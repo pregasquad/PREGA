@@ -1,0 +1,250 @@
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Plus, Minus, Package, Trash2, Edit2, UserPlus } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { insertProductSchema, insertStaffSchema } from "@shared/schema";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useState } from "react";
+import type { Product } from "@shared/schema";
+
+export default function Inventory() {
+  const { toast } = useToast();
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isStaffDialogOpen, setIsStaffDialogOpen] = useState(false);
+
+  const { data: products, isLoading } = useQuery<Product[]>({
+    queryKey: ["/api/products"],
+  });
+
+  const productForm = useForm({
+    resolver: zodResolver(insertProductSchema),
+    defaultValues: { name: "", quantity: 0 }
+  });
+
+  const staffForm = useForm({
+    resolver: zodResolver(insertStaffSchema),
+    defaultValues: { name: "", color: "#" + Math.floor(Math.random()*16777215).toString(16) }
+  });
+
+  const createProductMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/products", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      setIsDialogOpen(false);
+      productForm.reset();
+      toast({ title: "تمت إضافة المنتج" });
+    }
+  });
+
+  const createStaffMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/staff", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
+      setIsStaffDialogOpen(false);
+      staffForm.reset();
+      toast({ title: "تمت إضافة الموظف" });
+    }
+  });
+
+  const updateProductMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const res = await apiRequest("PATCH", `/api/products/${id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      setEditingProduct(null);
+      toast({ title: "تم تحديث المنتج" });
+    }
+  });
+
+  const deleteProductMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/products/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      toast({ title: "تم حذف المنتج" });
+    }
+  });
+
+  const updateStockMutation = useMutation({
+    mutationFn: async ({ id, quantity }: { id: number; quantity: number }) => {
+      const res = await apiRequest("PATCH", `/api/products/${id}/quantity`, { quantity });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+    },
+  });
+
+  if (isLoading) return <div>جاري التحميل...</div>;
+
+  return (
+    <div className="p-6 space-y-6" dir="rtl">
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-3xl font-bold">المخزون</h1>
+        <div className="flex gap-2">
+          <Dialog open={isStaffDialogOpen} onOpenChange={setIsStaffDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <UserPlus className="h-4 w-4" />
+                إضافة موظف
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle>إضافة موظف جديد</DialogTitle></DialogHeader>
+              <Form {...staffForm}>
+                <form onSubmit={staffForm.handleSubmit((data) => createStaffMutation.mutate(data))} className="space-y-4">
+                  <FormField control={staffForm.control} name="name" render={({ field }) => (
+                    <FormItem><FormLabel>الاسم</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+                  )} />
+                  <FormField control={staffForm.control} name="color" render={({ field }) => (
+                    <FormItem><FormLabel>اللون</FormLabel><FormControl><Input type="color" {...field} /></FormControl></FormItem>
+                  )} />
+                  <Button type="submit" className="w-full" disabled={createStaffMutation.isPending}>إضافة</Button>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" />
+                منتج جديد
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>إضافة منتج جديد</DialogTitle>
+              </DialogHeader>
+              <Form {...productForm}>
+                <form onSubmit={productForm.handleSubmit((data) => createProductMutation.mutate(data))} className="space-y-4">
+                  <FormField
+                    control={productForm.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>اسم المنتج</FormLabel>
+                        <FormControl><Input {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={productForm.control}
+                    name="quantity"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>الكمية الأولية</FormLabel>
+                        <FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit" className="w-full" disabled={createProductMutation.isPending}>إضافة</Button>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {products?.map((product) => (
+          <Card key={product.id} className="hover-elevate overflow-visible">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-xl font-bold">{product.name}</CardTitle>
+              <div className="flex gap-2">
+                <Button variant="ghost" size="icon" onClick={() => deleteProductMutation.mutate(product.id)}>
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">الكمية الحالية:</span>
+                  <span className={`text-2xl font-bold ${product.quantity <= 2 ? 'text-destructive' : 'text-primary'}`}>
+                    {product.quantity}
+                  </span>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => updateStockMutation.mutate({ id: product.id, quantity: product.quantity + 1 })}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => updateStockMutation.mutate({ id: product.id, quantity: Math.max(0, product.quantity - 1) })}
+                    disabled={product.quantity <= 0}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => {
+                      setEditingProduct(product);
+                      productForm.reset(product);
+                    }}
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                {/* Edit Product Dialog */}
+                <Dialog open={!!editingProduct} onOpenChange={(open) => !open && setEditingProduct(null)}>
+                  <DialogContent>
+                    <DialogHeader><DialogTitle>تعديل المنتج</DialogTitle></DialogHeader>
+                    <Form {...productForm}>
+                      <form onSubmit={productForm.handleSubmit((data) => updateProductMutation.mutate({ id: editingProduct!.id, data }))} className="space-y-4">
+                        <FormField
+                          control={productForm.control}
+                          name="name"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>اسم المنتج</FormLabel>
+                              <FormControl><Input {...field} /></FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <Button type="submit" className="w-full">تحديث</Button>
+                      </form>
+                    </Form>
+                  </DialogContent>
+                </Dialog>
+                
+                {product.quantity <= 2 && (
+                  <p className="text-xs text-destructive font-medium">
+                    ⚠️ تنبيه: المخزون منخفض جداً (2 أو أقل)!
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}

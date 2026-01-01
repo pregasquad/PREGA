@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-electron/
+release/
+android/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Large files
+*.zip
+*.exe
+attached_assets/*.zip
+
+# Electron cache
+.cache/
+electron/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Replit
+.replit
+replit.nix
+.config/
+
+# Database files
+*.db
+*.sqlite
