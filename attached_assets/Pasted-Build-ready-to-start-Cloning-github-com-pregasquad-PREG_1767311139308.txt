@@ -1,0 +1,194 @@
+Build ready to start ▶️
+>> Cloning github.com/pregasquad/PREGA.git commit sha d49c2a79241503927b90c01c76b19a477b3cd418 into /builder/workspace
+Initialized empty Git repository in /builder/workspace/.git/
+From https://github.com/pregasquad/PREGA
+ * branch            d49c2a79241503927b90c01c76b19a477b3cd418 -> FETCH_HEAD
+HEAD is now at d49c2a7 Initial commit
+Starting Docker daemon...
+Waiting for the Docker daemon to start...
+done
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 249B done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/node:20-alpine
+#2 DONE 2.4s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 2B done
+#3 DONE 0.0s
+
+#4 [internal] load build context
+#4 DONE 0.0s
+
+#5 [1/7] FROM docker.io/library/node:20-alpine@sha256:658d0f63e501824d6c23e06d4bb95c71e7d704537c9d9272f488ac03a370d448
+#5 resolve docker.io/library/node:20-alpine@sha256:658d0f63e501824d6c23e06d4bb95c71e7d704537c9d9272f488ac03a370d448 done
+#5 DONE 0.0s
+
+#6 [auth] k-ff88b3b5-c422-4cd6-a0ba-cfe187b28767/d099f113-e60e-47c2-a5e3-7bf88fee5e0f-cache:pull token for registry01.prod.koyeb.com
+#6 DONE 0.0s
+
+#7 importing cache manifest from registry01.prod.koyeb.com/k-ff88b3b5-c422-4cd6-a0ba-cfe187b28767/d099f113-e60e-47c2-a5e3-7bf88fee5e0f-cache:latest
+#7 ERROR: failed to configure registry cache importer: registry01.prod.koyeb.com/k-ff88b3b5-c422-4cd6-a0ba-cfe187b28767/d099f113-e60e-47c2-a5e3-7bf88fee5e0f-cache:latest: not found
+
+#4 [internal] load build context
+#4 transferring context: 3.26MB 0.0s done
+#4 DONE 0.1s
+
+#5 [1/7] FROM docker.io/library/node:20-alpine@sha256:658d0f63e501824d6c23e06d4bb95c71e7d704537c9d9272f488ac03a370d448
+#5 sha256:fd1849a5c548bc65ee47a64498951bda5d40e87d08efe9dca69b5c8cdedc7a52 443B / 443B 0.1s done
+#5 sha256:cb3325e64457574e24f92246e3da3376946e473d636209e1390eac47b50b26a3 0B / 1.26MB 0.2s
+#5 sha256:cb3325e64457574e24f92246e3da3376946e473d636209e1390eac47b50b26a3 1.26MB / 1.26MB 0.2s done
+#5 sha256:8d06ba6946d1f299d8f962e37906c77006df33d47050430a57f7893ec35af697 0B / 42.78MB 0.2s
+#5 sha256:1074353eec0db2c1d81d5af2671e56e00cf5738486f5762609ea33d606f88612 3.86MB / 3.86MB 0.3s done
+#5 sha256:8d06ba6946d1f299d8f962e37906c77006df33d47050430a57f7893ec35af697 14.68MB / 42.78MB 0.5s
+#5 extracting sha256:1074353eec0db2c1d81d5af2671e56e00cf5738486f5762609ea33d606f88612 0.1s done
+#5 sha256:8d06ba6946d1f299d8f962e37906c77006df33d47050430a57f7893ec35af697 23.07MB / 42.78MB 0.6s
+#5 sha256:8d06ba6946d1f299d8f962e37906c77006df33d47050430a57f7893ec35af697 31.46MB / 42.78MB 0.8s
+#5 sha256:8d06ba6946d1f299d8f962e37906c77006df33d47050430a57f7893ec35af697 39.85MB / 42.78MB 0.9s
+#5 sha256:8d06ba6946d1f299d8f962e37906c77006df33d47050430a57f7893ec35af697 42.78MB / 42.78MB 1.1s
+#5 sha256:8d06ba6946d1f299d8f962e37906c77006df33d47050430a57f7893ec35af697 42.78MB / 42.78MB 1.1s done
+#5 extracting sha256:8d06ba6946d1f299d8f962e37906c77006df33d47050430a57f7893ec35af697
+#5 extracting sha256:8d06ba6946d1f299d8f962e37906c77006df33d47050430a57f7893ec35af697 0.5s done
+#5 DONE 1.7s
+
+#5 [1/7] FROM docker.io/library/node:20-alpine@sha256:658d0f63e501824d6c23e06d4bb95c71e7d704537c9d9272f488ac03a370d448
+#5 extracting sha256:cb3325e64457574e24f92246e3da3376946e473d636209e1390eac47b50b26a3 0.0s done
+#5 extracting sha256:fd1849a5c548bc65ee47a64498951bda5d40e87d08efe9dca69b5c8cdedc7a52 done
+#5 DONE 1.7s
+
+#8 [2/7] WORKDIR /app
+#8 DONE 0.4s
+
+#9 [3/7] COPY package*.json ./
+#9 DONE 0.0s
+
+#10 [4/7] RUN npm ci
+#10 0.823 npm warn skipping integrity check for git dependency ssh://git@github.com/electron/node-gyp.git
+#10 2.429 npm warn deprecated rimraf@3.0.2: Rimraf versions prior to v4 are no longer supported
+#10 3.028 npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+#10 3.108 npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+#10 3.860 npm warn deprecated boolean@3.2.0: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
+#10 4.363 npm warn deprecated @npmcli/move-file@2.0.1: This functionality has been moved to @npmcli/fs
+#10 4.703 npm warn deprecated rimraf@2.6.3: Rimraf versions prior to v4 are no longer supported
+#10 4.912 npm warn deprecated glob@8.1.0: Glob versions prior to v9 are no longer supported
+#10 5.051 npm warn deprecated glob@8.1.0: Glob versions prior to v9 are no longer supported
+#10 10.79 
+#10 10.79 added 889 packages, and audited 890 packages in 11s
+#10 10.79 
+#10 10.79 124 packages are looking for funding
+#10 10.79   run `npm fund` for details
+#10 10.79 
+#10 10.79 found 0 vulnerabilities
+#10 10.79 npm notice
+#10 10.79 npm notice New major version of npm available! 10.8.2 -> 11.7.0
+#10 10.79 npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.7.0
+#10 10.79 npm notice To update run: npm install -g npm@11.7.0
+#10 10.79 npm notice
+#10 DONE 15.8s
+
+#11 [5/7] COPY . .
+#11 DONE 0.2s
+
+#12 [6/7] RUN npm run build
+#12 0.141 
+#12 0.141 > pregasquad-manager@1.0.0 build
+#12 0.141 > tsx script/build.ts
+#12 0.141 
+#12 0.698 building client...
+#12 0.742 vite v7.3.0 building client environment for production...
+#12 1.179 transforming...
+#12 5.710 ✓ 3337 modules transformed.
+#12 6.231 rendering chunks...
+#12 6.242 computing gzip size...
+#12 6.269 ../dist/public/index.html                     2.46 kB │ gzip:   0.94 kB
+#12 6.269 ../dist/public/assets/index-CkP09dIB.css     79.56 kB │ gzip:  13.13 kB
+#12 6.269 ../dist/public/assets/index-CG4gHFjk.js   1,089.56 kB │ gzip: 315.97 kB
+#12 6.270 
+#12 6.270 (!) Some chunks are larger than 500 kB after minification. Consider:
+#12 6.270 - Using dynamic import() to code-split the application
+#12 6.270 - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+#12 6.270 - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+#12 6.270 ✓ built in 5.12s
+#12 6.270 building server...
+#12 6.349 
+#12 6.349   dist/index.cjs  1.1mb ⚠️
+#12 6.349 
+#12 6.349 ⚡ Done in 73ms
+#12 DONE 6.5s
+
+#13 [7/7] RUN npm prune --production
+#13 0.111 npm warn config production Use `--omit=dev` instead.
+#13 1.372 
+#13 1.372 up to date, audited 501 packages in 1s
+#13 1.372 
+#13 1.372 64 packages are looking for funding
+#13 1.372   run `npm fund` for details
+#13 1.373 
+#13 1.373 found 0 vulnerabilities
+#13 DONE 1.5s
+
+#14 exporting to image
+#14 exporting layers
+#14 exporting layers 11.5s done
+#14 ...
+
+#15 [auth] k-ff88b3b5-c422-4cd6-a0ba-cfe187b28767/d099f113-e60e-47c2-a5e3-7bf88fee5e0f:pull,push token for registry01.prod.koyeb.com
+#15 DONE 0.0s
+
+#14 exporting to image
+#14 exporting manifest sha256:9c339a53c05974c05373a6ea6b6ea66f0d2cb78f560202df5187065fb75ae9a4 done
+#14 exporting config sha256:8a4d6e88daa724cecafe9e590438e4e39a5800ad82437310ba718f878cd64e57 done
+#14 pushing layers
+#14 pushing layers 12.4s done
+#14 pushing manifest for registry01.prod.koyeb.com/k-ff88b3b5-c422-4cd6-a0ba-cfe187b28767/d099f113-e60e-47c2-a5e3-7bf88fee5e0f:latest@sha256:9c339a53c05974c05373a6ea6b6ea66f0d2cb78f560202df5187065fb75ae9a4
+#14 pushing manifest for registry01.prod.koyeb.com/k-ff88b3b5-c422-4cd6-a0ba-cfe187b28767/d099f113-e60e-47c2-a5e3-7bf88fee5e0f:latest@sha256:9c339a53c05974c05373a6ea6b6ea66f0d2cb78f560202df5187065fb75ae9a4 1.2s done
+#14 pushing layers 0.5s done
+#14 pushing manifest for registry01.prod.koyeb.com/k-ff88b3b5-c422-4cd6-a0ba-cfe187b28767/d099f113-e60e-47c2-a5e3-7bf88fee5e0f:0472c459-91ae-4186-a836-ef76eb82c3dc@sha256:9c339a53c05974c05373a6ea6b6ea66f0d2cb78f560202df5187065fb75ae9a4
+#14 pushing manifest for registry01.prod.koyeb.com/k-ff88b3b5-c422-4cd6-a0ba-cfe187b28767/d099f113-e60e-47c2-a5e3-7bf88fee5e0f:0472c459-91ae-4186-a836-ef76eb82c3dc@sha256:9c339a53c05974c05373a6ea6b6ea66f0d2cb78f560202df5187065fb75ae9a4 0.7s done
+#14 DONE 26.4s
+
+#16 [auth] k-ff88b3b5-c422-4cd6-a0ba-cfe187b28767/d099f113-e60e-47c2-a5e3-7bf88fee5e0f-cache:pull,push token for registry01.prod.koyeb.com
+#16 DONE 0.0s
+
+#17 exporting cache to registry
+#17 preparing build cache for export
+#17 writing layer sha256:1074353eec0db2c1d81d5af2671e56e00cf5738486f5762609ea33d606f88612
+#17 writing layer sha256:1074353eec0db2c1d81d5af2671e56e00cf5738486f5762609ea33d606f88612 2.0s done
+#17 writing layer sha256:1f2218c27268fd471918e41903a0fc176f0f61fb9e3afc1413ae454c31fae950
+#17 writing layer sha256:1f2218c27268fd471918e41903a0fc176f0f61fb9e3afc1413ae454c31fae950 1.9s done
+#17 writing layer sha256:23c0aed8742bc69953a053a933cbc8491ff3e777a3775a8e1e6413440720bc39
+#17 writing layer sha256:23c0aed8742bc69953a053a933cbc8491ff3e777a3775a8e1e6413440720bc39 done
+#17 writing layer sha256:36f3d7462e54a4ddb596c74d8d443b04431bd5631c5b445fb7f0b69ad439c974
+#17 writing layer sha256:36f3d7462e54a4ddb596c74d8d443b04431bd5631c5b445fb7f0b69ad439c974 2.4s done
+#17 writing layer sha256:3fdd788f7b12f85e9686aa3fef6770b1b7f3e41322fd08750128ad8192814834
+#17 writing layer sha256:3fdd788f7b12f85e9686aa3fef6770b1b7f3e41322fd08750128ad8192814834
+#17 writing layer sha256:3fdd788f7b12f85e9686aa3fef6770b1b7f3e41322fd08750128ad8192814834 done
+#17 writing layer sha256:426cf4a1a6f4adadd615dbfa4955e61cb16bc83d17f082bb738806e49367d1d0
+#17 writing layer sha256:426cf4a1a6f4adadd615dbfa4955e61cb16bc83d17f082bb738806e49367d1d0 done
+#17 writing layer sha256:6459b2a468d598749ae712eea8b54209f0cff4d37f745a5289ad70e9142ecd8e
+#17 writing layer sha256:6459b2a468d598749ae712eea8b54209f0cff4d37f745a5289ad70e9142ecd8e 1.6s done
+#17 writing layer sha256:6bb0c75c910286d2bf0cd47c11e270986304f7dc5516ec119101590d311f47b8
+#17 writing layer sha256:6bb0c75c910286d2bf0cd47c11e270986304f7dc5516ec119101590d311f47b8 done
+#17 writing layer sha256:8d06ba6946d1f299d8f962e37906c77006df33d47050430a57f7893ec35af697
+#17 writing layer sha256:8d06ba6946d1f299d8f962e37906c77006df33d47050430a57f7893ec35af697 done
+#17 writing layer sha256:8d20c6cb8a43651a432dafd0e07d51ddafba8dbe4ec5b2045a306f2f9f6c96fc
+#17 writing layer sha256:8d20c6cb8a43651a432dafd0e07d51ddafba8dbe4ec5b2045a306f2f9f6c96fc done
+#17 writing layer sha256:bd5c368d06792f76f9a519d43c5ed1be950c099b21be03e932e1abdf4fe74bce
+#17 writing layer sha256:bd5c368d06792f76f9a519d43c5ed1be950c099b21be03e932e1abdf4fe74bce done
+#17 writing layer sha256:cb3325e64457574e24f92246e3da3376946e473d636209e1390eac47b50b26a3
+#17 writing layer sha256:cb3325e64457574e24f92246e3da3376946e473d636209e1390eac47b50b26a3 done
+#17 writing layer sha256:dbf18cbbff0c003e2ddf66d154f34b69b369670934a2751d048951e7c2bf8d01
+#17 writing layer sha256:dbf18cbbff0c003e2ddf66d154f34b69b369670934a2751d048951e7c2bf8d01 done
+#17 writing layer sha256:fd1849a5c548bc65ee47a64498951bda5d40e87d08efe9dca69b5c8cdedc7a52
+#17 writing layer sha256:fd1849a5c548bc65ee47a64498951bda5d40e87d08efe9dca69b5c8cdedc7a52 1.5s done
+#17 writing config sha256:475cd062ab67c49a70332a27460146075d7468bcb2a1c93d6fb943e7d44a8af7
+#17 writing config sha256:475cd062ab67c49a70332a27460146075d7468bcb2a1c93d6fb943e7d44a8af7 1.6s done
+#17 writing cache image manifest sha256:4aecdea5481a43c496a27d7211ebb8f15f771b46c575553243dc1b561a62f126
+#17 preparing build cache for export 36.8s done
+#17 writing cache image manifest sha256:4aecdea5481a43c496a27d7211ebb8f15f771b46c575553243dc1b561a62f126 1.8s done
+#17 DONE 36.8s
+------
+ > importing cache manifest from registry01.prod.koyeb.com/k-ff88b3b5-c422-4cd6-a0ba-cfe187b28767/d099f113-e60e-47c2-a5e3-7bf88fee5e0f-cache:latest:
+------
+Build succeeded ✅
