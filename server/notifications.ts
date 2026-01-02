@@ -8,6 +8,13 @@ interface MessageResult {
   channel?: "sms" | "whatsapp";
 }
 
+interface WhatsAppTemplateParams {
+  clientName: string;
+  serviceName: string;
+  date: string;
+  time: string;
+}
+
 export async function sendSMS(to: string, text: string): Promise<MessageResult> {
   const apiKey = process.env.YCLOUD_API_KEY;
   
@@ -57,13 +64,14 @@ export async function sendSMS(to: string, text: string): Promise<MessageResult> 
   }
 }
 
-export async function sendWhatsApp(
+export async function sendWhatsAppTemplate(
   to: string, 
-  text: string,
-  fromNumber?: string
+  params: WhatsAppTemplateParams
 ): Promise<MessageResult> {
   const apiKey = process.env.YCLOUD_API_KEY;
-  const whatsappFrom = fromNumber || process.env.YCLOUD_WHATSAPP_NUMBER;
+  const whatsappFrom = process.env.YCLOUD_WHATSAPP_NUMBER;
+  const templateName = process.env.YCLOUD_WHATSAPP_TEMPLATE || "booking_confirmation";
+  const templateLang = process.env.YCLOUD_WHATSAPP_TEMPLATE_LANG || "ar";
   
   if (!apiKey) {
     console.log("YCloud API key not configured - WhatsApp not sent");
@@ -75,8 +83,8 @@ export async function sendWhatsApp(
     return { success: false, error: "WhatsApp business number not configured", channel: "whatsapp" };
   }
 
-  if (!to || !text) {
-    return { success: false, error: "Missing phone number or message", channel: "whatsapp" };
+  if (!to) {
+    return { success: false, error: "Missing phone number", channel: "whatsapp" };
   }
 
   const formattedPhone = formatPhoneNumber(to);
@@ -94,9 +102,23 @@ export async function sendWhatsApp(
       body: JSON.stringify({
         from: whatsappFrom,
         to: formattedPhone,
-        type: "text",
-        text: {
-          body: text,
+        type: "template",
+        template: {
+          name: templateName,
+          language: {
+            code: templateLang,
+          },
+          components: [
+            {
+              type: "body",
+              parameters: [
+                { type: "text", text: params.clientName },
+                { type: "text", text: params.serviceName },
+                { type: "text", text: params.date },
+                { type: "text", text: params.time },
+              ],
+            },
+          ],
         },
       }),
     });
@@ -112,7 +134,7 @@ export async function sendWhatsApp(
     }
 
     const data = await response.json();
-    console.log("WhatsApp sent successfully:", data.id);
+    console.log("WhatsApp template sent successfully:", data.id);
     return { success: true, messageId: data.id, channel: "whatsapp" };
   } catch (error) {
     console.error("Failed to send WhatsApp:", error);
@@ -120,20 +142,25 @@ export async function sendWhatsApp(
   }
 }
 
-export async function sendNotification(
+export async function sendBookingNotification(
   to: string, 
-  text: string,
-  preferWhatsApp: boolean = true
+  params: WhatsAppTemplateParams
 ): Promise<MessageResult> {
-  if (preferWhatsApp && process.env.YCLOUD_WHATSAPP_NUMBER) {
-    const whatsappResult = await sendWhatsApp(to, text);
+  if (process.env.YCLOUD_WHATSAPP_NUMBER) {
+    const whatsappResult = await sendWhatsAppTemplate(to, params);
     if (whatsappResult.success) {
       return whatsappResult;
     }
-    console.log("WhatsApp failed, falling back to SMS");
+    console.log("WhatsApp failed, falling back to SMS:", whatsappResult.error);
   }
   
-  return sendSMS(to, text);
+  const smsMessage = createBookingConfirmationMessage(
+    params.clientName,
+    params.serviceName,
+    params.date,
+    params.time
+  );
+  return sendSMS(to, smsMessage);
 }
 
 function formatPhoneNumber(phone: string): string | null {

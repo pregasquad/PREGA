@@ -105,9 +105,13 @@ Preferred communication style: Simple, everyday language.
 - **Secrets Required**:
   - `YCLOUD_API_KEY` - Get from YCloud dashboard (required)
   - `YCLOUD_WHATSAPP_NUMBER` - Your WhatsApp Business number (optional, for WhatsApp)
+- **Optional Environment Variables**:
+  - `YCLOUD_WHATSAPP_TEMPLATE` - Template name for WhatsApp messages (default: "booking_confirmation")
+  - `YCLOUD_WHATSAPP_TEMPLATE_LANG` - Template language code (default: "ar")
 - **Behavior**: If WhatsApp is configured, tries WhatsApp first, falls back to SMS
 - **Trigger**: Confirmation sent automatically when booking includes phone number
 - **Phone Format**: Supports Moroccan numbers (06XXXXXXXX) - auto-converts to +212 format
 - **API Endpoints**:
   - SMS: https://api.ycloud.com/v2/sms
   - WhatsApp: https://api.ycloud.com/v2/whatsapp/messages
+- **WhatsApp Template**: Must be pre-approved in YCloud. Template should have 4 body parameters: client name, service, date, time

@@ -5,7 +5,7 @@ import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
-import { sendNotification, createBookingConfirmationMessage } from "./notifications";
+import { sendBookingNotification } from "./notifications";
 
 let io: SocketIOServer;
 
@@ -61,18 +61,17 @@ export async function registerRoutes(
         io.emit("booking:created", item);
       }
       
-      // Send SMS confirmation if phone number is in client name (format: "Name (phone)")
+      // Send booking confirmation via WhatsApp/SMS if phone number is in client name (format: "Name (phone)")
       const phoneMatch = item.client.match(/\(([^)]+)\)/);
       if (phoneMatch && phoneMatch[1]) {
         const phone = phoneMatch[1];
         const clientName = item.client.replace(/\s*\([^)]+\)/, "").trim();
-        const message = createBookingConfirmationMessage(
+        sendBookingNotification(phone, {
           clientName,
-          item.service,
-          item.date,
-          item.startTime
-        );
-        sendNotification(phone, message).catch(err => {
+          serviceName: item.service,
+          date: item.date,
+          time: item.startTime,
+        }).catch(err => {
           console.error("Notification failed:", err);
         });
       }
