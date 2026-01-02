@@ -8,7 +8,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { DollarSign, Users, CalendarIcon, TrendingUp, Building2, Edit2, Check, X, RefreshCw, Plus, Trash2, Receipt, UserMinus } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { DollarSign, Users, CalendarIcon, TrendingUp, Building2, Edit2, Check, X, RefreshCw, Plus, Trash2, Receipt, UserMinus, ChevronDown } from "lucide-react";
 import { useState, useEffect } from "react";
 import { io, Socket } from "socket.io-client";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay, parseISO, isAfter, isBefore, isEqual } from "date-fns";
@@ -28,6 +29,7 @@ export default function Salaries() {
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [showChargeDialog, setShowChargeDialog] = useState(false);
   const [showDeductionDialog, setShowDeductionDialog] = useState(false);
+  const [commissionRatesOpen, setCommissionRatesOpen] = useState(false);
   const [newCharge, setNewCharge] = useState({ type: "rent", name: "", amount: 0, date: format(new Date(), "yyyy-MM-dd") });
   const [newDeduction, setNewDeduction] = useState<{ staffName: string; type: "advance" | "loan" | "penalty" | "other"; description: string; amount: number; date: string }>({ staffName: "", type: "advance", description: "", amount: 0, date: format(new Date(), "yyyy-MM-dd") });
 
@@ -502,95 +504,104 @@ export default function Salaries() {
         </Card>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>نسب العمولة حسب الخدمة</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-right">الخدمة</TableHead>
-                <TableHead className="text-right">السعر</TableHead>
-                <TableHead className="text-right">نسبة العمولة</TableHead>
-                <TableHead className="text-right">عمولة الموظف</TableHead>
-                <TableHead className="text-right">حصة الصالون</TableHead>
-                <TableHead className="text-right w-[100px]">تعديل</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {services.map((service) => {
-                const commissionPercent = service.commissionPercent ?? 50;
-                const staffAmount = Math.round((service.price * commissionPercent) / 100);
-                const salonAmount = service.price - staffAmount;
-                const isEditing = editingServiceId === service.id;
-
-                return (
-                  <TableRow key={service.id}>
-                    <TableCell className="font-medium">{service.name}</TableCell>
-                    <TableCell>{service.price} د.م</TableCell>
-                    <TableCell>
-                      {isEditing ? (
-                        <div className="flex items-center gap-2">
-                          <Input
-                            type="number"
-                            min={0}
-                            max={100}
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            className="w-20 h-8"
-                          />
-                          <span>%</span>
-                        </div>
-                      ) : (
-                        <span>{commissionPercent}%</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-green-600">
-                      {staffAmount} د.م
-                    </TableCell>
-                    <TableCell className="text-primary">
-                      {salonAmount} د.م
-                    </TableCell>
-                    <TableCell>
-                      {isEditing ? (
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => saveCommission(service.id)}
-                            disabled={updateCommissionMutation.isPending}
-                          >
-                            <Check className="h-4 w-4 text-green-600" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={cancelEditing}
-                          >
-                            <X className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => startEditing(service)}
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </TableCell>
+      <Collapsible open={commissionRatesOpen} onOpenChange={setCommissionRatesOpen}>
+        <Card>
+          <CollapsibleTrigger asChild>
+            <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between">
+                <CardTitle>نسب العمولة حسب الخدمة</CardTitle>
+                <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform duration-200 ${commissionRatesOpen ? 'rotate-180' : ''}`} />
+              </div>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-right">الخدمة</TableHead>
+                    <TableHead className="text-right">السعر</TableHead>
+                    <TableHead className="text-right">نسبة العمولة</TableHead>
+                    <TableHead className="text-right">عمولة الموظف</TableHead>
+                    <TableHead className="text-right">حصة الصالون</TableHead>
+                    <TableHead className="text-right w-[100px]">تعديل</TableHead>
                   </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                  {services.map((service) => {
+                    const commissionPercent = service.commissionPercent ?? 50;
+                    const staffAmount = Math.round((service.price * commissionPercent) / 100);
+                    const salonAmount = service.price - staffAmount;
+                    const isEditing = editingServiceId === service.id;
+
+                    return (
+                      <TableRow key={service.id}>
+                        <TableCell className="font-medium">{service.name}</TableCell>
+                        <TableCell>{service.price} د.م</TableCell>
+                        <TableCell>
+                          {isEditing ? (
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                min={0}
+                                max={100}
+                                value={editValue}
+                                onChange={(e) => setEditValue(e.target.value)}
+                                className="w-20 h-8"
+                              />
+                              <span>%</span>
+                            </div>
+                          ) : (
+                            <span>{commissionPercent}%</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-green-600">
+                          {staffAmount} د.م
+                        </TableCell>
+                        <TableCell className="text-primary">
+                          {salonAmount} د.م
+                        </TableCell>
+                        <TableCell>
+                          {isEditing ? (
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => saveCommission(service.id)}
+                                disabled={updateCommissionMutation.isPending}
+                              >
+                                <Check className="h-4 w-4 text-green-600" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={cancelEditing}
+                              >
+                                <X className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => startEditing(service)}
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
 
       {/* Expenses Section */}
       <Card>
