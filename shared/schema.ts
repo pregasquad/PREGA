@@ -1,9 +1,9 @@
-import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { mysqlTable, text, serial, int, boolean, timestamp, varchar } from "drizzle-orm/mysql-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 export * from "./models/auth";
 
-export const clients = pgTable("clients", {
+export const clients = mysqlTable("clients", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   phone: text("phone"),
@@ -12,10 +12,10 @@ export const clients = pgTable("clients", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const products = pgTable("products", {
+export const products = mysqlTable("products", {
   id: serial("id").primaryKey(),
-  name: text("name").notNull().unique(),
-  quantity: integer("quantity").notNull().default(0),
+  name: varchar("name", { length: 255 }).notNull().unique(),
+  quantity: int("quantity").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -35,45 +35,45 @@ export const insertClientSchema = createInsertSchema(clients).omit({ id: true, c
 export type InsertClient = z.infer<typeof insertClientSchema>;
 export type Client = typeof clients.$inferSelect;
 
-export const appointments = pgTable("appointments", {
+export const appointments = mysqlTable("appointments", {
   id: serial("id").primaryKey(),
   date: text("date").notNull(),
   startTime: text("start_time").notNull(),
-  duration: integer("duration").notNull(),
+  duration: int("duration").notNull(),
   client: text("client").notNull(),
   service: text("service").notNull(),
   staff: text("staff").notNull(),
-  price: integer("price").notNull(),
-  total: integer("total").notNull(),
+  price: int("price").notNull(),
+  total: int("total").notNull(),
   paid: boolean("paid").default(false).notNull(),
 });
 
-export const services = pgTable("services", {
+export const services = mysqlTable("services", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  price: integer("price").notNull(),
-  duration: integer("duration").notNull(),
+  price: int("price").notNull(),
+  duration: int("duration").notNull(),
   category: text("category").notNull(),
-  linkedProductId: integer("linked_product_id").references(() => products.id),
-  commissionPercent: integer("commission_percent").notNull().default(50),
+  linkedProductId: int("linked_product_id"),
+  commissionPercent: int("commission_percent").notNull().default(50),
 });
 
-export const categories = pgTable("categories", {
+export const categories = mysqlTable("categories", {
   id: serial("id").primaryKey(),
-  name: text("name").notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull().unique(),
 });
 
-export const staff = pgTable("staff", {
+export const staff = mysqlTable("staff", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   color: text("color").notNull(),
 });
 
-export const charges = pgTable("charges", {
+export const charges = mysqlTable("charges", {
   id: serial("id").primaryKey(),
   type: text("type").notNull(),
   name: text("name").notNull(),
-  amount: integer("amount").notNull(),
+  amount: int("amount").notNull(),
   date: text("date").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -87,12 +87,12 @@ export const insertChargeSchema = createInsertSchema(charges).omit({ id: true, c
 export type Charge = typeof charges.$inferSelect;
 export type InsertCharge = z.infer<typeof insertChargeSchema>;
 
-export const staffDeductions = pgTable("staff_deductions", {
+export const staffDeductions = mysqlTable("staff_deductions", {
   id: serial("id").primaryKey(),
   staffName: text("staff_name").notNull(),
   type: text("type").notNull(),
   description: text("description").notNull(),
-  amount: integer("amount").notNull(),
+  amount: int("amount").notNull(),
   date: text("date").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

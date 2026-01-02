@@ -1,14 +1,30 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-import pg from "pg";
+import { drizzle } from "drizzle-orm/mysql2";
+import mysql from "mysql2/promise";
 import * as schema from "@shared/schema";
 
-const { Pool } = pg;
+const host = process.env.TIDB_HOST;
+const port = parseInt(process.env.TIDB_PORT || "4000");
+const user = process.env.TIDB_USER;
+const password = process.env.TIDB_PASSWORD;
+const database = process.env.TIDB_DATABASE;
 
-if (!process.env.DATABASE_URL) {
+if (!host || !user || !password || !database) {
   throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
+    "TiDB credentials must be set: TIDB_HOST, TIDB_USER, TIDB_PASSWORD, TIDB_DATABASE",
   );
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-export const db = drizzle(pool, { schema });
+export const pool = mysql.createPool({
+  host,
+  port,
+  user,
+  password,
+  database,
+  ssl: {
+    rejectUnauthorized: true,
+  },
+  waitForConnections: true,
+  connectionLimit: 10,
+});
+
+export const db = drizzle(pool, { schema, mode: "default" });
