@@ -334,17 +334,17 @@ export default function Planning() {
       </div>
 
       {/* Calendar Grid */}
-      <div className="flex-1 bg-card rounded-2xl border border-border shadow-sm overflow-hidden flex flex-col min-h-[500px]" dir="ltr">
+      <div className="flex-1 bg-card rounded-2xl border border-border shadow-sm overflow-hidden flex flex-col min-h-[500px]">
         {/* Scrollable Container for both Header and Grid */}
         <div ref={scrollContainerRef} className="flex-1 overflow-x-auto overflow-y-auto calendar-scroll relative" id="calendar-scroll-container">
           <div className="min-w-max">
             {/* Staff Header (inside scroll) */}
             <div className="flex border-b border-border sticky top-0 z-20 bg-card/95 backdrop-blur shadow-sm">
-              <div className="w-14 md:w-20 flex-shrink-0 border-r border-border bg-muted/30 flex items-center justify-center sticky left-0 z-30 bg-card">
+              <div className="w-14 md:w-20 flex-shrink-0 border-l border-border bg-muted/30 flex items-center justify-center sticky right-0 z-30 bg-card">
                 <Clock className="w-4 h-4 text-muted-foreground" />
               </div>
               {staffList.map(s => (
-                <div key={s.id} className="flex-1 py-2 md:py-4 px-1 md:px-2 text-center border-r border-border last:border-r-0 bg-muted/5 min-w-[140px] md:min-w-[200px] flex flex-col items-center justify-center gap-1">
+                <div key={s.id} className="flex-1 py-2 md:py-4 px-1 md:px-2 text-center border-l border-border last:border-l-0 bg-muted/5 min-w-[140px] md:min-w-[200px] flex flex-col items-center justify-center gap-1">
                   <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full shadow-sm" style={{ backgroundColor: s.color }} />
                   <span className="font-black text-[10px] md:text-base text-foreground truncate block uppercase tracking-wider">{s.name}</span>
                 </div>
@@ -353,10 +353,10 @@ export default function Planning() {
 
             <div className="flex relative min-h-[1020px]" style={{ height: (END_HOUR - START_HOUR) * SLOT_HEIGHT }}>
               {/* Time Column */}
-              <div className="w-14 md:w-20 flex-shrink-0 border-r border-border bg-muted/5 sticky left-0 z-10">
+              <div className="w-14 md:w-20 flex-shrink-0 border-l border-border bg-muted/5 sticky right-0 z-10">
                 {timeSlots.map((slot, i) => (
                   slot.minutes % 60 === 0 && (
-                    <div key={i} className="absolute w-full text-center text-[10px] md:text-xs text-muted-foreground -mt-2" 
+                    <div key={i} className="absolute w-full text-right pr-2 text-[10px] md:text-xs text-muted-foreground -mt-2" 
                          style={{ top: (slot.minutes - START_HOUR * 60) * PIXELS_PER_MINUTE }}>
                       {slot.label}
                     </div>
@@ -366,7 +366,7 @@ export default function Planning() {
 
               {/* Staff Columns */}
               {staffList.map((s) => (
-                <div key={s.id} className="flex-1 relative border-r border-border last:border-r-0 min-w-[140px] md:min-w-[200px]">
+                <div key={s.id} className="flex-1 relative border-l border-border last:border-l-0 min-w-[140px] md:min-w-[200px]">
                   {/* Horizontal Grid Lines */}
                   {timeSlots.map((slot, i) => (
                     <div 
@@ -385,7 +385,7 @@ export default function Planning() {
 
                   {/* Appointments */}
                   {appointments
-                    .filter(app => app.staff?.toLowerCase() === s.name?.toLowerCase())
+                    .filter(app => app.staff === s.name)
                     .map(app => {
                       const [h, m] = app.startTime.split(':').map(Number);
                       const startMinutes = h * 60 + m;
@@ -393,7 +393,7 @@ export default function Planning() {
                       const top = offsetMinutes * PIXELS_PER_MINUTE;
                       const height = app.duration * PIXELS_PER_MINUTE;
 
-                      const staffColor = staffList.find(st => st.name?.toLowerCase() === s.name?.toLowerCase())?.color || "var(--primary)";
+                      const staffColor = staffList.find(st => st.name === s.name)?.color || "var(--primary)";
 
                       return (
                         <div
