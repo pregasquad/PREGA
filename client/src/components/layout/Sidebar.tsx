@@ -163,13 +163,14 @@ export function Sidebar() {
 
   return (
     <ShadcnSidebar side="right" dir="rtl">
-      <SidebarHeader className="p-6">
+      <SidebarHeader className="p-4">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-display font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-              PREGAS<span className="font-sans font-light text-foreground">MGR</span>
-            </h1>
-            <p className="text-[10px] text-muted-foreground tracking-wide uppercase">Beauty</p>
+          <div className="flex items-center gap-3">
+            <img src="/logo.png" alt="PREGA SQUAD" className="w-12 h-12 rounded-full object-cover" />
+            <div>
+              <h1 className="text-lg font-display font-bold text-primary">PREGA SQUAD</h1>
+              <p className="text-[10px] text-muted-foreground tracking-wide">Be Humble</p>
+            </div>
           </div>
           
           <Popover>

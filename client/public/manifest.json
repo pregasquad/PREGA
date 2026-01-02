@@ -1,7 +1,7 @@
 {
-  "name": "PREGASQUAD Manager",
-  "short_name": "PREGASQUAD",
-  "description": "Beauty Salon Appointment Management System",
+  "name": "PREGA SQUAD Manager",
+  "short_name": "PREGA SQUAD",
+  "description": "Beauty Salon Appointment Management System - Be Humble",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
