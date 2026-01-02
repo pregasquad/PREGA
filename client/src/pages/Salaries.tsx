@@ -1,14 +1,16 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { DollarSign, Users, CalendarIcon, TrendingUp } from "lucide-react";
+import { DollarSign, Users, CalendarIcon, TrendingUp, Building2, Edit2, Check, X } from "lucide-react";
 import { useState } from "react";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isWithinInterval, parseISO } from "date-fns";
 import { ar } from "date-fns/locale";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Staff, Service, Appointment } from "@shared/schema";
 
 type PeriodType = "day" | "week" | "month" | "custom";
@@ -17,6 +19,8 @@ export default function Salaries() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [period, setPeriod] = useState<PeriodType>("month");
   const [selectedStaff, setSelectedStaff] = useState<string>("all");
+  const [editingServiceId, setEditingServiceId] = useState<number | null>(null);
+  const [editValue, setEditValue] = useState<string>("");
 
   const { data: staff = [] } = useQuery<Staff[]>({
     queryKey: ["/api/staff"],
@@ -34,6 +38,35 @@ export default function Salaries() {
       return res.json();
     },
   });
+
+  const updateCommissionMutation = useMutation({
+    mutationFn: async ({ id, commissionPercent }: { id: number; commissionPercent: number }) => {
+      const res = await apiRequest("PATCH", `/api/services/${id}`, { commissionPercent });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/services"] });
+      setEditingServiceId(null);
+      setEditValue("");
+    },
+  });
+
+  const startEditing = (service: Service) => {
+    setEditingServiceId(service.id);
+    setEditValue(String(service.commissionPercent ?? 50));
+  };
+
+  const saveCommission = (id: number) => {
+    const value = parseInt(editValue);
+    if (!isNaN(value) && value >= 0 && value <= 100) {
+      updateCommissionMutation.mutate({ id, commissionPercent: value });
+    }
+  };
+
+  const cancelEditing = () => {
+    setEditingServiceId(null);
+    setEditValue("");
+  };
 
   const getDateRange = () => {
     switch (period) {
@@ -106,6 +139,7 @@ export default function Salaries() {
   const totalRevenue = staffEarnings.reduce((sum, e) => sum + e.totalRevenue, 0);
   const totalCommissions = staffEarnings.reduce((sum, e) => sum + e.totalCommission, 0);
   const totalAppointments = staffEarnings.reduce((sum, e) => sum + e.appointmentsCount, 0);
+  const salonPortion = totalRevenue - totalCommissions;
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto" dir="rtl">
@@ -156,7 +190,7 @@ export default function Salaries() {
         </Select>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">إجمالي الإيرادات</CardTitle>
@@ -172,12 +206,23 @@ export default function Salaries() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">إجمالي العمولات</CardTitle>
+            <CardTitle className="text-sm font-medium">عمولات الموظفين</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{totalCommissions.toLocaleString()} د.م</div>
             <p className="text-xs text-muted-foreground">المبلغ المستحق للموظفين</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-primary/5 border-primary/20">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">حصة الصالون</CardTitle>
+            <Building2 className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-primary">{salonPortion.toLocaleString()} د.م</div>
+            <p className="text-xs text-muted-foreground">الباقي للصالون بعد العمولات</p>
           </CardContent>
         </Card>
 
@@ -205,6 +250,7 @@ export default function Salaries() {
                 <TableHead className="text-right">عدد المواعيد</TableHead>
                 <TableHead className="text-right">إجمالي الإيرادات</TableHead>
                 <TableHead className="text-right">العمولة المستحقة</TableHead>
+                <TableHead className="text-right">حصة الصالون</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -216,11 +262,14 @@ export default function Salaries() {
                   <TableCell className="text-green-600 font-semibold">
                     {earning.totalCommission.toLocaleString()} د.م
                   </TableCell>
+                  <TableCell className="text-primary font-semibold">
+                    {(earning.totalRevenue - earning.totalCommission).toLocaleString()} د.م
+                  </TableCell>
                 </TableRow>
               ))}
               {staffEarnings.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                     لا توجد بيانات للفترة المحددة
                   </TableCell>
                 </TableRow>
@@ -244,6 +293,7 @@ export default function Salaries() {
                   <TableHead className="text-right">عدد المرات</TableHead>
                   <TableHead className="text-right">الإيرادات</TableHead>
                   <TableHead className="text-right">العمولة</TableHead>
+                  <TableHead className="text-right">حصة الصالون</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -260,6 +310,9 @@ export default function Salaries() {
                       <TableCell>{data.revenue.toLocaleString()} د.م</TableCell>
                       <TableCell className="text-green-600">
                         {data.commission.toLocaleString()} د.م
+                      </TableCell>
+                      <TableCell className="text-primary">
+                        {(data.revenue - data.commission).toLocaleString()} د.م
                       </TableCell>
                     </TableRow>
                   ))}
@@ -281,19 +334,79 @@ export default function Salaries() {
                 <TableHead className="text-right">السعر</TableHead>
                 <TableHead className="text-right">نسبة العمولة</TableHead>
                 <TableHead className="text-right">عمولة الموظف</TableHead>
+                <TableHead className="text-right">حصة الصالون</TableHead>
+                <TableHead className="text-right w-[100px]">تعديل</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {services.map((service) => (
-                <TableRow key={service.id}>
-                  <TableCell className="font-medium">{service.name}</TableCell>
-                  <TableCell>{service.price} د.م</TableCell>
-                  <TableCell>{service.commissionPercent ?? 50}%</TableCell>
-                  <TableCell className="text-green-600">
-                    {Math.round((service.price * (service.commissionPercent ?? 50)) / 100)} د.م
-                  </TableCell>
-                </TableRow>
-              ))}
+              {services.map((service) => {
+                const commissionPercent = service.commissionPercent ?? 50;
+                const staffAmount = Math.round((service.price * commissionPercent) / 100);
+                const salonAmount = service.price - staffAmount;
+                const isEditing = editingServiceId === service.id;
+
+                return (
+                  <TableRow key={service.id}>
+                    <TableCell className="font-medium">{service.name}</TableCell>
+                    <TableCell>{service.price} د.م</TableCell>
+                    <TableCell>
+                      {isEditing ? (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            className="w-20 h-8"
+                          />
+                          <span>%</span>
+                        </div>
+                      ) : (
+                        <span>{commissionPercent}%</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-green-600">
+                      {staffAmount} د.م
+                    </TableCell>
+                    <TableCell className="text-primary">
+                      {salonAmount} د.م
+                    </TableCell>
+                    <TableCell>
+                      {isEditing ? (
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => saveCommission(service.id)}
+                            disabled={updateCommissionMutation.isPending}
+                          >
+                            <Check className="h-4 w-4 text-green-600" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={cancelEditing}
+                          >
+                            <X className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => startEditing(service)}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>
