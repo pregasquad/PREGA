@@ -154,7 +154,8 @@ export async function notifySalonOwner(message: string): Promise<NotificationRes
   if (!ownerPhone) {
     return { success: false, error: "Owner phone not configured" };
   }
-  return sendWhatsApp(ownerPhone, message);
+  const formattedPhone = formatPhoneNumber(ownerPhone);
+  return sendWhatsApp(formattedPhone, message);
 }
 
 export async function sendClientConfirmation(
