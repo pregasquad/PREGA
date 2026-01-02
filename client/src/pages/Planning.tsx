@@ -385,7 +385,7 @@ export default function Planning() {
 
                   {/* Appointments */}
                   {appointments
-                    .filter(app => app.staff === s.name)
+                    .filter(app => app.staff?.toLowerCase() === s.name?.toLowerCase())
                     .map(app => {
                       const [h, m] = app.startTime.split(':').map(Number);
                       const startMinutes = h * 60 + m;
@@ -393,7 +393,7 @@ export default function Planning() {
                       const top = offsetMinutes * PIXELS_PER_MINUTE;
                       const height = app.duration * PIXELS_PER_MINUTE;
 
-                      const staffColor = staffList.find(st => st.name === s.name)?.color || "var(--primary)";
+                      const staffColor = staffList.find(st => st.name?.toLowerCase() === s.name?.toLowerCase())?.color || "var(--primary)";
 
                       return (
                         <div
