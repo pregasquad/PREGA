@@ -115,3 +115,10 @@ Preferred communication style: Simple, everyday language.
   - SMS: https://api.ycloud.com/v2/sms
   - WhatsApp: https://api.ycloud.com/v2/whatsapp/messages
 - **WhatsApp Template**: Must be pre-approved in YCloud. Template should have 4 body parameters: client name, service, date, time
+
+### Twilio WhatsApp Integration
+- **Provider**: Twilio (managed via Replit integration)
+- **Implementation**: `server/notifications.ts`
+- **Setup**: Configured via Replit's Twilio connector (no manual secrets needed)
+- **Behavior**: WhatsApp via Twilio is tried first, falls back to YCloud SMS if Twilio fails
+- **Phone Format**: Supports Moroccan numbers (06XXXXXXXX) - auto-converts to +212 format

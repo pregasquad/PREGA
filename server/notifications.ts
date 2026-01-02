@@ -1,5 +1,6 @@
+import twilio from 'twilio';
+
 const YCLOUD_SMS_URL = "https://api.ycloud.com/v2/sms";
-const YCLOUD_WHATSAPP_URL = "https://api.ycloud.com/v2/whatsapp/messages";
 
 interface MessageResult {
   success: boolean;
@@ -15,12 +16,123 @@ interface WhatsAppTemplateParams {
   time: string;
 }
 
+let connectionSettings: any;
+
+async function getTwilioCredentials() {
+  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
+  const xReplitToken = process.env.REPL_IDENTITY 
+    ? 'repl ' + process.env.REPL_IDENTITY 
+    : process.env.WEB_REPL_RENEWAL 
+    ? 'depl ' + process.env.WEB_REPL_RENEWAL 
+    : null;
+
+  if (!xReplitToken) {
+    throw new Error('Replit token not found');
+  }
+
+  connectionSettings = await fetch(
+    'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=twilio',
+    {
+      headers: {
+        'Accept': 'application/json',
+        'X_REPLIT_TOKEN': xReplitToken
+      }
+    }
+  ).then(res => res.json()).then(data => data.items?.[0]);
+
+  if (!connectionSettings || (!connectionSettings.settings.account_sid || !connectionSettings.settings.api_key || !connectionSettings.settings.api_key_secret)) {
+    throw new Error('Twilio not connected');
+  }
+  return {
+    accountSid: connectionSettings.settings.account_sid,
+    apiKey: connectionSettings.settings.api_key,
+    apiKeySecret: connectionSettings.settings.api_key_secret,
+    phoneNumber: connectionSettings.settings.phone_number
+  };
+}
+
+async function getTwilioClient() {
+  const { accountSid, apiKey, apiKeySecret } = await getTwilioCredentials();
+  return twilio(apiKey, apiKeySecret, {
+    accountSid: accountSid
+  });
+}
+
+async function getTwilioFromPhoneNumber() {
+  const { phoneNumber } = await getTwilioCredentials();
+  return phoneNumber;
+}
+
+export async function sendWhatsAppTwilio(
+  to: string, 
+  message: string
+): Promise<MessageResult> {
+  try {
+    const client = await getTwilioClient();
+    const fromNumber = await getTwilioFromPhoneNumber();
+    
+    if (!fromNumber) {
+      console.log("Twilio phone number not configured");
+      return { success: false, error: "Twilio phone number not configured", channel: "whatsapp" };
+    }
+
+    const formattedPhone = formatPhoneNumber(to);
+    if (!formattedPhone) {
+      return { success: false, error: "Invalid phone number format", channel: "whatsapp" };
+    }
+
+    const result = await client.messages.create({
+      from: `whatsapp:${fromNumber}`,
+      to: `whatsapp:${formattedPhone}`,
+      body: message,
+    });
+
+    console.log("WhatsApp sent successfully via Twilio:", result.sid);
+    return { success: true, messageId: result.sid, channel: "whatsapp" };
+  } catch (error: any) {
+    console.error("Failed to send WhatsApp via Twilio:", error.message);
+    return { success: false, error: error.message, channel: "whatsapp" };
+  }
+}
+
+export async function sendSMSTwilio(
+  to: string, 
+  message: string
+): Promise<MessageResult> {
+  try {
+    const client = await getTwilioClient();
+    const fromNumber = await getTwilioFromPhoneNumber();
+    
+    if (!fromNumber) {
+      console.log("Twilio phone number not configured");
+      return { success: false, error: "Twilio phone number not configured", channel: "sms" };
+    }
+
+    const formattedPhone = formatPhoneNumber(to);
+    if (!formattedPhone) {
+      return { success: false, error: "Invalid phone number format", channel: "sms" };
+    }
+
+    const result = await client.messages.create({
+      from: fromNumber,
+      to: formattedPhone,
+      body: message,
+    });
+
+    console.log("SMS sent successfully via Twilio:", result.sid);
+    return { success: true, messageId: result.sid, channel: "sms" };
+  } catch (error: any) {
+    console.error("Failed to send SMS via Twilio:", error.message);
+    return { success: false, error: error.message, channel: "sms" };
+  }
+}
+
 export async function sendSMS(to: string, text: string): Promise<MessageResult> {
   const apiKey = process.env.YCLOUD_API_KEY;
   
   if (!apiKey) {
-    console.log("YCloud API key not configured - SMS not sent");
-    return { success: false, error: "API key not configured", channel: "sms" };
+    console.log("YCloud API key not configured - trying Twilio SMS");
+    return sendSMSTwilio(to, text);
   }
 
   if (!to || !text) {
@@ -64,103 +176,24 @@ export async function sendSMS(to: string, text: string): Promise<MessageResult> 
   }
 }
 
-export async function sendWhatsAppTemplate(
-  to: string, 
-  params: WhatsAppTemplateParams
-): Promise<MessageResult> {
-  const apiKey = process.env.YCLOUD_API_KEY;
-  const whatsappFrom = process.env.YCLOUD_WHATSAPP_NUMBER;
-  const templateName = process.env.YCLOUD_WHATSAPP_TEMPLATE || "booking_confirmation";
-  const templateLang = process.env.YCLOUD_WHATSAPP_TEMPLATE_LANG || "ar";
-  
-  if (!apiKey) {
-    console.log("YCloud API key not configured - WhatsApp not sent");
-    return { success: false, error: "API key not configured", channel: "whatsapp" };
-  }
-
-  if (!whatsappFrom) {
-    console.log("WhatsApp business number not configured");
-    return { success: false, error: "WhatsApp business number not configured", channel: "whatsapp" };
-  }
-
-  if (!to) {
-    return { success: false, error: "Missing phone number", channel: "whatsapp" };
-  }
-
-  const formattedPhone = formatPhoneNumber(to);
-  if (!formattedPhone) {
-    return { success: false, error: "Invalid phone number format", channel: "whatsapp" };
-  }
-
-  try {
-    const response = await fetch(YCLOUD_WHATSAPP_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-API-Key": apiKey,
-      },
-      body: JSON.stringify({
-        from: whatsappFrom,
-        to: formattedPhone,
-        type: "template",
-        template: {
-          name: templateName,
-          language: {
-            code: templateLang,
-          },
-          components: [
-            {
-              type: "body",
-              parameters: [
-                { type: "text", text: params.clientName },
-                { type: "text", text: params.serviceName },
-                { type: "text", text: params.date },
-                { type: "text", text: params.time },
-              ],
-            },
-          ],
-        },
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error("YCloud WhatsApp error:", errorData);
-      return { 
-        success: false, 
-        error: errorData.error?.message || `HTTP ${response.status}`,
-        channel: "whatsapp"
-      };
-    }
-
-    const data = await response.json();
-    console.log("WhatsApp template sent successfully:", data.id);
-    return { success: true, messageId: data.id, channel: "whatsapp" };
-  } catch (error) {
-    console.error("Failed to send WhatsApp:", error);
-    return { success: false, error: String(error), channel: "whatsapp" };
-  }
-}
-
 export async function sendBookingNotification(
   to: string, 
   params: WhatsAppTemplateParams
 ): Promise<MessageResult> {
-  if (process.env.YCLOUD_WHATSAPP_NUMBER) {
-    const whatsappResult = await sendWhatsAppTemplate(to, params);
-    if (whatsappResult.success) {
-      return whatsappResult;
-    }
-    console.log("WhatsApp failed, falling back to SMS:", whatsappResult.error);
-  }
-  
-  const smsMessage = createBookingConfirmationMessage(
+  const message = createBookingConfirmationMessage(
     params.clientName,
     params.serviceName,
     params.date,
     params.time
   );
-  return sendSMS(to, smsMessage);
+
+  const whatsappResult = await sendWhatsAppTwilio(to, message);
+  if (whatsappResult.success) {
+    return whatsappResult;
+  }
+  console.log("WhatsApp failed, falling back to SMS:", whatsappResult.error);
+  
+  return sendSMS(to, message);
 }
 
 function formatPhoneNumber(phone: string): string | null {
