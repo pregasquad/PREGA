@@ -1,0 +1,120 @@
+{
+  "common": {
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "add": "Ajouter",
+    "search": "Rechercher",
+    "loading": "Chargement...",
+    "noData": "Aucune donnée",
+    "confirm": "Confirmer",
+    "back": "Retour",
+    "next": "Suivant",
+    "submit": "Soumettre",
+    "close": "Fermer"
+  },
+  "nav": {
+    "home": "Accueil",
+    "appointments": "Rendez-vous",
+    "clients": "Clients",
+    "services": "Services",
+    "staff": "Personnel",
+    "inventory": "Inventaire",
+    "expenses": "Dépenses",
+    "reports": "Rapports",
+    "settings": "Paramètres",
+    "logout": "Déconnexion",
+    "performance": "Performance du personnel"
+  },
+  "home": {
+    "title": "Tableau de bord",
+    "todayAppointments": "Rendez-vous du jour",
+    "totalClients": "Total clients",
+    "totalServices": "Services",
+    "totalStaff": "Personnel",
+    "lowStockAlert": "Alerte stock faible",
+    "noAppointments": "Aucun rendez-vous prévu aujourd'hui"
+  },
+  "appointments": {
+    "title": "Rendez-vous",
+    "newAppointment": "Nouveau rendez-vous",
+    "client": "Client",
+    "service": "Service",
+    "staff": "Personnel",
+    "date": "Date",
+    "time": "Heure",
+    "duration": "Durée",
+    "price": "Prix",
+    "status": "Statut",
+    "notes": "Notes",
+    "pending": "En attente",
+    "confirmed": "Confirmé",
+    "completed": "Terminé",
+    "cancelled": "Annulé"
+  },
+  "clients": {
+    "title": "Clients",
+    "newClient": "Nouveau client",
+    "name": "Nom",
+    "phone": "Téléphone",
+    "email": "Email",
+    "birthday": "Date de naissance",
+    "loyaltyPoints": "Points de fidélité",
+    "totalVisits": "Visites totales",
+    "totalSpent": "Total dépensé",
+    "referredBy": "Référé par",
+    "notes": "Notes"
+  },
+  "services": {
+    "title": "Services",
+    "newService": "Nouveau service",
+    "name": "Nom du service",
+    "category": "Catégorie",
+    "price": "Prix",
+    "duration": "Durée (minutes)",
+    "commission": "Commission"
+  },
+  "staff": {
+    "title": "Personnel",
+    "newStaff": "Nouveau membre",
+    "name": "Nom",
+    "color": "Couleur",
+    "performance": "Performance"
+  },
+  "inventory": {
+    "title": "Inventaire",
+    "newProduct": "Nouveau produit",
+    "name": "Nom du produit",
+    "quantity": "Quantité",
+    "lowStockThreshold": "Seuil de stock faible",
+    "price": "Prix",
+    "lowStock": "Stock faible"
+  },
+  "expenses": {
+    "title": "Dépenses",
+    "newExpense": "Nouvelle dépense",
+    "type": "Type",
+    "name": "Nom",
+    "amount": "Montant",
+    "date": "Date",
+    "total": "Total des dépenses"
+  },
+  "booking": {
+    "title": "Réserver un rendez-vous",
+    "subtitle": "Réservez votre rendez-vous maintenant",
+    "selectService": "Choisir le service",
+    "selectStaff": "Choisir le personnel",
+    "selectDate": "Choisir la date",
+    "selectTime": "Choisir l'heure",
+    "yourInfo": "Vos informations",
+    "bookNow": "Réserver maintenant",
+    "success": "Réservation réussie!",
+    "successMessage": "Nous vous contacterons pour confirmer le rendez-vous"
+  },
+  "language": {
+    "ar": "العربية",
+    "fr": "Français",
+    "en": "English"
+  }
+}

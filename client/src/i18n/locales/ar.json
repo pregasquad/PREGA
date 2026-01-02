@@ -1,0 +1,120 @@
+{
+  "common": {
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "add": "إضافة",
+    "search": "بحث",
+    "loading": "جاري التحميل...",
+    "noData": "لا توجد بيانات",
+    "confirm": "تأكيد",
+    "back": "رجوع",
+    "next": "التالي",
+    "submit": "إرسال",
+    "close": "إغلاق"
+  },
+  "nav": {
+    "home": "الرئيسية",
+    "appointments": "المواعيد",
+    "clients": "العملاء",
+    "services": "الخدمات",
+    "staff": "الموظفين",
+    "inventory": "المخزون",
+    "expenses": "المصاريف",
+    "reports": "التقارير",
+    "settings": "الإعدادات",
+    "logout": "تسجيل الخروج",
+    "performance": "أداء الموظفين"
+  },
+  "home": {
+    "title": "لوحة التحكم",
+    "todayAppointments": "مواعيد اليوم",
+    "totalClients": "إجمالي العملاء",
+    "totalServices": "الخدمات",
+    "totalStaff": "الموظفون",
+    "lowStockAlert": "تنبيه المخزون المنخفض",
+    "noAppointments": "لا توجد مواعيد مجدولة لليوم"
+  },
+  "appointments": {
+    "title": "المواعيد",
+    "newAppointment": "موعد جديد",
+    "client": "العميل",
+    "service": "الخدمة",
+    "staff": "الموظف",
+    "date": "التاريخ",
+    "time": "الوقت",
+    "duration": "المدة",
+    "price": "السعر",
+    "status": "الحالة",
+    "notes": "ملاحظات",
+    "pending": "قيد الانتظار",
+    "confirmed": "مؤكد",
+    "completed": "مكتمل",
+    "cancelled": "ملغي"
+  },
+  "clients": {
+    "title": "العملاء",
+    "newClient": "عميل جديد",
+    "name": "الاسم",
+    "phone": "الهاتف",
+    "email": "البريد الإلكتروني",
+    "birthday": "تاريخ الميلاد",
+    "loyaltyPoints": "نقاط الولاء",
+    "totalVisits": "إجمالي الزيارات",
+    "totalSpent": "إجمالي المصروف",
+    "referredBy": "تمت الإحالة بواسطة",
+    "notes": "ملاحظات"
+  },
+  "services": {
+    "title": "الخدمات",
+    "newService": "خدمة جديدة",
+    "name": "اسم الخدمة",
+    "category": "الفئة",
+    "price": "السعر",
+    "duration": "المدة (دقيقة)",
+    "commission": "نسبة العمولة"
+  },
+  "staff": {
+    "title": "الموظفين",
+    "newStaff": "موظف جديد",
+    "name": "الاسم",
+    "color": "اللون",
+    "performance": "الأداء"
+  },
+  "inventory": {
+    "title": "المخزون",
+    "newProduct": "منتج جديد",
+    "name": "اسم المنتج",
+    "quantity": "الكمية",
+    "lowStockThreshold": "حد المخزون المنخفض",
+    "price": "السعر",
+    "lowStock": "مخزون منخفض"
+  },
+  "expenses": {
+    "title": "المصاريف",
+    "newExpense": "مصروف جديد",
+    "type": "النوع",
+    "name": "الاسم",
+    "amount": "المبلغ",
+    "date": "التاريخ",
+    "total": "إجمالي المصاريف"
+  },
+  "booking": {
+    "title": "حجز موعد",
+    "subtitle": "احجز موعدك الآن",
+    "selectService": "اختر الخدمة",
+    "selectStaff": "اختر الموظف",
+    "selectDate": "اختر التاريخ",
+    "selectTime": "اختر الوقت",
+    "yourInfo": "معلوماتك",
+    "bookNow": "احجز الآن",
+    "success": "تم الحجز بنجاح!",
+    "successMessage": "سيتم التواصل معك لتأكيد الموعد"
+  },
+  "language": {
+    "ar": "العربية",
+    "fr": "Français",
+    "en": "English"
+  }
+}

@@ -1,5 +1,6 @@
 import { Sidebar } from "./Sidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const style = {
@@ -15,7 +16,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <header className="flex h-16 items-center justify-between px-4 border-b bg-card shrink-0">
             <SidebarTrigger />
             <div className="flex items-center gap-2">
-              {/* Theme toggle could be added here if needed */}
+              <LanguageSwitcher />
             </div>
           </header>
           <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-24 md:pb-6">

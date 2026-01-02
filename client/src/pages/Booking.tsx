@@ -10,10 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
-import { ar } from "date-fns/locale";
+import { ar, fr, enUS } from "date-fns/locale";
 import { Clock, CheckCircle2, Scissors, User, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 const bookingSchema = z.object({
   client: z.string().min(1, "الاسم مطلوب"),
@@ -36,12 +38,23 @@ const TIME_SLOTS = [
 ];
 
 export default function Booking() {
+  const { t, i18n } = useTranslation();
   const [date, setDate] = useState<Date>();
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [isSuccess, setIsSuccess] = useState(false);
   
   const { data: staffList = [] } = useStaff();
   const { data: services = [] } = useServices();
+
+  const getDateLocale = () => {
+    switch (i18n.language) {
+      case "fr": return fr;
+      case "en": return enUS;
+      default: return ar;
+    }
+  };
+
+  const isRTL = i18n.language === "ar";
   const formattedDate = date ? format(date, "yyyy-MM-dd") : "";
   const { data: appointments = [] } = useAppointments(formattedDate);
   const createMutation = useCreateAppointment();
@@ -168,13 +181,16 @@ export default function Booking() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-primary/10 p-4 md:p-6" dir="rtl">
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-primary/10 p-4 md:p-6" dir={isRTL ? "rtl" : "ltr"}>
       <div className="max-w-4xl mx-auto space-y-6">
+        <div className="flex justify-end mb-4">
+          <LanguageSwitcher />
+        </div>
         <div className="text-center space-y-2">
           <h1 className="text-3xl md:text-4xl font-display font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-            احجز موعدك
+            {t("booking.title")}
           </h1>
-          <p className="text-muted-foreground">اختر الخدمة والوقت المناسب لك</p>
+          <p className="text-muted-foreground">{t("booking.subtitle")}</p>
         </div>
 
         <Card className="shadow-xl border-0">

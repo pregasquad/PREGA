@@ -1,0 +1,120 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "search": "Search",
+    "loading": "Loading...",
+    "noData": "No data",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "submit": "Submit",
+    "close": "Close"
+  },
+  "nav": {
+    "home": "Home",
+    "appointments": "Appointments",
+    "clients": "Clients",
+    "services": "Services",
+    "staff": "Staff",
+    "inventory": "Inventory",
+    "expenses": "Expenses",
+    "reports": "Reports",
+    "settings": "Settings",
+    "logout": "Logout",
+    "performance": "Staff Performance"
+  },
+  "home": {
+    "title": "Dashboard",
+    "todayAppointments": "Today's Appointments",
+    "totalClients": "Total Clients",
+    "totalServices": "Services",
+    "totalStaff": "Staff",
+    "lowStockAlert": "Low Stock Alert",
+    "noAppointments": "No appointments scheduled for today"
+  },
+  "appointments": {
+    "title": "Appointments",
+    "newAppointment": "New Appointment",
+    "client": "Client",
+    "service": "Service",
+    "staff": "Staff",
+    "date": "Date",
+    "time": "Time",
+    "duration": "Duration",
+    "price": "Price",
+    "status": "Status",
+    "notes": "Notes",
+    "pending": "Pending",
+    "confirmed": "Confirmed",
+    "completed": "Completed",
+    "cancelled": "Cancelled"
+  },
+  "clients": {
+    "title": "Clients",
+    "newClient": "New Client",
+    "name": "Name",
+    "phone": "Phone",
+    "email": "Email",
+    "birthday": "Birthday",
+    "loyaltyPoints": "Loyalty Points",
+    "totalVisits": "Total Visits",
+    "totalSpent": "Total Spent",
+    "referredBy": "Referred By",
+    "notes": "Notes"
+  },
+  "services": {
+    "title": "Services",
+    "newService": "New Service",
+    "name": "Service Name",
+    "category": "Category",
+    "price": "Price",
+    "duration": "Duration (minutes)",
+    "commission": "Commission"
+  },
+  "staff": {
+    "title": "Staff",
+    "newStaff": "New Staff Member",
+    "name": "Name",
+    "color": "Color",
+    "performance": "Performance"
+  },
+  "inventory": {
+    "title": "Inventory",
+    "newProduct": "New Product",
+    "name": "Product Name",
+    "quantity": "Quantity",
+    "lowStockThreshold": "Low Stock Threshold",
+    "price": "Price",
+    "lowStock": "Low Stock"
+  },
+  "expenses": {
+    "title": "Expenses",
+    "newExpense": "New Expense",
+    "type": "Type",
+    "name": "Name",
+    "amount": "Amount",
+    "date": "Date",
+    "total": "Total Expenses"
+  },
+  "booking": {
+    "title": "Book an Appointment",
+    "subtitle": "Book your appointment now",
+    "selectService": "Select Service",
+    "selectStaff": "Select Staff",
+    "selectDate": "Select Date",
+    "selectTime": "Select Time",
+    "yourInfo": "Your Information",
+    "bookNow": "Book Now",
+    "success": "Booking Successful!",
+    "successMessage": "We will contact you to confirm your appointment"
+  },
+  "language": {
+    "ar": "العربية",
+    "fr": "Français",
+    "en": "English"
+  }
+}
