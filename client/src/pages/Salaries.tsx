@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -6,21 +6,47 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { DollarSign, Users, CalendarIcon, TrendingUp, Building2, Edit2, Check, X } from "lucide-react";
-import { useState } from "react";
+import { DollarSign, Users, CalendarIcon, TrendingUp, Building2, Edit2, Check, X, RefreshCw } from "lucide-react";
+import { useState, useEffect } from "react";
+import { io, Socket } from "socket.io-client";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isWithinInterval, parseISO } from "date-fns";
 import { ar } from "date-fns/locale";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/queryClient";
 import type { Staff, Service, Appointment } from "@shared/schema";
 
 type PeriodType = "day" | "week" | "month" | "custom";
 
 export default function Salaries() {
+  const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [period, setPeriod] = useState<PeriodType>("month");
   const [selectedStaff, setSelectedStaff] = useState<string>("all");
   const [editingServiceId, setEditingServiceId] = useState<number | null>(null);
   const [editValue, setEditValue] = useState<string>("");
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+
+  useEffect(() => {
+    const socket: Socket = io();
+
+    socket.on("booking:created", () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments/all"] });
+      setLastUpdate(new Date());
+    });
+
+    socket.on("appointment:updated", () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments/all"] });
+      setLastUpdate(new Date());
+    });
+
+    socket.on("appointment:paid", () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments/all"] });
+      setLastUpdate(new Date());
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [queryClient]);
 
   const { data: staff = [] } = useQuery<Staff[]>({
     queryKey: ["/api/staff"],
@@ -30,13 +56,14 @@ export default function Salaries() {
     queryKey: ["/api/services"],
   });
 
-  const { data: appointments = [] } = useQuery<Appointment[]>({
+  const { data: appointments = [], refetch: refetchAppointments } = useQuery<Appointment[]>({
     queryKey: ["/api/appointments/all"],
     queryFn: async () => {
       const res = await fetch("/api/appointments/all");
       if (!res.ok) return [];
       return res.json();
     },
+    refetchInterval: 30000,
   });
 
   const updateCommissionMutation = useMutation({
@@ -143,9 +170,27 @@ export default function Salaries() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto" dir="rtl">
-      <div>
-        <h1 className="text-3xl font-display font-bold">الرواتب والعمولات</h1>
-        <p className="text-muted-foreground">حساب أرباح الموظفين بناءً على الخدمات المقدمة</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-display font-bold">الرواتب والعمولات</h1>
+          <p className="text-muted-foreground">حساب أرباح الموظفين بناءً على الخدمات المقدمة</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-muted-foreground">
+            آخر تحديث: {format(lastUpdate, "HH:mm:ss", { locale: ar })}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              refetchAppointments();
+              setLastUpdate(new Date());
+            }}
+          >
+            <RefreshCw className="h-4 w-4 ml-2" />
+            تحديث
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-4 items-center">

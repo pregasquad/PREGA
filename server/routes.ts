@@ -67,6 +67,12 @@ export async function registerRoutes(
     try {
       const input = api.appointments.update.input.parse(req.body);
       const item = await storage.updateAppointment(Number(req.params.id), input);
+      
+      io.emit("appointment:updated", item);
+      if (item.paid) {
+        io.emit("appointment:paid", item);
+      }
+      
       res.json(item);
     } catch (err) {
       if (err instanceof z.ZodError) {
