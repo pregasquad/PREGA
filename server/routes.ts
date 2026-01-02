@@ -5,7 +5,7 @@ import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
-import { sendSMS, sendWhatsApp, formatAppointmentReminder, formatAppointmentConfirmation, isTwilioConfigured } from "./twilio";
+import { sendSMS, sendWhatsApp, formatAppointmentReminder, formatAppointmentConfirmation, formatNewBookingNotification, notifySalonOwner, sendClientConfirmation, isTwilioConfigured } from "./twilio";
 
 let io: SocketIOServer;
 
@@ -59,6 +59,37 @@ export async function registerRoutes(
       // Emit real-time notification for new booking (only unpaid reservations)
       if (!item.paid) {
         io.emit("booking:created", item);
+      }
+
+      // Extract phone number from client name if provided (format: "Name (phone)")
+      const phoneMatch = item.client.match(/\(([^)]+)\)/);
+      const clientPhone = phoneMatch ? phoneMatch[1] : null;
+      const clientName = item.client.replace(/\s*\([^)]+\)/, "").trim();
+
+      // Send notifications in background (don't block response)
+      if (isTwilioConfigured()) {
+        // Notify salon owner about new booking
+        const ownerMessage = formatNewBookingNotification(
+          clientName,
+          clientPhone || "غير متوفر",
+          item.service,
+          item.date,
+          item.startTime,
+          item.total
+        );
+        notifySalonOwner(ownerMessage).catch(err => console.error("Failed to notify owner:", err));
+
+        // Send confirmation to client if phone provided
+        if (clientPhone) {
+          sendClientConfirmation(
+            clientPhone,
+            clientName,
+            item.service,
+            item.date,
+            item.startTime,
+            item.total
+          ).catch(err => console.error("Failed to send client confirmation:", err));
+        }
       }
       
       res.status(201).json(item);

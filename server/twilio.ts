@@ -106,3 +106,44 @@ export function formatAppointmentConfirmation(
 export function isTwilioConfigured(): boolean {
   return !!(client && twilioPhone);
 }
+
+export function formatNewBookingNotification(
+  clientName: string,
+  clientPhone: string,
+  serviceName: string,
+  date: string,
+  time: string,
+  total: number
+): string {
+  return `حجز جديد! 🔔
+
+👤 العميل: ${clientName}
+📱 الهاتف: ${clientPhone}
+💇 الخدمة: ${serviceName}
+📅 التاريخ: ${date}
+⏰ الوقت: ${time}
+💰 السعر: ${total} DH`;
+}
+
+export async function notifySalonOwner(message: string): Promise<NotificationResult> {
+  const ownerPhone = process.env.SALON_OWNER_PHONE;
+  if (!ownerPhone) {
+    return { success: false, error: "Owner phone not configured" };
+  }
+  return sendWhatsApp(ownerPhone, message);
+}
+
+export async function sendClientConfirmation(
+  clientPhone: string,
+  clientName: string,
+  serviceName: string,
+  date: string,
+  time: string,
+  total: number
+): Promise<NotificationResult> {
+  if (!clientPhone) {
+    return { success: false, error: "No client phone provided" };
+  }
+  const message = formatAppointmentConfirmation(clientName, serviceName, date, time, total);
+  return sendWhatsApp(clientPhone, message);
+}
