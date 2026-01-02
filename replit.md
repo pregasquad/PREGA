@@ -97,9 +97,12 @@ Preferred communication style: Simple, everyday language.
 - Added low stock inventory alerts on dashboard
 - Expense categories now loaded from database API
 
-## Pending Features
+## SMS Notifications
 
-### SMS/WhatsApp Notifications
-- Requires Twilio integration to send appointment reminders
-- When ready, use Replit's Twilio integration or provide TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER secrets
-- Implementation location: Create `server/notifications.ts` for SMS sending logic
+### YCloud SMS Integration
+- **Provider**: YCloud (https://www.ycloud.com/)
+- **API Endpoint**: https://api.ycloud.com/v2/sms
+- **Implementation**: `server/notifications.ts`
+- **Secret Required**: `YCLOUD_API_KEY` - Get from YCloud dashboard
+- **Trigger**: SMS confirmation sent automatically when booking includes phone number
+- **Phone Format**: Supports Moroccan numbers (06XXXXXXXX) - auto-converts to +212 format
