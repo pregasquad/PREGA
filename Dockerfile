@@ -12,11 +12,12 @@ COPY . .
 
 RUN npm run build
 
-RUN npm prune --production
-
 EXPOSE 5000
 
 ENV NODE_ENV=production
 ENV PORT=5000
 
-CMD ["node", "dist/index.cjs"]
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
+CMD ["/docker-entrypoint.sh"]
