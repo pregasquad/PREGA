@@ -12,6 +12,7 @@ import Services from "@/pages/Services";
 import Reports from "@/pages/Reports";
 import Inventory from "@/pages/Inventory";
 import Charges from "@/pages/Charges";
+import Salaries from "@/pages/Salaries";
 import Booking from "@/pages/Booking";
 import NotFound from "@/pages/not-found";
 
@@ -55,6 +56,10 @@ function Router() {
 
       <Route path="/charges">
         <PageRoute component={Charges} />
+      </Route>
+
+      <Route path="/salaries">
+        <PageRoute component={Salaries} requireAdmin />
       </Route>
 
       <Route path="/booking" component={Booking} />

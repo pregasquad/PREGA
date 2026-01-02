@@ -21,6 +21,7 @@ const serviceFormSchema = insertServiceSchema.extend({
   price: z.coerce.number(),
   duration: z.coerce.number(),
   linkedProductId: z.coerce.number().optional().nullable(),
+  commissionPercent: z.coerce.number().min(0).max(100).default(50),
 });
 
 export default function Services() {
@@ -70,7 +71,7 @@ export default function Services() {
 
   const sForm = useForm({
     resolver: zodResolver(serviceFormSchema),
-    defaultValues: { name: "", price: 0, duration: 30, category: "", linkedProductId: null }
+    defaultValues: { name: "", price: 0, duration: 30, category: "", linkedProductId: null, commissionPercent: 50 }
   });
 
   const cForm = useForm({
@@ -150,7 +151,7 @@ export default function Services() {
                       </FormItem>
                     )}
                   />
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-3 gap-4">
                     <FormField
                       control={sForm.control}
                       name="price"
@@ -168,6 +169,16 @@ export default function Services() {
                         <FormItem>
                           <FormLabel>المدة</FormLabel>
                           <FormControl><Input type="number" {...field} /></FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={sForm.control}
+                      name="commissionPercent"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>العمولة %</FormLabel>
+                          <FormControl><Input type="number" min={0} max={100} {...field} /></FormControl>
                         </FormItem>
                       )}
                     />
@@ -256,7 +267,7 @@ export default function Services() {
                         <div key={service.id} className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border border-border group">
                           <div>
                             <h4 className="font-semibold">{service.name}</h4>
-                            <p className="text-sm text-muted-foreground">{service.duration} دقيقة • {service.price} DH</p>
+                            <p className="text-sm text-muted-foreground">{service.duration} دقيقة • {service.price} DH • عمولة {service.commissionPercent ?? 50}%</p>
                             {service.linkedProductId && (
                               <p className="text-xs text-primary flex items-center gap-1 mt-1">
                                 <Package className="w-3 h-3" />

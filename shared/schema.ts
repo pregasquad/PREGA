@@ -55,6 +55,7 @@ export const services = pgTable("services", {
   duration: integer("duration").notNull(),
   category: text("category").notNull(),
   linkedProductId: integer("linked_product_id").references(() => products.id),
+  commissionPercent: integer("commission_percent").notNull().default(50),
 });
 
 export const categories = pgTable("categories", {

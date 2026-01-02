@@ -15,7 +15,8 @@ import {
   ShieldCheck,
   Bell,
   Clock,
-  User
+  User,
+  DollarSign
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,7 @@ const NAV_ITEMS = [
   { label: "الخدمات", href: "/services", icon: Scissors },
   { label: "المخزون", href: "/inventory", icon: Package },
   { label: "المصاريف", href: "/charges", icon: Wallet },
+  { label: "الرواتب", href: "/salaries", icon: DollarSign },
   { label: "التقارير", href: "/reports", icon: BarChart3 },
   { label: "صفحة الحجز", href: "/booking", icon: ExternalLink, external: true },
 ];
