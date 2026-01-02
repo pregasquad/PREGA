@@ -244,6 +244,26 @@ export async function registerRoutes(
     res.status(204).send();
   });
 
+  // Staff Deductions
+  app.get("/api/staff-deductions", async (_req, res) => {
+    const items = await storage.getStaffDeductions();
+    res.json(items);
+  });
+
+  app.post("/api/staff-deductions", async (req, res) => {
+    try {
+      const item = await storage.createStaffDeduction(req.body);
+      res.status(201).json(item);
+    } catch (err) {
+      res.status(400).json({ message: "Failed to create deduction" });
+    }
+  });
+
+  app.delete("/api/staff-deductions/:id", async (req, res) => {
+    await storage.deleteStaffDeduction(Number(req.params.id));
+    res.status(204).send();
+  });
+
   // Seed data if empty
   await seedDatabase();
 

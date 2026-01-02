@@ -87,6 +87,26 @@ export const insertChargeSchema = createInsertSchema(charges).omit({ id: true, c
 export type Charge = typeof charges.$inferSelect;
 export type InsertCharge = z.infer<typeof insertChargeSchema>;
 
+export const staffDeductions = pgTable("staff_deductions", {
+  id: serial("id").primaryKey(),
+  staffName: text("staff_name").notNull(),
+  type: text("type").notNull(),
+  description: text("description").notNull(),
+  amount: integer("amount").notNull(),
+  date: text("date").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertStaffDeductionSchema = createInsertSchema(staffDeductions).omit({ id: true, createdAt: true }).extend({
+  staffName: z.string().min(1, "Staff name is required"),
+  type: z.enum(["advance", "loan", "penalty", "other"]),
+  description: z.string().min(1, "Description is required"),
+  amount: z.number().int().min(0, "Amount must be non-negative"),
+  date: z.string().min(1, "Date is required"),
+});
+export type StaffDeduction = typeof staffDeductions.$inferSelect;
+export type InsertStaffDeduction = z.infer<typeof insertStaffDeductionSchema>;
+
 export const insertAppointmentSchema = createInsertSchema(appointments).omit({ id: true });
 export const insertServiceSchema = createInsertSchema(services).omit({ id: true });
 export const insertCategorySchema = createInsertSchema(categories).omit({ id: true });

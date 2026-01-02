@@ -1,13 +1,14 @@
 import { db } from "./db";
 import {
-  appointments, services, categories, staff, products, clients, charges,
+  appointments, services, categories, staff, products, clients, charges, staffDeductions,
   type Appointment, type InsertAppointment,
   type Service, type InsertService,
   type Category, type InsertCategory,
   type Staff, type InsertStaff,
   type Product, type InsertProduct,
   type Client, type InsertClient,
-  type Charge, type InsertCharge
+  type Charge, type InsertCharge,
+  type StaffDeduction, type InsertStaffDeduction
 } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 import { authStorage, type IAuthStorage } from "./replit_integrations/auth/storage";
@@ -49,6 +50,10 @@ export interface IStorage extends IAuthStorage {
   getCharges(): Promise<Charge[]>;
   createCharge(charge: InsertCharge): Promise<Charge>;
   deleteCharge(id: number): Promise<void>;
+
+  getStaffDeductions(): Promise<StaffDeduction[]>;
+  createStaffDeduction(deduction: InsertStaffDeduction): Promise<StaffDeduction>;
+  deleteStaffDeduction(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -195,6 +200,19 @@ export class DatabaseStorage implements IStorage {
 
   async deleteCharge(id: number): Promise<void> {
     await db.delete(charges).where(eq(charges.id, id));
+  }
+
+  async getStaffDeductions(): Promise<StaffDeduction[]> {
+    return await db.select().from(staffDeductions).orderBy(desc(staffDeductions.createdAt));
+  }
+
+  async createStaffDeduction(deduction: InsertStaffDeduction): Promise<StaffDeduction> {
+    const [created] = await db.insert(staffDeductions).values(deduction).returning();
+    return created;
+  }
+
+  async deleteStaffDeduction(id: number): Promise<void> {
+    await db.delete(staffDeductions).where(eq(staffDeductions.id, id));
   }
 }
 

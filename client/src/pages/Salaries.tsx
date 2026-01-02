@@ -6,13 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { DollarSign, Users, CalendarIcon, TrendingUp, Building2, Edit2, Check, X, RefreshCw } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { DollarSign, Users, CalendarIcon, TrendingUp, Building2, Edit2, Check, X, RefreshCw, Plus, Trash2, Receipt, UserMinus } from "lucide-react";
 import { useState, useEffect } from "react";
 import { io, Socket } from "socket.io-client";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay, parseISO, isAfter, isBefore, isEqual } from "date-fns";
 import { ar } from "date-fns/locale";
 import { apiRequest } from "@/lib/queryClient";
-import type { Staff, Service, Appointment } from "@shared/schema";
+import type { Staff, Service, Appointment, Charge, StaffDeduction } from "@shared/schema";
 
 type PeriodType = "day" | "week" | "month" | "custom";
 
@@ -24,6 +26,10 @@ export default function Salaries() {
   const [editingServiceId, setEditingServiceId] = useState<number | null>(null);
   const [editValue, setEditValue] = useState<string>("");
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const [showChargeDialog, setShowChargeDialog] = useState(false);
+  const [showDeductionDialog, setShowDeductionDialog] = useState(false);
+  const [newCharge, setNewCharge] = useState({ type: "rent", name: "", amount: 0, date: format(new Date(), "yyyy-MM-dd") });
+  const [newDeduction, setNewDeduction] = useState<{ staffName: string; type: "advance" | "loan" | "penalty" | "other"; description: string; amount: number; date: string }>({ staffName: "", type: "advance", description: "", amount: 0, date: format(new Date(), "yyyy-MM-dd") });
 
   useEffect(() => {
     const socket: Socket = io();
@@ -64,6 +70,56 @@ export default function Salaries() {
       return res.json();
     },
     refetchInterval: 30000,
+  });
+
+  const { data: charges = [] } = useQuery<Charge[]>({
+    queryKey: ["/api/charges"],
+  });
+
+  const { data: deductions = [] } = useQuery<StaffDeduction[]>({
+    queryKey: ["/api/staff-deductions"],
+  });
+
+  const createChargeMutation = useMutation({
+    mutationFn: async (charge: typeof newCharge) => {
+      const res = await apiRequest("POST", "/api/charges", charge);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/charges"] });
+      setShowChargeDialog(false);
+      setNewCharge({ type: "rent", name: "", amount: 0, date: format(new Date(), "yyyy-MM-dd") });
+    },
+  });
+
+  const deleteChargeMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/charges/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/charges"] });
+    },
+  });
+
+  const createDeductionMutation = useMutation({
+    mutationFn: async (deduction: typeof newDeduction) => {
+      const res = await apiRequest("POST", "/api/staff-deductions", deduction);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff-deductions"] });
+      setShowDeductionDialog(false);
+      setNewDeduction({ staffName: "", type: "advance", description: "", amount: 0, date: format(new Date(), "yyyy-MM-dd") });
+    },
+  });
+
+  const deleteDeductionMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/staff-deductions/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff-deductions"] });
+    },
   });
 
   const updateCommissionMutation = useMutation({
@@ -463,6 +519,277 @@ export default function Salaries() {
                   </TableRow>
                 );
               })}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Expenses Section */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Receipt className="h-5 w-5" />
+            المصاريف والتكاليف
+          </CardTitle>
+          <Dialog open={showChargeDialog} onOpenChange={setShowChargeDialog}>
+            <DialogTrigger asChild>
+              <Button size="sm">
+                <Plus className="h-4 w-4 ml-2" />
+                إضافة مصروف
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>إضافة مصروف جديد</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label>نوع المصروف</Label>
+                  <Select value={newCharge.type} onValueChange={(v) => setNewCharge({ ...newCharge, type: v })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="rent">إيجار</SelectItem>
+                      <SelectItem value="utilities">مرافق (ماء/كهرباء)</SelectItem>
+                      <SelectItem value="products">منتجات</SelectItem>
+                      <SelectItem value="equipment">معدات</SelectItem>
+                      <SelectItem value="maintenance">صيانة</SelectItem>
+                      <SelectItem value="other">أخرى</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>الوصف</Label>
+                  <Input
+                    value={newCharge.name}
+                    onChange={(e) => setNewCharge({ ...newCharge, name: e.target.value })}
+                    placeholder="وصف المصروف"
+                  />
+                </div>
+                <div>
+                  <Label>المبلغ (د.م)</Label>
+                  <Input
+                    type="number"
+                    value={newCharge.amount || ""}
+                    onChange={(e) => setNewCharge({ ...newCharge, amount: parseInt(e.target.value) || 0 })}
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <Label>التاريخ</Label>
+                  <Input
+                    type="date"
+                    value={newCharge.date}
+                    onChange={(e) => setNewCharge({ ...newCharge, date: e.target.value })}
+                  />
+                </div>
+                <Button
+                  className="w-full"
+                  onClick={() => createChargeMutation.mutate(newCharge)}
+                  disabled={!newCharge.name || !newCharge.amount || createChargeMutation.isPending}
+                >
+                  حفظ
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-right">النوع</TableHead>
+                <TableHead className="text-right">الوصف</TableHead>
+                <TableHead className="text-right">المبلغ</TableHead>
+                <TableHead className="text-right">التاريخ</TableHead>
+                <TableHead className="text-right w-[60px]"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {charges.filter(c => {
+                const chargeDate = startOfDay(parseISO(c.date));
+                return (isAfter(chargeDate, startOfDay(start)) || isEqual(chargeDate, startOfDay(start))) &&
+                       (isBefore(chargeDate, endOfDay(end)) || isEqual(chargeDate, endOfDay(end)));
+              }).map((charge) => (
+                <TableRow key={charge.id}>
+                  <TableCell>
+                    {charge.type === "rent" && "إيجار"}
+                    {charge.type === "utilities" && "مرافق"}
+                    {charge.type === "products" && "منتجات"}
+                    {charge.type === "equipment" && "معدات"}
+                    {charge.type === "maintenance" && "صيانة"}
+                    {charge.type === "other" && "أخرى"}
+                  </TableCell>
+                  <TableCell>{charge.name}</TableCell>
+                  <TableCell className="text-red-600 font-semibold">{charge.amount.toLocaleString()} د.م</TableCell>
+                  <TableCell>{format(parseISO(charge.date), "d MMM yyyy", { locale: ar })}</TableCell>
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => deleteChargeMutation.mutate(charge.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {charges.filter(c => {
+                const chargeDate = startOfDay(parseISO(c.date));
+                return (isAfter(chargeDate, startOfDay(start)) || isEqual(chargeDate, startOfDay(start))) &&
+                       (isBefore(chargeDate, endOfDay(end)) || isEqual(chargeDate, endOfDay(end)));
+              }).length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                    لا توجد مصاريف للفترة المحددة
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Staff Deductions Section */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <UserMinus className="h-5 w-5" />
+            خصومات الموظفين
+          </CardTitle>
+          <Dialog open={showDeductionDialog} onOpenChange={setShowDeductionDialog}>
+            <DialogTrigger asChild>
+              <Button size="sm">
+                <Plus className="h-4 w-4 ml-2" />
+                إضافة خصم
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>إضافة خصم للموظف</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label>الموظف</Label>
+                  <Select value={newDeduction.staffName} onValueChange={(v) => setNewDeduction({ ...newDeduction, staffName: v })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر الموظف" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {staff.map((s) => (
+                        <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>نوع الخصم</Label>
+                  <Select value={newDeduction.type} onValueChange={(v) => setNewDeduction({ ...newDeduction, type: v as "advance" | "loan" | "penalty" | "other" })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="advance">سلفة</SelectItem>
+                      <SelectItem value="loan">قرض</SelectItem>
+                      <SelectItem value="penalty">غرامة</SelectItem>
+                      <SelectItem value="other">أخرى</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>الوصف</Label>
+                  <Input
+                    value={newDeduction.description}
+                    onChange={(e) => setNewDeduction({ ...newDeduction, description: e.target.value })}
+                    placeholder="وصف الخصم"
+                  />
+                </div>
+                <div>
+                  <Label>المبلغ (د.م)</Label>
+                  <Input
+                    type="number"
+                    value={newDeduction.amount || ""}
+                    onChange={(e) => setNewDeduction({ ...newDeduction, amount: parseInt(e.target.value) || 0 })}
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <Label>التاريخ</Label>
+                  <Input
+                    type="date"
+                    value={newDeduction.date}
+                    onChange={(e) => setNewDeduction({ ...newDeduction, date: e.target.value })}
+                  />
+                </div>
+                <Button
+                  className="w-full"
+                  onClick={() => createDeductionMutation.mutate(newDeduction)}
+                  disabled={!newDeduction.staffName || !newDeduction.description || !newDeduction.amount || createDeductionMutation.isPending}
+                >
+                  حفظ
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-right">الموظف</TableHead>
+                <TableHead className="text-right">النوع</TableHead>
+                <TableHead className="text-right">الوصف</TableHead>
+                <TableHead className="text-right">المبلغ</TableHead>
+                <TableHead className="text-right">التاريخ</TableHead>
+                <TableHead className="text-right w-[60px]"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {deductions.filter(d => {
+                const deductionDate = startOfDay(parseISO(d.date));
+                const staffMatch = selectedStaff === "all" || d.staffName === selectedStaff;
+                return staffMatch &&
+                       (isAfter(deductionDate, startOfDay(start)) || isEqual(deductionDate, startOfDay(start))) &&
+                       (isBefore(deductionDate, endOfDay(end)) || isEqual(deductionDate, endOfDay(end)));
+              }).map((deduction) => (
+                <TableRow key={deduction.id}>
+                  <TableCell className="font-medium">{deduction.staffName}</TableCell>
+                  <TableCell>
+                    {deduction.type === "advance" && "سلفة"}
+                    {deduction.type === "loan" && "قرض"}
+                    {deduction.type === "penalty" && "غرامة"}
+                    {deduction.type === "other" && "أخرى"}
+                  </TableCell>
+                  <TableCell>{deduction.description}</TableCell>
+                  <TableCell className="text-orange-600 font-semibold">{deduction.amount.toLocaleString()} د.م</TableCell>
+                  <TableCell>{format(parseISO(deduction.date), "d MMM yyyy", { locale: ar })}</TableCell>
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => deleteDeductionMutation.mutate(deduction.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {deductions.filter(d => {
+                const deductionDate = startOfDay(parseISO(d.date));
+                const staffMatch = selectedStaff === "all" || d.staffName === selectedStaff;
+                return staffMatch &&
+                       (isAfter(deductionDate, startOfDay(start)) || isEqual(deductionDate, startOfDay(start))) &&
+                       (isBefore(deductionDate, endOfDay(end)) || isEqual(deductionDate, endOfDay(end)));
+              }).length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                    لا توجد خصومات للفترة المحددة
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>
