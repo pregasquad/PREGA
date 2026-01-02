@@ -2,18 +2,17 @@
 set -e
 
 echo "=== Environment Check ==="
-if [ -z "$TIDB_HOST" ]; then
-    echo "ERROR: TIDB_HOST is not set!"
-    echo "Please add TIDB_HOST environment variable in Koyeb"
+if [ -z "$DATABASE_URL" ] && [ -z "$TIDB_HOST" ]; then
+    echo "ERROR: DATABASE_URL or TIDB_HOST is not set!"
+    echo "Please add DATABASE_URL environment variable in Koyeb"
     exit 1
 fi
-echo "TIDB_HOST is set: $TIDB_HOST"
 
-if [ -z "$TIDB_PASSWORD" ]; then
-    echo "ERROR: TIDB_PASSWORD is not set!"
-    exit 1
+if [ -n "$DATABASE_URL" ]; then
+    echo "DATABASE_URL is set (hidden for security)"
+else
+    echo "TIDB_HOST is set: $TIDB_HOST"
 fi
-echo "TIDB_PASSWORD is set (hidden for security)"
 
 if [ -z "$SESSION_SECRET" ]; then
     echo "WARNING: SESSION_SECRET not set, using default"
