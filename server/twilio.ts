@@ -22,41 +22,17 @@ function getSmsNumber(): string | null {
   return twilioPhone.replace(/^whatsapp:/, "");
 }
 
-function formatPhoneNumber(phone: string): string {
-  let cleaned = phone.replace(/\s+/g, "").replace(/^whatsapp:/, "");
-  
-  if (cleaned.startsWith("+")) {
-    return cleaned;
-  }
-  
-  if (cleaned.startsWith("00")) {
-    return "+" + cleaned.substring(2);
-  }
-  
-  if (cleaned.startsWith("0")) {
-    return "+212" + cleaned.substring(1);
-  }
-  
-  if (cleaned.startsWith("212")) {
-    return "+" + cleaned;
-  }
-  
-  return "+212" + cleaned;
-}
-
 export async function sendSMS(to: string, message: string): Promise<NotificationResult> {
   const smsFrom = getSmsNumber();
   if (!client || !smsFrom) {
     return { success: false, error: "Twilio SMS not configured" };
   }
 
-  const formattedTo = formatPhoneNumber(to);
-
   try {
     const result = await client.messages.create({
       body: message,
       from: smsFrom,
-      to: formattedTo,
+      to: to.replace(/^whatsapp:/, ""),
     });
     return { success: true, messageSid: result.sid };
   } catch (error: any) {
@@ -70,13 +46,13 @@ export async function sendWhatsApp(to: string, message: string): Promise<Notific
     return { success: false, error: "Twilio WhatsApp not configured" };
   }
 
-  const formattedTo = formatPhoneNumber(to);
-
   const whatsappFrom = twilioWhatsAppPhone.startsWith("whatsapp:") 
     ? twilioWhatsAppPhone 
     : `whatsapp:${twilioWhatsAppPhone}`;
   
-  const whatsappTo = `whatsapp:${formattedTo}`;
+  const whatsappTo = to.startsWith("whatsapp:") 
+    ? to 
+    : `whatsapp:${to}`;
 
   try {
     const result = await client.messages.create({
@@ -154,8 +130,7 @@ export async function notifySalonOwner(message: string): Promise<NotificationRes
   if (!ownerPhone) {
     return { success: false, error: "Owner phone not configured" };
   }
-  const formattedPhone = formatPhoneNumber(ownerPhone);
-  return sendWhatsApp(formattedPhone, message);
+  return sendWhatsApp(ownerPhone, message);
 }
 
 export async function sendClientConfirmation(
