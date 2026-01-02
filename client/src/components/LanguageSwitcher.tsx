@@ -14,8 +14,15 @@ const languages = [
   { code: "en", name: "English", dir: "ltr" },
 ];
 
+function normalizeLanguage(lng: string): string {
+  if (!lng) return "ar";
+  const base = lng.split("-")[0].toLowerCase();
+  return ["ar", "fr", "en"].includes(base) ? base : "ar";
+}
+
 export function LanguageSwitcher() {
   const { i18n } = useTranslation();
+  const normalizedLang = normalizeLanguage(i18n.language);
 
   const changeLanguage = (lng: string) => {
     i18n.changeLanguage(lng);
@@ -26,7 +33,7 @@ export function LanguageSwitcher() {
     }
   };
 
-  const currentLang = languages.find((l) => l.code === i18n.language) || languages[0];
+  const currentLang = languages.find((l) => l.code === normalizedLang) || languages[0];
 
   return (
     <DropdownMenu>
@@ -41,7 +48,7 @@ export function LanguageSwitcher() {
           <DropdownMenuItem
             key={lang.code}
             onClick={() => changeLanguage(lang.code)}
-            className={i18n.language === lang.code ? "bg-accent" : ""}
+            className={normalizedLang === lang.code ? "bg-accent" : ""}
           >
             {lang.name}
           </DropdownMenuItem>
