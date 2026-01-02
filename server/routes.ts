@@ -5,7 +5,7 @@ import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
-import { sendSMS, createBookingConfirmationMessage } from "./notifications";
+import { sendNotification, createBookingConfirmationMessage } from "./notifications";
 
 let io: SocketIOServer;
 
@@ -72,8 +72,8 @@ export async function registerRoutes(
           item.date,
           item.startTime
         );
-        sendSMS(phone, message).catch(err => {
-          console.error("SMS notification failed:", err);
+        sendNotification(phone, message).catch(err => {
+          console.error("Notification failed:", err);
         });
       }
       

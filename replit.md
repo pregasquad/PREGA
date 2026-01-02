@@ -97,12 +97,17 @@ Preferred communication style: Simple, everyday language.
 - Added low stock inventory alerts on dashboard
 - Expense categories now loaded from database API
 
-## SMS Notifications
+## SMS & WhatsApp Notifications
 
-### YCloud SMS Integration
+### YCloud Integration
 - **Provider**: YCloud (https://www.ycloud.com/)
-- **API Endpoint**: https://api.ycloud.com/v2/sms
 - **Implementation**: `server/notifications.ts`
-- **Secret Required**: `YCLOUD_API_KEY` - Get from YCloud dashboard
-- **Trigger**: SMS confirmation sent automatically when booking includes phone number
+- **Secrets Required**:
+  - `YCLOUD_API_KEY` - Get from YCloud dashboard (required)
+  - `YCLOUD_WHATSAPP_NUMBER` - Your WhatsApp Business number (optional, for WhatsApp)
+- **Behavior**: If WhatsApp is configured, tries WhatsApp first, falls back to SMS
+- **Trigger**: Confirmation sent automatically when booking includes phone number
 - **Phone Format**: Supports Moroccan numbers (06XXXXXXXX) - auto-converts to +212 format
+- **API Endpoints**:
+  - SMS: https://api.ycloud.com/v2/sms
+  - WhatsApp: https://api.ycloud.com/v2/whatsapp/messages
