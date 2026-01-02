@@ -2,7 +2,7 @@
 
 ## Overview
 
-A full-stack beauty salon appointment management application built with React, Express, and PostgreSQL. The system provides scheduling capabilities with a visual calendar interface, service management, staff tracking, and business analytics/reporting. Authentication is handled via Replit Auth (OpenID Connect).
+A full-stack beauty salon appointment management application built with React, Express, and TiDB Cloud (MySQL). The system provides scheduling capabilities with a visual calendar interface, service management, staff tracking, and business analytics/reporting. Authentication is handled via Replit Auth (OpenID Connect).
 
 ## User Preferences
 
@@ -26,10 +26,10 @@ Preferred communication style: Simple, everyday language.
 - **API Design**: RESTful endpoints defined in `shared/routes.ts` with Zod schemas for type-safe request/response validation
 
 ### Data Storage
-- **Database**: PostgreSQL via Drizzle ORM
+- **Database**: TiDB Cloud (MySQL-compatible) via Drizzle ORM with mysql2 driver
 - **Schema Location**: `shared/schema.ts` contains all table definitions
 - **Migrations**: Drizzle Kit for schema management (`db:push` command)
-- **Session Storage**: PostgreSQL-backed sessions via `connect-pg-simple`
+- **Environment Variables**: TIDB_HOST, TIDB_PORT, TIDB_USER, TIDB_PASSWORD, TIDB_DATABASE
 
 ### Authentication
 - **Provider**: Replit Auth (OpenID Connect)
@@ -64,8 +64,8 @@ Preferred communication style: Simple, everyday language.
 ## External Dependencies
 
 ### Database
-- **PostgreSQL**: Primary data store (requires `DATABASE_URL` environment variable)
-- **Drizzle ORM**: Type-safe database queries and schema management
+- **TiDB Cloud**: MySQL-compatible distributed database (requires TIDB_HOST, TIDB_PORT, TIDB_USER, TIDB_PASSWORD, TIDB_DATABASE)
+- **Drizzle ORM**: Type-safe database queries and schema management with mysql2 driver
 
 ### Authentication
 - **Replit Auth**: OpenID Connect provider (requires `ISSUER_URL`, `REPL_ID`, `SESSION_SECRET`)
