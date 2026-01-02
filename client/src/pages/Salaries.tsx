@@ -235,6 +235,26 @@ export default function Salaries() {
   const totalAppointments = staffEarnings.reduce((sum, e) => sum + e.appointmentsCount, 0);
   const salonPortion = totalRevenue - totalCommissions;
 
+  // Calculate filtered expenses and deductions
+  const filteredCharges = charges.filter(c => {
+    const chargeDate = startOfDay(parseISO(c.date));
+    return (isAfter(chargeDate, startOfDay(start)) || isEqual(chargeDate, startOfDay(start))) &&
+           (isBefore(chargeDate, endOfDay(end)) || isEqual(chargeDate, endOfDay(end)));
+  });
+
+  const filteredDeductions = deductions.filter(d => {
+    const deductionDate = startOfDay(parseISO(d.date));
+    const staffMatch = selectedStaff === "all" || d.staffName === selectedStaff;
+    return staffMatch &&
+           (isAfter(deductionDate, startOfDay(start)) || isEqual(deductionDate, startOfDay(start))) &&
+           (isBefore(deductionDate, endOfDay(end)) || isEqual(deductionDate, endOfDay(end)));
+  });
+
+  const totalExpenses = filteredCharges.reduce((sum, c) => sum + c.amount, 0);
+  const totalDeductions = filteredDeductions.reduce((sum, d) => sum + d.amount, 0);
+  const netProfit = salonPortion - totalExpenses;
+  const netStaffPayable = totalCommissions - totalDeductions;
+
   return (
     <div className="space-y-6 max-w-6xl mx-auto" dir="rtl">
       <div className="flex items-center justify-between">
@@ -349,6 +369,54 @@ export default function Salaries() {
           </CardContent>
         </Card>
       </div>
+
+      {/* الميزانية - Budget Summary */}
+      <Card className="border-2 border-dashed">
+        <CardHeader>
+          <CardTitle className="text-xl">الميزانية</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Salon Side */}
+            <div className="space-y-3 p-4 bg-primary/5 rounded-lg">
+              <h3 className="font-bold text-lg border-b pb-2">حساب الصالون</h3>
+              <div className="flex justify-between">
+                <span>حصة الصالون من الإيرادات:</span>
+                <span className="font-semibold text-primary">{salonPortion.toLocaleString()} د.م</span>
+              </div>
+              <div className="flex justify-between text-red-600">
+                <span>إجمالي المصاريف:</span>
+                <span className="font-semibold">- {totalExpenses.toLocaleString()} د.م</span>
+              </div>
+              <div className="flex justify-between pt-2 border-t-2 text-lg">
+                <span className="font-bold">صافي ربح الصالون:</span>
+                <span className={`font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {netProfit.toLocaleString()} د.م
+                </span>
+              </div>
+            </div>
+
+            {/* Staff Side */}
+            <div className="space-y-3 p-4 bg-green-50 rounded-lg">
+              <h3 className="font-bold text-lg border-b pb-2">حساب الموظفين</h3>
+              <div className="flex justify-between">
+                <span>إجمالي العمولات المستحقة:</span>
+                <span className="font-semibold text-green-600">{totalCommissions.toLocaleString()} د.م</span>
+              </div>
+              <div className="flex justify-between text-orange-600">
+                <span>إجمالي الخصومات:</span>
+                <span className="font-semibold">- {totalDeductions.toLocaleString()} د.م</span>
+              </div>
+              <div className="flex justify-between pt-2 border-t-2 text-lg">
+                <span className="font-bold">صافي المستحق للموظفين:</span>
+                <span className={`font-bold ${netStaffPayable >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {netStaffPayable.toLocaleString()} د.م
+                </span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -607,11 +675,7 @@ export default function Salaries() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {charges.filter(c => {
-                const chargeDate = startOfDay(parseISO(c.date));
-                return (isAfter(chargeDate, startOfDay(start)) || isEqual(chargeDate, startOfDay(start))) &&
-                       (isBefore(chargeDate, endOfDay(end)) || isEqual(chargeDate, endOfDay(end)));
-              }).map((charge) => (
+              {filteredCharges.map((charge) => (
                 <TableRow key={charge.id}>
                   <TableCell>
                     {charge.type === "rent" && "إيجار"}
@@ -636,11 +700,7 @@ export default function Salaries() {
                   </TableCell>
                 </TableRow>
               ))}
-              {charges.filter(c => {
-                const chargeDate = startOfDay(parseISO(c.date));
-                return (isAfter(chargeDate, startOfDay(start)) || isEqual(chargeDate, startOfDay(start))) &&
-                       (isBefore(chargeDate, endOfDay(end)) || isEqual(chargeDate, endOfDay(end)));
-              }).length === 0 && (
+              {filteredCharges.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                     لا توجد مصاريف للفترة المحددة
@@ -747,13 +807,7 @@ export default function Salaries() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {deductions.filter(d => {
-                const deductionDate = startOfDay(parseISO(d.date));
-                const staffMatch = selectedStaff === "all" || d.staffName === selectedStaff;
-                return staffMatch &&
-                       (isAfter(deductionDate, startOfDay(start)) || isEqual(deductionDate, startOfDay(start))) &&
-                       (isBefore(deductionDate, endOfDay(end)) || isEqual(deductionDate, endOfDay(end)));
-              }).map((deduction) => (
+              {filteredDeductions.map((deduction) => (
                 <TableRow key={deduction.id}>
                   <TableCell className="font-medium">{deduction.staffName}</TableCell>
                   <TableCell>
@@ -777,13 +831,7 @@ export default function Salaries() {
                   </TableCell>
                 </TableRow>
               ))}
-              {deductions.filter(d => {
-                const deductionDate = startOfDay(parseISO(d.date));
-                const staffMatch = selectedStaff === "all" || d.staffName === selectedStaff;
-                return staffMatch &&
-                       (isAfter(deductionDate, startOfDay(start)) || isEqual(deductionDate, startOfDay(start))) &&
-                       (isBefore(deductionDate, endOfDay(end)) || isEqual(deductionDate, endOfDay(end)));
-              }).length === 0 && (
+              {filteredDeductions.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                     لا توجد خصومات للفترة المحددة
