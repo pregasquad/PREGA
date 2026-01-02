@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { DollarSign, Users, CalendarIcon, TrendingUp, Building2, Edit2, Check, X, RefreshCw } from "lucide-react";
 import { useState, useEffect } from "react";
 import { io, Socket } from "socket.io-client";
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isWithinInterval, parseISO } from "date-fns";
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay, parseISO, isAfter, isBefore, isEqual } from "date-fns";
 import { ar } from "date-fns/locale";
 import { apiRequest } from "@/lib/queryClient";
 import type { Staff, Service, Appointment } from "@shared/schema";
@@ -111,10 +111,13 @@ export default function Salaries() {
   const { start, end } = getDateRange();
 
   const filteredAppointments = appointments.filter((apt) => {
-    const aptDate = parseISO(apt.date);
-    const inRange = isWithinInterval(aptDate, { start, end });
+    const aptDate = startOfDay(parseISO(apt.date));
+    const rangeStart = startOfDay(start);
+    const rangeEnd = endOfDay(end);
+    const inRange = (isAfter(aptDate, rangeStart) || isEqual(aptDate, rangeStart)) && 
+                    (isBefore(aptDate, rangeEnd) || isEqual(aptDate, rangeEnd));
     const staffMatch = selectedStaff === "all" || apt.staff === selectedStaff;
-    return inRange && staffMatch && apt.paid;
+    return inRange && staffMatch && apt.paid === true;
   });
 
   const getServiceCommission = (serviceName: string): number => {
@@ -142,24 +145,32 @@ export default function Salaries() {
     });
 
     filteredAppointments.forEach((apt) => {
-      if (earnings[apt.staff]) {
-        const commissionPercent = getServiceCommission(apt.service);
-        const commission = Math.round((apt.total * commissionPercent) / 100);
-        
-        earnings[apt.staff].totalRevenue += apt.total;
-        earnings[apt.staff].totalCommission += commission;
-        earnings[apt.staff].appointmentsCount += 1;
-
-        if (!earnings[apt.staff].services[apt.service]) {
-          earnings[apt.staff].services[apt.service] = { count: 0, revenue: 0, commission: 0 };
-        }
-        earnings[apt.staff].services[apt.service].count += 1;
-        earnings[apt.staff].services[apt.service].revenue += apt.total;
-        earnings[apt.staff].services[apt.service].commission += commission;
+      if (!earnings[apt.staff]) {
+        earnings[apt.staff] = { 
+          name: apt.staff, 
+          totalRevenue: 0, 
+          totalCommission: 0, 
+          appointmentsCount: 0,
+          services: {}
+        };
       }
+      
+      const commissionPercent = getServiceCommission(apt.service);
+      const commission = Math.round((apt.total * commissionPercent) / 100);
+      
+      earnings[apt.staff].totalRevenue += apt.total;
+      earnings[apt.staff].totalCommission += commission;
+      earnings[apt.staff].appointmentsCount += 1;
+
+      if (!earnings[apt.staff].services[apt.service]) {
+        earnings[apt.staff].services[apt.service] = { count: 0, revenue: 0, commission: 0 };
+      }
+      earnings[apt.staff].services[apt.service].count += 1;
+      earnings[apt.staff].services[apt.service].revenue += apt.total;
+      earnings[apt.staff].services[apt.service].commission += commission;
     });
 
-    return Object.values(earnings);
+    return Object.values(earnings).filter(e => e.appointmentsCount > 0 || staff.some(s => s.name === e.name));
   };
 
   const staffEarnings = calculateStaffEarnings();
