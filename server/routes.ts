@@ -375,6 +375,78 @@ export async function registerRoutes(
     }
   });
 
+  // WhatsApp/SMS Notifications (Twilio)
+  app.post("/api/notifications/send", async (req, res) => {
+    try {
+      const { sendWhatsAppMessage, sendSMS } = await import("./twilio");
+      const { phone, message, useWhatsApp = true } = z.object({
+        phone: z.string(),
+        message: z.string(),
+        useWhatsApp: z.boolean().optional(),
+      }).parse(req.body);
+      
+      const result = useWhatsApp 
+        ? await sendWhatsAppMessage(phone, message)
+        : await sendSMS(phone, message);
+      
+      if (result.success) {
+        res.json({ success: true, messageId: result.messageId });
+      } else {
+        res.status(500).json({ success: false, error: result.error });
+      }
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post("/api/notifications/appointment-reminder", async (req, res) => {
+    try {
+      const { sendAppointmentReminder } = await import("./twilio");
+      const { clientPhone, clientName, appointmentDate, appointmentTime, serviceName, useWhatsApp = true } = z.object({
+        clientPhone: z.string(),
+        clientName: z.string(),
+        appointmentDate: z.string(),
+        appointmentTime: z.string(),
+        serviceName: z.string(),
+        useWhatsApp: z.boolean().optional(),
+      }).parse(req.body);
+      
+      const result = await sendAppointmentReminder(clientPhone, clientName, appointmentDate, appointmentTime, serviceName, useWhatsApp);
+      
+      if (result.success) {
+        res.json({ success: true, messageId: result.messageId });
+      } else {
+        res.status(500).json({ success: false, error: result.error });
+      }
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post("/api/notifications/booking-confirmation", async (req, res) => {
+    try {
+      const { sendBookingConfirmation } = await import("./twilio");
+      const { clientPhone, clientName, appointmentDate, appointmentTime, serviceName, useWhatsApp = true } = z.object({
+        clientPhone: z.string(),
+        clientName: z.string(),
+        appointmentDate: z.string(),
+        appointmentTime: z.string(),
+        serviceName: z.string(),
+        useWhatsApp: z.boolean().optional(),
+      }).parse(req.body);
+      
+      const result = await sendBookingConfirmation(clientPhone, clientName, appointmentDate, appointmentTime, serviceName, useWhatsApp);
+      
+      if (result.success) {
+        res.json({ success: true, messageId: result.messageId });
+      } else {
+        res.status(500).json({ success: false, error: result.error });
+      }
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: err.message });
+    }
+  });
+
   // Seed data if empty
   await seedDatabase();
 

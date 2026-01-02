@@ -77,6 +77,14 @@ Preferred communication style: Simple, everyday language.
 - **Recharts**: Charting library for reports
 - **date-fns**: Date manipulation utilities
 
+### Notifications (Twilio)
+- **WhatsApp/SMS**: Appointment reminders and booking confirmations via Twilio
+- **Endpoints**:
+  - `POST /api/notifications/send` - Send custom WhatsApp/SMS message
+  - `POST /api/notifications/appointment-reminder` - Send appointment reminder
+  - `POST /api/notifications/booking-confirmation` - Send booking confirmation
+- **Implementation**: `server/twilio.ts` with Replit Twilio integration
+
 ### Development Tools
 - **Vite**: Frontend dev server and bundler
 - **esbuild**: Server bundling for production
