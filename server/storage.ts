@@ -1,6 +1,6 @@
 import { db } from "./db";
 import {
-  appointments, services, categories, staff, products, clients, charges, staffDeductions,
+  appointments, services, categories, staff, products, clients, charges, staffDeductions, expenseCategories, loyaltyRedemptions,
   type Appointment, type InsertAppointment,
   type Service, type InsertService,
   type Category, type InsertCategory,
@@ -8,13 +8,16 @@ import {
   type Product, type InsertProduct,
   type Client, type InsertClient,
   type Charge, type InsertCharge,
-  type StaffDeduction, type InsertStaffDeduction
+  type StaffDeduction, type InsertStaffDeduction,
+  type ExpenseCategory, type InsertExpenseCategory,
+  type LoyaltyRedemption, type InsertLoyaltyRedemption
 } from "@shared/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql, and, gte, lte } from "drizzle-orm";
 import { authStorage, type IAuthStorage } from "./replit_integrations/auth/storage";
 
 export interface IStorage extends IAuthStorage {
   getAppointments(date?: string): Promise<Appointment[]>;
+  getAppointmentsByDateRange(startDate: string, endDate: string): Promise<Appointment[]>;
   createAppointment(appointment: InsertAppointment): Promise<Appointment>;
   updateAppointment(id: number, appointment: Partial<InsertAppointment>): Promise<Appointment>;
   deleteAppointment(id: number): Promise<void>;
@@ -37,15 +40,20 @@ export interface IStorage extends IAuthStorage {
 
   getProducts(): Promise<Product[]>;
   getProductByName(name: string): Promise<Product | undefined>;
+  getProduct(id: number): Promise<Product | undefined>;
   updateProductQuantity(id: number, quantity: number): Promise<Product>;
   updateProduct(id: number, product: Partial<InsertProduct>): Promise<Product>;
   createProduct(product: InsertProduct): Promise<Product>;
   deleteProduct(id: number): Promise<void>;
+  getLowStockProducts(): Promise<Product[]>;
 
   getClients(): Promise<Client[]>;
+  getClient(id: number): Promise<Client | undefined>;
   createClient(client: InsertClient): Promise<Client>;
   updateClient(id: number, client: Partial<InsertClient>): Promise<Client>;
   deleteClient(id: number): Promise<void>;
+  updateClientLoyalty(id: number, points: number, spent: number): Promise<Client>;
+  getClientAppointments(clientId: number): Promise<Appointment[]>;
 
   getCharges(): Promise<Charge[]>;
   createCharge(charge: InsertCharge): Promise<Charge>;
@@ -54,6 +62,19 @@ export interface IStorage extends IAuthStorage {
   getStaffDeductions(): Promise<StaffDeduction[]>;
   createStaffDeduction(deduction: InsertStaffDeduction): Promise<StaffDeduction>;
   deleteStaffDeduction(id: number): Promise<void>;
+
+  getExpenseCategories(): Promise<ExpenseCategory[]>;
+  createExpenseCategory(category: InsertExpenseCategory): Promise<ExpenseCategory>;
+  deleteExpenseCategory(id: number): Promise<void>;
+
+  getLoyaltyRedemptions(clientId?: number): Promise<LoyaltyRedemption[]>;
+  createLoyaltyRedemption(redemption: InsertLoyaltyRedemption): Promise<LoyaltyRedemption>;
+
+  getStaffPerformance(staffName: string, startDate: string, endDate: string): Promise<{
+    totalAppointments: number;
+    totalRevenue: number;
+    totalCommission: number;
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -65,6 +86,12 @@ export class DatabaseStorage implements IStorage {
       return await db.select().from(appointments).where(eq(appointments.date, date)).orderBy(appointments.startTime);
     }
     return await db.select().from(appointments).orderBy(appointments.date, appointments.startTime);
+  }
+
+  async getAppointmentsByDateRange(startDate: string, endDate: string): Promise<Appointment[]> {
+    return await db.select().from(appointments)
+      .where(and(gte(appointments.date, startDate), lte(appointments.date, endDate)))
+      .orderBy(appointments.date, appointments.startTime);
   }
 
   async createAppointment(appt: InsertAppointment): Promise<Appointment> {
@@ -152,9 +179,19 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(products);
   }
 
+  async getProduct(id: number): Promise<Product | undefined> {
+    const [product] = await db.select().from(products).where(eq(products.id, id));
+    return product;
+  }
+
   async getProductByName(name: string): Promise<Product | undefined> {
     const [product] = await db.select().from(products).where(eq(products.name, name));
     return product;
+  }
+
+  async getLowStockProducts(): Promise<Product[]> {
+    const allProducts = await db.select().from(products);
+    return allProducts.filter(p => p.quantity <= p.lowStockThreshold);
   }
 
   async updateProductQuantity(id: number, quantity: number): Promise<Product> {
@@ -186,6 +223,11 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(clients).orderBy(desc(clients.createdAt));
   }
 
+  async getClient(id: number): Promise<Client | undefined> {
+    const [client] = await db.select().from(clients).where(eq(clients.id, id));
+    return client;
+  }
+
   async createClient(client: InsertClient): Promise<Client> {
     const result = await db.insert(clients).values(client).$returningId();
     const [created] = await db.select().from(clients).where(eq(clients.id, result[0].id));
@@ -200,6 +242,26 @@ export class DatabaseStorage implements IStorage {
 
   async deleteClient(id: number): Promise<void> {
     await db.delete(clients).where(eq(clients.id, id));
+  }
+
+  async updateClientLoyalty(id: number, points: number, spent: number): Promise<Client> {
+    const [client] = await db.select().from(clients).where(eq(clients.id, id));
+    if (!client) throw new Error("Client not found");
+    
+    await db.update(clients).set({
+      loyaltyPoints: client.loyaltyPoints + points,
+      totalSpent: client.totalSpent + spent,
+      totalVisits: client.totalVisits + 1,
+    }).where(eq(clients.id, id));
+    
+    const [updated] = await db.select().from(clients).where(eq(clients.id, id));
+    return updated;
+  }
+
+  async getClientAppointments(clientId: number): Promise<Appointment[]> {
+    return await db.select().from(appointments)
+      .where(eq(appointments.clientId, clientId))
+      .orderBy(desc(appointments.date));
   }
 
   async getCharges(): Promise<Charge[]> {
@@ -228,6 +290,75 @@ export class DatabaseStorage implements IStorage {
 
   async deleteStaffDeduction(id: number): Promise<void> {
     await db.delete(staffDeductions).where(eq(staffDeductions.id, id));
+  }
+
+  async getExpenseCategories(): Promise<ExpenseCategory[]> {
+    return await db.select().from(expenseCategories);
+  }
+
+  async createExpenseCategory(category: InsertExpenseCategory): Promise<ExpenseCategory> {
+    const result = await db.insert(expenseCategories).values(category).$returningId();
+    const [created] = await db.select().from(expenseCategories).where(eq(expenseCategories.id, result[0].id));
+    return created;
+  }
+
+  async deleteExpenseCategory(id: number): Promise<void> {
+    await db.delete(expenseCategories).where(eq(expenseCategories.id, id));
+  }
+
+  async getLoyaltyRedemptions(clientId?: number): Promise<LoyaltyRedemption[]> {
+    if (clientId) {
+      return await db.select().from(loyaltyRedemptions)
+        .where(eq(loyaltyRedemptions.clientId, clientId))
+        .orderBy(desc(loyaltyRedemptions.createdAt));
+    }
+    return await db.select().from(loyaltyRedemptions).orderBy(desc(loyaltyRedemptions.createdAt));
+  }
+
+  async createLoyaltyRedemption(redemption: InsertLoyaltyRedemption): Promise<LoyaltyRedemption> {
+    const result = await db.insert(loyaltyRedemptions).values(redemption).$returningId();
+    const [created] = await db.select().from(loyaltyRedemptions).where(eq(loyaltyRedemptions.id, result[0].id));
+    
+    const [client] = await db.select().from(clients).where(eq(clients.id, redemption.clientId));
+    if (client) {
+      await db.update(clients).set({
+        loyaltyPoints: client.loyaltyPoints - redemption.pointsUsed,
+      }).where(eq(clients.id, redemption.clientId));
+    }
+    
+    return created;
+  }
+
+  async getStaffPerformance(staffName: string, startDate: string, endDate: string): Promise<{
+    totalAppointments: number;
+    totalRevenue: number;
+    totalCommission: number;
+  }> {
+    const appts = await db.select().from(appointments)
+      .where(and(
+        eq(appointments.staff, staffName),
+        gte(appointments.date, startDate),
+        lte(appointments.date, endDate)
+      ));
+    
+    const allServices = await db.select().from(services);
+    const serviceMap = new Map(allServices.map(s => [s.name, s]));
+    
+    let totalRevenue = 0;
+    let totalCommission = 0;
+    
+    for (const appt of appts) {
+      totalRevenue += appt.total;
+      const service = serviceMap.get(appt.service);
+      const commissionRate = service?.commissionPercent || 50;
+      totalCommission += Math.round(appt.total * commissionRate / 100);
+    }
+    
+    return {
+      totalAppointments: appts.length,
+      totalRevenue,
+      totalCommission,
+    };
   }
 }
 

@@ -14,6 +14,7 @@ export default defineConfig({
   out: "./migrations",
   schema: "./shared/schema.ts",
   dialect: "mysql",
+  strict: false,
   dbCredentials: {
     host,
     port,

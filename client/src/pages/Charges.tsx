@@ -9,15 +9,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, TrendingDown } from "lucide-react";
+import { Plus, Trash2, TrendingDown, FolderPlus } from "lucide-react";
 
-const CHARGE_TYPES = [
-  { value: "Produit", label: "منتج" },
-  { value: "Loyer", label: "إيجار" },
-  { value: "Eau", label: "ماء" },
-  { value: "Electricité", label: "كهرباء" },
-  { value: "Salaire", label: "راتب" },
-  { value: "Autre", label: "أخرى" },
+const DEFAULT_CHARGE_TYPES = [
+  { id: 0, name: "Produit", label: "منتج" },
+  { id: 0, name: "Loyer", label: "إيجار" },
+  { id: 0, name: "Eau", label: "ماء" },
+  { id: 0, name: "Electricité", label: "كهرباء" },
+  { id: 0, name: "Salaire", label: "راتب" },
+  { id: 0, name: "Autre", label: "أخرى" },
 ];
 
 export default function Charges() {
@@ -25,6 +25,7 @@ export default function Charges() {
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [newCategoryName, setNewCategoryName] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isAdmin = sessionStorage.getItem("admin_authenticated") === "true";
@@ -34,6 +35,30 @@ export default function Charges() {
     queryFn: async () => {
       const res = await fetch("/api/charges");
       return res.json();
+    },
+  });
+
+  const { data: categories = [] } = useQuery({
+    queryKey: ["/api/expense-categories"],
+    queryFn: async () => {
+      const res = await fetch("/api/expense-categories");
+      return res.json();
+    },
+  });
+
+  const chargeTypes = categories.length > 0 
+    ? categories.map((c: any) => ({ id: c.id, name: c.name, label: c.name }))
+    : DEFAULT_CHARGE_TYPES;
+
+  const createCategoryMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const res = await apiRequest("POST", "/api/expense-categories", { name });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/expense-categories"] });
+      setNewCategoryName("");
+      toast({ title: "تم إضافة الفئة" });
     },
   });
 
@@ -99,8 +124,8 @@ export default function Charges() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {CHARGE_TYPES.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>
+                    {chargeTypes.map((t: any) => (
+                      <SelectItem key={t.name} value={t.name}>
                         {t.label}
                       </SelectItem>
                     ))}
@@ -175,7 +200,7 @@ export default function Charges() {
               {charges.map((charge: any) => (
                 <TableRow key={charge.id}>
                   <TableCell>
-                    {CHARGE_TYPES.find((t) => t.value === charge.type)?.label || charge.type}
+                    {chargeTypes.find((t: any) => t.name === charge.type)?.label || charge.type}
                   </TableCell>
                   <TableCell>{charge.name}</TableCell>
                   <TableCell className="font-semibold">{charge.amount} DH</TableCell>

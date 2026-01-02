@@ -404,3 +404,14 @@ export function useDeleteClient() {
     },
   });
 }
+
+export function useProducts() {
+  return useQuery({
+    queryKey: ["/api/products"],
+    queryFn: async () => {
+      const res = await fetch("/api/products", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch products");
+      return res.json();
+    },
+  });
+}

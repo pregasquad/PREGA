@@ -1,6 +1,7 @@
 import { useAppointments, useStaff, useServices, useClients } from "@/hooks/use-salon-data";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Scissors, CalendarCheck, TrendingUp, Clock, Package, UserPlus, Pencil, Trash2, LogOut } from "lucide-react";
+import { Users, Scissors, CalendarCheck, TrendingUp, Clock, Package, UserPlus, Pencil, Trash2, LogOut, AlertTriangle } from "lucide-react";
 import { format, startOfToday } from "date-fns";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -20,6 +21,14 @@ export default function Home() {
   const { data: staff = [] } = useStaff();
   const { data: services = [] } = useServices();
   const { data: clients = [] } = useClients();
+  const { data: lowStockProducts = [] } = useQuery({
+    queryKey: ["/api/products/low-stock"],
+    queryFn: async () => {
+      const res = await fetch("/api/products/low-stock", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch low stock products");
+      return res.json();
+    },
+  });
   const [isStaffDialogOpen, setIsStaffDialogOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<any>(null);
   const { toast } = useToast();
@@ -137,6 +146,31 @@ export default function Home() {
             </Card>
           ))}
         </div>
+
+      {lowStockProducts.length > 0 && (
+        <Card className="border-destructive bg-destructive/5 hover-elevate">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="w-5 h-5" />
+              تنبيه المخزون المنخفض
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {lowStockProducts.map((product: any) => (
+                <div
+                  key={product.id}
+                  className="flex items-center gap-2 bg-background px-3 py-2 rounded-lg border border-destructive/30"
+                >
+                  <Package className="w-4 h-4 text-destructive" />
+                  <span className="font-medium">{product.name}</span>
+                  <span className="text-destructive font-bold">({product.quantity})</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <Card className="hover-elevate">

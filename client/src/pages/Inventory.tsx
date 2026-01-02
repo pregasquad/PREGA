@@ -180,9 +180,13 @@ export default function Inventory() {
               <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">الكمية الحالية:</span>
-                  <span className={`text-2xl font-bold ${product.quantity <= 2 ? 'text-destructive' : 'text-primary'}`}>
+                  <span className={`text-2xl font-bold ${product.quantity <= (product.lowStockThreshold || 5) ? 'text-destructive' : 'text-primary'}`}>
                     {product.quantity}
                   </span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">حد التنبيه:</span>
+                  <span className="text-muted-foreground">{product.lowStockThreshold || 5}</span>
                 </div>
                 
                 <div className="flex items-center gap-2">
@@ -235,9 +239,9 @@ export default function Inventory() {
                   </DialogContent>
                 </Dialog>
                 
-                {product.quantity <= 2 && (
-                  <p className="text-xs text-destructive font-medium">
-                    ⚠️ تنبيه: المخزون منخفض جداً (2 أو أقل)!
+                {product.quantity <= (product.lowStockThreshold || 5) && (
+                  <p className="text-xs text-destructive font-medium animate-pulse">
+                    ⚠️ تنبيه: المخزون منخفض!
                   </p>
                 )}
               </div>

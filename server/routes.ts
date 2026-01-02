@@ -264,6 +264,117 @@ export async function registerRoutes(
     res.status(204).send();
   });
 
+  // Clients
+  app.get("/api/clients", async (_req, res) => {
+    const items = await storage.getClients();
+    res.json(items);
+  });
+
+  app.get("/api/clients/:id", async (req, res) => {
+    const client = await storage.getClient(Number(req.params.id));
+    if (!client) return res.status(404).json({ message: "Client not found" });
+    res.json(client);
+  });
+
+  app.get("/api/clients/:id/appointments", async (req, res) => {
+    const appointments = await storage.getClientAppointments(Number(req.params.id));
+    res.json(appointments);
+  });
+
+  app.post("/api/clients", async (req, res) => {
+    try {
+      const item = await storage.createClient(req.body);
+      res.status(201).json(item);
+    } catch (err) {
+      res.status(400).json({ message: "Failed to create client" });
+    }
+  });
+
+  app.patch("/api/clients/:id", async (req, res) => {
+    try {
+      const item = await storage.updateClient(Number(req.params.id), req.body);
+      res.json(item);
+    } catch (err) {
+      res.status(400).json({ message: "Update failed" });
+    }
+  });
+
+  app.patch("/api/clients/:id/loyalty", async (req, res) => {
+    try {
+      const { points, spent } = req.body;
+      const item = await storage.updateClientLoyalty(Number(req.params.id), points, spent);
+      res.json(item);
+    } catch (err) {
+      res.status(400).json({ message: "Update failed" });
+    }
+  });
+
+  app.delete("/api/clients/:id", async (req, res) => {
+    await storage.deleteClient(Number(req.params.id));
+    res.status(204).send();
+  });
+
+  // Low Stock Products
+  app.get("/api/products/low-stock", async (_req, res) => {
+    const items = await storage.getLowStockProducts();
+    res.json(items);
+  });
+
+  // Expense Categories
+  app.get("/api/expense-categories", async (_req, res) => {
+    const items = await storage.getExpenseCategories();
+    res.json(items);
+  });
+
+  app.post("/api/expense-categories", async (req, res) => {
+    try {
+      const item = await storage.createExpenseCategory(req.body);
+      res.status(201).json(item);
+    } catch (err) {
+      res.status(400).json({ message: "Failed to create category" });
+    }
+  });
+
+  app.delete("/api/expense-categories/:id", async (req, res) => {
+    await storage.deleteExpenseCategory(Number(req.params.id));
+    res.status(204).send();
+  });
+
+  // Loyalty Redemptions
+  app.get("/api/loyalty-redemptions", async (req, res) => {
+    const clientId = req.query.clientId ? Number(req.query.clientId) : undefined;
+    const items = await storage.getLoyaltyRedemptions(clientId);
+    res.json(items);
+  });
+
+  app.post("/api/loyalty-redemptions", async (req, res) => {
+    try {
+      const item = await storage.createLoyaltyRedemption(req.body);
+      res.status(201).json(item);
+    } catch (err) {
+      res.status(400).json({ message: "Failed to redeem points" });
+    }
+  });
+
+  // Staff Performance
+  app.get("/api/staff-performance/:staffName", async (req, res) => {
+    try {
+      const { startDate, endDate } = z.object({
+        startDate: z.string(),
+        endDate: z.string(),
+      }).parse(req.query);
+      
+      const performance = await storage.getStaffPerformance(
+        req.params.staffName,
+        startDate,
+        endDate
+      );
+      res.json(performance);
+    } catch (err) {
+      res.status(400).json({ message: "Invalid parameters" });
+    }
+  });
+
   // Seed data if empty
   await seedDatabase();
 

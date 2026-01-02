@@ -16,7 +16,9 @@ import {
   Bell,
   Clock,
   User,
-  DollarSign
+  DollarSign,
+  Users,
+  TrendingUp
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -39,9 +41,11 @@ const NAV_ITEMS = [
   { label: "الرئيسية", href: "/", icon: Home },
   { label: "التخطيط", href: "/planning", icon: CalendarDays },
   { label: "الخدمات", href: "/services", icon: Scissors },
+  { label: "العملاء", href: "/clients", icon: Users },
   { label: "المخزون", href: "/inventory", icon: Package },
   { label: "المصاريف", href: "/charges", icon: Wallet },
   { label: "الرواتب", href: "/salaries", icon: DollarSign },
+  { label: "أداء الموظفين", href: "/staff-performance", icon: TrendingUp },
   { label: "التقارير", href: "/reports", icon: BarChart3 },
   { label: "صفحة الحجز", href: "/booking", icon: ExternalLink, external: true },
 ];

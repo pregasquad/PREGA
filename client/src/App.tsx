@@ -14,6 +14,8 @@ import Inventory from "@/pages/Inventory";
 import Charges from "@/pages/Charges";
 import Salaries from "@/pages/Salaries";
 import Booking from "@/pages/Booking";
+import Clients from "@/pages/Clients";
+import StaffPerformance from "@/pages/StaffPerformance";
 import NotFound from "@/pages/not-found";
 
 // Wrapper for pages with layout
@@ -60,6 +62,14 @@ function Router() {
 
       <Route path="/salaries">
         <PageRoute component={Salaries} requireAdmin />
+      </Route>
+
+      <Route path="/clients">
+        <PageRoute component={Clients} requireAdmin />
+      </Route>
+
+      <Route path="/staff-performance">
+        <PageRoute component={StaffPerformance} requireAdmin />
       </Route>
 
       <Route path="/booking" component={Booking} />
