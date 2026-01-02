@@ -6,6 +6,9 @@
   "type": "module",
   "license": "MIT",
   "main": "dist-electron/main.js",
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
     "dev": "NODE_ENV=development tsx server/index.ts",
     "build": "tsx script/build.ts",
