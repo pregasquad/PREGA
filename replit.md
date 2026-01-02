@@ -4,15 +4,6 @@
 
 A full-stack beauty salon appointment management application built with React, Express, and TiDB Cloud (MySQL). The system provides scheduling capabilities with a visual calendar interface, service management, staff tracking, and business analytics/reporting. Authentication is handled via Replit Auth (OpenID Connect).
 
-## Recent Changes (January 2026)
-
-- **Multi-Language Support**: Added i18next with Arabic, French, and English translations. Language switcher component in header.
-- **Twilio WhatsApp/SMS Integration**: Send appointment reminders and confirmations via SMS or WhatsApp. Uses TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER secrets.
-- **Client Management**: Loyalty points tracking, VIP tiers (Bronze, Silver, Gold, VIP), birthday reminders, visit history, referral system.
-- **Staff Performance Dashboard**: Interactive charts showing revenue, appointments, and commission per staff member.
-- **Low Stock Alerts**: Dashboard shows products below their threshold; uses /api/products/low-stock endpoint.
-- **Expense Categories**: Dynamic expense categories loaded from /api/expense-categories API.
-
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
