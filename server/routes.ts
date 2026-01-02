@@ -44,6 +44,12 @@ export async function registerRoutes(
     res.json(items);
   });
 
+  // Get all appointments (for salaries calculation)
+  app.get("/api/appointments/all", async (req, res) => {
+    const items = await storage.getAppointments();
+    res.json(items);
+  });
+
   app.post(api.appointments.create.path, async (req, res) => {
     try {
       const input = api.appointments.create.input.parse(req.body);
