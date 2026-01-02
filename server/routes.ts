@@ -5,6 +5,7 @@ import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
+import { sendSMS, sendWhatsApp, formatAppointmentReminder, formatAppointmentConfirmation, isTwilioConfigured } from "./twilio";
 
 let io: SocketIOServer;
 
@@ -372,6 +373,108 @@ export async function registerRoutes(
       res.json(performance);
     } catch (err) {
       res.status(400).json({ message: "Invalid parameters" });
+    }
+  });
+
+  // Twilio Notifications
+  app.get("/api/notifications/status", async (_req, res) => {
+    res.json({ configured: isTwilioConfigured() });
+  });
+
+  app.post("/api/notifications/send-sms", async (req, res) => {
+    try {
+      const { to, message } = z.object({
+        to: z.string(),
+        message: z.string(),
+      }).parse(req.body);
+      
+      const result = await sendSMS(to, message);
+      if (result.success) {
+        res.json({ success: true, messageSid: result.messageSid });
+      } else {
+        res.status(400).json({ success: false, error: result.error });
+      }
+    } catch (err) {
+      res.status(400).json({ success: false, error: "Invalid parameters" });
+    }
+  });
+
+  app.post("/api/notifications/send-whatsapp", async (req, res) => {
+    try {
+      const { to, message } = z.object({
+        to: z.string(),
+        message: z.string(),
+      }).parse(req.body);
+      
+      const result = await sendWhatsApp(to, message);
+      if (result.success) {
+        res.json({ success: true, messageSid: result.messageSid });
+      } else {
+        res.status(400).json({ success: false, error: result.error });
+      }
+    } catch (err) {
+      res.status(400).json({ success: false, error: "Invalid parameters" });
+    }
+  });
+
+  app.post("/api/notifications/send-reminder", async (req, res) => {
+    try {
+      const { clientPhone, clientName, serviceName, date, time, method } = z.object({
+        clientPhone: z.string(),
+        clientName: z.string(),
+        serviceName: z.string(),
+        date: z.string(),
+        time: z.string(),
+        method: z.enum(["sms", "whatsapp"]),
+      }).parse(req.body);
+      
+      const message = formatAppointmentReminder(clientName, serviceName, date, time);
+      
+      let result;
+      if (method === "whatsapp") {
+        result = await sendWhatsApp(clientPhone, message);
+      } else {
+        result = await sendSMS(clientPhone, message);
+      }
+      
+      if (result.success) {
+        res.json({ success: true, messageSid: result.messageSid });
+      } else {
+        res.status(400).json({ success: false, error: result.error });
+      }
+    } catch (err) {
+      res.status(400).json({ success: false, error: "Invalid parameters" });
+    }
+  });
+
+  app.post("/api/notifications/send-confirmation", async (req, res) => {
+    try {
+      const { clientPhone, clientName, serviceName, date, time, total, method } = z.object({
+        clientPhone: z.string(),
+        clientName: z.string(),
+        serviceName: z.string(),
+        date: z.string(),
+        time: z.string(),
+        total: z.number(),
+        method: z.enum(["sms", "whatsapp"]),
+      }).parse(req.body);
+      
+      const message = formatAppointmentConfirmation(clientName, serviceName, date, time, total);
+      
+      let result;
+      if (method === "whatsapp") {
+        result = await sendWhatsApp(clientPhone, message);
+      } else {
+        result = await sendSMS(clientPhone, message);
+      }
+      
+      if (result.success) {
+        res.json({ success: true, messageSid: result.messageSid });
+      } else {
+        res.status(400).json({ success: false, error: result.error });
+      }
+    } catch (err) {
+      res.status(400).json({ success: false, error: "Invalid parameters" });
     }
   });
 

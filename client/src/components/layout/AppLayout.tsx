@@ -1,8 +1,18 @@
 import { Sidebar } from "./Sidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { useTranslation } from "react-i18next";
+import { useEffect } from "react";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
+  const { i18n } = useTranslation();
+  const isRTL = i18n.language === "ar";
+
+  useEffect(() => {
+    document.documentElement.dir = isRTL ? "rtl" : "ltr";
+    document.documentElement.lang = i18n.language;
+  }, [i18n.language, isRTL]);
+
   const style = {
     "--sidebar-width": "16rem",
     "--sidebar-width-mobile": "100vw",
@@ -10,7 +20,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider style={style as React.CSSProperties}>
-      <div className="flex h-screen w-full overflow-hidden bg-background safe-area-p" dir="rtl">
+      <div className="flex h-screen w-full overflow-hidden bg-background safe-area-p" dir={isRTL ? "rtl" : "ltr"}>
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0 relative">
           <header className="flex h-16 items-center justify-between px-4 border-b bg-card shrink-0">
