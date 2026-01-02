@@ -81,3 +81,25 @@ Preferred communication style: Simple, everyday language.
 - **Vite**: Frontend dev server and bundler
 - **esbuild**: Server bundling for production
 - **TypeScript**: Type checking across the stack
+
+### Internationalization (i18n)
+- **i18next**: Multi-language support with Arabic (default), French, and English
+- **Translation files**: Located in `client/src/i18n/locales/`
+- **Language Switcher**: Available in header and booking page
+
+## Recent Changes
+
+### January 2026
+- Added multi-language support (Arabic, French, English) with language switcher
+- Created public booking page at `/booking` for clients
+- Added client management with loyalty points tracking and VIP tiers
+- Implemented staff performance dashboard with charts
+- Added low stock inventory alerts on dashboard
+- Expense categories now loaded from database API
+
+## Pending Features
+
+### SMS/WhatsApp Notifications
+- Requires Twilio integration to send appointment reminders
+- When ready, use Replit's Twilio integration or provide TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER secrets
+- Implementation location: Create `server/notifications.ts` for SMS sending logic
