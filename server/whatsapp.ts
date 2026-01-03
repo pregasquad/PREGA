@@ -1,5 +1,6 @@
 const WHATSAPP_API_KEY = process.env.WHATSAPP_API_KEY;
 const WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
+const WHATSAPP_FROM_NUMBER = "212669640496";
 
 const SENDZEN_API_URL = "https://api.sendzen.io/v1/messages";
 
@@ -23,7 +24,7 @@ export async function sendWhatsAppMessage(
       body: JSON.stringify({
         messaging_product: "whatsapp",
         recipient_type: "individual",
-        from: WHATSAPP_PHONE_NUMBER_ID,
+        from: WHATSAPP_FROM_NUMBER,
         to: formattedPhone,
         type: "text",
         text: {
