@@ -9,5 +9,8 @@ if (!process.env.TIDB_DATABASE_URL) {
 const url = new URL(process.env.TIDB_DATABASE_URL);
 url.searchParams.set("ssl", JSON.stringify({ rejectUnauthorized: true }));
 
-const connection = await mysql.createConnection(url.toString());
-export const db = drizzle(connection, { schema, mode: "default" });
+export const pool = mysql.createPool({
+  uri: url.toString(),
+});
+
+export const db = drizzle(pool, { schema, mode: "default" });
