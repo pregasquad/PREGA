@@ -14,6 +14,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     };
 
     const handleTouchMove = (e: TouchEvent) => {
+      // Disable pull-to-refresh if a dialog/modal is open
+      if (document.querySelector('[role="dialog"]')) return;
+
       const y = e.touches[0].pageY;
       if (window.scrollY === 0 && y > startY + 150 && !isRefreshing) {
         setIsRefreshing(true);
