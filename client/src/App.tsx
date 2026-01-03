@@ -37,6 +37,10 @@ function Router() {
   return (
     <Switch>
       <Route path="/">
+        <PageRoute component={Planning} />
+      </Route>
+
+      <Route path="/home">
         <PageRoute component={Home} requireAdmin />
       </Route>
 

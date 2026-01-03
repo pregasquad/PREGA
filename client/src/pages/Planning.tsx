@@ -128,6 +128,13 @@ export default function Planning() {
   const [selectedStaff, setSelectedStaff] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [editingAppointment, setEditingAppointment] = useState<any>(null);
+  const [isPageReady, setIsPageReady] = useState(false);
+
+  useEffect(() => {
+    // Small delay to ensure everything is mounted and measured
+    const timer = setTimeout(() => setIsPageReady(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Form setup
   const form = useForm<AppointmentFormValues>({
@@ -288,7 +295,10 @@ export default function Planning() {
   }
 
   return (
-    <div className="h-full flex flex-col gap-4 md:gap-6" dir="rtl">
+    <div className={cn(
+      "h-full flex flex-col gap-4 md:gap-6 transition-opacity duration-500",
+      isPageReady ? "opacity-100" : "opacity-0"
+    )} dir="rtl">
       {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>
