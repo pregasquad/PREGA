@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CalendarIcon, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Check, X, UserPlus, Edit2, Scissors, Search, Star, CreditCard, Settings2 } from "lucide-react";
+import { CalendarIcon, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Check, X, UserPlus, Edit2, Scissors, Search, Star, CreditCard, Settings2, Sparkles, User, Timer } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -527,115 +527,156 @@ export default function Planning() {
         setIsDialogOpen(open);
         if (!open) setIsEditFavoritesOpen(false);
       }}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>{editingAppointment ? "تعديل الموعد" : "موعد جديد"}</DialogTitle>
-          </DialogHeader>
+        <DialogContent className="sm:max-w-[520px] p-0 overflow-hidden border-0 shadow-2xl bg-gradient-to-br from-pink-50 via-white to-cyan-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+          {/* Header with gradient */}
+          <div className="bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 p-5 text-white">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-black flex items-center gap-2 text-white">
+                <Sparkles className="w-5 h-5" />
+                {editingAppointment ? "تعديل الموعد" : "موعد جديد"}
+              </DialogTitle>
+            </DialogHeader>
+          </div>
           
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                {/* 1. Price first */}
+            <form onSubmit={form.handleSubmit(onSubmit)} className="p-5 space-y-5">
+              
+              {/* Price Section - Hero Card */}
+              <div className="bg-gradient-to-r from-emerald-500/10 to-teal-500/10 rounded-2xl p-4 border-2 border-emerald-500/30 shadow-sm">
                 <FormField
                   control={form.control}
                   name="total"
                   render={({ field }) => (
-                    <FormItem className="col-span-2">
-                      <FormLabel className="text-primary font-bold">السعر الإجمالي (DH)</FormLabel>
-                      <FormControl>
-                        <Input type="number" className="text-xl h-12 font-black border-2 border-primary" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="client"
-                  render={({ field }) => (
-                    <FormItem className="col-span-2">
-                      <FormLabel>اسم العميل</FormLabel>
-                      <FormControl>
-                        <Input placeholder="فلان الفلاني" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="staff"
-                  render={({ field }) => (
                     <FormItem>
-                      <FormLabel>الموظف</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="اختر الموظف" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {staffList.map(s => (
-                            <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="startTime"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>وقت البدء</FormLabel>
+                      <FormLabel className="text-emerald-700 dark:text-emerald-400 font-bold flex items-center gap-2 text-base">
+                        <CreditCard className="w-4 h-4" />
+                        السعر الإجمالي
+                      </FormLabel>
                       <FormControl>
                         <div className="relative">
-                          <Input type="time" {...field} />
-                          <Clock className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                          <Input 
+                            type="number" 
+                            className="text-3xl h-16 font-black border-2 border-emerald-500/50 bg-white dark:bg-gray-800 rounded-xl text-center pr-16 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" 
+                            {...field} 
+                          />
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl font-bold text-emerald-600">DH</span>
                         </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+              </div>
 
+              {/* Client Section */}
+              <div className="bg-white/70 dark:bg-gray-800/50 rounded-2xl p-4 border border-border/50 shadow-sm backdrop-blur">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
+                    <User className="w-4 h-4 text-blue-500" />
+                  </div>
+                  <span className="font-bold text-sm text-blue-600 dark:text-blue-400">معلومات العميل</span>
+                </div>
                 <FormField
                   control={form.control}
-                  name="duration"
+                  name="client"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>المدة (دقيقة)</FormLabel>
                       <FormControl>
-                        <Input type="number" {...field} />
+                        <Input 
+                          placeholder="اسم العميل..." 
+                          className="h-11 rounded-xl border-border/50 bg-white/50 dark:bg-gray-700/50"
+                          {...field} 
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+              </div>
 
+              {/* Schedule Section */}
+              <div className="bg-white/70 dark:bg-gray-800/50 rounded-2xl p-4 border border-border/50 shadow-sm backdrop-blur">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center">
+                    <Timer className="w-4 h-4 text-purple-500" />
+                  </div>
+                  <span className="font-bold text-sm text-purple-600 dark:text-purple-400">الجدول الزمني</span>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <FormField
+                    control={form.control}
+                    name="staff"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs text-muted-foreground">الموظف</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="h-10 rounded-xl border-border/50 bg-white/50 dark:bg-gray-700/50">
+                              <SelectValue placeholder="اختر" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {staffList.map(s => (
+                              <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="startTime"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs text-muted-foreground">وقت البدء</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="time" 
+                            className="h-10 rounded-xl border-border/50 bg-white/50 dark:bg-gray-700/50"
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="duration"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs text-muted-foreground">المدة (د)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            className="h-10 rounded-xl border-border/50 bg-white/50 dark:bg-gray-700/50"
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
+              {/* Service Section */}
+              <div className="bg-white/70 dark:bg-gray-800/50 rounded-2xl p-4 border border-border/50 shadow-sm backdrop-blur">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center">
+                    <Scissors className="w-4 h-4 text-orange-500" />
+                  </div>
+                  <span className="font-bold text-sm text-orange-600 dark:text-orange-400">الخدمة</span>
+                </div>
                 <FormField
                   control={form.control}
                   name="service"
                   render={({ field }) => (
-                    <FormItem className="col-span-2">
-                      <FormLabel className="flex items-center justify-between">
-                        <span>الخدمة</span>
-                        {serviceSearch && (
-                          <Button 
-                            type="button" 
-                            variant="ghost" 
-                            className="h-auto p-0 text-xs text-primary"
-                            onClick={() => setServiceSearch("")}
-                          >
-                            مسح البحث
-                          </Button>
-                        )}
-                      </FormLabel>
+                    <FormItem>
                       <div className="space-y-3">
                         <Popover>
                           <PopoverTrigger asChild>
@@ -765,12 +806,13 @@ export default function Planning() {
                 />
               </div>
 
-              <DialogFooter className="gap-2 pt-4">
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-2">
                 {editingAppointment && (
                   <Button
                     type="button"
                     variant="destructive"
-                    className="flex-1"
+                    className="flex-1 h-12 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all"
                     onClick={() => {
                       if (confirm("هل أنت متأكد من حذف هذا الموعد؟")) {
                         deleteMutation.mutate(editingAppointment.id);
@@ -778,13 +820,19 @@ export default function Planning() {
                       }
                     }}
                   >
-                    حذف الموعد
+                    <Trash2 className="w-4 h-4 ml-2" />
+                    حذف
                   </Button>
                 )}
-                <Button type="submit" className="flex-1 h-12 text-lg font-bold" disabled={createMutation.isPending || updateMutation.isPending}>
-                  {editingAppointment ? "تحديث" : "تأكيد الموعد"}
+                <Button 
+                  type="submit" 
+                  className="flex-1 h-14 text-lg font-black rounded-xl bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-600 hover:via-purple-600 hover:to-indigo-600 shadow-xl hover:shadow-2xl transition-all transform hover:scale-[1.02]" 
+                  disabled={createMutation.isPending || updateMutation.isPending}
+                >
+                  <Sparkles className="w-5 h-5 ml-2" />
+                  {editingAppointment ? "تحديث الموعد" : "تأكيد الموعد"}
                 </Button>
-              </DialogFooter>
+              </div>
             </form>
           </Form>
         </DialogContent>
