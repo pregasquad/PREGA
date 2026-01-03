@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CalendarIcon, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Check, X, UserPlus, Edit2, Scissors, Search, Star, CreditCard } from "lucide-react";
+import { CalendarIcon, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Check, X, UserPlus, Edit2, Scissors, Search, Star, CreditCard, Settings2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -42,6 +42,15 @@ export default function Planning() {
   const [isStaffDialogOpen, setIsStaffDialogOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<any>(null);
   const [serviceSearch, setServiceSearch] = useState("");
+  const [isEditFavoritesOpen, setIsEditFavoritesOpen] = useState(false);
+  const [favoriteNames, setFavoriteNames] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem('favoriteServiceNames');
+      return stored ? JSON.parse(stored) : ["Brushing", "Manicure Simple", "Soin Classique", "Sourcils"];
+    } catch {
+      return ["Brushing", "Manicure Simple", "Soin Classique", "Sourcils"];
+    }
+  });
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const hasScrolledToNow = useRef(false);
   const { toast } = useToast();
@@ -296,13 +305,29 @@ export default function Planning() {
     timeSlots.push({ minutes: i, label: formattedTime, fullLabel: timeString });
   }
 
-  // Get favorite services (fixed list)
+  // Get favorite services from user's saved list
   const favoriteServices = useMemo(() => {
-    const fixedNames = ["Brushing", "Manicure Simple", "Soin Classique", "Sourcils"];
-    return fixedNames
+    return favoriteNames
       .map(name => services.find(s => s.name === name))
       .filter(Boolean);
-  }, [services]);
+  }, [services, favoriteNames]);
+
+  // Toggle a service in favorites
+  const toggleFavorite = (serviceName: string) => {
+    setFavoriteNames(prev => {
+      let updated: string[];
+      if (prev.includes(serviceName)) {
+        updated = prev.filter(n => n !== serviceName);
+      } else if (prev.length < 4) {
+        updated = [...prev, serviceName];
+      } else {
+        toast({ title: "الحد الأقصى 4 خدمات", variant: "destructive" });
+        return prev;
+      }
+      localStorage.setItem('favoriteServiceNames', JSON.stringify(updated));
+      return updated;
+    });
+  };
 
   // Filter services based on search
   const filteredServices = useMemo(() => {
@@ -498,7 +523,10 @@ export default function Planning() {
       </div>
 
       {/* Create/Edit Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={(open) => {
+        setIsDialogOpen(open);
+        if (!open) setIsEditFavoritesOpen(false);
+      }}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>{editingAppointment ? "تعديل الموعد" : "موعد جديد"}</DialogTitle>
@@ -666,27 +694,68 @@ export default function Planning() {
                         </Popover>
                         
                         {/* Favorite Services */}
-                        {!editingAppointment && favoriteServices.length > 0 && !serviceSearch && (
-                          <div className="space-y-1">
-                            <Label className="text-[10px] text-muted-foreground">الخدمات الأكثر استخداماً</Label>
-                            <div className="flex flex-wrap gap-2">
-                              {favoriteServices.map((s: any) => (
-                                <Button
-                                  key={s.id}
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  className={cn(
-                                    "h-8 text-[11px] md:text-xs rounded-full border-primary/30 bg-primary/5 hover:bg-primary/10",
-                                    field.value === s.name && "bg-primary text-primary-foreground border-solid ring-2 ring-primary ring-offset-1"
-                                  )}
-                                  onClick={() => handleServiceChange(s.name)}
-                                >
-                                  <Star className={cn("w-3 h-3 ml-1", field.value === s.name ? "fill-current" : "text-primary")} />
-                                  {s.name}
-                                </Button>
-                              ))}
+                        {!editingAppointment && !serviceSearch && (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <Label className="text-[10px] text-muted-foreground">الخدمات المفضلة</Label>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-2 text-[10px]"
+                                onClick={() => setIsEditFavoritesOpen(!isEditFavoritesOpen)}
+                              >
+                                <Settings2 className="w-3 h-3 ml-1" />
+                                {isEditFavoritesOpen ? "إغلاق" : "تعديل"}
+                              </Button>
                             </div>
+                            
+                            {isEditFavoritesOpen ? (
+                              <div className="border border-dashed border-primary/30 rounded-lg p-3 bg-primary/5 max-h-[200px] overflow-y-auto">
+                                <p className="text-[10px] text-muted-foreground mb-2">اختر حتى 4 خدمات ({favoriteNames.length}/4)</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {services.map((s) => (
+                                    <Button
+                                      key={s.id}
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      className={cn(
+                                        "h-7 text-[10px] rounded-full transition-all",
+                                        favoriteNames.includes(s.name) 
+                                          ? "bg-primary text-primary-foreground border-primary" 
+                                          : "border-border hover:border-primary/50"
+                                      )}
+                                      onClick={() => toggleFavorite(s.name)}
+                                    >
+                                      {favoriteNames.includes(s.name) && <Check className="w-3 h-3 ml-1" />}
+                                      {s.name}
+                                    </Button>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : favoriteServices.length > 0 ? (
+                              <div className="flex flex-wrap gap-2">
+                                {favoriteServices.map((s: any) => (
+                                  <Button
+                                    key={s.id}
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className={cn(
+                                      "h-8 text-[11px] md:text-xs rounded-full border-primary/30 bg-primary/5 hover:bg-primary/10",
+                                      field.value === s.name && "bg-primary text-primary-foreground border-solid ring-2 ring-primary ring-offset-1"
+                                    )}
+                                    onClick={() => handleServiceChange(s.name)}
+                                  >
+                                    <Star className={cn("w-3 h-3 ml-1", field.value === s.name ? "fill-current" : "text-primary")} />
+                                    {s.name}
+                                  </Button>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-[10px] text-muted-foreground">انقر على "تعديل" لاختيار الخدمات المفضلة</p>
+                            )}
                           </div>
                         )}
                       </div>
