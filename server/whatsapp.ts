@@ -1,7 +1,7 @@
 const WHATSAPP_API_KEY = process.env.WHATSAPP_API_KEY;
 const WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
 
-const WHATSAPP_API_URL = `https://graph.facebook.com/v18.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
+const SENDZEN_API_URL = "https://api.sendzen.io/v1/messages";
 
 export async function sendWhatsAppMessage(
   to: string,
@@ -14,7 +14,7 @@ export async function sendWhatsAppMessage(
 
     const formattedPhone = to.replace(/[^0-9]/g, "");
     
-    const response = await fetch(WHATSAPP_API_URL, {
+    const response = await fetch(SENDZEN_API_URL, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${WHATSAPP_API_KEY}`,
@@ -23,6 +23,7 @@ export async function sendWhatsAppMessage(
       body: JSON.stringify({
         messaging_product: "whatsapp",
         recipient_type: "individual",
+        from: WHATSAPP_PHONE_NUMBER_ID,
         to: formattedPhone,
         type: "text",
         text: {
@@ -35,16 +36,16 @@ export async function sendWhatsAppMessage(
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("WhatsApp API error:", data);
+      console.error("SendZen API error:", data);
       return { 
         success: false, 
-        error: data.error?.message || "Failed to send message" 
+        error: data.error?.message || data.message || "Failed to send message" 
       };
     }
 
     return { 
       success: true, 
-      messageId: data.messages?.[0]?.id 
+      messageId: data.messages?.[0]?.id || data.id
     };
   } catch (error: any) {
     console.error("WhatsApp send error:", error.message);
