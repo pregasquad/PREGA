@@ -46,11 +46,12 @@ export default function Planning() {
   const hasScrolledToNow = useRef(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    // Small delay to ensure everything is mounted and measured
-    const timer = setTimeout(() => setIsPageReady(true), 100);
-    return () => clearTimeout(timer);
-  }, []);
+  const formattedDate = format(date, "yyyy-MM-dd");
+  
+  const { data: appointments = [], isLoading: loadingApps } = useAppointments(formattedDate);
+  const { data: staffList = [] } = useStaff();
+  const { data: services = [] } = useServices();
+  const isAdmin = sessionStorage.getItem("admin_authenticated") === "true";
 
   // Update time every 20 seconds
   useEffect(() => {
@@ -80,13 +81,14 @@ export default function Planning() {
     }
   }, [nowLinePosition, isPageReady]);
 
-  const formattedDate = format(date, "yyyy-MM-dd");
-  
-  const { data: appointments = [], isLoading: loadingApps } = useAppointments(formattedDate);
-  const { data: staffList = [] } = useStaff();
-  const { data: services = [] } = useServices();
-  const isAdmin = sessionStorage.getItem("admin_authenticated") === "true";
-  
+  useEffect(() => {
+    // Small delay to ensure everything is mounted and measured
+    if (!loadingApps) {
+      const timer = setTimeout(() => setIsPageReady(true), 200);
+      return () => clearTimeout(timer);
+    }
+  }, [loadingApps]);
+
   const createMutation = useCreateAppointment();
   const updateMutation = useUpdateAppointment();
   const deleteMutation = useDeleteAppointment();
