@@ -109,9 +109,27 @@ export default function Booking() {
     };
     
     createMutation.mutate(appointmentData, {
-      onSuccess: () => {
+      onSuccess: async () => {
         setIsSuccess(true);
         queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+        
+        if (data.phone) {
+          try {
+            await fetch("/api/notifications/booking-confirmation", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                clientPhone: data.phone,
+                clientName: data.client,
+                appointmentDate: format(date, "PPP", { locale: ar }),
+                appointmentTime: selectedTime,
+                serviceName: data.service,
+              }),
+            });
+          } catch (err) {
+            console.log("WhatsApp notification failed:", err);
+          }
+        }
       }
     });
   };

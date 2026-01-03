@@ -374,19 +374,16 @@ export async function registerRoutes(
     }
   });
 
-  // WhatsApp/SMS Notifications (Twilio)
+  // WhatsApp Notifications
   app.post("/api/notifications/send", async (req, res) => {
     try {
-      const { sendWhatsAppMessage, sendSMS } = await import("./twilio");
-      const { phone, message, useWhatsApp = true } = z.object({
+      const { sendWhatsAppMessage } = await import("./whatsapp");
+      const { phone, message } = z.object({
         phone: z.string(),
         message: z.string(),
-        useWhatsApp: z.boolean().optional(),
       }).parse(req.body);
       
-      const result = useWhatsApp 
-        ? await sendWhatsAppMessage(phone, message)
-        : await sendSMS(phone, message);
+      const result = await sendWhatsAppMessage(phone, message);
       
       if (result.success) {
         res.json({ success: true, messageId: result.messageId });
@@ -400,17 +397,16 @@ export async function registerRoutes(
 
   app.post("/api/notifications/appointment-reminder", async (req, res) => {
     try {
-      const { sendAppointmentReminder } = await import("./twilio");
-      const { clientPhone, clientName, appointmentDate, appointmentTime, serviceName, useWhatsApp = true } = z.object({
+      const { sendAppointmentReminder } = await import("./whatsapp");
+      const { clientPhone, clientName, appointmentDate, appointmentTime, serviceName } = z.object({
         clientPhone: z.string(),
         clientName: z.string(),
         appointmentDate: z.string(),
         appointmentTime: z.string(),
         serviceName: z.string(),
-        useWhatsApp: z.boolean().optional(),
       }).parse(req.body);
       
-      const result = await sendAppointmentReminder(clientPhone, clientName, appointmentDate, appointmentTime, serviceName, useWhatsApp);
+      const result = await sendAppointmentReminder(clientPhone, clientName, appointmentDate, appointmentTime, serviceName);
       
       if (result.success) {
         res.json({ success: true, messageId: result.messageId });
@@ -424,17 +420,16 @@ export async function registerRoutes(
 
   app.post("/api/notifications/booking-confirmation", async (req, res) => {
     try {
-      const { sendBookingConfirmation } = await import("./twilio");
-      const { clientPhone, clientName, appointmentDate, appointmentTime, serviceName, useWhatsApp = true } = z.object({
+      const { sendBookingConfirmation } = await import("./whatsapp");
+      const { clientPhone, clientName, appointmentDate, appointmentTime, serviceName } = z.object({
         clientPhone: z.string(),
         clientName: z.string(),
         appointmentDate: z.string(),
         appointmentTime: z.string(),
         serviceName: z.string(),
-        useWhatsApp: z.boolean().optional(),
       }).parse(req.body);
       
-      const result = await sendBookingConfirmation(clientPhone, clientName, appointmentDate, appointmentTime, serviceName, useWhatsApp);
+      const result = await sendBookingConfirmation(clientPhone, clientName, appointmentDate, appointmentTime, serviceName);
       
       if (result.success) {
         res.json({ success: true, messageId: result.messageId });
