@@ -20,7 +20,16 @@ export function AdminLock({ children }: AdminLockProps) {
     if (isAuth === "true") {
       setIsLocked(false);
     }
-  }, []);
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isLocked) {
+        setLocation("/planning");
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isLocked, setLocation]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
