@@ -1,10 +1,38 @@
 import { Sidebar } from "./Sidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { useEffect, useState } from "react";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
+  const [startY, setStartY] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  useEffect(() => {
+    const handleTouchStart = (e: TouchEvent) => {
+      if (window.scrollY === 0) {
+        setStartY(e.touches[0].pageY);
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      const y = e.touches[0].pageY;
+      if (window.scrollY === 0 && y > startY + 150 && !isRefreshing) {
+        setIsRefreshing(true);
+        window.location.reload();
+      }
+    };
+
+    window.addEventListener("touchstart", handleTouchStart);
+    window.addEventListener("touchmove", handleTouchMove);
+
+    return () => {
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchmove", handleTouchMove);
+    };
+  }, [startY, isRefreshing]);
+
   const style = {
     "--sidebar-width": "16rem",
-    "--sidebar-width-mobile": "100vw",
+    "--sidebar-width-mobile": "18rem",
   };
 
   return (
@@ -12,10 +40,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="flex h-screen w-full overflow-hidden bg-background safe-area-p" dir="rtl">
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0 relative">
-          <header className="flex h-16 items-center justify-between px-4 border-b bg-card shrink-0">
+          <header className="flex h-16 items-center justify-between px-4 border-b bg-background shrink-0 z-20">
             <SidebarTrigger />
             <div className="flex items-center gap-2">
-              {/* Theme toggle could be added here if needed */}
+              {isRefreshing && <span className="text-xs text-muted-foreground animate-pulse">جاري التحديث...</span>}
             </div>
           </header>
           <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-24 md:pb-6">
