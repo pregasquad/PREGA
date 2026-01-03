@@ -115,11 +115,18 @@ export default function Booking() {
         
         if (data.phone) {
           try {
+            let formattedPhone = data.phone.replace(/[^0-9]/g, "");
+            if (formattedPhone.startsWith("0")) {
+              formattedPhone = "212" + formattedPhone.substring(1);
+            } else if (!formattedPhone.startsWith("212")) {
+              formattedPhone = "212" + formattedPhone;
+            }
+            
             await fetch("/api/notifications/booking-confirmation", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                clientPhone: data.phone,
+                clientPhone: formattedPhone,
                 clientName: data.client,
                 appointmentDate: format(date, "PPP", { locale: ar }),
                 appointmentTime: selectedTime,
