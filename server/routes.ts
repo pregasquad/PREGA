@@ -186,6 +186,17 @@ export async function registerRoutes(
     res.json(products);
   });
 
+  app.get("/api/products/low-stock", async (_req, res) => {
+    const items = await storage.getLowStockProducts();
+    res.json(items);
+  });
+
+  app.get("/api/products/by-name/:name", async (req, res) => {
+    const product = await storage.getProductByName(req.params.name);
+    if (!product) return res.status(404).json({ message: "Product not found" });
+    res.json(product);
+  });
+
   app.post("/api/products", async (req, res) => {
     const item = await storage.createProduct(req.body);
     res.status(201).json(item);
@@ -203,12 +214,6 @@ export async function registerRoutes(
 
   app.get("/api/products/:id", async (req, res) => {
     const product = await storage.getProducts().then(prods => prods.find(p => p.id === parseInt(req.params.id)));
-    if (!product) return res.status(404).json({ message: "Product not found" });
-    res.json(product);
-  });
-
-  app.get("/api/products/by-name/:name", async (req, res) => {
-    const product = await storage.getProductByName(req.params.name);
     if (!product) return res.status(404).json({ message: "Product not found" });
     res.json(product);
   });
@@ -312,12 +317,6 @@ export async function registerRoutes(
   app.delete("/api/clients/:id", async (req, res) => {
     await storage.deleteClient(Number(req.params.id));
     res.status(204).send();
-  });
-
-  // Low Stock Products
-  app.get("/api/products/low-stock", async (_req, res) => {
-    const items = await storage.getLowStockProducts();
-    res.json(items);
   });
 
   // Expense Categories

@@ -2,7 +2,7 @@
 
 ## Overview
 
-A full-stack beauty salon appointment management application built with React, Express, and TiDB Cloud (MySQL). The system provides scheduling capabilities with a visual calendar interface, service management, staff tracking, and business analytics/reporting. Authentication is handled via Replit Auth (OpenID Connect).
+A full-stack beauty salon appointment management application built with React, Express, and PostgreSQL. The system provides scheduling capabilities with a visual calendar interface, service management, staff tracking, and business analytics/reporting. Authentication is handled via Replit Auth (OpenID Connect).
 
 ## User Preferences
 
@@ -26,14 +26,14 @@ Preferred communication style: Simple, everyday language.
 - **API Design**: RESTful endpoints defined in `shared/routes.ts` with Zod schemas for type-safe request/response validation
 
 ### Data Storage
-- **Database**: TiDB Cloud (MySQL-compatible) via Drizzle ORM with mysql2 driver
+- **Database**: PostgreSQL via Neon serverless with Drizzle ORM
 - **Schema Location**: `shared/schema.ts` contains all table definitions
 - **Migrations**: Drizzle Kit for schema management (`db:push` command)
-- **Environment Variables**: TIDB_HOST, TIDB_PORT, TIDB_USER, TIDB_PASSWORD, TIDB_DATABASE
+- **Environment Variables**: DATABASE_URL (PostgreSQL connection string)
 
 ### Authentication
 - **Provider**: Replit Auth (OpenID Connect)
-- **Session Management**: Express-session with PostgreSQL store
+- **Session Management**: Express-session with memory store
 - **Implementation**: Located in `server/replit_integrations/auth/`
 - **User Storage**: Users table with profile information synced from Replit
 
@@ -49,26 +49,28 @@ Preferred communication style: Simple, everyday language.
 │   ├── storage.ts       # Database operations
 │   └── replit_integrations/  # Auth integration
 ├── shared/              # Shared code between client/server
-│   ├── schema.ts        # Drizzle database schema
+│   ├── schema.ts        # Drizzle database schema (PostgreSQL)
 │   └── routes.ts        # API route contracts with Zod
 └── migrations/          # Database migrations
 ```
 
 ### Key Data Models
 - **Appointments**: Date, time, duration, client, service, staff, pricing, payment status
-- **Services**: Name, price, duration, category
+- **Services**: Name, price, duration, category, commission percent
 - **Categories**: Service groupings
-- **Staff**: Name and display color for calendar UI
+- **Staff**: Name, display color, phone, email, base salary
+- **Clients**: Name, phone, email, birthday, loyalty points
+- **Charges**: Expenses and charges tracking
 - **Users/Sessions**: Replit Auth user profiles and session data
 
 ## External Dependencies
 
 ### Database
-- **TiDB Cloud**: MySQL-compatible distributed database (requires TIDB_HOST, TIDB_PORT, TIDB_USER, TIDB_PASSWORD, TIDB_DATABASE)
-- **Drizzle ORM**: Type-safe database queries and schema management with mysql2 driver
+- **PostgreSQL**: Neon serverless PostgreSQL (requires DATABASE_URL)
+- **Drizzle ORM**: Type-safe database queries and schema management with pg driver
 
 ### Authentication
-- **Replit Auth**: OpenID Connect provider (requires `ISSUER_URL`, `REPL_ID`, `SESSION_SECRET`)
+- **Replit Auth**: OpenID Connect provider (requires `REPL_ID`, `SESSION_SECRET`)
 - **Passport.js**: Authentication middleware with OpenID Connect strategy
 
 ### UI Libraries
@@ -89,3 +91,8 @@ Preferred communication style: Simple, everyday language.
 - **Vite**: Frontend dev server and bundler
 - **esbuild**: Server bundling for production
 - **TypeScript**: Type checking across the stack
+
+## Recent Changes (January 2026)
+- Migrated database from TiDB/MySQL to PostgreSQL using Neon serverless
+- Updated Drizzle ORM configuration for PostgreSQL dialect
+- Updated schema from mysql-core to pg-core

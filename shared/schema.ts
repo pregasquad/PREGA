@@ -1,27 +1,27 @@
-import { mysqlTable, text, serial, int, boolean, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { pgTable, text, serial, integer, boolean, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 export * from "./models/auth";
 
-export const clients = mysqlTable("clients", {
+export const clients = pgTable("clients", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   phone: text("phone"),
   email: text("email"),
   birthday: text("birthday"),
   notes: text("notes"),
-  loyaltyPoints: int("loyalty_points").notNull().default(0),
-  totalVisits: int("total_visits").notNull().default(0),
-  totalSpent: int("total_spent").notNull().default(0),
-  referredBy: int("referred_by"),
+  loyaltyPoints: integer("loyalty_points").notNull().default(0),
+  totalVisits: integer("total_visits").notNull().default(0),
+  totalSpent: integer("total_spent").notNull().default(0),
+  referredBy: integer("referred_by"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const products = mysqlTable("products", {
+export const products = pgTable("products", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull().unique(),
-  quantity: int("quantity").notNull().default(0),
-  lowStockThreshold: int("low_stock_threshold").notNull().default(5),
+  quantity: integer("quantity").notNull().default(0),
+  lowStockThreshold: integer("low_stock_threshold").notNull().default(5),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -44,59 +44,59 @@ export const insertClientSchema = createInsertSchema(clients).omit({ id: true, c
 export type InsertClient = z.infer<typeof insertClientSchema>;
 export type Client = typeof clients.$inferSelect;
 
-export const appointments = mysqlTable("appointments", {
+export const appointments = pgTable("appointments", {
   id: serial("id").primaryKey(),
   date: text("date").notNull(),
   startTime: text("start_time").notNull(),
-  duration: int("duration").notNull(),
+  duration: integer("duration").notNull(),
   client: text("client").notNull(),
-  clientId: int("client_id"),
+  clientId: integer("client_id"),
   service: text("service").notNull(),
   staff: text("staff").notNull(),
-  price: int("price").notNull(),
-  total: int("total").notNull(),
+  price: integer("price").notNull(),
+  total: integer("total").notNull(),
   paid: boolean("paid").default(false).notNull(),
-  loyaltyPointsEarned: int("loyalty_points_earned").default(0),
+  loyaltyPointsEarned: integer("loyalty_points_earned").default(0),
 });
 
-export const services = mysqlTable("services", {
+export const services = pgTable("services", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  price: int("price").notNull(),
-  duration: int("duration").notNull(),
+  price: integer("price").notNull(),
+  duration: integer("duration").notNull(),
   category: text("category").notNull(),
-  linkedProductId: int("linked_product_id"),
-  commissionPercent: int("commission_percent").notNull().default(50),
-  loyaltyPointsMultiplier: int("loyalty_points_multiplier").notNull().default(1),
+  linkedProductId: integer("linked_product_id"),
+  commissionPercent: integer("commission_percent").notNull().default(50),
+  loyaltyPointsMultiplier: integer("loyalty_points_multiplier").notNull().default(1),
 });
 
-export const categories = mysqlTable("categories", {
+export const categories = pgTable("categories", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull().unique(),
 });
 
-export const staff = mysqlTable("staff", {
+export const staff = pgTable("staff", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   color: text("color").notNull(),
   phone: text("phone"),
   email: text("email"),
-  baseSalary: int("base_salary").notNull().default(0),
+  baseSalary: integer("base_salary").notNull().default(0),
 });
 
-export const expenseCategories = mysqlTable("expense_categories", {
+export const expenseCategories = pgTable("expense_categories", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull().unique(),
   color: varchar("color", { length: 50 }).notNull().default("#6b7280"),
 });
 
-export const charges = mysqlTable("charges", {
+export const charges = pgTable("charges", {
   id: serial("id").primaryKey(),
   type: text("type").notNull(),
   name: text("name").notNull(),
-  amount: int("amount").notNull(),
+  amount: integer("amount").notNull(),
   date: text("date").notNull(),
-  categoryId: int("category_id"),
+  categoryId: integer("category_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -110,12 +110,12 @@ export const insertChargeSchema = createInsertSchema(charges).omit({ id: true, c
 export type Charge = typeof charges.$inferSelect;
 export type InsertCharge = z.infer<typeof insertChargeSchema>;
 
-export const staffDeductions = mysqlTable("staff_deductions", {
+export const staffDeductions = pgTable("staff_deductions", {
   id: serial("id").primaryKey(),
   staffName: text("staff_name").notNull(),
   type: text("type").notNull(),
   description: text("description").notNull(),
-  amount: int("amount").notNull(),
+  amount: integer("amount").notNull(),
   date: text("date").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -130,10 +130,10 @@ export const insertStaffDeductionSchema = createInsertSchema(staffDeductions).om
 export type StaffDeduction = typeof staffDeductions.$inferSelect;
 export type InsertStaffDeduction = z.infer<typeof insertStaffDeductionSchema>;
 
-export const loyaltyRedemptions = mysqlTable("loyalty_redemptions", {
+export const loyaltyRedemptions = pgTable("loyalty_redemptions", {
   id: serial("id").primaryKey(),
-  clientId: int("client_id").notNull(),
-  pointsUsed: int("points_used").notNull(),
+  clientId: integer("client_id").notNull(),
+  pointsUsed: integer("points_used").notNull(),
   rewardDescription: text("reward_description").notNull(),
   date: text("date").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
