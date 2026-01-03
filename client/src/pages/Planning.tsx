@@ -442,12 +442,12 @@ export default function Planning() {
         <div ref={scrollContainerRef} className="flex-1 overflow-x-auto overflow-y-auto calendar-scroll relative" id="calendar-scroll-container">
           <div className="min-w-max">
             {/* Staff Header (inside scroll) */}
-            <div className="flex border-b border-border sticky top-0 z-20 bg-card/95 backdrop-blur shadow-sm">
-              <div className="w-14 md:w-20 flex-shrink-0 border-l border-border bg-muted/30 flex items-center justify-center sticky right-0 z-30 bg-card">
+            <div className="flex border-b border-border sticky top-0 z-10 bg-card/95 backdrop-blur shadow-sm">
+              <div className="w-14 md:w-20 flex-shrink-0 border-l border-border bg-card flex items-center justify-center sticky right-0 z-30">
                 <Clock className="w-4 h-4 text-muted-foreground" />
               </div>
               {staffList.map(s => (
-                <div key={s.id} className="flex-1 py-2 md:py-4 px-1 md:px-2 text-center border-l border-border last:border-l-0 bg-muted/5 min-w-[140px] md:min-w-[200px] flex flex-col items-center justify-center gap-1">
+                <div key={s.id} className="flex-1 py-2 md:py-4 px-1 md:px-2 text-center border-l border-border last:border-l-0 bg-card min-w-[140px] md:min-w-[200px] flex flex-col items-center justify-center gap-1">
                   <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full shadow-sm" style={{ backgroundColor: s.color }} />
                   <span className="font-black text-[10px] md:text-base text-foreground truncate block uppercase tracking-wider">{s.name}</span>
                 </div>
@@ -456,7 +456,7 @@ export default function Planning() {
 
             <div className="flex relative min-h-[2400px]" style={{ height: (END_HOUR - START_HOUR) * SLOT_HEIGHT }}>
               {/* Time Column */}
-              <div className="w-14 md:w-20 flex-shrink-0 border-l border-border bg-muted/5 sticky right-0 z-10">
+              <div className="w-14 md:w-20 flex-shrink-0 border-l border-border bg-card sticky right-0 z-20">
                 {timeSlots.map((slot, i) => (
                   slot.minutes % 60 === 0 && (
                     <div key={i} className="absolute w-full text-right pr-2 text-[10px] md:text-xs text-muted-foreground -mt-2" 
