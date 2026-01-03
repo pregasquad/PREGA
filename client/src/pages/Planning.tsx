@@ -296,6 +296,18 @@ export default function Planning() {
     timeSlots.push({ minutes: i, label: formattedTime, fullLabel: timeString });
   }
 
+  // Get most used services from localStorage
+  const favoriteServices = useMemo(() => {
+    const stored = localStorage.getItem('mostUsedServices');
+    if (!stored) return [];
+    const mostUsed = JSON.parse(stored);
+    return Object.entries(mostUsed)
+      .sort(([, a]: any, [, b]: any) => b - a)
+      .slice(0, 5)
+      .map(([name]) => services.find(s => s.name === name))
+      .filter(Boolean);
+  }, [services]);
+
   return (
     <div className={cn(
       "h-full flex flex-col gap-4 md:gap-6 transition-opacity duration-500",
@@ -565,20 +577,43 @@ export default function Planning() {
                   control={form.control}
                   name="service"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="col-span-2">
                       <FormLabel>الخدمة</FormLabel>
-                      <Select onValueChange={handleServiceChange} defaultValue={field.value} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="اختر الخدمة" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {services.map(s => (
-                            <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <div className="space-y-2">
+                        <Select onValueChange={handleServiceChange} defaultValue={field.value} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="اختر الخدمة" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {services.map(s => (
+                              <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        
+                        {!editingAppointment && favoriteServices.length > 0 && (
+                          <div className="flex flex-wrap gap-2 pt-1">
+                            {favoriteServices.map((s: any) => (
+                              <Button
+                                key={s.id}
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className={cn(
+                                  "h-7 text-[10px] md:text-xs rounded-full border-dashed",
+                                  field.value === s.name && "bg-primary text-primary-foreground border-solid"
+                                )}
+                                onClick={() => handleServiceChange(s.name)}
+                              >
+                                <Star className="w-3 h-3 ml-1 fill-current" />
+                                {s.name}
+                              </Button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
