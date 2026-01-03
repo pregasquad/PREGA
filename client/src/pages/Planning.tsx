@@ -65,14 +65,13 @@ export default function Planning() {
 
   // Auto-scroll to current time on page load
   useEffect(() => {
-    if (nowLinePosition !== null && scrollContainerRef.current && !hasScrolledToNow.current) {
+    if (nowLinePosition !== null && scrollContainerRef.current && isPageReady && !hasScrolledToNow.current) {
       const container = scrollContainerRef.current;
-      const headerHeight = 60;
-      const scrollPosition = nowLinePosition - container.clientHeight / 3 + headerHeight;
+      const scrollPosition = nowLinePosition - container.clientHeight / 3;
       container.scrollTo({ top: Math.max(0, scrollPosition), behavior: 'smooth' });
       hasScrolledToNow.current = true;
     }
-  }, [nowLinePosition]);
+  }, [nowLinePosition, isPageReady]);
   const formattedDate = format(date, "yyyy-MM-dd");
   
   const { data: appointments = [], isLoading: loadingApps } = useAppointments(formattedDate);
