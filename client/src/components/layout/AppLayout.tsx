@@ -1,10 +1,12 @@
 import { Sidebar } from "./Sidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { useEffect, useState } from "react";
+import { useLocation } from "wouter";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [startY, setStartY] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [location] = useLocation();
 
   useEffect(() => {
     const handleTouchStart = (e: TouchEvent) => {
@@ -14,6 +16,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     };
 
     const handleTouchMove = (e: TouchEvent) => {
+      // Disable pull-to-refresh on planning page
+      if (location === "/planning") return;
+      
       // Disable pull-to-refresh if a dialog/modal is open
       if (document.querySelector('[role="dialog"]')) return;
 
@@ -31,7 +36,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       window.removeEventListener("touchstart", handleTouchStart);
       window.removeEventListener("touchmove", handleTouchMove);
     };
-  }, [startY, isRefreshing]);
+  }, [startY, isRefreshing, location]);
 
   const style = {
     "--sidebar-width": "16rem",
