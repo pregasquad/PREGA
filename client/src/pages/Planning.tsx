@@ -20,9 +20,9 @@ import { insertAppointmentSchema, insertStaffSchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
 // Constants for grid calculation
-const START_HOUR = 0;  // 00:00
-const END_HOUR = 24;   // 00:00 next day
-const SLOT_HEIGHT = 120; // Increased for better full-size appearance
+const START_HOUR = 8;  // 08:00
+const END_HOUR = 22;   // 22:00
+const SLOT_HEIGHT = 100; // Slightly smaller for better fit
 const SLOT_INTERVAL = 15; // minutes
 const PIXELS_PER_MINUTE = SLOT_HEIGHT / 60;
 
@@ -411,21 +411,27 @@ export default function Planning() {
                           }}
                           onClick={(e) => handleAppointmentClick(e, app)}
                         >
-                          <div className="flex flex-col items-center justify-center h-full gap-1 md:gap-2">
-                            <div className="flex flex-col items-center gap-0.5 md:gap-1 w-full overflow-hidden">
-                              <div className={`${app.duration >= 45 ? 'text-xs md:text-base' : 'text-[8px] md:text-sm'} font-black px-1.5 md:px-3 py-0.5 md:py-1 rounded-full bg-white/40 dark:bg-black/40 border md:border-2 border-current shadow-sm md:shadow-md shrink-0 leading-tight text-center break-words max-w-full`} style={{ color: staffColor }}>
-                                {app.service}
-                              </div>
-                            </div>
-                            
-                            <div className="flex items-center justify-between border-t border-black/5 pt-0.5 md:pt-1 mt-0.5 md:mt-1 w-full">
-                              <div className="hidden md:flex items-center gap-1 opacity-70">
-                                <Clock className="w-3 h-3" />
-                                <span>{app.duration} دقيقة</span>
-                              </div>
-                              <div className="font-bold text-[8px] md:text-sm w-full text-center md:w-auto">{app.total} DH</div>
-                            </div>
+                      <div className="flex flex-col items-center justify-center h-full gap-0.5 md:gap-1">
+                        <div className="flex flex-col items-center gap-0.5 w-full overflow-hidden">
+                          <div className={cn(
+                            "font-black px-1.5 md:px-3 py-0.5 md:py-1 rounded-full bg-white/30 dark:bg-black/30 border md:border-2 border-current shadow-sm shrink-0 leading-tight text-center break-words max-w-full",
+                            app.duration >= 45 ? 'text-[10px] md:text-sm' : 'text-[8px] md:text-xs'
+                          )} style={{ color: "inherit" }}>
+                            {app.service}
                           </div>
+                          <span className="text-[8px] md:text-[10px] font-bold opacity-90 truncate max-w-full">
+                            {app.client}
+                          </span>
+                        </div>
+                        
+                        <div className="flex items-center justify-between border-t border-black/5 pt-0.5 w-full">
+                          <div className="hidden md:flex items-center gap-1 opacity-80">
+                            <Clock className="w-2.5 h-2.5" />
+                            <span className="text-[9px]">{app.duration} م</span>
+                          </div>
+                          <div className="font-bold text-[9px] md:text-xs w-full text-center md:w-auto">{app.total} DH</div>
+                        </div>
+                      </div>
 
                           {/* Status badge / Pay button */}
                           {app.paid ? (
