@@ -527,65 +527,53 @@ export default function Planning() {
         setIsDialogOpen(open);
         if (!open) setIsEditFavoritesOpen(false);
       }}>
-        <DialogContent className="sm:max-w-[420px] p-0 overflow-hidden border-2 border-primary/20 shadow-2xl bg-gradient-to-br from-pink-50/80 via-white to-cyan-50/80 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[380px] p-0 overflow-hidden border-2 border-primary/20 shadow-2xl bg-gradient-to-br from-pink-50/80 via-white to-cyan-50/80 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
           {/* Compact Header */}
-          <div className="bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 px-4 py-3 text-white sticky top-0 z-10">
+          <div className="bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 px-3 py-2 text-white">
             <DialogHeader>
-              <DialogTitle className="text-base font-black flex items-center gap-2 text-white">
-                <Sparkles className="w-4 h-4" />
+              <DialogTitle className="text-sm font-black flex items-center gap-2 text-white">
+                <Sparkles className="w-3 h-3" />
                 {editingAppointment ? "تعديل الموعد" : "موعد جديد"}
               </DialogTitle>
             </DialogHeader>
           </div>
           
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="p-4 space-y-3">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="p-3 space-y-2">
               
-              {/* Price - Compact Hero */}
-              <div className="bg-gradient-to-r from-emerald-500/10 to-teal-500/10 rounded-xl p-3 border border-emerald-500/30">
+              {/* Price Row */}
+              <div className="flex items-center gap-2 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 rounded-lg p-2 border border-emerald-500/30">
+                <CreditCard className="w-4 h-4 text-emerald-600 shrink-0" />
                 <FormField
                   control={form.control}
                   name="total"
                   render={({ field }) => (
-                    <FormItem>
-                      <div className="flex items-center gap-2 mb-2">
-                        <CreditCard className="w-4 h-4 text-emerald-600" />
-                        <FormLabel className="text-emerald-700 dark:text-emerald-400 font-bold text-sm m-0">السعر</FormLabel>
-                      </div>
+                    <FormItem className="flex-1 space-y-0">
                       <FormControl>
-                        <div className="relative">
-                          <Input 
-                            type="number" 
-                            className="text-2xl h-12 font-black border border-emerald-500/50 bg-white dark:bg-gray-800 rounded-lg text-center focus:ring-1 focus:ring-emerald-500" 
-                            {...field} 
-                          />
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-emerald-600">DH</span>
-                        </div>
+                        <Input 
+                          type="number" 
+                          placeholder="السعر"
+                          className="text-xl h-10 font-black border-0 bg-white dark:bg-gray-800 rounded-lg text-center" 
+                          {...field} 
+                        />
                       </FormControl>
-                      <FormMessage />
                     </FormItem>
                   )}
                 />
+                <span className="text-sm font-bold text-emerald-600">DH</span>
               </div>
 
-              {/* Client + Schedule Row */}
-              <div className="grid grid-cols-2 gap-3">
+              {/* All Fields Grid */}
+              <div className="grid grid-cols-2 gap-2">
                 <FormField
                   control={form.control}
                   name="client"
                   render={({ field }) => (
-                    <FormItem className="col-span-2">
-                      <FormLabel className="text-xs text-muted-foreground flex items-center gap-1">
-                        <User className="w-3 h-3" /> العميل
-                      </FormLabel>
+                    <FormItem className="col-span-2 space-y-1">
+                      <FormLabel className="text-[10px] text-muted-foreground">العميل</FormLabel>
                       <FormControl>
-                        <Input 
-                          placeholder="اسم العميل..." 
-                          className="h-9 rounded-lg text-sm"
-                          {...field} 
-                        />
+                        <Input placeholder="اسم العميل..." className="h-8 rounded-lg text-xs" {...field} />
                       </FormControl>
-                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -594,11 +582,11 @@ export default function Planning() {
                   control={form.control}
                   name="staff"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs text-muted-foreground">الموظف</FormLabel>
+                    <FormItem className="space-y-1">
+                      <FormLabel className="text-[10px] text-muted-foreground">الموظف</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                         <FormControl>
-                          <SelectTrigger className="h-9 rounded-lg text-sm">
+                          <SelectTrigger className="h-8 rounded-lg text-xs">
                             <SelectValue placeholder="اختر" />
                           </SelectTrigger>
                         </FormControl>
@@ -608,7 +596,6 @@ export default function Planning() {
                           ))}
                         </SelectContent>
                       </Select>
-                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -617,12 +604,11 @@ export default function Planning() {
                   control={form.control}
                   name="startTime"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs text-muted-foreground">الوقت</FormLabel>
+                    <FormItem className="space-y-1">
+                      <FormLabel className="text-[10px] text-muted-foreground">الوقت</FormLabel>
                       <FormControl>
-                        <Input type="time" className="h-9 rounded-lg text-sm" {...field} />
+                        <Input type="time" className="h-8 rounded-lg text-xs" {...field} />
                       </FormControl>
-                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -631,154 +617,98 @@ export default function Planning() {
                   control={form.control}
                   name="duration"
                   render={({ field }) => (
-                    <FormItem className="col-span-2">
-                      <FormLabel className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Timer className="w-3 h-3" /> المدة (دقيقة)
-                      </FormLabel>
+                    <FormItem className="space-y-1">
+                      <FormLabel className="text-[10px] text-muted-foreground">المدة (د)</FormLabel>
                       <FormControl>
-                        <Input type="number" className="h-9 rounded-lg text-sm" {...field} />
+                        <Input type="number" className="h-8 rounded-lg text-xs" {...field} />
                       </FormControl>
-                      <FormMessage />
                     </FormItem>
                   )}
                 />
-              </div>
 
-              {/* Service Section - Compact */}
-              <div className="border border-border/50 rounded-xl p-3 bg-white/50 dark:bg-gray-800/30">
-                <div className="flex items-center gap-2 mb-2">
-                  <Scissors className="w-3 h-3 text-orange-500" />
-                  <span className="font-bold text-xs text-orange-600 dark:text-orange-400">الخدمة</span>
-                </div>
+                {/* Service - spans full width */}
                 <FormField
                   control={form.control}
                   name="service"
                   render={({ field }) => (
-                    <FormItem>
-                      <div className="space-y-2">
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button 
-                              variant="outline" 
-                              role="combobox" 
-                              className={cn(
-                                "w-full justify-between h-9 text-sm rounded-lg",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value || "اختر الخدمة..."}
-                              <Search className="ml-2 h-3 w-3 shrink-0 opacity-50" />
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-[350px] p-0" align="start">
-                            <div className="flex flex-col">
-                              <div className="p-3 border-b border-border">
-                                <div className="relative">
-                                  <Search className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
-                                  <Input 
-                                    placeholder="ابحث عن خدمة..." 
-                                    className="pr-9 h-10"
-                                    value={serviceSearch}
-                                    onChange={(e) => setServiceSearch(e.target.value)}
-                                    autoFocus
-                                  />
-                                </div>
-                              </div>
-                              <div className="max-h-[300px] overflow-y-auto p-1">
-                                {filteredServices.length === 0 ? (
-                                  <div className="py-6 text-center text-sm text-muted-foreground">
-                                    لم يتم العثور على خدمات
-                                  </div>
-                                ) : (
-                                  filteredServices.map(s => (
-                                    <button
-                                      key={s.id}
-                                      type="button"
-                                      className={cn(
-                                        "w-full text-right px-3 py-2 text-sm rounded-sm hover:bg-primary/10 transition-colors flex items-center justify-between group",
-                                        field.value === s.name && "bg-primary/5 font-bold"
-                                      )}
-                                      onClick={() => {
-                                        handleServiceChange(s.name);
-                                      }}
-                                    >
-                                      <span>{s.name}</span>
-                                      <span className="text-[10px] text-muted-foreground group-hover:text-primary">{s.price} DH</span>
-                                    </button>
-                                  ))
-                                )}
+                    <FormItem className="col-span-2 space-y-1">
+                      <FormLabel className="text-[10px] text-muted-foreground flex items-center gap-1">
+                        <Scissors className="w-3 h-3" /> الخدمة
+                      </FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            role="combobox" 
+                            className={cn(
+                              "w-full justify-between h-8 text-xs rounded-lg",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value || "اختر الخدمة..."}
+                            <Search className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[320px] p-0" align="start">
+                          <div className="flex flex-col">
+                            <div className="p-2 border-b border-border">
+                              <div className="relative">
+                                <Search className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input 
+                                  placeholder="ابحث عن خدمة..." 
+                                  className="pr-9 h-9 text-sm"
+                                  value={serviceSearch}
+                                  onChange={(e) => setServiceSearch(e.target.value)}
+                                  autoFocus
+                                />
                               </div>
                             </div>
-                          </PopoverContent>
-                        </Popover>
-                        
-                        {/* Favorite Services */}
-                        {!editingAppointment && !serviceSearch && (
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <Label className="text-[10px] text-muted-foreground">الخدمات المفضلة</Label>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 px-2 text-[10px]"
-                                onClick={() => setIsEditFavoritesOpen(!isEditFavoritesOpen)}
-                              >
-                                <Settings2 className="w-3 h-3 ml-1" />
-                                {isEditFavoritesOpen ? "إغلاق" : "تعديل"}
-                              </Button>
-                            </div>
-                            
-                            {isEditFavoritesOpen ? (
-                              <div className="border border-dashed border-primary/30 rounded-lg p-3 bg-primary/5 max-h-[200px] overflow-y-auto">
-                                <p className="text-[10px] text-muted-foreground mb-2">اختر حتى 4 خدمات ({favoriteNames.length}/4)</p>
-                                <div className="flex flex-wrap gap-2">
-                                  {services.map((s) => (
-                                    <Button
-                                      key={s.id}
-                                      type="button"
-                                      variant="outline"
-                                      size="sm"
-                                      className={cn(
-                                        "h-7 text-[10px] rounded-full transition-all",
-                                        favoriteNames.includes(s.name) 
-                                          ? "bg-primary text-primary-foreground border-primary" 
-                                          : "border-border hover:border-primary/50"
-                                      )}
-                                      onClick={() => toggleFavorite(s.name)}
-                                    >
-                                      {favoriteNames.includes(s.name) && <Check className="w-3 h-3 ml-1" />}
-                                      {s.name}
-                                    </Button>
-                                  ))}
+                            <div className="max-h-[200px] overflow-y-auto p-1">
+                              {filteredServices.length === 0 ? (
+                                <div className="py-4 text-center text-sm text-muted-foreground">
+                                  لم يتم العثور على خدمات
                                 </div>
-                              </div>
-                            ) : favoriteServices.length > 0 ? (
-                              <div className="flex flex-wrap gap-2">
-                                {favoriteServices.map((s: any) => (
-                                  <Button
+                              ) : (
+                                filteredServices.map(s => (
+                                  <button
                                     key={s.id}
                                     type="button"
-                                    variant="outline"
-                                    size="sm"
                                     className={cn(
-                                      "h-8 text-[11px] md:text-xs rounded-full border-primary/30 bg-primary/5 hover:bg-primary/10",
-                                      field.value === s.name && "bg-primary text-primary-foreground border-solid ring-2 ring-primary ring-offset-1"
+                                      "w-full text-right px-3 py-1.5 text-sm rounded-sm hover:bg-primary/10 transition-colors flex items-center justify-between group",
+                                      field.value === s.name && "bg-primary/5 font-bold"
                                     )}
                                     onClick={() => handleServiceChange(s.name)}
                                   >
-                                    <Star className={cn("w-3 h-3 ml-1", field.value === s.name ? "fill-current" : "text-primary")} />
-                                    {s.name}
-                                  </Button>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="text-[10px] text-muted-foreground">انقر على "تعديل" لاختيار الخدمات المفضلة</p>
-                            )}
+                                    <span>{s.name}</span>
+                                    <span className="text-[10px] text-muted-foreground group-hover:text-primary">{s.price} DH</span>
+                                  </button>
+                                ))
+                              )}
+                            </div>
                           </div>
-                        )}
-                      </div>
-                      <FormMessage />
+                        </PopoverContent>
+                      </Popover>
+                      
+                      {/* Quick Favorites - compact inline */}
+                      {!editingAppointment && favoriteServices.length > 0 && (
+                        <div className="flex flex-wrap gap-1 pt-1">
+                          {favoriteServices.slice(0, 4).map((s: any) => (
+                            <Button
+                              key={s.id}
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className={cn(
+                                "h-6 text-[10px] px-2 rounded-full",
+                                field.value === s.name ? "bg-primary text-primary-foreground" : "bg-muted/50 hover:bg-muted"
+                              )}
+                              onClick={() => handleServiceChange(s.name)}
+                            >
+                              {s.name}
+                            </Button>
+                          ))}
+                        </div>
+                      )}
                     </FormItem>
                   )}
                 />
