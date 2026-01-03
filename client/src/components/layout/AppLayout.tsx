@@ -40,7 +40,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="flex h-screen w-full overflow-hidden bg-background safe-area-p" dir="rtl">
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0 relative">
-          <header className="flex h-16 items-center justify-between px-4 border-b bg-background shrink-0 z-20">
+          <header className="flex h-12 items-center justify-between px-4 border-b bg-background shrink-0 z-20">
             <SidebarTrigger />
             <div className="flex items-center gap-2">
               {isRefreshing && <span className="text-xs text-muted-foreground animate-pulse">جاري التحديث...</span>}
