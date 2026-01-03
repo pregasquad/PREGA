@@ -10,17 +10,17 @@ interface AdminLockProps {
 }
 
 export function AdminLock({ children }: AdminLockProps) {
-  const [isLocked, setIsLocked] = useState(true);
+  const [isLocked, setIsLocked] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem("admin_authenticated") !== "true";
+    }
+    return true;
+  });
   const [password, setPassword] = useState("");
   const [error, setError] = useState(false);
   const [, setLocation] = useLocation();
 
   useEffect(() => {
-    const isAuth = sessionStorage.getItem("admin_authenticated");
-    if (isAuth === "true") {
-      setIsLocked(false);
-    }
-
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && isLocked) {
         setLocation("/planning");
