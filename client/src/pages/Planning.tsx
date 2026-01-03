@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CalendarIcon, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Check, X, UserPlus, Edit2, Scissors, Search, Star, CreditCard, Settings2, Sparkles, User, Timer } from "lucide-react";
+import { CalendarIcon, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Check, X, UserPlus, Edit2, Scissors, Search, Star, CreditCard, Settings2, Sparkles, User, Timer, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -431,6 +431,15 @@ export default function Planning() {
             </Popover>
             <Button variant="ghost" size="icon" onClick={() => setDate(d => addDays(d, 1))} className="h-8 w-8">
               <ChevronRight className="w-4 h-4" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/appointments"] })} 
+              className="h-8 w-8"
+              title="تحديث"
+            >
+              <RefreshCw className="w-4 h-4" />
             </Button>
           </div>
         </div>
