@@ -47,11 +47,11 @@ function Router() {
       <Route path="/planning">
         <PageRoute component={Planning} />
       </Route>
-      
+
       <Route path="/services">
         <PageRoute component={Services} requireAdmin />
       </Route>
-      
+
       <Route path="/reports">
         <PageRoute component={Reports} requireAdmin />
       </Route>
@@ -77,7 +77,7 @@ function Router() {
       </Route>
 
       <Route path="/booking" component={Booking} />
-      
+
       <Route component={NotFound} />
     </Switch>
   );
