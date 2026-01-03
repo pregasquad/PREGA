@@ -692,7 +692,7 @@ export default function Planning() {
                       {/* Quick Favorites - compact inline */}
                       {!editingAppointment && (
                         <div className="pt-1">
-                          <div className="flex items-center gap-1 flex-wrap">
+                          <div className="flex items-center gap-1">
                             {favoriteServices.slice(0, 4).map((s: any) => (
                               <Button
                                 key={s.id}
@@ -700,7 +700,7 @@ export default function Planning() {
                                 variant="ghost"
                                 size="sm"
                                 className={cn(
-                                  "h-6 text-[10px] px-2 rounded-full",
+                                  "h-6 text-[9px] px-1.5 rounded-full shrink-0",
                                   field.value === s.name ? "bg-primary text-primary-foreground" : "bg-muted/50 hover:bg-muted"
                                 )}
                                 onClick={() => handleServiceChange(s.name)}
@@ -712,7 +712,7 @@ export default function Planning() {
                               type="button"
                               variant="ghost"
                               size="sm"
-                              className="h-6 w-6 p-0 rounded-full text-muted-foreground hover:text-primary"
+                              className="h-6 w-6 p-0 rounded-full text-muted-foreground hover:text-primary shrink-0"
                               onClick={() => setIsEditFavoritesOpen(!isEditFavoritesOpen)}
                             >
                               <Settings2 className="w-3 h-3" />
