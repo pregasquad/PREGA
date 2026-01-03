@@ -36,6 +36,7 @@ const formSchema = insertAppointmentSchema.extend({
 type AppointmentFormValues = z.infer<typeof formSchema>;
 
 export default function Planning() {
+  const [isPageReady, setIsPageReady] = useState(false);
   const [now, setNow] = useState(new Date());
   const [date, setDate] = useState<Date>(startOfToday());
   const [isStaffDialogOpen, setIsStaffDialogOpen] = useState(false);
@@ -44,6 +45,12 @@ export default function Planning() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const hasScrolledToNow = useRef(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    // Small delay to ensure everything is mounted and measured
+    const timer = setTimeout(() => setIsPageReady(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Update time every 20 seconds
   useEffect(() => {
@@ -72,6 +79,7 @@ export default function Planning() {
       hasScrolledToNow.current = true;
     }
   }, [nowLinePosition, isPageReady]);
+
   const formattedDate = format(date, "yyyy-MM-dd");
   
   const { data: appointments = [], isLoading: loadingApps } = useAppointments(formattedDate);
@@ -127,13 +135,6 @@ export default function Planning() {
   const [selectedStaff, setSelectedStaff] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [editingAppointment, setEditingAppointment] = useState<any>(null);
-  const [isPageReady, setIsPageReady] = useState(false);
-
-  useEffect(() => {
-    // Small delay to ensure everything is mounted and measured
-    const timer = setTimeout(() => setIsPageReady(true), 100);
-    return () => clearTimeout(timer);
-  }, []);
 
   // Form setup
   const form = useForm<AppointmentFormValues>({
@@ -478,7 +479,9 @@ export default function Planning() {
             </div>
           </div>
         </div>
-      </div>      {/* Create/Edit Dialog */}
+      </div>
+
+      {/* Create/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
@@ -544,156 +547,6 @@ export default function Planning() {
 
                 <FormField
                   control={form.control}
-                  name="service"
-                  render={({ field }) => {
-                    const selectedService = services.find(s => s.name === field.value);
-                    const categories = Array.from(new Set(services.map(s => s.category)));
-                    
-                    // Get most used services from localStorage
-                    const getMostUsedServices = () => {
-                      const stored = localStorage.getItem('mostUsedServices');
-                      const data = stored ? JSON.parse(stored) : {};
-                      
-                      // Identify popular services in general from current list
-                      const popularServices = services
-                        .slice(0, 10) // Take first 10 as generic "popular"
-                        .filter(s => !data[s.name]);
-
-                      const userChoices = Object.entries(data)
-                        .sort((a: any, b: any) => b[1] - a[1])
-                        .slice(0, 5)
-                        .map(([name]) => services.find(s => s.name === name))
-                        .filter(Boolean);
-
-                      // Combine user choices with generic popular ones
-                      return [...userChoices, ...popularServices].slice(0, 3);
-                    };
-                    
-                    const mostUsedServices = getMostUsedServices();
-                    
-                    // Filter services based on search
-                    const filteredCategories = categories.map(cat => {
-                      const catServices = services.filter(s => s.category === cat && 
-                        s.name.toLowerCase().includes(serviceSearch.toLowerCase()));
-                      return { name: cat, services: catServices };
-                    }).filter(cat => cat.services.length > 0);
-
-                    return (
-                      <FormItem className="col-span-2">
-                        <FormLabel>الخدمة</FormLabel>
-                        <div className="space-y-3">
-                          {/* Suggested Services (Fast Add) */}
-                          {mostUsedServices.length > 0 && !serviceSearch && (
-                            <div className="flex flex-col gap-1.5 mb-2">
-                              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">الخدمات المقترحة</span>
-                              <div className="flex flex-wrap gap-2">
-                                {mostUsedServices.map((s: any) => (
-                                  <Button
-                                    key={s.id}
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-7 text-[10px] gap-1 border-primary/20 hover:border-primary hover:bg-primary/5 transition-all"
-                                    onClick={() => handleServiceChange(s.name)}
-                                  >
-                                    <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
-                                    {s.name}
-                                  </Button>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          <Select onValueChange={handleServiceChange} value={field.value} dir="rtl">
-                            <FormControl>
-                              <SelectTrigger className="bg-background">
-                                <SelectValue placeholder="اختر الخدمة" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent 
-                              position="popper" 
-                              side="bottom" 
-                              sideOffset={4} 
-                              align="start"
-                              avoidCollisions={false}
-                              className="max-h-[400px] w-[var(--radix-select-trigger-width)] bg-white dark:bg-slate-900 border-border shadow-xl z-[100] opacity-100 p-0 overflow-hidden rounded-xl"
-                            >
-                              {/* Search bar inside dropdown */}
-                              <div className="sticky top-0 p-3 bg-white dark:bg-slate-900 border-b border-border z-10">
-                                <div 
-                                  className="relative" 
-                                  onClick={(e) => e.stopPropagation()}
-                                  onPointerDown={(e) => e.stopPropagation()}
-                                >
-                                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                  <input 
-                                    placeholder="البحث عن خدمة..." 
-                                    className="w-full pl-9 h-10 text-sm bg-muted/30 border-none rounded-md outline-none focus:ring-2 focus:ring-primary/20 px-3"
-                                    value={serviceSearch}
-                                    onChange={(e) => setServiceSearch(e.target.value)}
-                                    onKeyDown={(e) => e.stopPropagation()}
-                                    onKeyUp={(e) => e.stopPropagation()}
-                                    onKeyPress={(e) => e.stopPropagation()}
-                                    autoComplete="off"
-                                    autoFocus
-                                  />
-                                </div>
-                              </div>
-                              <div className="overflow-y-auto max-h-[340px] py-1">
-                                {filteredCategories.length > 0 ? (
-                                  filteredCategories.map(cat => (
-                                    <div key={cat.name} className="mb-2 last:mb-0">
-                                      <div className="px-3 py-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider bg-muted/30 mb-1 sticky top-0 z-[5]">
-                                        {cat.name}
-                                      </div>
-                                      <div className="px-1">
-                                        {cat.services.map(s => (
-                                          <SelectItem 
-                                            key={s.id} 
-                                            value={s.name} 
-                                            className="hover:bg-primary/5 focus:bg-primary/10 cursor-pointer rounded-md mx-1 my-0.5 transition-colors py-2.5"
-                                          >
-                                            <div className="flex justify-between items-center w-full gap-4 pr-1">
-                                              <span className="font-medium text-sm">{s.name}</span>
-                                              <div className="flex items-center gap-2">
-                                                <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground">{s.duration} د</span>
-                                                <span className="text-sm font-bold text-primary">{s.price} DH</span>
-                                              </div>
-                                            </div>
-                                          </SelectItem>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  ))
-                                ) : serviceSearch ? (
-                                  <div className="p-8 text-center">
-                                    <div className="bg-muted/20 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
-                                      <Search className="w-6 h-6 text-muted-foreground/50" />
-                                    </div>
-                                    <p className="text-sm text-muted-foreground font-medium">
-                                      لا توجد نتائج لـ "{serviceSearch}"
-                                    </p>
-                                    <p className="text-xs text-muted-foreground/60 mt-1 italic">
-                                      مثال: قص شعر، صبغة، بروتين
-                                    </p>
-                                  </div>
-                                ) : (
-                                  <div className="p-8 text-center text-muted-foreground italic text-sm">
-                                    ابدأ البحث أو اختر من الفئات
-                                  </div>
-                                )}
-                              </div>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    );
-                  }}
-                />
-
-                <FormField
-                  control={form.control}
                   name="duration"
                   render={({ field }) => (
                     <FormItem>
@@ -701,6 +554,29 @@ export default function Planning() {
                       <FormControl>
                         <Input type="number" {...field} />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="service"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>الخدمة</FormLabel>
+                      <Select onValueChange={handleServiceChange} defaultValue={field.value} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="اختر الخدمة" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {services.map(s => (
+                            <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -721,34 +597,12 @@ export default function Planning() {
                 />
               </div>
 
-              <div className="flex items-center gap-2 pt-2">
-                <FormField
-                  control={form.control}
-                  name="paid"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center gap-2 space-y-0">
-                      <FormControl>
-                        <Button
-                          type="button"
-                          variant={field.value ? "default" : "outline"}
-                          className={cn("gap-2", field.value && "bg-emerald-500 hover:bg-emerald-600")}
-                          onClick={() => field.onChange(!field.value)}
-                        >
-                          {field.value ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
-                          {field.value ? "مدفوع" : "غير مدفوع"}
-                        </Button>
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </div>
-
               <DialogFooter className="gap-2 pt-4">
-                {editingAppointment && isAdmin && (
+                {editingAppointment && (
                   <Button
                     type="button"
-                    variant="outline"
-                    className="text-destructive hover:bg-destructive/10"
+                    variant="destructive"
+                    className="flex-1"
                     onClick={() => {
                       if (confirm("هل أنت متأكد من حذف هذا الموعد؟")) {
                         deleteMutation.mutate(editingAppointment.id);
@@ -756,12 +610,11 @@ export default function Planning() {
                       }
                     }}
                   >
-                    <Trash2 className="h-4 w-4 ml-2" />
                     حذف الموعد
                   </Button>
                 )}
                 <Button type="submit" className="flex-1" disabled={createMutation.isPending || updateMutation.isPending}>
-                  {editingAppointment ? "تحديث الموعد" : "تأكيد الموعد"}
+                  {editingAppointment ? "تحديث" : "تأكيد الموعد"}
                 </Button>
               </DialogFooter>
             </form>
