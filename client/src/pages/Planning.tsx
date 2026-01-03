@@ -167,49 +167,53 @@ export default function Planning() {
   // URL params for notification deep linking
   const searchString = useSearch();
   const [, setLocation] = useLocation();
-  const hasHandledDeepLink = useRef(false);
+  const pendingAppointmentId = useRef<string | null>(null);
   
-  // Handle deep link from notification click
+  // Handle deep link - Step 1: Set date and store appointment ID
   useEffect(() => {
-    if (hasHandledDeepLink.current || !searchString) return;
+    if (!searchString) return;
     
     const params = new URLSearchParams(searchString);
     const dateParam = params.get("date");
     const appointmentId = params.get("appointmentId");
     
-    if (dateParam && appointmentId) {
-      // Parse and set the date
+    if (dateParam && appointmentId && !pendingAppointmentId.current) {
+      pendingAppointmentId.current = appointmentId;
       try {
         const targetDate = parseISO(dateParam);
         setDate(targetDate);
       } catch (e) {
         console.error("Invalid date param:", dateParam);
+        pendingAppointmentId.current = null;
       }
-      
-      // Find and open the appointment once data is loaded
-      if (!loadingApps && appointments.length > 0) {
-        const targetApp = appointments.find(app => app.id === parseInt(appointmentId));
-        if (targetApp) {
-          form.reset({
-            date: targetApp.date,
-            startTime: targetApp.startTime,
-            duration: targetApp.duration,
-            client: targetApp.client,
-            service: targetApp.service,
-            staff: targetApp.staff,
-            price: targetApp.price,
-            total: targetApp.total,
-            paid: targetApp.paid,
-          });
-          setEditingAppointment(targetApp);
-          setIsDialogOpen(true);
-          hasHandledDeepLink.current = true;
-          // Clear URL params
-          setLocation("/planning", { replace: true });
-        }
-      }
+      setLocation("/planning", { replace: true });
     }
-  }, [searchString, loadingApps, appointments, form, setLocation]);
+  }, [searchString, setLocation]);
+  
+  // Handle deep link - Step 2: Open appointment when data loads
+  useEffect(() => {
+    if (!pendingAppointmentId.current || loadingApps) return;
+    
+    const targetApp = appointments.find(app => app.id === parseInt(pendingAppointmentId.current!));
+    if (targetApp) {
+      form.reset({
+        date: targetApp.date,
+        startTime: targetApp.startTime,
+        duration: targetApp.duration,
+        client: targetApp.client,
+        service: targetApp.service,
+        staff: targetApp.staff,
+        price: targetApp.price,
+        total: targetApp.total,
+        paid: targetApp.paid,
+      });
+      setEditingAppointment(targetApp);
+      setIsDialogOpen(true);
+      pendingAppointmentId.current = null;
+    } else if (appointments.length > 0) {
+      pendingAppointmentId.current = null;
+    }
+  }, [loadingApps, appointments, form]);
 
   // Calculate daily revenue and staff breakdown (only paid appointments)
   const stats = useMemo(() => {
