@@ -38,7 +38,7 @@ import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 
 const NAV_ITEMS = [
-  { label: "الرئيسية", href: "/", icon: Home },
+  { label: "الرئيسية", href: "/home", icon: Home },
   { label: "التخطيط", href: "/planning", icon: CalendarDays },
   { label: "الخدمات", href: "/services", icon: Scissors },
   { label: "العملاء", href: "/clients", icon: Users },
