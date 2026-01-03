@@ -604,7 +604,7 @@ export default function Planning() {
                         {serviceSearch && (
                           <Button 
                             type="button" 
-                            variant="link" 
+                            variant="ghost" 
                             className="h-auto p-0 text-xs text-primary"
                             onClick={() => setServiceSearch("")}
                           >
@@ -613,30 +613,61 @@ export default function Planning() {
                         )}
                       </FormLabel>
                       <div className="space-y-3">
-                        {/* Search and Select */}
-                        <div className="flex gap-2">
-                          <div className="relative flex-1">
-                            <Search className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
-                            <Input 
-                              placeholder="ابحث عن خدمة..." 
-                              className="pr-9"
-                              value={serviceSearch}
-                              onChange={(e) => setServiceSearch(e.target.value)}
-                            />
-                          </div>
-                          <Select onValueChange={handleServiceChange} defaultValue={field.value} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger className="w-[180px]">
-                                <SelectValue placeholder="اختر من القائمة" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {filteredServices.map(s => (
-                                <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button 
+                              variant="outline" 
+                              role="combobox" 
+                              className={cn(
+                                "w-full justify-between h-11",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value || "ابحث واختر الخدمة..."}
+                              <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[450px] p-0" align="start">
+                            <div className="flex flex-col">
+                              <div className="p-3 border-b border-border">
+                                <div className="relative">
+                                  <Search className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
+                                  <Input 
+                                    placeholder="ابحث عن خدمة..." 
+                                    className="pr-9 h-10"
+                                    value={serviceSearch}
+                                    onChange={(e) => setServiceSearch(e.target.value)}
+                                    autoFocus
+                                  />
+                                </div>
+                              </div>
+                              <div className="max-h-[300px] overflow-y-auto p-1">
+                                {filteredServices.length === 0 ? (
+                                  <div className="py-6 text-center text-sm text-muted-foreground">
+                                    لم يتم العثور على خدمات
+                                  </div>
+                                ) : (
+                                  filteredServices.map(s => (
+                                    <button
+                                      key={s.id}
+                                      type="button"
+                                      className={cn(
+                                        "w-full text-right px-3 py-2 text-sm rounded-sm hover:bg-primary/10 transition-colors flex items-center justify-between group",
+                                        field.value === s.name && "bg-primary/5 font-bold"
+                                      )}
+                                      onClick={() => {
+                                        handleServiceChange(s.name);
+                                      }}
+                                    >
+                                      <span>{s.name}</span>
+                                      <span className="text-[10px] text-muted-foreground group-hover:text-primary">{s.price} DH</span>
+                                    </button>
+                                  ))
+                                )}
+                              </div>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
                         
                         {/* Favorite Services */}
                         {!editingAppointment && favoriteServices.length > 0 && !serviceSearch && (
