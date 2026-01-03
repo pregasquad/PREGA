@@ -1,8 +1,9 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
-import { format, addDays, startOfToday, setHours, setMinutes, isSameDay } from "date-fns";
+import { format, addDays, startOfToday, setHours, setMinutes, isSameDay, parseISO } from "date-fns";
 import { useAppointments, useStaff, useServices, useCreateAppointment, useUpdateAppointment, useDeleteAppointment } from "@/hooks/use-salon-data";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useSearch, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -162,6 +163,53 @@ export default function Planning() {
       paid: false,
     },
   });
+  
+  // URL params for notification deep linking
+  const searchString = useSearch();
+  const [, setLocation] = useLocation();
+  const hasHandledDeepLink = useRef(false);
+  
+  // Handle deep link from notification click
+  useEffect(() => {
+    if (hasHandledDeepLink.current || !searchString) return;
+    
+    const params = new URLSearchParams(searchString);
+    const dateParam = params.get("date");
+    const appointmentId = params.get("appointmentId");
+    
+    if (dateParam && appointmentId) {
+      // Parse and set the date
+      try {
+        const targetDate = parseISO(dateParam);
+        setDate(targetDate);
+      } catch (e) {
+        console.error("Invalid date param:", dateParam);
+      }
+      
+      // Find and open the appointment once data is loaded
+      if (!loadingApps && appointments.length > 0) {
+        const targetApp = appointments.find(app => app.id === parseInt(appointmentId));
+        if (targetApp) {
+          form.reset({
+            date: targetApp.date,
+            startTime: targetApp.startTime,
+            duration: targetApp.duration,
+            client: targetApp.client,
+            service: targetApp.service,
+            staff: targetApp.staff,
+            price: targetApp.price,
+            total: targetApp.total,
+            paid: targetApp.paid,
+          });
+          setEditingAppointment(targetApp);
+          setIsDialogOpen(true);
+          hasHandledDeepLink.current = true;
+          // Clear URL params
+          setLocation("/planning", { replace: true });
+        }
+      }
+    }
+  }, [searchString, loadingApps, appointments, form, setLocation]);
 
   // Calculate daily revenue and staff breakdown (only paid appointments)
   const stats = useMemo(() => {
