@@ -166,7 +166,7 @@ export function Sidebar() {
   };
 
   return (
-    <ShadcnSidebar side="left" dir="rtl">
+    <ShadcnSidebar side="right" dir="rtl" className="hidden md:flex">
       <SidebarHeader className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
