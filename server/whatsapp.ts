@@ -145,7 +145,7 @@ export async function sendBookingConfirmation(
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   return sendWhatsAppTemplate(
     clientPhone,
-    "pregasquad",
+    "pregasquad1",
     "ar",
     [clientName, appointmentDate, appointmentTime, serviceName]
   );
@@ -160,7 +160,7 @@ export async function sendAppointmentReminder(
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   return sendWhatsAppTemplate(
     clientPhone,
-    "pregasquad",
+    "pregasquad1",
     "ar",
     [clientName, appointmentDate, appointmentTime, serviceName]
   );
