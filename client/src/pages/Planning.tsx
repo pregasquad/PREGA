@@ -599,34 +599,47 @@ export default function Planning() {
                   name="service"
                   render={({ field }) => (
                     <FormItem className="col-span-2">
-                      <FormLabel>الخدمة</FormLabel>
+                      <FormLabel className="flex items-center justify-between">
+                        <span>الخدمة</span>
+                        {serviceSearch && (
+                          <Button 
+                            type="button" 
+                            variant="link" 
+                            className="h-auto p-0 text-xs text-primary"
+                            onClick={() => setServiceSearch("")}
+                          >
+                            مسح البحث
+                          </Button>
+                        )}
+                      </FormLabel>
                       <div className="space-y-3">
                         {/* Search and Select */}
-                        <div className="relative">
-                          <Search className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
-                          <Input 
-                            placeholder="بحث عن خدمة..." 
-                            className="pr-9 mb-2"
-                            value={serviceSearch}
-                            onChange={(e) => setServiceSearch(e.target.value)}
-                          />
+                        <div className="flex gap-2">
+                          <div className="relative flex-1">
+                            <Search className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <Input 
+                              placeholder="ابحث عن خدمة..." 
+                              className="pr-9"
+                              value={serviceSearch}
+                              onChange={(e) => setServiceSearch(e.target.value)}
+                            />
+                          </div>
+                          <Select onValueChange={handleServiceChange} defaultValue={field.value} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="w-[180px]">
+                                <SelectValue placeholder="اختر من القائمة" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {filteredServices.map(s => (
+                                <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
-
-                        <Select onValueChange={handleServiceChange} defaultValue={field.value} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="اختر الخدمة" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {filteredServices.map(s => (
-                              <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
                         
                         {/* Favorite Services */}
-                        {!editingAppointment && favoriteServices.length > 0 && (
+                        {!editingAppointment && favoriteServices.length > 0 && !serviceSearch && (
                           <div className="space-y-1">
                             <Label className="text-[10px] text-muted-foreground">الخدمات الأكثر استخداماً</Label>
                             <div className="flex flex-wrap gap-2">
