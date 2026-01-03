@@ -296,15 +296,11 @@ export default function Planning() {
     timeSlots.push({ minutes: i, label: formattedTime, fullLabel: timeString });
   }
 
-  // Get most used services from localStorage
+  // Get favorite services (fixed list)
   const favoriteServices = useMemo(() => {
-    const stored = localStorage.getItem('mostUsedServices');
-    if (!stored) return [];
-    const mostUsed = JSON.parse(stored);
-    return Object.entries(mostUsed)
-      .sort(([, a]: any, [, b]: any) => b - a)
-      .slice(0, 5)
-      .map(([name]) => services.find(s => s.name === name))
+    const fixedNames = ["Brushing", "Manicure Simple", "Soin Classique", "Sourcils"];
+    return fixedNames
+      .map(name => services.find(s => s.name === name))
       .filter(Boolean);
   }, [services]);
 
