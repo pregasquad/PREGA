@@ -16,11 +16,11 @@ class AuthStorage implements IAuthStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
+    // MySQL uses onDuplicateKeyUpdate
     const [user] = await db
       .insert(users)
       .values(userData)
-      .onConflictDoUpdate({
-        target: users.id,
+      .onDuplicateKeyUpdate({
         set: {
           ...userData,
           updatedAt: new Date(),
