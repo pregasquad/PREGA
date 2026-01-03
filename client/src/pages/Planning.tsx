@@ -690,23 +690,60 @@ export default function Planning() {
                       </Popover>
                       
                       {/* Quick Favorites - compact inline */}
-                      {!editingAppointment && favoriteServices.length > 0 && (
-                        <div className="flex flex-wrap gap-1 pt-1">
-                          {favoriteServices.slice(0, 4).map((s: any) => (
+                      {!editingAppointment && (
+                        <div className="pt-1">
+                          <div className="flex items-center gap-1 flex-wrap">
+                            {favoriteServices.slice(0, 4).map((s: any) => (
+                              <Button
+                                key={s.id}
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className={cn(
+                                  "h-6 text-[10px] px-2 rounded-full",
+                                  field.value === s.name ? "bg-primary text-primary-foreground" : "bg-muted/50 hover:bg-muted"
+                                )}
+                                onClick={() => handleServiceChange(s.name)}
+                              >
+                                {s.name}
+                              </Button>
+                            ))}
                             <Button
-                              key={s.id}
                               type="button"
                               variant="ghost"
                               size="sm"
-                              className={cn(
-                                "h-6 text-[10px] px-2 rounded-full",
-                                field.value === s.name ? "bg-primary text-primary-foreground" : "bg-muted/50 hover:bg-muted"
-                              )}
-                              onClick={() => handleServiceChange(s.name)}
+                              className="h-6 w-6 p-0 rounded-full text-muted-foreground hover:text-primary"
+                              onClick={() => setIsEditFavoritesOpen(!isEditFavoritesOpen)}
                             >
-                              {s.name}
+                              <Settings2 className="w-3 h-3" />
                             </Button>
-                          ))}
+                          </div>
+                          
+                          {isEditFavoritesOpen && (
+                            <div className="mt-2 border border-dashed border-primary/30 rounded-lg p-2 bg-primary/5 max-h-[120px] overflow-y-auto">
+                              <p className="text-[9px] text-muted-foreground mb-1">اختر حتى 4 ({favoriteNames.length}/4)</p>
+                              <div className="flex flex-wrap gap-1">
+                                {services.map((s) => (
+                                  <Button
+                                    key={s.id}
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className={cn(
+                                      "h-5 text-[9px] px-1.5 rounded-full",
+                                      favoriteNames.includes(s.name) 
+                                        ? "bg-primary text-primary-foreground border-primary" 
+                                        : "border-border/50"
+                                    )}
+                                    onClick={() => toggleFavorite(s.name)}
+                                  >
+                                    {favoriteNames.includes(s.name) && <Check className="w-2 h-2 ml-0.5" />}
+                                    {s.name}
+                                  </Button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                     </FormItem>
