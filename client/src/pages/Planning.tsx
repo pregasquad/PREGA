@@ -19,10 +19,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { insertAppointmentSchema, insertStaffSchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
-// Constants for grid calculation
-const START_HOUR = 8;  // 08:00
-const END_HOUR = 22;   // 22:00
-const SLOT_HEIGHT = 100; // Slightly smaller for better fit
+// Constants for grid calculation (Updated to 24h)
+const START_HOUR = 0;  // 00:00
+const END_HOUR = 24;   // 24:00
+const SLOT_HEIGHT = 100;
 const SLOT_INTERVAL = 15; // minutes
 const PIXELS_PER_MINUTE = SLOT_HEIGHT / 60;
 
@@ -308,6 +308,12 @@ export default function Planning() {
       .filter(Boolean);
   }, [services]);
 
+  // Filter services based on search
+  const filteredServices = useMemo(() => {
+    if (!serviceSearch) return services;
+    return services.filter(s => s.name.toLowerCase().includes(serviceSearch.toLowerCase()));
+  }, [services, serviceSearch]);
+
   return (
     <div className={cn(
       "h-full flex flex-col gap-4 md:gap-6 transition-opacity duration-500",
@@ -375,7 +381,7 @@ export default function Planning() {
               ))}
             </div>
 
-            <div className="flex relative min-h-[1020px]" style={{ height: (END_HOUR - START_HOUR) * SLOT_HEIGHT }}>
+            <div className="flex relative min-h-[2400px]" style={{ height: (END_HOUR - START_HOUR) * SLOT_HEIGHT }}>
               {/* Time Column */}
               <div className="w-14 md:w-20 flex-shrink-0 border-l border-border bg-muted/5 sticky right-0 z-10">
                 {timeSlots.map((slot, i) => (
@@ -505,6 +511,21 @@ export default function Planning() {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
               <div className="grid grid-cols-2 gap-4">
+                {/* 1. Price first */}
+                <FormField
+                  control={form.control}
+                  name="total"
+                  render={({ field }) => (
+                    <FormItem className="col-span-2">
+                      <FormLabel className="text-primary font-bold">السعر الإجمالي (DH)</FormLabel>
+                      <FormControl>
+                        <Input type="number" className="text-xl h-12 font-black border-2 border-primary" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <FormField
                   control={form.control}
                   name="client"
@@ -579,7 +600,18 @@ export default function Planning() {
                   render={({ field }) => (
                     <FormItem className="col-span-2">
                       <FormLabel>الخدمة</FormLabel>
-                      <div className="space-y-2">
+                      <div className="space-y-3">
+                        {/* Search and Select */}
+                        <div className="relative">
+                          <Search className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input 
+                            placeholder="بحث عن خدمة..." 
+                            className="pr-9 mb-2"
+                            value={serviceSearch}
+                            onChange={(e) => setServiceSearch(e.target.value)}
+                          />
+                        </div>
+
                         <Select onValueChange={handleServiceChange} defaultValue={field.value} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
@@ -587,47 +619,37 @@ export default function Planning() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {services.map(s => (
+                            {filteredServices.map(s => (
                               <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                         
+                        {/* Favorite Services */}
                         {!editingAppointment && favoriteServices.length > 0 && (
-                          <div className="flex flex-wrap gap-2 pt-1">
-                            {favoriteServices.map((s: any) => (
-                              <Button
-                                key={s.id}
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className={cn(
-                                  "h-7 text-[10px] md:text-xs rounded-full border-dashed",
-                                  field.value === s.name && "bg-primary text-primary-foreground border-solid"
-                                )}
-                                onClick={() => handleServiceChange(s.name)}
-                              >
-                                <Star className="w-3 h-3 ml-1 fill-current" />
-                                {s.name}
-                              </Button>
-                            ))}
+                          <div className="space-y-1">
+                            <Label className="text-[10px] text-muted-foreground">الخدمات الأكثر استخداماً</Label>
+                            <div className="flex flex-wrap gap-2">
+                              {favoriteServices.map((s: any) => (
+                                <Button
+                                  key={s.id}
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className={cn(
+                                    "h-8 text-[11px] md:text-xs rounded-full border-primary/30 bg-primary/5 hover:bg-primary/10",
+                                    field.value === s.name && "bg-primary text-primary-foreground border-solid ring-2 ring-primary ring-offset-1"
+                                  )}
+                                  onClick={() => handleServiceChange(s.name)}
+                                >
+                                  <Star className={cn("w-3 h-3 ml-1", field.value === s.name ? "fill-current" : "text-primary")} />
+                                  {s.name}
+                                </Button>
+                              ))}
+                            </div>
                           </div>
                         )}
                       </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="total"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>السعر (DH)</FormLabel>
-                      <FormControl>
-                        <Input type="number" {...field} />
-                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -650,7 +672,7 @@ export default function Planning() {
                     حذف الموعد
                   </Button>
                 )}
-                <Button type="submit" className="flex-1" disabled={createMutation.isPending || updateMutation.isPending}>
+                <Button type="submit" className="flex-1 h-12 text-lg font-bold" disabled={createMutation.isPending || updateMutation.isPending}>
                   {editingAppointment ? "تحديث" : "تأكيد الموعد"}
                 </Button>
               </DialogFooter>
