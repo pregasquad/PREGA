@@ -35,6 +35,7 @@ export async function sendWhatsAppMessage(
     });
 
     const data = await response.json();
+    console.log("SendZen API response:", JSON.stringify(data, null, 2));
 
     if (!response.ok) {
       console.error("SendZen API error:", data);
