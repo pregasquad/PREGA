@@ -609,7 +609,11 @@ export default function Planning() {
                             </Button>
                           </FormControl>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[320px] p-0 shadow-xl border-2" align="start">
+                        <PopoverContent 
+                          className="w-[320px] p-0 shadow-xl border-2" 
+                          align="start"
+                          onWheel={(e) => e.stopPropagation()}
+                        >
                           <div className="p-3 border-b bg-muted/30">
                             <div className="relative">
                               <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -626,8 +630,13 @@ export default function Planning() {
                             </p>
                           </div>
                           <div 
-                            className="h-[250px] overflow-y-auto overscroll-contain p-2 space-y-1"
-                            style={{ scrollbarWidth: 'thin' }}
+                            className="max-h-[250px] overflow-y-scroll p-2 space-y-1"
+                            style={{ scrollbarWidth: 'thin', WebkitOverflowScrolling: 'touch' }}
+                            onWheel={(e) => {
+                              e.stopPropagation();
+                              const target = e.currentTarget;
+                              target.scrollTop += e.deltaY;
+                            }}
                           >
                             {filteredServices.map(s => (
                               <div
