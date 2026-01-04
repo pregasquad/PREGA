@@ -257,10 +257,10 @@ export default function Planning() {
       let updated: string[];
       if (prev.includes(serviceName)) {
         updated = prev.filter(n => n !== serviceName);
-      } else if (prev.length < 4) {
+      } else if (prev.length < 6) {
         updated = [...prev, serviceName];
       } else {
-        toast({ title: "الحد الأقصى 4 خدمات", variant: "destructive" });
+        toast({ title: "الحد الأقصى 6 خدمات", variant: "destructive" });
         return prev;
       }
       localStorage.setItem('favoriteServiceNames', JSON.stringify(updated));
@@ -675,7 +675,7 @@ export default function Planning() {
                         <div className="pt-2">
                           <p className="text-[10px] text-muted-foreground mb-1">الخدمات المفضلة:</p>
                           <div className="flex flex-wrap items-center gap-2">
-                            {favoriteServices.slice(0, 4).map((s: any) => (
+                            {favoriteServices.slice(0, 6).map((s: any) => (
                               <Button
                                 key={s.id}
                                 type="button"
@@ -706,7 +706,7 @@ export default function Planning() {
                           
                           {isEditFavoritesOpen && (
                             <div className="mt-2 border border-dashed border-primary/30 rounded-lg p-2 bg-primary/5 max-h-[120px] overflow-y-auto">
-                              <p className="text-[9px] text-muted-foreground mb-1">اختر حتى 4 ({favoriteNames.length}/4)</p>
+                              <p className="text-[9px] text-muted-foreground mb-1">اختر حتى 6 ({favoriteNames.length}/6)</p>
                               <div className="flex flex-wrap gap-1">
                                 {services.map((s) => (
                                   <Button
