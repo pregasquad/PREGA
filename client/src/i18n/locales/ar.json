@@ -1,0 +1,129 @@
+{
+  "nav": {
+    "home": "الرئيسية",
+    "planning": "التخطيط",
+    "services": "الخدمات",
+    "clients": "العملاء",
+    "inventory": "المخزون",
+    "expenses": "المصاريف",
+    "salaries": "الرواتب",
+    "staffPerformance": "أداء الموظفين",
+    "reports": "التقارير",
+    "booking": "صفحة الحجز"
+  },
+  "common": {
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "add": "إضافة",
+    "search": "بحث",
+    "loading": "جاري التحميل...",
+    "noResults": "لا توجد نتائج",
+    "confirm": "تأكيد",
+    "close": "إغلاق",
+    "paid": "مدفوع",
+    "unpaid": "غير مدفوع",
+    "total": "المجموع",
+    "price": "السعر",
+    "duration": "المدة",
+    "minutes": "دقيقة",
+    "refresh": "تحديث",
+    "refreshed": "تم التحديث",
+    "dataUpdated": "تم تحديث البيانات بنجاح"
+  },
+  "planning": {
+    "title": "PREGA SQUAD - التخطيط",
+    "newBooking": "حجز جديد",
+    "editBooking": "تعديل الحجز",
+    "client": "العميل",
+    "service": "الخدمة",
+    "staff": "الموظف",
+    "time": "الوقت",
+    "date": "التاريخ",
+    "selectService": "اختر خدمة...",
+    "searchService": "ابحث عن خدمة...",
+    "servicesAvailable": "خدمة متاحة",
+    "favoriteServices": "الخدمات المفضلة:",
+    "maxFavorites": "الحد الأقصى 6 خدمات",
+    "selectUpTo": "اختر حتى 6",
+    "confirmBooking": "تأكيد الموعد",
+    "updateBooking": "تحديث",
+    "deleteConfirm": "هل أنت متأكد من حذف هذا الموعد؟",
+    "paymentConfirmed": "تم التأكيد",
+    "paymentConfirmedDesc": "تم تأكيد الدفع بنجاح"
+  },
+  "services": {
+    "title": "الخدمات",
+    "addService": "إضافة خدمة",
+    "editService": "تعديل الخدمة",
+    "serviceName": "اسم الخدمة",
+    "category": "الفئة",
+    "commission": "نسبة العمولة",
+    "linkedProduct": "المنتج المرتبط"
+  },
+  "clients": {
+    "title": "العملاء",
+    "addClient": "إضافة عميل",
+    "editClient": "تعديل العميل",
+    "name": "الاسم",
+    "phone": "الهاتف",
+    "email": "البريد الإلكتروني",
+    "birthday": "تاريخ الميلاد",
+    "loyaltyPoints": "نقاط الولاء"
+  },
+  "inventory": {
+    "title": "المخزون",
+    "addProduct": "إضافة منتج",
+    "productName": "اسم المنتج",
+    "quantity": "الكمية",
+    "minStock": "الحد الأدنى",
+    "purchasePrice": "سعر الشراء",
+    "salePrice": "سعر البيع"
+  },
+  "expenses": {
+    "title": "المصاريف",
+    "addExpense": "إضافة مصروف",
+    "description": "الوصف",
+    "amount": "المبلغ",
+    "type": "النوع"
+  },
+  "salaries": {
+    "title": "الرواتب",
+    "baseSalary": "الراتب الأساسي",
+    "commission": "العمولة",
+    "bonus": "المكافأة",
+    "totalSalary": "إجمالي الراتب"
+  },
+  "reports": {
+    "title": "التقارير",
+    "dailyRevenue": "الإيرادات اليومية",
+    "weeklyRevenue": "الإيرادات الأسبوعية",
+    "monthlyRevenue": "الإيرادات الشهرية",
+    "topServices": "أفضل الخدمات",
+    "topStaff": "أفضل الموظفين"
+  },
+  "booking": {
+    "title": "حجز موعد",
+    "selectDate": "اختر التاريخ",
+    "selectTime": "اختر الوقت",
+    "selectService": "اختر الخدمة",
+    "yourInfo": "معلوماتك",
+    "bookNow": "احجز الآن",
+    "bookingConfirmed": "تم تأكيد الحجز",
+    "thankYou": "شكراً لحجزك!"
+  },
+  "auth": {
+    "login": "تسجيل الدخول",
+    "logout": "تسجيل الخروج",
+    "adminLogin": "دخول المدير",
+    "password": "كلمة المرور",
+    "wrongPassword": "كلمة المرور خاطئة"
+  },
+  "language": {
+    "select": "اللغة",
+    "en": "الإنجليزية",
+    "fr": "الفرنسية",
+    "ar": "العربية"
+  }
+}

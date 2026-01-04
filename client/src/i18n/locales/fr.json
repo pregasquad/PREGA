@@ -1,0 +1,129 @@
+{
+  "nav": {
+    "home": "Accueil",
+    "planning": "Planning",
+    "services": "Services",
+    "clients": "Clients",
+    "inventory": "Stock",
+    "expenses": "Dépenses",
+    "salaries": "Salaires",
+    "staffPerformance": "Performance Staff",
+    "reports": "Rapports",
+    "booking": "Page de Réservation"
+  },
+  "common": {
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "add": "Ajouter",
+    "search": "Rechercher",
+    "loading": "Chargement...",
+    "noResults": "Aucun résultat",
+    "confirm": "Confirmer",
+    "close": "Fermer",
+    "paid": "Payé",
+    "unpaid": "Non payé",
+    "total": "Total",
+    "price": "Prix",
+    "duration": "Durée",
+    "minutes": "minutes",
+    "refresh": "Actualiser",
+    "refreshed": "Actualisé",
+    "dataUpdated": "Données mises à jour avec succès"
+  },
+  "planning": {
+    "title": "PREGA SQUAD - Planning",
+    "newBooking": "Nouveau RDV",
+    "editBooking": "Modifier RDV",
+    "client": "Client",
+    "service": "Service",
+    "staff": "Staff",
+    "time": "Heure",
+    "date": "Date",
+    "selectService": "Choisir un service...",
+    "searchService": "Rechercher un service...",
+    "servicesAvailable": "services disponibles",
+    "favoriteServices": "Services Favoris:",
+    "maxFavorites": "Maximum 6 services",
+    "selectUpTo": "Choisir jusqu'à 6",
+    "confirmBooking": "Confirmer le RDV",
+    "updateBooking": "Mettre à jour",
+    "deleteConfirm": "Êtes-vous sûr de vouloir supprimer ce rendez-vous?",
+    "paymentConfirmed": "Paiement Confirmé",
+    "paymentConfirmedDesc": "Paiement confirmé avec succès"
+  },
+  "services": {
+    "title": "Services",
+    "addService": "Ajouter Service",
+    "editService": "Modifier Service",
+    "serviceName": "Nom du Service",
+    "category": "Catégorie",
+    "commission": "Commission %",
+    "linkedProduct": "Produit Lié"
+  },
+  "clients": {
+    "title": "Clients",
+    "addClient": "Ajouter Client",
+    "editClient": "Modifier Client",
+    "name": "Nom",
+    "phone": "Téléphone",
+    "email": "Email",
+    "birthday": "Anniversaire",
+    "loyaltyPoints": "Points de Fidélité"
+  },
+  "inventory": {
+    "title": "Stock",
+    "addProduct": "Ajouter Produit",
+    "productName": "Nom du Produit",
+    "quantity": "Quantité",
+    "minStock": "Stock Minimum",
+    "purchasePrice": "Prix d'Achat",
+    "salePrice": "Prix de Vente"
+  },
+  "expenses": {
+    "title": "Dépenses",
+    "addExpense": "Ajouter Dépense",
+    "description": "Description",
+    "amount": "Montant",
+    "type": "Type"
+  },
+  "salaries": {
+    "title": "Salaires",
+    "baseSalary": "Salaire de Base",
+    "commission": "Commission",
+    "bonus": "Prime",
+    "totalSalary": "Salaire Total"
+  },
+  "reports": {
+    "title": "Rapports",
+    "dailyRevenue": "Revenus Journaliers",
+    "weeklyRevenue": "Revenus Hebdomadaires",
+    "monthlyRevenue": "Revenus Mensuels",
+    "topServices": "Meilleurs Services",
+    "topStaff": "Meilleur Staff"
+  },
+  "booking": {
+    "title": "Réserver un Rendez-vous",
+    "selectDate": "Choisir la Date",
+    "selectTime": "Choisir l'Heure",
+    "selectService": "Choisir le Service",
+    "yourInfo": "Vos Informations",
+    "bookNow": "Réserver Maintenant",
+    "bookingConfirmed": "Réservation Confirmée",
+    "thankYou": "Merci pour votre réservation!"
+  },
+  "auth": {
+    "login": "Connexion",
+    "logout": "Déconnexion",
+    "adminLogin": "Connexion Admin",
+    "password": "Mot de passe",
+    "wrongPassword": "Mot de passe incorrect"
+  },
+  "language": {
+    "select": "Langue",
+    "en": "Anglais",
+    "fr": "Français",
+    "ar": "Arabe"
+  }
+}

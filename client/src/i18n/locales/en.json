@@ -1,0 +1,129 @@
+{
+  "nav": {
+    "home": "Home",
+    "planning": "Planning",
+    "services": "Services",
+    "clients": "Clients",
+    "inventory": "Inventory",
+    "expenses": "Expenses",
+    "salaries": "Salaries",
+    "staffPerformance": "Staff Performance",
+    "reports": "Reports",
+    "booking": "Booking Page"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "search": "Search",
+    "loading": "Loading...",
+    "noResults": "No results",
+    "confirm": "Confirm",
+    "close": "Close",
+    "paid": "Paid",
+    "unpaid": "Unpaid",
+    "total": "Total",
+    "price": "Price",
+    "duration": "Duration",
+    "minutes": "minutes",
+    "refresh": "Refresh",
+    "refreshed": "Refreshed",
+    "dataUpdated": "Data updated successfully"
+  },
+  "planning": {
+    "title": "PREGA SQUAD - Planning",
+    "newBooking": "New Booking",
+    "editBooking": "Edit Booking",
+    "client": "Client",
+    "service": "Service",
+    "staff": "Staff",
+    "time": "Time",
+    "date": "Date",
+    "selectService": "Choose a service...",
+    "searchService": "Search for a service...",
+    "servicesAvailable": "services available",
+    "favoriteServices": "Favorite Services:",
+    "maxFavorites": "Maximum 6 services",
+    "selectUpTo": "Select up to 6",
+    "confirmBooking": "Confirm Booking",
+    "updateBooking": "Update",
+    "deleteConfirm": "Are you sure you want to delete this appointment?",
+    "paymentConfirmed": "Payment Confirmed",
+    "paymentConfirmedDesc": "Payment confirmed successfully"
+  },
+  "services": {
+    "title": "Services",
+    "addService": "Add Service",
+    "editService": "Edit Service",
+    "serviceName": "Service Name",
+    "category": "Category",
+    "commission": "Commission %",
+    "linkedProduct": "Linked Product"
+  },
+  "clients": {
+    "title": "Clients",
+    "addClient": "Add Client",
+    "editClient": "Edit Client",
+    "name": "Name",
+    "phone": "Phone",
+    "email": "Email",
+    "birthday": "Birthday",
+    "loyaltyPoints": "Loyalty Points"
+  },
+  "inventory": {
+    "title": "Inventory",
+    "addProduct": "Add Product",
+    "productName": "Product Name",
+    "quantity": "Quantity",
+    "minStock": "Minimum Stock",
+    "purchasePrice": "Purchase Price",
+    "salePrice": "Sale Price"
+  },
+  "expenses": {
+    "title": "Expenses",
+    "addExpense": "Add Expense",
+    "description": "Description",
+    "amount": "Amount",
+    "type": "Type"
+  },
+  "salaries": {
+    "title": "Salaries",
+    "baseSalary": "Base Salary",
+    "commission": "Commission",
+    "bonus": "Bonus",
+    "totalSalary": "Total Salary"
+  },
+  "reports": {
+    "title": "Reports",
+    "dailyRevenue": "Daily Revenue",
+    "weeklyRevenue": "Weekly Revenue",
+    "monthlyRevenue": "Monthly Revenue",
+    "topServices": "Top Services",
+    "topStaff": "Top Staff"
+  },
+  "booking": {
+    "title": "Book an Appointment",
+    "selectDate": "Select Date",
+    "selectTime": "Select Time",
+    "selectService": "Select Service",
+    "yourInfo": "Your Information",
+    "bookNow": "Book Now",
+    "bookingConfirmed": "Booking Confirmed",
+    "thankYou": "Thank you for your booking!"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "adminLogin": "Admin Login",
+    "password": "Password",
+    "wrongPassword": "Wrong password"
+  },
+  "language": {
+    "select": "Language",
+    "en": "English",
+    "fr": "French",
+    "ar": "Arabic"
+  }
+}
