@@ -54,7 +54,7 @@ export default function Planning() {
   useEffect(() => {
     const refreshTimer = setInterval(() => {
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
-    }, 20000);
+    }, 30000);
     return () => clearInterval(refreshTimer);
   }, []);
 
