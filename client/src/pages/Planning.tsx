@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -596,46 +597,61 @@ export default function Planning() {
                             <Button
                               variant="outline"
                               role="combobox"
-                              className="h-8 w-full justify-between rounded-lg text-xs"
+                              className="h-9 w-full justify-between rounded-lg text-xs border-2 hover:border-primary/50 transition-colors"
                             >
-                              {field.value || "اختر خدمة"}
-                              <Search className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+                              <span className="truncate">{field.value || "اختر خدمة..."}</span>
+                              <Search className="ml-2 h-4 w-4 shrink-0 text-muted-foreground" />
                             </Button>
                           </FormControl>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[300px] p-0" align="start">
-                          <div className="p-2 border-b">
+                        <PopoverContent className="w-[320px] p-0 shadow-xl border-2" align="start">
+                          <div className="p-3 border-b bg-muted/30">
                             <div className="relative">
-                              <Search className="absolute right-2 top-2 h-4 w-4 text-muted-foreground" />
+                              <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                               <Input
                                 placeholder="ابحث عن خدمة..."
                                 value={serviceSearch}
                                 onChange={(e) => setServiceSearch(e.target.value)}
-                                className="pr-8 h-8 text-xs"
+                                className="pr-10 h-10 text-sm rounded-lg border-2 focus:border-primary"
+                                autoFocus
                               />
                             </div>
+                            <p className="text-[10px] text-muted-foreground mt-2 text-center">
+                              {filteredServices.length} خدمة متاحة
+                            </p>
                           </div>
-                          <div className="max-h-60 overflow-y-auto p-1">
-                            {filteredServices.map(s => (
-                              <div
-                                key={s.id}
-                                className={cn(
-                                  "flex items-center justify-between p-2 rounded-lg cursor-pointer text-xs hover:bg-muted",
-                                  field.value === s.name && "bg-primary/10"
-                                )}
-                                onClick={() => {
-                                  handleServiceChange(s.name);
-                                  setServiceSearch("");
-                                }}
-                              >
-                                <span>{s.name}</span>
-                                <span className="text-muted-foreground">{s.price} DH</span>
-                              </div>
-                            ))}
-                            {filteredServices.length === 0 && (
-                              <div className="p-2 text-center text-xs text-muted-foreground">لا توجد نتائج</div>
-                            )}
-                          </div>
+                          <ScrollArea className="h-[250px]">
+                            <div className="p-2 space-y-1">
+                              {filteredServices.map(s => (
+                                <div
+                                  key={s.id}
+                                  className={cn(
+                                    "flex items-center justify-between p-3 rounded-xl cursor-pointer text-sm transition-all",
+                                    "hover:bg-gradient-to-r hover:from-primary/10 hover:to-transparent",
+                                    field.value === s.name 
+                                      ? "bg-gradient-to-r from-primary/20 to-primary/5 border-r-4 border-primary font-medium" 
+                                      : "hover:translate-x-1"
+                                  )}
+                                  onClick={() => {
+                                    handleServiceChange(s.name);
+                                    setServiceSearch("");
+                                  }}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    {field.value === s.name && <Check className="h-4 w-4 text-primary" />}
+                                    <span>{s.name}</span>
+                                  </div>
+                                  <span className="text-xs font-bold text-primary">{s.price} DH</span>
+                                </div>
+                              ))}
+                              {filteredServices.length === 0 && (
+                                <div className="p-6 text-center">
+                                  <Search className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
+                                  <p className="text-sm text-muted-foreground">لا توجد نتائج</p>
+                                </div>
+                              )}
+                            </div>
+                          </ScrollArea>
                         </PopoverContent>
                       </Popover>
                       
