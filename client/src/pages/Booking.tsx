@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslation } from "react-i18next";
 import { useStaff, useServices, useCreateAppointment, useAppointments } from "@/hooks/use-salon-data";
 import { queryClient } from "@/lib/queryClient";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -10,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
-import { ar } from "date-fns/locale";
+import { ar, enUS, fr } from "date-fns/locale";
 import { Clock, CheckCircle2, Scissors, User, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
@@ -36,12 +37,21 @@ const TIME_SLOTS = [
 ];
 
 export default function Booking() {
+  const { t, i18n } = useTranslation();
   const [date, setDate] = useState<Date>();
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [isSuccess, setIsSuccess] = useState(false);
   
   const { data: staffList = [] } = useStaff();
   const { data: services = [] } = useServices();
+  
+  const getDateLocale = () => {
+    switch (i18n.language) {
+      case "ar": return ar;
+      case "fr": return fr;
+      default: return enUS;
+    }
+  };
   const formattedDate = date ? format(date, "yyyy-MM-dd") : "";
   const { data: appointments = [] } = useAppointments(formattedDate);
   const createMutation = useCreateAppointment();
@@ -155,7 +165,7 @@ export default function Booking() {
 
   if (isSuccess) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-primary/10 flex items-center justify-center p-4" dir="rtl">
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-primary/10 flex items-center justify-center p-4" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
         <Card className="w-full max-w-md text-center py-12 px-8 space-y-6 shadow-2xl border-0">
           <div className="flex justify-center">
             <div className="w-20 h-20 rounded-full bg-emerald-500/10 flex items-center justify-center">
@@ -163,29 +173,29 @@ export default function Booking() {
             </div>
           </div>
           <div className="space-y-2">
-            <h1 className="text-3xl font-display font-bold">تم الحجز بنجاح!</h1>
-            <p className="text-muted-foreground text-base">شكراً لك، سنراك في الموعد المحدد.</p>
+            <h1 className="text-3xl font-display font-bold">{t("booking.bookingConfirmed")}</h1>
+            <p className="text-muted-foreground text-base">{t("booking.thankYou")}</p>
           </div>
           <div className="bg-muted rounded-xl p-4 text-sm space-y-2">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">التاريخ:</span>
-              <span className="font-semibold">{date && format(date, "PPP", { locale: ar })}</span>
+              <span className="text-muted-foreground">{t("common.date")}:</span>
+              <span className="font-semibold">{date && format(date, "PPP", { locale: getDateLocale() })}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">الوقت:</span>
+              <span className="text-muted-foreground">{t("booking.time")}:</span>
               <span className="font-semibold">{selectedTime}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">الخدمة:</span>
+              <span className="text-muted-foreground">{t("booking.service")}:</span>
               <span className="font-semibold">{selectedService}</span>
             </div>
             <div className="flex justify-between border-t pt-2 mt-2">
-              <span className="text-muted-foreground">السعر:</span>
-              <span className="font-bold text-primary text-lg">{form.getValues("total")} DH</span>
+              <span className="text-muted-foreground">{t("common.price")}:</span>
+              <span className="font-bold text-primary text-lg">{form.getValues("total")} {t("common.currency")}</span>
             </div>
           </div>
           <Button onClick={() => window.location.reload()} className="w-full h-12 text-lg mt-4">
-            حجز موعد جديد
+            {t("booking.newBooking")}
           </Button>
         </Card>
       </div>
@@ -193,13 +203,13 @@ export default function Booking() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-primary/10 p-4 md:p-6" dir="rtl">
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-primary/10 p-4 md:p-6" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="text-center space-y-2">
           <h1 className="text-3xl md:text-4xl font-display font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-            احجز موعدك
+            {t("booking.title")}
           </h1>
-          <p className="text-muted-foreground">اختر الخدمة والوقت المناسب لك</p>
+          <p className="text-muted-foreground">{t("booking.subtitle")}</p>
         </div>
 
         <Card className="shadow-xl border-0">
@@ -215,10 +225,10 @@ export default function Booking() {
                         <FormItem>
                           <FormLabel className="flex items-center gap-2">
                             <User className="w-4 h-4" />
-                            اسمك بالكامل
+                            {t("booking.fullName")}
                           </FormLabel>
                           <FormControl>
-                            <Input placeholder="أدخل اسمك" className="h-11" {...field} />
+                            <Input placeholder={t("booking.enterName")} className="h-11" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -232,7 +242,7 @@ export default function Booking() {
                         <FormItem>
                           <FormLabel className="flex items-center gap-2">
                             <Phone className="w-4 h-4" />
-                            رقم الهاتف (اختياري)
+                            {t("booking.phoneOptional")}
                           </FormLabel>
                           <FormControl>
                             <Input placeholder="06XXXXXXXX" className="h-11" {...field} />
@@ -249,12 +259,12 @@ export default function Booking() {
                         <FormItem>
                           <FormLabel className="flex items-center gap-2">
                             <Scissors className="w-4 h-4" />
-                            الخدمة المطلوبة
+                            {t("booking.requiredService")}
                           </FormLabel>
                           <Select onValueChange={handleServiceChange} value={field.value}>
                             <FormControl>
                               <SelectTrigger className="h-11">
-                                <SelectValue placeholder="اختر الخدمة" />
+                                <SelectValue placeholder={t("booking.selectService")} />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent className="max-h-[300px]">
@@ -267,7 +277,7 @@ export default function Booking() {
                                     <SelectItem key={s.id} value={s.name}>
                                       <div className="flex justify-between items-center w-full gap-4">
                                         <span>{s.name}</span>
-                                        <span className="text-primary font-bold">{s.price} DH</span>
+                                        <span className="text-primary font-bold">{s.price} {t("common.currency")}</span>
                                       </div>
                                     </SelectItem>
                                   ))}
@@ -277,7 +287,7 @@ export default function Booking() {
                           </Select>
                           {selectedService && (
                             <p className="text-sm text-muted-foreground">
-                              المدة: {form.getValues("duration")} دقيقة • السعر: {form.getValues("total")} DH
+                              {t("common.duration")}: {form.getValues("duration")} {t("common.minutes")} • {t("common.price")}: {form.getValues("total")} {t("common.currency")}
                             </p>
                           )}
                           <FormMessage />
@@ -290,7 +300,7 @@ export default function Booking() {
                       name="staff"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>الموظف المفضل</FormLabel>
+                          <FormLabel>{t("booking.preferredStaff")}</FormLabel>
                           <div className="grid grid-cols-3 gap-2">
                             {staffList.map(s => (
                               <Button
@@ -321,7 +331,7 @@ export default function Booking() {
                   <div className="space-y-6">
                     <div>
                       <FormLabel className="flex items-center gap-2 mb-3">
-                        اختر التاريخ
+                        {t("booking.selectDate")}
                       </FormLabel>
                       <div className="flex justify-center">
                         <Calendar
@@ -341,7 +351,7 @@ export default function Booking() {
                       <div>
                         <FormLabel className="flex items-center gap-2 mb-3">
                           <Clock className="w-4 h-4" />
-                          اختر الوقت المتاح
+                          {t("booking.selectAvailableTime")}
                         </FormLabel>
                         <div className="grid grid-cols-4 gap-2 max-h-[200px] overflow-y-auto p-1">
                           {getAvailableSlots.map(slot => (
@@ -362,7 +372,7 @@ export default function Booking() {
                         </div>
                         {getAvailableSlots.length === 0 && (
                           <p className="text-center text-muted-foreground py-4">
-                            لا توجد أوقات متاحة في هذا اليوم
+                            {t("booking.noTimesAvailable")}
                           </p>
                         )}
                       </div>
@@ -376,7 +386,7 @@ export default function Booking() {
                     className="w-full h-14 text-lg"
                     disabled={createMutation.isPending || !canSubmit}
                   >
-                    {createMutation.isPending ? "جاري الحجز..." : "تأكيد الحجز"}
+                    {createMutation.isPending ? t("booking.bookingInProgress") : t("booking.confirmBooking")}
                   </Button>
                 </div>
               </form>

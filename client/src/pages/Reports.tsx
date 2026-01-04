@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useAppointments, useStaff } from "@/hooks/use-salon-data";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from "recharts";
@@ -8,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addWeeks, subWeeks, addMonths, subMonths, isWithinInterval, parseISO, startOfDay, endOfDay } from "date-fns";
-import { ar } from "date-fns/locale";
+import { ar, enUS, fr } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
 
 const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#a4de6c', '#d0ed57'];
@@ -16,6 +17,7 @@ const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#a4de6c', '#d0ed57'
 type ViewMode = "weekly" | "monthly" | "custom";
 
 export default function Reports() {
+  const { t, i18n } = useTranslation();
   const [viewMode, setViewMode] = useState<ViewMode>("weekly");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [customRange, setCustomRange] = useState<DateRange | undefined>({
@@ -26,6 +28,12 @@ export default function Reports() {
 
   const { data: appointments = [] } = useAppointments();
   const { data: staffList = [] } = useStaff();
+
+  const dateLocale = useMemo(() => {
+    if (i18n.language === "ar") return ar;
+    if (i18n.language === "fr") return fr;
+    return enUS;
+  }, [i18n.language]);
 
   const dateRange = useMemo(() => {
     if (viewMode === "weekly") {
@@ -121,39 +129,39 @@ export default function Reports() {
 
   const periodLabel = useMemo(() => {
     if (viewMode === "weekly") {
-      return `${format(dateRange.start, "d MMM", { locale: ar })} - ${format(dateRange.end, "d MMM yyyy", { locale: ar })}`;
+      return `${format(dateRange.start, "d MMM", { locale: dateLocale })} - ${format(dateRange.end, "d MMM yyyy", { locale: dateLocale })}`;
     } else if (viewMode === "monthly") {
-      return format(selectedDate, "MMMM yyyy", { locale: ar });
+      return format(selectedDate, "MMMM yyyy", { locale: dateLocale });
     } else {
       if (customRange?.from && customRange?.to) {
-        return `${format(customRange.from, "d MMM", { locale: ar })} - ${format(customRange.to, "d MMM yyyy", { locale: ar })}`;
+        return `${format(customRange.from, "d MMM", { locale: dateLocale })} - ${format(customRange.to, "d MMM yyyy", { locale: dateLocale })}`;
       } else if (customRange?.from) {
-        return format(customRange.from, "d MMM yyyy", { locale: ar });
+        return format(customRange.from, "d MMM yyyy", { locale: dateLocale });
       }
-      return "اختر الفترة";
+      return t("reports.selectPeriod");
     }
-  }, [viewMode, dateRange, selectedDate, customRange]);
+  }, [viewMode, dateRange, selectedDate, customRange, dateLocale, t]);
 
   const periodSubLabel = useMemo(() => {
-    if (viewMode === "weekly") return "هذا الأسبوع";
-    if (viewMode === "monthly") return "هذا الشهر";
-    return "فترة مخصصة";
-  }, [viewMode]);
+    if (viewMode === "weekly") return t("common.thisWeek");
+    if (viewMode === "monthly") return t("common.thisMonth");
+    return t("reports.customPeriod");
+  }, [viewMode, t]);
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto p-6" dir="rtl">
+    <div className="space-y-6 max-w-6xl mx-auto p-6" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold">التحليلات والتقارير</h1>
-          <p className="text-muted-foreground">نظرة عامة على أداء الصالون الخاص بك.</p>
+          <h1 className="text-3xl font-display font-bold">{t("reports.pageTitle")}</h1>
+          <p className="text-muted-foreground">{t("reports.pageDesc")}</p>
         </div>
 
         <div className="flex items-center gap-2">
           <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
             <TabsList>
-              <TabsTrigger value="weekly">أسبوعي</TabsTrigger>
-              <TabsTrigger value="monthly">شهري</TabsTrigger>
-              <TabsTrigger value="custom">مخصص</TabsTrigger>
+              <TabsTrigger value="weekly">{t("reports.weekly")}</TabsTrigger>
+              <TabsTrigger value="monthly">{t("reports.monthly")}</TabsTrigger>
+              <TabsTrigger value="custom">{t("reports.custom")}</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
@@ -215,10 +223,10 @@ export default function Reports() {
           <CardContent className="p-6">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-indigo-100 font-medium text-sm">إجمالي الإيرادات</p>
+                <p className="text-indigo-100 font-medium text-sm">{t("reports.totalRevenue")}</p>
                 <h3 className="text-4xl font-bold mt-2">{stats.totalRevenue.toLocaleString()} DH</h3>
                 <div className="mt-4 flex items-center text-indigo-100 text-sm">
-                  <span>تم تحصيل {stats.paidRevenue.toLocaleString()} DH</span>
+                  <span>{t("reports.collected")} {stats.paidRevenue.toLocaleString()} DH</span>
                 </div>
               </div>
               <div className="p-3 bg-white/20 rounded-xl">
@@ -232,7 +240,7 @@ export default function Reports() {
           <CardContent className="p-6">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-muted-foreground font-medium text-sm">المواعيد</p>
+                <p className="text-muted-foreground font-medium text-sm">{t("reports.appointments")}</p>
                 <h3 className="text-4xl font-bold mt-2 text-foreground">{stats.totalAppointments}</h3>
                 <div className="mt-4 flex items-center text-emerald-600 text-sm font-medium">
                   <CalendarCheck className="w-4 h-4 ml-1" />
@@ -250,11 +258,11 @@ export default function Reports() {
           <CardContent className="p-6">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-muted-foreground font-medium text-sm">الموظفون النشطون</p>
+                <p className="text-muted-foreground font-medium text-sm">{t("reports.activeStaff")}</p>
                 <h3 className="text-4xl font-bold mt-2 text-foreground">{staffList.length}</h3>
                 <div className="mt-4 flex items-center text-blue-600 text-sm font-medium">
                   <Users className="w-4 h-4 ml-1" />
-                  <span>أعضاء</span>
+                  <span>{t("reports.members")}</span>
                 </div>
               </div>
               <div className="p-3 bg-blue-100 rounded-xl">
@@ -267,12 +275,12 @@ export default function Reports() {
 
       <Card className="shadow-lg border">
         <CardHeader>
-          <CardTitle>أداء الموظفين</CardTitle>
-          <CardDescription>الخدمات والإيرادات لكل موظف خلال الفترة المحددة</CardDescription>
+          <CardTitle>{t("reports.staffPerformance")}</CardTitle>
+          <CardDescription>{t("reports.staffPerformanceDesc")}</CardDescription>
         </CardHeader>
         <CardContent>
           {staffPerformance.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">لا توجد بيانات للفترة المحددة</p>
+            <p className="text-center text-muted-foreground py-8">{t("reports.noDataForPeriod")}</p>
           ) : (
             <div className="space-y-6">
               {staffPerformance.map((staff) => (
@@ -287,7 +295,7 @@ export default function Reports() {
                     </div>
                     <div className="flex items-center gap-4 text-sm">
                       <span className="bg-primary/20 text-primary px-3 py-1 rounded-full font-medium">
-                        {staff.appointmentCount} موعد
+                        {staff.appointmentCount} {t("reports.appointment")}
                       </span>
                       <span className="bg-emerald-100 text-emerald-600 px-3 py-1 rounded-full font-bold">
                         {staff.totalEarnings.toLocaleString()} DH
@@ -297,18 +305,18 @@ export default function Reports() {
                   
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     <div className="bg-background rounded-lg p-3 border">
-                      <p className="text-xs text-muted-foreground">تم تحصيله</p>
+                      <p className="text-xs text-muted-foreground">{t("reports.collectedAmount")}</p>
                       <p className="text-lg font-bold text-emerald-600">{staff.paidEarnings.toLocaleString()} DH</p>
                     </div>
                     <div className="bg-background rounded-lg p-3 border">
-                      <p className="text-xs text-muted-foreground">غير محصل</p>
+                      <p className="text-xs text-muted-foreground">{t("reports.uncollected")}</p>
                       <p className="text-lg font-bold text-orange-500">{staff.unpaidEarnings.toLocaleString()} DH</p>
                     </div>
                   </div>
 
                   {staff.serviceBreakdown.length > 0 && (
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground mb-2">تفاصيل الخدمات:</p>
+                      <p className="text-sm font-medium text-muted-foreground mb-2">{t("reports.serviceDetailsLabel")}</p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                         {staff.serviceBreakdown.map((svc) => (
                           <div key={svc.service} className="flex items-center justify-between bg-background rounded-lg px-3 py-2 border text-sm">
@@ -332,13 +340,13 @@ export default function Reports() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="shadow-lg border">
           <CardHeader>
-            <CardTitle>الإيرادات حسب الموظف</CardTitle>
-            <CardDescription>توزيع الأداء لكل عضو في الفريق</CardDescription>
+            <CardTitle>{t("reports.revenueByStaff")}</CardTitle>
+            <CardDescription>{t("reports.staffRevenueDesc")}</CardDescription>
           </CardHeader>
           <CardContent className="h-80">
             {stats.staffRevenue.length === 0 ? (
               <div className="flex items-center justify-center h-full text-muted-foreground">
-                لا توجد بيانات للفترة المحددة
+                {t("reports.noDataForPeriod")}
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
@@ -349,7 +357,7 @@ export default function Reports() {
                   <Tooltip 
                     cursor={{ fill: 'transparent' }}
                     contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                    formatter={(value: number) => [`${value.toLocaleString()} DH`, 'الإيرادات']}
+                    formatter={(value: number) => [`${value.toLocaleString()} DH`, t("reports.revenue")]}
                   />
                   <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={30}>
                     {stats.staffRevenue.map((entry, index) => (
@@ -364,13 +372,13 @@ export default function Reports() {
 
         <Card className="shadow-lg border">
           <CardHeader>
-            <CardTitle>أفضل الخدمات</CardTitle>
-            <CardDescription>أكثر العلاجات شعبية المحجوزة</CardDescription>
+            <CardTitle>{t("reports.topServices")}</CardTitle>
+            <CardDescription>{t("reports.topServicesDesc")}</CardDescription>
           </CardHeader>
           <CardContent className="h-80">
             {stats.serviceData.length === 0 ? (
               <div className="flex items-center justify-center h-full text-muted-foreground">
-                لا توجد بيانات للفترة المحددة
+                {t("reports.noDataForPeriod")}
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
