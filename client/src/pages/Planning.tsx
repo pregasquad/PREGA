@@ -517,23 +517,25 @@ export default function Planning() {
         setIsDialogOpen(open);
         if (!open) setIsEditFavoritesOpen(false);
       }}>
-        <DialogContent className="sm:max-w-[380px] p-0 overflow-hidden border-2 border-primary/20 shadow-2xl bg-gradient-to-br from-pink-50/80 via-white to-cyan-50/80 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900" dir={isRtl ? "rtl" : "ltr"}>
-          {/* Compact Header */}
-          <div className="bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 px-3 py-2 text-white">
+        <DialogContent 
+          className="sm:max-w-[380px] max-h-[90vh] p-0 overflow-hidden border border-border shadow-xl bg-background rounded-xl" 
+          dir={isRtl ? "rtl" : "ltr"}
+        >
+          <div className="bg-primary px-4 py-3 text-primary-foreground">
             <DialogHeader>
-              <DialogTitle className="text-sm font-black flex items-center gap-2 text-white">
-                <Sparkles className="w-3 h-3" />
+              <DialogTitle className="text-base font-bold flex items-center gap-2">
+                <Sparkles className="w-4 h-4" />
                 {editingAppointment ? t("planning.editBooking") : t("planning.newBooking")}
               </DialogTitle>
             </DialogHeader>
           </div>
           
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="p-3 space-y-2">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="p-4 space-y-3 overflow-y-auto max-h-[calc(90vh-120px)]" style={{ WebkitOverflowScrolling: 'touch' }}>
               
               {/* Price Row */}
-              <div className="flex items-center gap-2 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 rounded-lg p-2 border border-emerald-500/30">
-                <CreditCard className="w-4 h-4 text-emerald-600 shrink-0" />
+              <div className="flex items-center gap-3 bg-muted/50 rounded-lg p-3 border">
+                <CreditCard className="w-5 h-5 text-primary shrink-0" />
                 <FormField
                   control={form.control}
                   name="total"
@@ -542,15 +544,17 @@ export default function Planning() {
                       <FormControl>
                         <Input 
                           type="number" 
+                          inputMode="decimal"
                           placeholder={t("common.price")}
-                          className="text-xl h-10 font-black border-0 bg-white dark:bg-gray-800 rounded-lg text-center" 
+                          className="text-2xl h-12 font-bold border-0 bg-background rounded-lg text-center"
+                          onFocus={(e) => e.target.select()}
                           {...field} 
                         />
                       </FormControl>
                     </FormItem>
                   )}
                 />
-                <span className="text-sm font-bold text-emerald-600">DH</span>
+                <span className="text-base font-bold text-primary">DH</span>
               </div>
 
               {/* All Fields Grid */}
@@ -676,7 +680,6 @@ export default function Planning() {
                                 value={serviceSearch}
                                 onChange={(e) => setServiceSearch(e.target.value)}
                                 className="pr-10 h-10 text-sm rounded-lg border-2 focus:border-primary"
-                                autoFocus
                               />
                             </div>
                             <p className="text-[10px] text-muted-foreground mt-2 text-center">
