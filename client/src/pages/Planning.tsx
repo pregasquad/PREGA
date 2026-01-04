@@ -86,6 +86,12 @@ export default function Planning() {
   }, [date, isToday]);
   const [isEditFavoritesOpen, setIsEditFavoritesOpen] = useState(false);
   const [servicePopoverOpen, setServicePopoverOpen] = useState(false);
+  const [draggedAppointment, setDraggedAppointment] = useState<any>(null);
+  const [dragOverSlot, setDragOverSlot] = useState<{staff: string, time: string} | null>(null);
+  const [pullDistance, setPullDistance] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const pullStartY = useRef<number | null>(null);
+  const pageRef = useRef<HTMLDivElement>(null);
   const [favoriteIds, setFavoriteIds] = useState<number[]>(() => {
     try {
       const stored = localStorage.getItem('favoriteServiceIds');
@@ -283,6 +289,95 @@ export default function Planning() {
     }
   };
 
+  const handleDragStart = (e: React.DragEvent, appointment: any) => {
+    setDraggedAppointment(appointment);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", appointment.id.toString());
+  };
+
+  const handleDragEnd = () => {
+    setDraggedAppointment(null);
+    setDragOverSlot(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent, staffName: string, time: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverSlot({ staff: staffName, time });
+  };
+
+  const handleDragLeave = () => {
+    setDragOverSlot(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, staffName: string, newTime: string) => {
+    e.preventDefault();
+    setDragOverSlot(null);
+    
+    if (!draggedAppointment) return;
+    
+    const staffMember = staffList.find(s => s.name === staffName);
+    if (!staffMember) return;
+
+    try {
+      await apiRequest("PUT", `/api/appointments/${draggedAppointment.id}`, {
+        ...draggedAppointment,
+        staff: staffName,
+        startTime: newTime,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+      toast({ 
+        title: t("planning.appointmentMoved"), 
+        description: `${draggedAppointment.client} → ${staffName} @ ${newTime}` 
+      });
+      playSuccessSound();
+    } catch (error) {
+      toast({ title: t("common.error"), description: t("planning.moveError"), variant: "destructive" });
+    }
+    
+    setDraggedAppointment(null);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (pageRef.current && pageRef.current.scrollTop === 0) {
+      pullStartY.current = e.touches[0].clientY;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (pullStartY.current === null || isRefreshing) return;
+    
+    const currentY = e.touches[0].clientY;
+    const diff = currentY - pullStartY.current;
+    
+    if (diff > 0 && pageRef.current && pageRef.current.scrollTop === 0) {
+      setPullDistance(Math.min(diff * 0.5, 100));
+    }
+  };
+
+  const handleTouchEnd = async () => {
+    if (pullDistance > 60 && !isRefreshing) {
+      setIsRefreshing(true);
+      setPullDistance(60);
+      
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/appointments"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/staff"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/services"] }),
+      ]);
+      
+      toast({ title: t("common.refreshed"), description: t("common.dataUpdated") });
+      
+      setTimeout(() => {
+        setIsRefreshing(false);
+        setPullDistance(0);
+      }, 500);
+    } else {
+      setPullDistance(0);
+    }
+    pullStartY.current = null;
+  };
+
   const favoriteServices = useMemo(() => {
     return favoriteIds.map(id => services.find(s => s.id === id)).filter(Boolean);
   }, [services, favoriteIds]);
@@ -339,7 +434,29 @@ export default function Planning() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-2 md:p-4" dir={isRtl ? "rtl" : "ltr"}>
+    <div 
+      ref={pageRef}
+      className="min-h-screen bg-background p-2 md:p-4 overflow-auto"
+      dir={isRtl ? "rtl" : "ltr"}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Pull to Refresh Indicator */}
+      {(pullDistance > 0 || isRefreshing) && (
+        <div 
+          className="flex justify-center items-center transition-all duration-200"
+          style={{ height: pullDistance, marginBottom: pullDistance > 0 ? 8 : 0 }}
+        >
+          <div className={cn(
+            "flex items-center gap-2 text-sm text-muted-foreground",
+            pullDistance > 60 && "text-orange-500"
+          )}>
+            <RefreshCw className={cn("w-5 h-5", isRefreshing && "animate-spin")} />
+            <span>{isRefreshing ? t("common.loading") : (pullDistance > 60 ? t("common.refresh") : "↓")}</span>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
         <h1 className="text-xl md:text-2xl font-bold">{t("planning.title")}</h1>
@@ -425,7 +542,7 @@ export default function Planning() {
         <div 
           className="grid relative" 
           style={{ 
-            gridTemplateColumns: `80px repeat(${staffList.length}, minmax(120px, 1fr))`,
+            gridTemplateColumns: `55px repeat(${staffList.length}, minmax(120px, 1fr))`,
             gridAutoRows: '48px'
           }}
         >
@@ -446,7 +563,7 @@ export default function Planning() {
             </div>
           )}
           {/* Top row - Staff headers (sticky) */}
-          <div className="bg-muted/50 border-b border-l p-2 sticky top-0 left-0 z-20" style={{ gridColumn: 1, gridRow: 1 }}></div>
+          <div className={cn("bg-card border-b p-1 sticky top-0 z-30", isRtl ? "right-0 border-l" : "left-0 border-r")} style={{ gridColumn: 1, gridRow: 1 }}></div>
           {staffList.map((s, staffIndex) => (
             <div 
               key={s.id} 
@@ -466,7 +583,7 @@ export default function Planning() {
             return (
             <React.Fragment key={hour}>
               <div 
-                className="bg-muted/30 border-b border-l p-2 text-xs text-muted-foreground font-medium sticky left-0 z-10"
+                className={cn("bg-card border-b p-1 text-xs text-muted-foreground font-medium sticky z-30", isRtl ? "right-0 border-l" : "left-0 border-r")}
                 style={{ gridColumn: 1, gridRow: rowNum }}
               >
                 {hour}
@@ -484,20 +601,31 @@ export default function Planning() {
 
                 const span = booking ? getBookingSpan(booking) : 1;
 
+                const isDragOver = dragOverSlot?.staff === s.name && dragOverSlot?.time === hour;
+                const isDragging = draggedAppointment?.id === booking?.id;
+
                 return (
                   <div
                     key={`${s.id}-${hour}`}
                     className={cn(
-                      "border-b border-l p-1 min-h-[48px] transition-colors",
+                      "border-b border-l p-1 min-h-[48px] transition-all duration-200",
                       booking 
-                        ? "text-white cursor-pointer m-0.5 rounded-xl shadow-md z-10 relative" 
-                        : "bg-background hover:bg-muted/50 cursor-pointer"
+                        ? "text-white cursor-grab active:cursor-grabbing m-0.5 rounded-xl shadow-md z-10 relative" 
+                        : "bg-background hover:bg-muted/50 cursor-pointer",
+                      isDragOver && !booking && "bg-orange-100 dark:bg-orange-900/30 ring-2 ring-orange-500 ring-inset",
+                      isDragging && "opacity-50 scale-95"
                     )}
                     style={{ 
                       gridColumn: colNum,
                       gridRow: booking ? `${rowNum} / span ${span}` : rowNum,
                       backgroundColor: booking ? s.color : undefined
                     }}
+                    draggable={!!booking}
+                    onDragStart={(e) => booking && handleDragStart(e, booking)}
+                    onDragEnd={handleDragEnd}
+                    onDragOver={(e) => !booking && handleDragOver(e, s.name, hour)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => !booking && handleDrop(e, s.name, hour)}
                     onClick={(e) => booking ? handleAppointmentClick(e, booking) : handleSlotClick(s.name, hour)}
                   >
                     {booking && (
