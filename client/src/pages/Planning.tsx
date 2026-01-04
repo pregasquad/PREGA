@@ -44,10 +44,18 @@ export default function Planning() {
   const [date, setDate] = useState<Date>(startOfToday());
   const [serviceSearch, setServiceSearch] = useState("");
   const [currentTime, setCurrentTime] = useState(new Date());
+  const boardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const refreshTimer = setInterval(() => {
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+    }, 20000);
+    return () => clearInterval(refreshTimer);
   }, []);
 
   const getCurrentTimePosition = () => {
@@ -62,6 +70,15 @@ export default function Planning() {
   };
 
   const isToday = format(date, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
+
+  useEffect(() => {
+    if (isToday && boardRef.current) {
+      const position = getCurrentTimePosition();
+      setTimeout(() => {
+        boardRef.current?.scrollTo({ top: Math.max(0, position - 100), behavior: "smooth" });
+      }, 300);
+    }
+  }, [date]);
   const [isEditFavoritesOpen, setIsEditFavoritesOpen] = useState(false);
   const [favoriteNames, setFavoriteNames] = useState<string[]>(() => {
     try {
@@ -392,7 +409,7 @@ export default function Planning() {
       </div>
 
       {/* Board */}
-      <div className="overflow-x-auto bg-card rounded-xl border shadow-sm relative">
+      <div ref={boardRef} className="overflow-auto max-h-[calc(100vh-200px)] bg-card rounded-xl border shadow-sm relative">
         {/* Current Time Line */}
         {isToday && (
           <div 
