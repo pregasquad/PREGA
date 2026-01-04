@@ -497,14 +497,23 @@ export default function Planning() {
             </div>
           )}
           {/* Top row - Staff headers (sticky) */}
-          <div className={cn("bg-card border-b p-1 sticky top-0 z-30", isRtl ? "right-0 border-l" : "left-0 border-r")} style={{ gridColumn: 1, gridRow: 1 }}></div>
+          <div 
+            className={cn(
+              "bg-card border-b sticky top-0 z-30",
+              isRtl ? "right-0 border-l" : "left-0 border-r"
+            )} 
+            style={{ gridColumn: 1, gridRow: 1, minHeight: '48px' }}
+          />
           {staffList.map((s, staffIndex) => (
             <div 
               key={s.id} 
-              className="bg-muted/50 border-b border-l p-2 md:p-3 font-bold text-center text-xs md:text-sm sticky top-0 z-10"
-              style={{ gridColumn: staffIndex + 2, gridRow: 1 }}
+              className={cn(
+                "bg-muted/50 border-b p-2 md:p-3 font-bold text-center text-xs md:text-sm sticky top-0 z-20",
+                isRtl ? "border-r" : "border-l"
+              )}
+              style={{ gridColumn: staffIndex + 2, gridRow: 1, minHeight: '48px' }}
             >
-              <div className="flex items-center justify-center gap-1">
+              <div className="flex items-center justify-center gap-1 h-full">
                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
                 <span>{s.name}</span>
               </div>
@@ -517,7 +526,10 @@ export default function Planning() {
             return (
             <React.Fragment key={hour}>
               <div 
-                className={cn("bg-card border-b p-1 text-xs text-muted-foreground font-medium sticky z-30", isRtl ? "right-0 border-l" : "left-0 border-r")}
+                className={cn(
+                  "bg-card border-b p-1 text-xs text-muted-foreground font-medium sticky z-30 flex items-center justify-center",
+                  isRtl ? "right-0 border-l" : "left-0 border-r"
+                )}
                 style={{ gridColumn: 1, gridRow: rowNum }}
               >
                 {hour}
@@ -542,7 +554,8 @@ export default function Planning() {
                   <div
                     key={`${s.id}-${hour}`}
                     className={cn(
-                      "border-b border-l p-1 min-h-[48px] transition-all duration-200",
+                      "border-b p-1 min-h-[48px] transition-all duration-200",
+                      isRtl ? "border-r" : "border-l",
                       booking 
                         ? "text-white cursor-grab active:cursor-grabbing m-0.5 rounded-xl shadow-md z-10 relative" 
                         : "bg-background hover:bg-muted/50 cursor-pointer",
