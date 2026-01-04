@@ -429,12 +429,12 @@ export default function Planning() {
           className="grid" 
           style={{ gridTemplateColumns: `80px repeat(${staffList.length}, minmax(120px, 1fr))` }}
         >
-          {/* Top row - Staff headers */}
-          <div className="bg-muted/50 border-b border-l p-2"></div>
+          {/* Top row - Staff headers (sticky) */}
+          <div className="bg-muted/50 border-b border-l p-2 sticky top-0 z-10"></div>
           {staffList.map((s) => (
             <div 
               key={s.id} 
-              className="bg-muted/50 border-b border-l p-2 md:p-3 font-bold text-center text-xs md:text-sm"
+              className="bg-muted/50 border-b border-l p-2 md:p-3 font-bold text-center text-xs md:text-sm sticky top-0 z-10"
             >
               <div className="flex items-center justify-center gap-1">
                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
