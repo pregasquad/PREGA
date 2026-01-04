@@ -106,6 +106,7 @@ export async function sendWhatsAppMessage(
       body: JSON.stringify({
         messaging_product: "whatsapp",
         recipient_type: "individual",
+        from: WHATSAPP_FROM_NUMBER,
         to: formattedPhone,
         type: "text",
         text: {
