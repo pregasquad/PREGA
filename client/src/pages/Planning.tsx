@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
-import { format, addDays, startOfToday, setHours, setMinutes, isSameDay, parseISO } from "date-fns";
+import { format, addDays, startOfToday, parseISO } from "date-fns";
 import { useAppointments, useStaff, useServices, useCreateAppointment, useUpdateAppointment, useDeleteAppointment } from "@/hooks/use-salon-data";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useSearch, useLocation } from "wouter";
@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CalendarIcon, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Check, X, UserPlus, Edit2, Scissors, Search, Star, CreditCard, Settings2, Sparkles, User, Timer, RefreshCw } from "lucide-react";
+import { CalendarIcon, ChevronLeft, ChevronRight, Plus, Trash2, Check, X, Search, Star, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -20,14 +20,14 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { insertAppointmentSchema, insertStaffSchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
-// Constants for grid calculation (Updated to 24h)
-const START_HOUR = 0;  // 00:00
-const END_HOUR = 24;   // 24:00
-const SLOT_HEIGHT = 100;
-const SLOT_INTERVAL = 15; // minutes
-const PIXELS_PER_MINUTE = SLOT_HEIGHT / 60;
+const hours = [
+  "09:00","09:30","10:00","10:30","11:00","11:30",
+  "12:00","12:30","13:00","13:30","14:00","14:30",
+  "15:00","15:30","16:00","16:30","17:00","17:30",
+  "18:00","18:30","19:00","19:30","20:00","20:30",
+  "21:00","21:30","22:00","22:30","23:00","23:30"
+];
 
-// Schema for form
 const formSchema = insertAppointmentSchema.extend({
   price: z.coerce.number(),
   duration: z.coerce.number(),
@@ -37,11 +37,7 @@ const formSchema = insertAppointmentSchema.extend({
 type AppointmentFormValues = z.infer<typeof formSchema>;
 
 export default function Planning() {
-  const [isPageReady, setIsPageReady] = useState(false);
-  const [now, setNow] = useState(new Date());
   const [date, setDate] = useState<Date>(startOfToday());
-  const [isStaffDialogOpen, setIsStaffDialogOpen] = useState(false);
-  const [editingStaff, setEditingStaff] = useState<any>(null);
   const [serviceSearch, setServiceSearch] = useState("");
   const [isEditFavoritesOpen, setIsEditFavoritesOpen] = useState(false);
   const [favoriteNames, setFavoriteNames] = useState<string[]>(() => {
@@ -52,8 +48,6 @@ export default function Planning() {
       return ["Brushing", "Manicure Simple", "Soin Classique", "Sourcils"];
     }
   });
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const hasScrolledToNow = useRef(false);
   const { toast } = useToast();
 
   const formattedDate = format(date, "yyyy-MM-dd");
@@ -63,92 +57,13 @@ export default function Planning() {
   const { data: services = [] } = useServices();
   const isAdmin = sessionStorage.getItem("admin_authenticated") === "true";
 
-  // Update time every 20 seconds
-  useEffect(() => {
-    const interval = setInterval(() => setNow(new Date()), 20000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const nowLinePosition = useMemo(() => {
-    if (!date || format(date, "yyyy-MM-dd") !== format(now, "yyyy-MM-dd")) return null;
-    const h = now.getHours();
-    const m = now.getMinutes();
-    const currentMinutes = h * 60 + m;
-    const startMinutes = START_HOUR * 60;
-    const endMinutes = END_HOUR * 60;
-
-    if (currentMinutes < startMinutes || currentMinutes >= endMinutes) return null;
-    return (currentMinutes - startMinutes) * PIXELS_PER_MINUTE;
-  }, [now, date]);
-
-  // Auto-scroll to current time on page load
-  useEffect(() => {
-    if (nowLinePosition !== null && scrollContainerRef.current && isPageReady && !hasScrolledToNow.current) {
-      const container = scrollContainerRef.current;
-      const scrollPosition = nowLinePosition - container.clientHeight / 3;
-      container.scrollTo({ top: Math.max(0, scrollPosition), behavior: 'smooth' });
-      hasScrolledToNow.current = true;
-    }
-  }, [nowLinePosition, isPageReady]);
-
-  useEffect(() => {
-    // Small delay to ensure everything is mounted and measured
-    if (!loadingApps) {
-      const timer = setTimeout(() => setIsPageReady(true), 200);
-      return () => clearTimeout(timer);
-    }
-  }, [loadingApps]);
-
   const createMutation = useCreateAppointment();
   const updateMutation = useUpdateAppointment();
   const deleteMutation = useDeleteAppointment();
 
-  const createStaffMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const res = await apiRequest("POST", "/api/staff", data);
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
-      setIsStaffDialogOpen(false);
-      toast({ title: "تمت إضافة الموظف" });
-    }
-  });
-
-  const updateStaffMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: any }) => {
-      const res = await apiRequest("PATCH", `/api/staff/${id}`, data);
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
-      setEditingStaff(null);
-      toast({ title: "تم تحديث بيانات الموظف" });
-    }
-  });
-
-  const deleteStaffMutation = useMutation({
-    mutationFn: async (id: number) => {
-      await apiRequest("DELETE", `/api/staff/${id}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
-      toast({ title: "تم حذف الموظف" });
-    }
-  });
-
-  const staffForm = useForm({
-    resolver: zodResolver(insertStaffSchema),
-    defaultValues: { name: "", color: "#" + Math.floor(Math.random()*16777215).toString(16) }
-  });
-
-  // Modal State
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedStaff, setSelectedStaff] = useState<string | null>(null);
-  const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [editingAppointment, setEditingAppointment] = useState<any>(null);
 
-  // Form setup
   const form = useForm<AppointmentFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -163,13 +78,11 @@ export default function Planning() {
       paid: false,
     },
   });
-  
-  // URL params for notification deep linking
+
   const searchString = useSearch();
   const [, setLocation] = useLocation();
   const pendingAppointmentId = useRef<string | null>(null);
-  
-  // Handle deep link - Step 1: Set date and store appointment ID
+
   useEffect(() => {
     if (!searchString) return;
     
@@ -189,8 +102,7 @@ export default function Planning() {
       setLocation("/planning", { replace: true });
     }
   }, [searchString, setLocation]);
-  
-  // Handle deep link - Step 2: Open appointment when data loads
+
   useEffect(() => {
     if (!pendingAppointmentId.current || loadingApps) return;
     
@@ -215,7 +127,6 @@ export default function Planning() {
     }
   }, [loadingApps, appointments, form]);
 
-  // Calculate daily revenue and staff breakdown (only paid appointments)
   const stats = useMemo(() => {
     const paidAppointments = appointments.filter(app => app.paid);
     const total = paidAppointments.reduce((sum, app) => sum + (app.total || 0), 0);
@@ -228,10 +139,6 @@ export default function Planning() {
     return { total, perStaff };
   }, [appointments, staffList]);
 
-  const totalRevenue = stats.total;
-  const staffRevenue = stats.perStaff;
-
-  // Open modal for new appointment - default to paid since created by staff
   const handleSlotClick = (staffName: string, time: string) => {
     form.reset({
       date: formattedDate,
@@ -244,18 +151,13 @@ export default function Planning() {
       total: 0,
       paid: true,
     });
-    setSelectedStaff(staffName);
-    setSelectedTime(time);
     setEditingAppointment(null);
     setIsDialogOpen(true);
   };
 
-  // Open modal for edit (admin only)
   const handleAppointmentClick = (e: React.MouseEvent, app: any) => {
     e.stopPropagation();
-    if (!isAdmin) {
-      return; // Non-admin users cannot edit appointments
-    }
+    if (!isAdmin) return;
     form.reset({
       date: app.date,
       startTime: app.startTime,
@@ -272,13 +174,11 @@ export default function Planning() {
   };
 
   const onSubmit = async (data: AppointmentFormValues) => {
-    // Save most used service to localStorage
     const stored = localStorage.getItem('mostUsedServices');
     const mostUsed = stored ? JSON.parse(stored) : {};
     mostUsed[data.service] = (mostUsed[data.service] || 0) + 1;
     localStorage.setItem('mostUsedServices', JSON.stringify(mostUsed));
 
-    // Find the service to check for linked product
     const selectedService = services.find(s => s.name === data.service);
     
     if (selectedService?.linkedProductId) {
@@ -289,8 +189,6 @@ export default function Planning() {
           alert(`⚠️ المخزون غير كافٍ لـ ${product.name}`);
           return;
         }
-        
-        // Decrease stock
         await apiRequest("PATCH", `/api/products/${product.id}/quantity`, {
           quantity: product.quantity - 1
         });
@@ -318,7 +216,6 @@ export default function Planning() {
     }
   };
 
-  // Quick mark as paid
   const handleMarkAsPaid = async (e: React.MouseEvent, app: any) => {
     e.stopPropagation();
     try {
@@ -327,44 +224,16 @@ export default function Planning() {
         paid: true
       });
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
-      toast({
-        title: "تم التأكيد",
-        description: "تم تأكيد الدفع بنجاح",
-      });
+      toast({ title: "تم التأكيد", description: "تم تأكيد الدفع بنجاح" });
     } catch (error) {
-      toast({
-        title: "خطأ",
-        description: "فشل تأكيد الدفع",
-        variant: "destructive"
-      });
+      toast({ title: "خطأ", description: "فشل تأكيد الدفع", variant: "destructive" });
     }
   };
 
-  // Time slots array
-  interface TimeSlot {
-    minutes: number;
-    label: string;
-    fullLabel: string;
-  }
-  const timeSlots: TimeSlot[] = [];
-  for (let i = START_HOUR * 60; i < END_HOUR * 60; i += SLOT_INTERVAL) {
-    const h = Math.floor(i / 60);
-    const m = i % 60;
-    const timeString = `${h < 24 ? h : h - 24}:${m === 0 ? "00" : m}`;
-    // Format for display (e.g., 09:00)
-    const displayH = h < 24 ? h : h - 24;
-    const formattedTime = `${displayH.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-    timeSlots.push({ minutes: i, label: formattedTime, fullLabel: timeString });
-  }
-
-  // Get favorite services from user's saved list
   const favoriteServices = useMemo(() => {
-    return favoriteNames
-      .map(name => services.find(s => s.name === name))
-      .filter(Boolean);
+    return favoriteNames.map(name => services.find(s => s.name === name)).filter(Boolean);
   }, [services, favoriteNames]);
 
-  // Toggle a service in favorites
   const toggleFavorite = (serviceName: string) => {
     setFavoriteNames(prev => {
       let updated: string[];
@@ -381,463 +250,426 @@ export default function Planning() {
     });
   };
 
-  // Filter services based on search
   const filteredServices = useMemo(() => {
     if (!serviceSearch) return services;
     return services.filter(s => s.name.toLowerCase().includes(serviceSearch.toLowerCase()));
   }, [services, serviceSearch]);
 
-  return (
-    <div className={cn(
-      "h-full flex flex-col gap-4 md:gap-6 transition-opacity duration-500",
-      isPageReady ? "opacity-100" : "opacity-0"
-    )} dir="rtl">
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold">التخطيط</h1>
-        </div>
+  const getBooking = (staffName: string, hour: string) => {
+    return appointments.find(a => a.staff === staffName && a.startTime === hour);
+  };
 
-        <div className="flex flex-wrap items-center gap-3 md:gap-4 w-full lg:w-auto">
-          <div className="flex flex-wrap items-center gap-2 flex-1 md:flex-initial">
-            {staffRevenue.map(s => (
-              <div key={s.id} className="bg-card px-2 py-1 md:px-3 md:py-1.5 rounded-lg border border-border shadow-sm flex items-center gap-1.5 md:gap-2 group relative">
-                <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full" style={{ backgroundColor: s.color }} />
-                <span className="text-[10px] md:text-xs font-medium text-muted-foreground">{s.name}</span>
-                <span className="text-xs md:text-sm font-bold">{s.total} DH</span>
+  const getBookingSpan = (app: any) => {
+    return Math.ceil(app.duration / 30);
+  };
+
+  const isSlotCovered = (staffName: string, hour: string) => {
+    const hourIndex = hours.indexOf(hour);
+    for (let i = 0; i < hourIndex; i++) {
+      const prevBooking = appointments.find(a => a.staff === staffName && a.startTime === hours[i]);
+      if (prevBooking) {
+        const span = getBookingSpan(prevBooking);
+        if (i + span > hourIndex) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
+  return (
+    <div className="min-h-screen bg-background p-2 md:p-4" dir="rtl">
+      {/* Header */}
+      <div className="mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+        <h1 className="text-xl md:text-2xl font-bold">PREGA SQUAD – التخطيط</h1>
+        
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          {/* Staff Revenue */}
+          <div className="flex flex-wrap items-center gap-1">
+            {stats.perStaff.map(s => (
+              <div key={s.id} className="bg-card px-2 py-1 rounded-lg border text-xs flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
+                <span className="font-medium">{s.name}</span>
+                <span className="font-bold">{s.total} DH</span>
               </div>
             ))}
           </div>
 
-          <div className="bg-card px-3 py-1.5 md:px-4 md:py-2 rounded-xl border border-border shadow-sm flex items-center gap-2">
-            <span className="text-muted-foreground text-[10px] md:text-sm font-medium">إجمالي اليوم</span>
-            <span className="text-lg md:text-xl font-bold text-primary">{totalRevenue} DH</span>
+          {/* Total */}
+          <div className="bg-primary text-primary-foreground px-3 py-1 rounded-lg text-sm font-bold">
+            {stats.total} DH
           </div>
 
-          <div className="flex items-center gap-2 bg-card p-1 rounded-xl border border-border shadow-sm w-full md:w-auto justify-between md:justify-start">
-            <Button variant="ghost" size="icon" onClick={() => setDate(d => addDays(d, -1))} className="h-8 w-8">
-              <ChevronLeft className="w-4 h-4" />
+          {/* Date Navigation */}
+          <div className="flex items-center gap-1 bg-card rounded-lg border p-1">
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDate(d => addDays(d, -1))}>
+              <ChevronRight className="w-4 h-4" />
             </Button>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="ghost" className={cn("flex-1 md:w-[200px] justify-start text-left font-normal h-8", !date && "text-muted-foreground")}>
-                  <CalendarIcon className="ml-2 h-4 w-4" />
-                  <span className="truncate">{date ? format(date, "PPP") : <span>Pick a date</span>}</span>
+                <Button variant="ghost" className="h-7 px-2 text-xs">
+                  <CalendarIcon className="w-3 h-3 ml-1" />
+                  {format(date, "dd/MM")}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="end">
                 <Calendar mode="single" selected={date} onSelect={(d) => d && setDate(d)} initialFocus />
               </PopoverContent>
             </Popover>
-            <Button variant="ghost" size="icon" onClick={() => setDate(d => addDays(d, 1))} className="h-8 w-8">
-              <ChevronRight className="w-4 h-4" />
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDate(d => addDays(d, 1))}>
+              <ChevronLeft className="w-4 h-4" />
             </Button>
             <Button 
               variant="ghost" 
               size="icon" 
-              onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/appointments"] })} 
-              className="h-8 w-8"
-              title="تحديث"
+              className="h-7 w-7"
+              onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/appointments"] })}
             >
-              <RefreshCw className="w-4 h-4" />
+              <RefreshCw className="w-3 h-3" />
             </Button>
           </div>
+
+          {/* New Booking Button */}
+          <Button 
+            onClick={() => {
+              form.reset({
+                date: formattedDate,
+                startTime: "10:00",
+                duration: 60,
+                client: "",
+                service: "",
+                staff: staffList[0]?.name || "",
+                price: 0,
+                total: 0,
+                paid: true,
+              });
+              setEditingAppointment(null);
+              setIsDialogOpen(true);
+            }}
+            className="bg-black text-white px-3 py-1 rounded-xl text-sm"
+          >
+            <Plus className="w-4 h-4 ml-1" />
+            حجز جديد
+          </Button>
         </div>
       </div>
 
-      {/* Calendar Grid */}
-      <div className="flex-1 bg-card rounded-2xl border border-border shadow-sm overflow-hidden flex flex-col min-h-[500px]">
-        {/* Scrollable Container for both Header and Grid */}
-        <div ref={scrollContainerRef} className="flex-1 overflow-x-auto overflow-y-auto calendar-scroll relative" id="calendar-scroll-container">
-          <div className="min-w-max">
-            {/* Staff Header (inside scroll) */}
-            <div className="flex border-b border-border sticky top-0 z-20 bg-card/95 backdrop-blur shadow-sm">
-              <div className="w-14 md:w-20 flex-shrink-0 border-l border-border bg-muted/30 flex items-center justify-center sticky right-0 z-30 bg-card">
-                <Clock className="w-4 h-4 text-muted-foreground" />
+      {/* Board */}
+      <div className="overflow-x-auto bg-card rounded-xl border shadow-sm">
+        <div 
+          className="grid" 
+          style={{ gridTemplateColumns: `80px repeat(${staffList.length}, minmax(120px, 1fr))` }}
+        >
+          {/* Top row - Staff headers */}
+          <div className="bg-muted/50 border-b border-l p-2"></div>
+          {staffList.map((s) => (
+            <div 
+              key={s.id} 
+              className="bg-muted/50 border-b border-l p-2 md:p-3 font-bold text-center text-xs md:text-sm"
+            >
+              <div className="flex items-center justify-center gap-1">
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
+                <span>{s.name}</span>
               </div>
-              {staffList.map(s => (
-                <div key={s.id} className="flex-1 py-2 md:py-4 px-1 md:px-2 text-center border-l border-border last:border-l-0 bg-muted/5 min-w-[140px] md:min-w-[200px] flex flex-col items-center justify-center gap-1">
-                  <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full shadow-sm" style={{ backgroundColor: s.color }} />
-                  <span className="font-black text-[10px] md:text-base text-foreground truncate block uppercase tracking-wider">{s.name}</span>
-                </div>
-              ))}
             </div>
+          ))}
 
-            <div className="flex relative min-h-[2400px]" style={{ height: (END_HOUR - START_HOUR) * SLOT_HEIGHT }}>
-              {/* Time Column */}
-              <div className="w-14 md:w-20 flex-shrink-0 border-l border-border bg-muted/5 sticky right-0 z-10">
-                {timeSlots.map((slot, i) => (
-                  slot.minutes % 60 === 0 && (
-                    <div key={i} className="absolute w-full text-right pr-2 text-[10px] md:text-xs text-muted-foreground -mt-2" 
-                         style={{ top: (slot.minutes - START_HOUR * 60) * PIXELS_PER_MINUTE }}>
-                      {slot.label}
-                    </div>
-                  )
-                ))}
+          {/* Time rows */}
+          {hours.map((hour) => (
+            <React.Fragment key={hour}>
+              <div 
+                className="bg-muted/30 border-b border-l p-2 text-xs text-muted-foreground font-medium"
+              >
+                {hour}
               </div>
 
-              {/* Staff Columns */}
-              {staffList.map((s) => (
-                <div key={s.id} className="flex-1 relative border-l border-border last:border-l-0 min-w-[140px] md:min-w-[200px]">
-                  {/* Horizontal Grid Lines */}
-                  {timeSlots.map((slot, i) => (
-                    <div 
-                      key={i} 
-                      className={cn(
-                        "absolute w-full border-b border-border/30 h-[15px] hover:bg-primary/5 transition-colors cursor-pointer",
-                        slot.minutes % 60 === 0 && "border-border/60"
-                      )}
-                      style={{ 
-                        top: (slot.minutes - START_HOUR * 60) * PIXELS_PER_MINUTE,
-                        height: SLOT_INTERVAL * PIXELS_PER_MINUTE
-                      }}
-                      onClick={() => handleSlotClick(s.name, slot.label)}
-                    />
-                  ))}
+              {staffList.map((s) => {
+                const booking = getBooking(s.name, hour);
+                const isCovered = isSlotCovered(s.name, hour);
 
-                  {/* Appointments */}
-                  {appointments
-                    .filter(app => app.staff === s.name)
-                    .map(app => {
-                      const [h, m] = app.startTime.split(':').map(Number);
-                      const startMinutes = h * 60 + m;
-                      const offsetMinutes = startMinutes - (START_HOUR * 60);
-                      const top = offsetMinutes * PIXELS_PER_MINUTE;
-                      const height = app.duration * PIXELS_PER_MINUTE;
+                if (isCovered) {
+                  return null;
+                }
 
-                      const staffColor = staffList.find(st => st.name === s.name)?.color || "var(--primary)";
+                const span = booking ? getBookingSpan(booking) : 1;
 
-                      return (
-                        <div
-                          key={app.id}
-                          className={cn(
-                            "absolute left-0.5 right-0.5 md:left-1 md:right-1 rounded-lg md:rounded-xl p-1 md:p-3 text-[10px] md:text-xs border transition-all overflow-hidden flex flex-col justify-between shadow-sm",
-                            isAdmin ? "cursor-pointer hover:brightness-95 hover:shadow-xl hover:z-10" : "cursor-default"
-                          )}
-                          style={{ 
-                            top, 
-                            height: Math.max(height, 40),
-                            backgroundColor: staffColor,
-                            borderColor: `${staffColor}40`,
-                            color: "#ffffff"
-                          }}
-                          onClick={(e) => handleAppointmentClick(e, app)}
-                        >
-                      <div className="flex flex-col items-center justify-center h-full gap-0.5 md:gap-1">
-                        <div className="flex flex-col items-center gap-0.5 w-full overflow-hidden">
-                          <div className={cn(
-                            "font-black px-1.5 md:px-3 py-0.5 md:py-1 rounded-full bg-white/30 dark:bg-black/30 border md:border-2 border-current shadow-sm shrink-0 leading-tight text-center break-words max-w-full",
-                            app.duration >= 45 ? 'text-[10px] md:text-sm' : 'text-[8px] md:text-xs'
-                          )} style={{ color: "inherit" }}>
-                            {app.service}
-                          </div>
-                          <span className="text-[8px] md:text-[10px] font-bold opacity-90 truncate max-w-full">
-                            {app.client}
-                          </span>
+                return (
+                  <div
+                    key={`${s.id}-${hour}`}
+                    className={cn(
+                      "border-b border-l p-1 min-h-[48px] transition-colors",
+                      booking 
+                        ? "text-white cursor-pointer" 
+                        : "bg-background hover:bg-muted/50 cursor-pointer"
+                    )}
+                    style={booking ? { 
+                      gridRow: `span ${span}`,
+                      backgroundColor: s.color 
+                    } : undefined}
+                    onClick={(e) => booking ? handleAppointmentClick(e, booking) : handleSlotClick(s.name, hour)}
+                  >
+                    {booking && (
+                      <div className="h-full flex flex-col justify-between p-1">
+                        <div>
+                          <div className="font-bold text-xs md:text-sm truncate">{booking.client || "—"}</div>
+                          <div className="text-[10px] md:text-xs opacity-90 truncate">{booking.service}</div>
                         </div>
-                        
-                        <div className="flex items-center justify-between border-t border-black/5 pt-0.5 w-full">
-                          <div className="hidden md:flex items-center gap-1 opacity-80">
-                            <Clock className="w-2.5 h-2.5" />
-                            <span className="text-[9px]">{app.duration} م</span>
+                        <div className="flex items-center justify-between mt-1">
+                          <span className="text-[10px] opacity-80">{booking.duration}د</span>
+                          <div className="flex items-center gap-1">
+                            <span className="font-bold text-xs">{booking.total} DH</span>
+                            {booking.paid ? (
+                              <Check className="w-3 h-3 text-white" />
+                            ) : (
+                              <button
+                                onClick={(e) => handleMarkAsPaid(e, booking)}
+                                className="bg-white/20 hover:bg-white/30 rounded-full p-0.5"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            )}
                           </div>
-                          <div className="font-bold text-[9px] md:text-xs w-full text-center md:w-auto">{app.total} DH</div>
                         </div>
                       </div>
+                    )}
+                  </div>
+                );
+              })}
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
 
-                          {/* Status badge / Pay button */}
-                          {app.paid ? (
-                            <div className="absolute bottom-1 left-1 md:bottom-2 md:left-2 w-3 h-3 md:w-4 md:h-4 rounded-full bg-emerald-500 flex items-center justify-center">
-                              <Check className="w-2 h-2 md:w-3 md:h-3 text-white" />
-                            </div>
-                          ) : (
-                            <button
-                              onClick={(e) => handleMarkAsPaid(e, app)}
-                              className="absolute bottom-1 left-1 md:bottom-2 md:left-2 bg-white hover:bg-emerald-500 hover:text-white text-emerald-600 rounded-lg px-2 py-1 md:px-3 md:py-1.5 transition-all shadow-lg flex items-center gap-1 text-[10px] md:text-xs font-bold border border-emerald-200 hover:border-emerald-500"
-                              title="تأكيد الدفع"
-                            >
-                              <CreditCard className="w-3 h-3 md:w-4 md:h-4" />
-                              <span>دفع</span>
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
+      {/* Appointment Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>{editingAppointment ? "تعديل الحجز" : "حجز جديد"}</DialogTitle>
+          </DialogHeader>
+
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              {/* Favorite Services */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs text-muted-foreground">خدمات مفضلة</Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-xs"
+                    onClick={() => setIsEditFavoritesOpen(!isEditFavoritesOpen)}
+                  >
+                    <Star className="w-3 h-3 ml-1" />
+                    تعديل
+                  </Button>
                 </div>
-              ))}
-              
-              {/* Current Time Indicator */}
-              {nowLinePosition !== null && (
-                <div 
-                  className="absolute left-0 right-0 h-0.5 bg-red-500 z-50 pointer-events-none flex items-center"
-                  style={{ top: nowLinePosition }}
-                >
-                  <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-red-500 -mr-0.5 md:-ml-1" />
-                  <div className="bg-red-500 text-white text-[8px] md:text-[10px] px-1 rounded-sm mr-1 font-bold">
-                    {format(now, "HH:mm")}
+                <div className="grid grid-cols-2 gap-2">
+                  {favoriteServices.map((service: any) => (
+                    <Button
+                      key={service.id}
+                      type="button"
+                      variant={form.watch("service") === service.name ? "default" : "outline"}
+                      size="sm"
+                      className="text-xs h-8 justify-start"
+                      onClick={() => handleServiceChange(service.name)}
+                    >
+                      {service.name}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Edit Favorites */}
+              {isEditFavoritesOpen && (
+                <div className="border rounded-lg p-3 space-y-2 bg-muted/30">
+                  <Label className="text-xs">اختر حتى 4 خدمات مفضلة</Label>
+                  <div className="relative">
+                    <Search className="absolute right-2 top-2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="بحث..."
+                      value={serviceSearch}
+                      onChange={(e) => setServiceSearch(e.target.value)}
+                      className="pr-8 h-8 text-xs"
+                    />
+                  </div>
+                  <div className="max-h-32 overflow-y-auto space-y-1">
+                    {filteredServices.slice(0, 20).map((service: any) => (
+                      <div
+                        key={service.id}
+                        className={cn(
+                          "flex items-center justify-between p-2 rounded cursor-pointer text-xs",
+                          favoriteNames.includes(service.name) ? "bg-primary/10" : "hover:bg-muted"
+                        )}
+                        onClick={() => toggleFavorite(service.name)}
+                      >
+                        <span>{service.name}</span>
+                        {favoriteNames.includes(service.name) && <Star className="w-3 h-3 fill-primary text-primary" />}
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Create/Edit Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={(open) => {
-        setIsDialogOpen(open);
-        if (!open) setIsEditFavoritesOpen(false);
-      }}>
-        <DialogContent className="sm:max-w-[380px] p-0 overflow-hidden border-2 border-primary/20 shadow-2xl bg-gradient-to-br from-pink-50/80 via-white to-cyan-50/80 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-          {/* Compact Header */}
-          <div className="bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 px-3 py-2 text-white">
-            <DialogHeader>
-              <DialogTitle className="text-sm font-black flex items-center gap-2 text-white">
-                <Sparkles className="w-3 h-3" />
-                {editingAppointment ? "تعديل الموعد" : "موعد جديد"}
-              </DialogTitle>
-            </DialogHeader>
-          </div>
-          
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="p-3 space-y-2">
-              
-              {/* Price Row */}
-              <div className="flex items-center gap-2 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 rounded-lg p-2 border border-emerald-500/30">
-                <CreditCard className="w-4 h-4 text-emerald-600 shrink-0" />
-                <FormField
-                  control={form.control}
-                  name="total"
-                  render={({ field }) => (
-                    <FormItem className="flex-1 space-y-0">
+              {/* Service Selector */}
+              <FormField
+                control={form.control}
+                name="service"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>الخدمة</FormLabel>
+                    <Select value={field.value} onValueChange={handleServiceChange}>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="السعر"
-                          className="text-xl h-10 font-black border-0 bg-white dark:bg-gray-800 rounded-lg text-center" 
-                          {...field} 
-                        />
+                        <SelectTrigger>
+                          <SelectValue placeholder="اختر خدمة" />
+                        </SelectTrigger>
                       </FormControl>
-                    </FormItem>
-                  )}
-                />
-                <span className="text-sm font-bold text-emerald-600">DH</span>
-              </div>
+                      <SelectContent className="max-h-60">
+                        {services.map((s: any) => (
+                          <SelectItem key={s.id} value={s.name}>
+                            {s.name} - {s.price} DH
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-              {/* All Fields Grid */}
-              <div className="grid grid-cols-2 gap-2">
-                <FormField
-                  control={form.control}
-                  name="client"
-                  render={({ field }) => (
-                    <FormItem className="col-span-2 space-y-1">
-                      <FormLabel className="text-[10px] text-muted-foreground">العميل</FormLabel>
+              {/* Client */}
+              <FormField
+                control={form.control}
+                name="client"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>العميل</FormLabel>
+                    <FormControl>
+                      <Input placeholder="اسم العميل (رقم الهاتف)" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Staff */}
+              <FormField
+                control={form.control}
+                name="staff"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>الموظف</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
-                        <Input placeholder="اسم العميل..." className="h-8 rounded-lg text-xs" {...field} />
+                        <SelectTrigger>
+                          <SelectValue placeholder="اختر موظف" />
+                        </SelectTrigger>
                       </FormControl>
-                    </FormItem>
-                  )}
-                />
+                      <SelectContent>
+                        {staffList.map((s: any) => (
+                          <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                <FormField
-                  control={form.control}
-                  name="staff"
-                  render={({ field }) => (
-                    <FormItem className="space-y-1">
-                      <FormLabel className="text-[10px] text-muted-foreground">الموظف</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger className="h-8 rounded-lg text-xs">
-                            <SelectValue placeholder="اختر" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {staffList.map(s => (
-                            <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="startTime"
-                  render={({ field }) => (
-                    <FormItem className="space-y-1">
-                      <FormLabel className="text-[10px] text-muted-foreground">الوقت</FormLabel>
+              {/* Time */}
+              <FormField
+                control={form.control}
+                name="startTime"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>الوقت</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
-                        <Input type="time" className="h-8 rounded-lg text-xs" {...field} />
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
                       </FormControl>
-                    </FormItem>
-                  )}
-                />
+                      <SelectContent className="max-h-60">
+                        {hours.map(h => (
+                          <SelectItem key={h} value={h}>{h}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
+              {/* Duration & Price */}
+              <div className="grid grid-cols-2 gap-3">
                 <FormField
                   control={form.control}
                   name="duration"
                   render={({ field }) => (
-                    <FormItem className="space-y-1">
-                      <FormLabel className="text-[10px] text-muted-foreground">المدة (د)</FormLabel>
+                    <FormItem>
+                      <FormLabel>المدة (دقيقة)</FormLabel>
                       <FormControl>
-                        <Input type="number" className="h-8 rounded-lg text-xs" {...field} />
+                        <Input type="number" {...field} />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
-
-                {/* Service - spans full width */}
                 <FormField
                   control={form.control}
-                  name="service"
+                  name="total"
                   render={({ field }) => (
-                    <FormItem className="col-span-2 space-y-1">
-                      <FormLabel className="text-[10px] text-muted-foreground flex items-center gap-1">
-                        <Scissors className="w-3 h-3" /> الخدمة
-                      </FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button 
-                            variant="outline" 
-                            role="combobox" 
-                            className={cn(
-                              "w-full justify-between h-8 text-xs rounded-lg",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value || "اختر الخدمة..."}
-                            <Search className="ml-2 h-3 w-3 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[320px] p-0" align="start">
-                          <div className="flex flex-col">
-                            <div className="p-2 border-b border-border">
-                              <div className="relative">
-                                <Search className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                                <Input 
-                                  placeholder="ابحث عن خدمة..." 
-                                  className="pr-9 h-9 text-sm"
-                                  value={serviceSearch}
-                                  onChange={(e) => setServiceSearch(e.target.value)}
-                                  autoFocus
-                                />
-                              </div>
-                            </div>
-                            <div className="max-h-[200px] overflow-y-auto p-1">
-                              {filteredServices.length === 0 ? (
-                                <div className="py-4 text-center text-sm text-muted-foreground">
-                                  لم يتم العثور على خدمات
-                                </div>
-                              ) : (
-                                filteredServices.map(s => (
-                                  <button
-                                    key={s.id}
-                                    type="button"
-                                    className={cn(
-                                      "w-full text-right px-3 py-1.5 text-sm rounded-sm hover:bg-primary/10 transition-colors flex items-center justify-between group",
-                                      field.value === s.name && "bg-primary/5 font-bold"
-                                    )}
-                                    onClick={() => handleServiceChange(s.name)}
-                                  >
-                                    <span>{s.name}</span>
-                                    <span className="text-[10px] text-muted-foreground group-hover:text-primary">{s.price} DH</span>
-                                  </button>
-                                ))
-                              )}
-                            </div>
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                      
-                      {/* Quick Favorites - compact inline */}
-                      {!editingAppointment && (
-                        <div className="pt-1">
-                          <div className="flex items-center gap-1">
-                            {favoriteServices.slice(0, 4).map((s: any) => (
-                              <Button
-                                key={s.id}
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className={cn(
-                                  "h-6 text-[9px] px-1.5 rounded-full shrink-0",
-                                  field.value === s.name ? "bg-primary text-primary-foreground" : "bg-muted/50 hover:bg-muted"
-                                )}
-                                onClick={() => handleServiceChange(s.name)}
-                              >
-                                {s.name}
-                              </Button>
-                            ))}
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0 rounded-full text-muted-foreground hover:text-primary shrink-0"
-                              onClick={() => setIsEditFavoritesOpen(!isEditFavoritesOpen)}
-                            >
-                              <Settings2 className="w-3 h-3" />
-                            </Button>
-                          </div>
-                          
-                          {isEditFavoritesOpen && (
-                            <div className="mt-2 border border-dashed border-primary/30 rounded-lg p-2 bg-primary/5 max-h-[120px] overflow-y-auto">
-                              <p className="text-[9px] text-muted-foreground mb-1">اختر حتى 4 ({favoriteNames.length}/4)</p>
-                              <div className="flex flex-wrap gap-1">
-                                {services.map((s) => (
-                                  <Button
-                                    key={s.id}
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    className={cn(
-                                      "h-5 text-[9px] px-1.5 rounded-full",
-                                      favoriteNames.includes(s.name) 
-                                        ? "bg-primary text-primary-foreground border-primary" 
-                                        : "border-border/50"
-                                    )}
-                                    onClick={() => toggleFavorite(s.name)}
-                                  >
-                                    {favoriteNames.includes(s.name) && <Check className="w-2 h-2 ml-0.5" />}
-                                    {s.name}
-                                  </Button>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
+                    <FormItem>
+                      <FormLabel>المجموع (DH)</FormLabel>
+                      <FormControl>
+                        <Input type="number" {...field} />
+                      </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex gap-2 pt-1">
-                {editingAppointment && (
+              {/* Paid */}
+              <FormField
+                control={form.control}
+                name="paid"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-2">
+                    <FormControl>
+                      <input
+                        type="checkbox"
+                        checked={field.value}
+                        onChange={field.onChange}
+                        className="w-4 h-4"
+                      />
+                    </FormControl>
+                    <FormLabel className="!mt-0">تم الدفع</FormLabel>
+                  </FormItem>
+                )}
+              />
+
+              <DialogFooter className="gap-2">
+                {editingAppointment && isAdmin && (
                   <Button
                     type="button"
                     variant="destructive"
-                    className="h-10 px-4 rounded-lg font-bold text-sm"
                     onClick={() => {
-                      if (confirm("هل أنت متأكد من حذف هذا الموعد؟")) {
+                      if (confirm("هل أنت متأكد من الحذف؟")) {
                         deleteMutation.mutate(editingAppointment.id);
                         setIsDialogOpen(false);
                       }
                     }}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-4 h-4 ml-1" />
+                    حذف
                   </Button>
                 )}
-                <Button 
-                  type="submit" 
-                  className="flex-1 h-11 text-sm font-black rounded-lg bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-600 hover:via-purple-600 hover:to-indigo-600 shadow-lg transition-all" 
-                  disabled={createMutation.isPending || updateMutation.isPending}
-                >
-                  <Sparkles className="w-4 h-4 ml-2" />
-                  {editingAppointment ? "تحديث" : "تأكيد الموعد"}
+                <Button type="submit">
+                  <Check className="w-4 h-4 ml-1" />
+                  {editingAppointment ? "حفظ" : "إضافة"}
                 </Button>
-              </div>
+              </DialogFooter>
             </form>
           </Form>
         </DialogContent>
