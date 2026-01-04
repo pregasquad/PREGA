@@ -77,7 +77,9 @@
     "stockInsufficient": "المخزون غير كافٍ لـ",
     "bookingCreated": "تم إنشاء الحجز بنجاح",
     "bookingUpdated": "تم تحديث الحجز بنجاح",
-    "bookingDeleted": "تم حذف الحجز بنجاح"
+    "bookingDeleted": "تم حذف الحجز بنجاح",
+    "appointmentMoved": "تم نقل الموعد",
+    "moveError": "فشل نقل الموعد"
   },
   "services": {
     "title": "الخدمات",

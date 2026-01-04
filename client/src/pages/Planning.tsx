@@ -86,6 +86,8 @@ export default function Planning() {
   }, [date, isToday]);
   const [isEditFavoritesOpen, setIsEditFavoritesOpen] = useState(false);
   const [servicePopoverOpen, setServicePopoverOpen] = useState(false);
+  const [draggedAppointment, setDraggedAppointment] = useState<any>(null);
+  const [dragOverSlot, setDragOverSlot] = useState<{staff: string, time: string} | null>(null);
   const [favoriteIds, setFavoriteIds] = useState<number[]>(() => {
     try {
       const stored = localStorage.getItem('favoriteServiceIds');
@@ -281,6 +283,55 @@ export default function Planning() {
     } catch (error) {
       toast({ title: t("common.error"), description: t("planning.paymentError"), variant: "destructive" });
     }
+  };
+
+  const handleDragStart = (e: React.DragEvent, appointment: any) => {
+    setDraggedAppointment(appointment);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", appointment.id.toString());
+  };
+
+  const handleDragEnd = () => {
+    setDraggedAppointment(null);
+    setDragOverSlot(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent, staffName: string, time: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverSlot({ staff: staffName, time });
+  };
+
+  const handleDragLeave = () => {
+    setDragOverSlot(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, staffName: string, newTime: string) => {
+    e.preventDefault();
+    setDragOverSlot(null);
+    
+    if (!draggedAppointment) return;
+    
+    const staffMember = staffList.find(s => s.name === staffName);
+    if (!staffMember) return;
+
+    try {
+      await apiRequest("PUT", `/api/appointments/${draggedAppointment.id}`, {
+        ...draggedAppointment,
+        staff: staffName,
+        startTime: newTime,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+      toast({ 
+        title: t("planning.appointmentMoved"), 
+        description: `${draggedAppointment.client} → ${staffName} @ ${newTime}` 
+      });
+      playSuccessSound();
+    } catch (error) {
+      toast({ title: t("common.error"), description: t("planning.moveError"), variant: "destructive" });
+    }
+    
+    setDraggedAppointment(null);
   };
 
   const favoriteServices = useMemo(() => {
@@ -484,20 +535,31 @@ export default function Planning() {
 
                 const span = booking ? getBookingSpan(booking) : 1;
 
+                const isDragOver = dragOverSlot?.staff === s.name && dragOverSlot?.time === hour;
+                const isDragging = draggedAppointment?.id === booking?.id;
+
                 return (
                   <div
                     key={`${s.id}-${hour}`}
                     className={cn(
-                      "border-b border-l p-1 min-h-[48px] transition-colors",
+                      "border-b border-l p-1 min-h-[48px] transition-all duration-200",
                       booking 
-                        ? "text-white cursor-pointer m-0.5 rounded-xl shadow-md z-10 relative" 
-                        : "bg-background hover:bg-muted/50 cursor-pointer"
+                        ? "text-white cursor-grab active:cursor-grabbing m-0.5 rounded-xl shadow-md z-10 relative" 
+                        : "bg-background hover:bg-muted/50 cursor-pointer",
+                      isDragOver && !booking && "bg-orange-100 dark:bg-orange-900/30 ring-2 ring-orange-500 ring-inset",
+                      isDragging && "opacity-50 scale-95"
                     )}
                     style={{ 
                       gridColumn: colNum,
                       gridRow: booking ? `${rowNum} / span ${span}` : rowNum,
                       backgroundColor: booking ? s.color : undefined
                     }}
+                    draggable={!!booking}
+                    onDragStart={(e) => booking && handleDragStart(e, booking)}
+                    onDragEnd={handleDragEnd}
+                    onDragOver={(e) => !booking && handleDragOver(e, s.name, hour)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => !booking && handleDrop(e, s.name, hour)}
                     onClick={(e) => booking ? handleAppointmentClick(e, booking) : handleSlotClick(s.name, hour)}
                   >
                     {booking && (
