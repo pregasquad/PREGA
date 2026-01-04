@@ -372,5 +372,31 @@
     "staffAdded": "Personnel ajouté avec succès",
     "staffUpdated": "Personnel mis à jour avec succès",
     "staffDeleted": "Personnel supprimé avec succès"
+  },
+  "home": {
+    "dashboard": "Tableau de Bord",
+    "overview": "Aperçu de l'activité du salon aujourd'hui",
+    "todayAppointments": "Rendez-vous du Jour",
+    "totalClients": "Total Clients",
+    "availableServices": "Services Disponibles",
+    "teamMembers": "Membres de l'Équipe",
+    "logout": "Déconnexion",
+    "addStaff": "Ajouter Personnel",
+    "addNewStaff": "Ajouter Nouveau Personnel",
+    "name": "Nom",
+    "color": "Couleur",
+    "adding": "Ajout en cours...",
+    "add": "Ajouter",
+    "staffAdded": "Personnel ajouté",
+    "editStaffData": "Modifier les Données du Personnel",
+    "updating": "Mise à jour...",
+    "update": "Mettre à jour",
+    "staffUpdated": "Personnel mis à jour",
+    "staffDeleted": "Personnel supprimé",
+    "deleteConfirm": "Êtes-vous sûr de vouloir supprimer ce membre du personnel?",
+    "lowStockAlert": "Alerte Stock Bas",
+    "noAppointmentsToday": "Aucun rendez-vous prévu pour aujourd'hui",
+    "teamStatus": "État de l'Équipe",
+    "appointmentsToday": "rendez-vous aujourd'hui"
   }
 }

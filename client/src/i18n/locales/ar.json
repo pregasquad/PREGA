@@ -372,5 +372,31 @@
     "staffAdded": "تم إضافة الموظف بنجاح",
     "staffUpdated": "تم تحديث الموظف بنجاح",
     "staffDeleted": "تم حذف الموظف بنجاح"
+  },
+  "home": {
+    "dashboard": "لوحة التحكم",
+    "overview": "نظرة عامة على نشاط الصالون اليوم",
+    "todayAppointments": "مواعيد اليوم",
+    "totalClients": "إجمالي العملاء",
+    "availableServices": "الخدمات المتاحة",
+    "teamMembers": "فريق العمل",
+    "logout": "تسجيل الخروج",
+    "addStaff": "إضافة موظف",
+    "addNewStaff": "إضافة موظف جديد",
+    "name": "الاسم",
+    "color": "اللون",
+    "adding": "جاري الإضافة...",
+    "add": "إضافة",
+    "staffAdded": "تمت إضافة الموظف",
+    "editStaffData": "تعديل بيانات الموظف",
+    "updating": "جاري التحديث...",
+    "update": "تحديث",
+    "staffUpdated": "تم تحديث بيانات الموظف",
+    "staffDeleted": "تم حذف الموظف",
+    "deleteConfirm": "هل أنت متأكد من حذف هذا الموظف؟",
+    "lowStockAlert": "تنبيه المخزون المنخفض",
+    "noAppointmentsToday": "لا توجد مواعيد مجدولة لليوم",
+    "teamStatus": "حالة الفريق",
+    "appointmentsToday": "مواعيد اليوم"
   }
 }

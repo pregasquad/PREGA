@@ -372,5 +372,31 @@
     "staffAdded": "Staff added successfully",
     "staffUpdated": "Staff updated successfully",
     "staffDeleted": "Staff deleted successfully"
+  },
+  "home": {
+    "dashboard": "Dashboard",
+    "overview": "Overview of today's salon activity",
+    "todayAppointments": "Today's Appointments",
+    "totalClients": "Total Clients",
+    "availableServices": "Available Services",
+    "teamMembers": "Team Members",
+    "logout": "Logout",
+    "addStaff": "Add Staff",
+    "addNewStaff": "Add New Staff",
+    "name": "Name",
+    "color": "Color",
+    "adding": "Adding...",
+    "add": "Add",
+    "staffAdded": "Staff added",
+    "editStaffData": "Edit Staff Data",
+    "updating": "Updating...",
+    "update": "Update",
+    "staffUpdated": "Staff updated",
+    "staffDeleted": "Staff deleted",
+    "deleteConfirm": "Are you sure you want to delete this staff member?",
+    "lowStockAlert": "Low Stock Alert",
+    "noAppointmentsToday": "No appointments scheduled for today",
+    "teamStatus": "Team Status",
+    "appointmentsToday": "appointments today"
   }
 }

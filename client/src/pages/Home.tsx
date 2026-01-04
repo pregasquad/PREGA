@@ -15,8 +15,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export default function Home() {
+  const { t, i18n } = useTranslation();
+  const isRtl = i18n.language === "ar";
   const { data: appointments = [] } = useAppointments(format(startOfToday(), "yyyy-MM-dd"));
   const { data: staff = [] } = useStaff();
   const { data: services = [] } = useServices();
@@ -54,7 +58,7 @@ export default function Home() {
       queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
       setIsStaffDialogOpen(false);
       staffForm.reset({ name: "", color: "#" + Math.floor(Math.random()*16777215).toString(16) });
-      toast({ title: "تمت إضافة الموظف" });
+      toast({ title: t("home.staffAdded") });
     }
   });
 
@@ -66,7 +70,7 @@ export default function Home() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
       setEditingStaff(null);
-      toast({ title: "تم تحديث بيانات الموظف" });
+      toast({ title: t("home.staffUpdated") });
     }
   });
 
@@ -76,26 +80,28 @@ export default function Home() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
-      toast({ title: "تم حذف الموظف" });
+      toast({ title: t("home.staffDeleted") });
     }
   });
 
   const stats = [
-    { label: "مواعيد اليوم", value: appointments.length, icon: CalendarCheck, color: "text-blue-500" },
-    { label: "إجمالي العملاء", value: clients.length, icon: Users, color: "text-green-500" },
-    { label: "الخدمات المتاحة", value: services.length, icon: Scissors, color: "text-purple-500" },
-    { label: "فريق العمل", value: staff.length, icon: Clock, color: "text-orange-500" },
+    { label: t("home.todayAppointments"), value: appointments.length, icon: CalendarCheck, color: "text-blue-500" },
+    { label: t("home.totalClients"), value: clients.length, icon: Users, color: "text-green-500" },
+    { label: t("home.availableServices"), value: services.length, icon: Scissors, color: "text-purple-500" },
+    { label: t("home.teamMembers"), value: staff.length, icon: Clock, color: "text-orange-500" },
   ];
 
   return (
-    <div className="space-y-8 p-6" dir="rtl">
+    <div className="space-y-8 p-6" dir={isRtl ? "rtl" : "ltr"}>
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold">لوحة التحكم</h1>
-          <p className="text-muted-foreground mt-2">نظرة عامة على نشاط الصالون اليوم</p>
+          <h1 className="text-3xl font-display font-bold">{t("home.dashboard")}</h1>
+          <p className="text-muted-foreground mt-2">{t("home.overview")}</p>
         </div>
 
         <div className="flex items-center gap-2">
+          <LanguageSwitcher />
+          
           <Button 
             variant="outline" 
             size="sm"
@@ -103,28 +109,28 @@ export default function Home() {
             onClick={handleAdminLogout}
           >
             <LogOut className="w-4 h-4" />
-            تسجيل الخروج
+            {t("home.logout")}
           </Button>
           
           <Dialog open={isStaffDialogOpen} onOpenChange={setIsStaffDialogOpen}>
             <DialogTrigger asChild>
               <Button className="gap-2">
                 <UserPlus className="w-4 h-4" />
-                إضافة موظف
+                {t("home.addStaff")}
               </Button>
             </DialogTrigger>
             <DialogContent>
-              <DialogHeader><DialogTitle>إضافة موظف جديد</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle>{t("home.addNewStaff")}</DialogTitle></DialogHeader>
               <Form {...staffForm}>
                 <form onSubmit={staffForm.handleSubmit((data) => createStaffMutation.mutate(data))} className="space-y-4">
                   <FormField control={staffForm.control} name="name" render={({ field }) => (
-                    <FormItem><FormLabel>الاسم</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+                    <FormItem><FormLabel>{t("home.name")}</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
                   )} />
                   <FormField control={staffForm.control} name="color" render={({ field }) => (
-                    <FormItem><FormLabel>اللون</FormLabel><FormControl><Input type="color" {...field} /></FormControl></FormItem>
+                    <FormItem><FormLabel>{t("home.color")}</FormLabel><FormControl><Input type="color" {...field} /></FormControl></FormItem>
                   )} />
                   <Button type="submit" className="w-full" disabled={createStaffMutation.isPending}>
-                    {createStaffMutation.isPending ? "جاري الإضافة..." : "إضافة"}
+                    {createStaffMutation.isPending ? t("home.adding") : t("home.add")}
                   </Button>
                 </form>
               </Form>
@@ -152,7 +158,7 @@ export default function Home() {
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="w-5 h-5" />
-              تنبيه المخزون المنخفض
+              {t("home.lowStockAlert")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -177,12 +183,12 @@ export default function Home() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-primary" />
-                مواعيد اليوم
+                {t("home.todayAppointments")}
               </CardTitle>
             </CardHeader>
             <CardContent>
               {appointments.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8">لا توجد مواعيد مجدولة لليوم</p>
+                <p className="text-muted-foreground text-center py-8">{t("home.noAppointmentsToday")}</p>
               ) : (
                 <div className="space-y-4">
                   {appointments.slice(0, 5).map((app: any) => (
@@ -191,9 +197,9 @@ export default function Home() {
                         <p className="font-bold">{app.client}</p>
                         <p className="text-xs text-muted-foreground">{app.service}</p>
                       </div>
-                      <div className="text-right">
+                      <div className={isRtl ? "text-left" : "text-right"}>
                         <p className="text-sm font-medium">{app.startTime}</p>
-                        <p className="text-xs text-primary font-bold">{app.total} DH</p>
+                        <p className="text-xs text-primary font-bold">{app.total} {t("common.currency")}</p>
                       </div>
                     </div>
                   ))}
@@ -206,7 +212,7 @@ export default function Home() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Package className="w-5 h-5 text-primary" />
-                حالة الفريق
+                {t("home.teamStatus")}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -221,7 +227,7 @@ export default function Home() {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-sm bg-background px-2 py-1 rounded-md border border-border">
-                          {staffApps} مواعيد اليوم
+                          {staffApps} {t("home.appointmentsToday")}
                         </span>
                         <Dialog open={!!editingStaff && editingStaff.id === s.id} onOpenChange={(open) => !open && setEditingStaff(null)}>
                           <DialogTrigger asChild>
@@ -230,7 +236,7 @@ export default function Home() {
                             </Button>
                           </DialogTrigger>
                           <DialogContent>
-                            <DialogHeader><DialogTitle>تعديل بيانات الموظف</DialogTitle></DialogHeader>
+                            <DialogHeader><DialogTitle>{t("home.editStaffData")}</DialogTitle></DialogHeader>
                             <form 
                               onSubmit={(e) => {
                                 e.preventDefault();
@@ -243,15 +249,15 @@ export default function Home() {
                               className="space-y-4"
                             >
                               <div className="space-y-2">
-                                <label className="text-sm font-medium">الاسم</label>
+                                <label className="text-sm font-medium">{t("home.name")}</label>
                                 <Input name="name" defaultValue={s.name} required />
                               </div>
                               <div className="space-y-2">
-                                <label className="text-sm font-medium">اللون</label>
+                                <label className="text-sm font-medium">{t("home.color")}</label>
                                 <Input name="color" type="color" defaultValue={s.color} required />
                               </div>
                               <Button type="submit" className="w-full" disabled={updateStaffMutation.isPending}>
-                                {updateStaffMutation.isPending ? "جاري التحديث..." : "تحديث"}
+                                {updateStaffMutation.isPending ? t("home.updating") : t("home.update")}
                               </Button>
                             </form>
                           </DialogContent>
@@ -261,7 +267,7 @@ export default function Home() {
                           size="icon" 
                           className="h-8 w-8 text-destructive hover:text-destructive"
                           onClick={() => {
-                            if (confirm("هل أنت متأكد من حذف هذا الموظف؟")) {
+                            if (confirm(t("home.deleteConfirm"))) {
                               deleteStaffMutation.mutate(s.id);
                             }
                           }}
