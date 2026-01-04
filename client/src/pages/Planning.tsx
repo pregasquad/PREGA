@@ -525,24 +525,26 @@ export default function Planning() {
         if (!open) setIsEditFavoritesOpen(false);
       }}>
         <DialogContent 
-          className="w-[calc(100vw-32px)] max-w-[380px] p-0 border border-border shadow-xl bg-background rounded-xl" 
+          className="w-[calc(100vw-32px)] max-w-[380px] p-0 border-0 shadow-2xl bg-gradient-to-b from-background to-muted/30 rounded-3xl overflow-hidden" 
           dir={isRtl ? "rtl" : "ltr"}
         >
-          <div className="bg-primary px-3 py-2 text-primary-foreground">
+          <div className="bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 px-4 py-3 text-white">
             <DialogHeader>
-              <DialogTitle className="text-sm font-bold flex items-center gap-2">
-                <Sparkles className="w-4 h-4" />
+              <DialogTitle className="text-base font-bold flex items-center gap-2">
+                <Sparkles className="w-5 h-5" />
                 {editingAppointment ? t("planning.editBooking") : t("planning.newBooking")}
               </DialogTitle>
             </DialogHeader>
           </div>
           
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="p-3 space-y-2">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="p-4 space-y-3">
               
               {/* Price Row - FIRST */}
-              <div className="flex items-center gap-2 bg-primary/5 rounded-lg p-2 border border-primary/20">
-                <CreditCard className="w-4 h-4 text-primary shrink-0" />
+              <div className="flex items-center gap-3 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 rounded-2xl p-3 border border-emerald-200 dark:border-emerald-800">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-lg">
+                  <CreditCard className="w-5 h-5 text-white" />
+                </div>
                 <FormField
                   control={form.control}
                   name="total"
@@ -553,7 +555,7 @@ export default function Planning() {
                           type="number" 
                           inputMode="decimal"
                           placeholder="0"
-                          className="text-xl h-10 font-bold border-0 bg-background rounded-lg text-center"
+                          className="text-2xl h-11 font-bold border-0 bg-white dark:bg-background rounded-xl text-center shadow-sm"
                           onFocus={(e) => e.target.select()}
                           {...field} 
                         />
@@ -561,21 +563,21 @@ export default function Planning() {
                     </FormItem>
                   )}
                 />
-                <span className="text-sm font-bold text-primary">DH</span>
+                <span className="text-base font-bold text-emerald-600 dark:text-emerald-400">DH</span>
                 <FormField
                   control={form.control}
                   name="paid"
                   render={({ field }) => (
-                    <FormItem className="flex items-center gap-1 space-y-0">
+                    <FormItem className="flex items-center gap-1.5 space-y-0 bg-white dark:bg-background rounded-xl px-2 py-1.5 shadow-sm">
                       <FormControl>
                         <input
                           type="checkbox"
                           checked={field.value}
                           onChange={field.onChange}
-                          className="w-4 h-4 accent-primary"
+                          className="w-4 h-4 accent-emerald-500 rounded"
                         />
                       </FormControl>
-                      <FormLabel className="!mt-0 text-[10px]">{t("common.paid")}</FormLabel>
+                      <FormLabel className="!mt-0 text-xs font-medium">{t("common.paid")}</FormLabel>
                     </FormItem>
                   )}
                 />
@@ -589,7 +591,7 @@ export default function Planning() {
                   render={({ field }) => (
                     <FormItem className="col-span-3 space-y-0">
                       <FormControl>
-                        <Input placeholder={t("planning.client")} className="h-9 rounded-lg text-sm" {...field} />
+                        <Input placeholder={t("planning.client")} className="h-10 rounded-xl text-sm border-2 border-muted focus:border-purple-400 transition-colors" {...field} />
                       </FormControl>
                     </FormItem>
                   )}
@@ -602,11 +604,11 @@ export default function Planning() {
                     <FormItem className="space-y-0">
                       <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                         <FormControl>
-                          <SelectTrigger className="h-9 rounded-lg text-xs">
+                          <SelectTrigger className="h-10 rounded-xl text-xs border-2 border-muted">
                             <SelectValue placeholder={t("planning.staff")} />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
+                        <SelectContent className="rounded-xl">
                           {staffList.map(s => (
                             <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
                           ))}
@@ -623,11 +625,11 @@ export default function Planning() {
                     <FormItem className="space-y-0">
                       <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                         <FormControl>
-                          <SelectTrigger className="h-9 rounded-lg text-xs">
+                          <SelectTrigger className="h-10 rounded-xl text-xs border-2 border-muted">
                             <SelectValue />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent className="max-h-60">
+                        <SelectContent className="max-h-60 rounded-xl">
                           {hours.map(h => (
                             <SelectItem key={h} value={h}>{h}</SelectItem>
                           ))}
@@ -643,7 +645,7 @@ export default function Planning() {
                   render={({ field }) => (
                     <FormItem className="space-y-0">
                       <FormControl>
-                        <Input type="number" inputMode="numeric" placeholder={t("common.duration")} className="h-9 rounded-lg text-xs" {...field} />
+                        <Input type="number" inputMode="numeric" placeholder={t("common.duration")} className="h-10 rounded-xl text-xs border-2 border-muted" {...field} />
                       </FormControl>
                     </FormItem>
                   )}
@@ -661,30 +663,30 @@ export default function Planning() {
                             <Button
                               variant="outline"
                               role="combobox"
-                              className="h-9 w-full justify-between rounded-lg text-xs"
+                              className="h-10 w-full justify-between rounded-xl text-xs border-2 border-muted hover:border-purple-400 transition-colors"
                             >
                               <span className="truncate">{field.value || t("planning.selectService")}</span>
-                              <Search className="h-3 w-3 shrink-0 text-muted-foreground" />
+                              <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
                             </Button>
                           </FormControl>
                         </PopoverTrigger>
                         <PopoverContent 
-                          className="w-[calc(100vw-56px)] max-w-[356px] p-0" 
+                          className="w-[calc(100vw-56px)] max-w-[356px] p-0 rounded-2xl border-2 shadow-xl" 
                           align="center" 
                           side="top" 
                           sideOffset={4}
                           onWheel={(e) => e.stopPropagation()}
                         >
-                          <div className="p-2 border-b">
+                          <div className="p-3 border-b bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30 rounded-t-2xl">
                             <Input
                               placeholder={t("planning.searchService")}
                               value={serviceSearch}
                               onChange={(e) => setServiceSearch(e.target.value)}
-                              className="h-8 text-sm"
+                              className="h-9 text-sm rounded-xl border-2"
                             />
                           </div>
                           <div 
-                            className="max-h-[200px] overflow-y-auto p-1"
+                            className="max-h-[200px] overflow-y-auto p-2"
                             style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
                             onWheel={(e) => {
                               e.stopPropagation();
@@ -695,16 +697,16 @@ export default function Planning() {
                           >
                             {Object.entries(groupedServices).map(([category, categoryServices]) => (
                               <div key={category}>
-                                <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase bg-muted/50 sticky top-0">
+                                <div className="px-2 py-1.5 text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase bg-purple-50 dark:bg-purple-950/30 rounded-lg mb-1 sticky top-0">
                                   {category}
                                 </div>
                                 {categoryServices.map(s => (
                                   <div
                                     key={s.id}
                                     className={cn(
-                                      "flex items-center justify-between p-2 rounded cursor-pointer text-sm",
-                                      "hover:bg-muted",
-                                      field.value === s.name && "bg-primary/10"
+                                      "flex items-center justify-between p-2.5 rounded-xl cursor-pointer text-sm mb-1 transition-all",
+                                      "hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 dark:hover:from-purple-950/30 dark:hover:to-pink-950/30",
+                                      field.value === s.name && "bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/40 dark:to-pink-900/40 font-medium"
                                     )}
                                     onClick={() => {
                                       handleServiceChange(s.name);
@@ -713,7 +715,7 @@ export default function Planning() {
                                     }}
                                   >
                                     <span className="truncate">{s.name}</span>
-                                    <span className="text-xs font-medium text-primary">{s.price} DH</span>
+                                    <span className="text-xs font-bold text-purple-600 dark:text-purple-400">{s.price} DH</span>
                                   </div>
                                 ))}
                               </div>
@@ -727,14 +729,19 @@ export default function Planning() {
 
                 {/* Quick Favorites - compact */}
                 {!editingAppointment && (
-                  <div className="col-span-3 flex flex-wrap gap-1">
+                  <div className="col-span-3 flex flex-wrap gap-1.5">
                     {favoriteServices.slice(0, 4).map((s: any) => (
                       <Button
                         key={s.id}
                         type="button"
                         variant={form.watch("service") === s.name ? "default" : "outline"}
                         size="sm"
-                        className="h-7 text-[10px] px-2"
+                        className={cn(
+                          "h-8 text-[10px] px-3 rounded-full font-medium transition-all",
+                          form.watch("service") === s.name 
+                            ? "bg-gradient-to-r from-pink-500 to-purple-500 border-0 text-white shadow-md" 
+                            : "border-2 hover:border-purple-300"
+                        )}
                         onClick={() => handleServiceChange(s.name)}
                       >
                         {s.name}
@@ -744,16 +751,16 @@ export default function Planning() {
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="h-7 w-7 p-0"
+                      className="h-8 w-8 p-0 rounded-full hover:bg-purple-100 dark:hover:bg-purple-900/30"
                       onClick={() => setIsEditFavoritesOpen(!isEditFavoritesOpen)}
                     >
-                      <Settings2 className="w-3 h-3" />
+                      <Settings2 className="w-4 h-4" />
                     </Button>
                   </div>
                 )}
                 
                 {isEditFavoritesOpen && (
-                  <div className="col-span-3 border rounded p-2 bg-muted/30">
+                  <div className="col-span-3 border-2 border-dashed border-purple-200 dark:border-purple-800 rounded-xl p-2 bg-purple-50/50 dark:bg-purple-950/20">
                     <ScrollArea className="h-[80px]">
                       <div className="flex flex-wrap gap-1">
                         {services.map((s) => (
@@ -762,7 +769,10 @@ export default function Planning() {
                             type="button"
                             variant={favoriteIds.includes(s.id) ? "default" : "outline"}
                             size="sm"
-                            className="h-5 text-[9px] px-1"
+                            className={cn(
+                              "h-6 text-[9px] px-2 rounded-full",
+                              favoriteIds.includes(s.id) && "bg-gradient-to-r from-pink-500 to-purple-500 border-0"
+                            )}
                             onClick={() => toggleFavorite(s.id)}
                           >
                             {s.name}
@@ -775,12 +785,12 @@ export default function Planning() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-2 pt-1">
+              <div className="flex gap-2 pt-2">
                 {editingAppointment && (
                   <Button
                     type="button"
                     variant="destructive"
-                    className="h-10 px-4 rounded-lg font-bold text-sm"
+                    className="h-11 px-4 rounded-xl font-bold text-sm shadow-md"
                     onClick={() => {
                       if (confirm(t("planning.deleteConfirm"))) {
                         deleteMutation.mutate(editingAppointment.id);
@@ -793,7 +803,7 @@ export default function Planning() {
                 )}
                 <Button 
                   type="submit" 
-                  className="flex-1 h-11 text-sm font-black rounded-lg bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-600 hover:via-purple-600 hover:to-indigo-600 shadow-lg transition-all" 
+                  className="flex-1 h-11 text-sm font-black rounded-xl bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-600 hover:via-purple-600 hover:to-indigo-600 shadow-lg hover:shadow-xl transition-all" 
                   disabled={createMutation.isPending || updateMutation.isPending}
                 >
                   <Sparkles className="w-4 h-4 ml-2" />
