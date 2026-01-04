@@ -578,7 +578,7 @@ export default function Planning() {
                     {booking && (
                       <div 
                         className={cn(
-                          "h-full m-0.5 p-2 rounded-xl shadow-md text-white cursor-grab active:cursor-grabbing transition-all duration-200",
+                          "h-full p-2 text-white cursor-grab active:cursor-grabbing transition-all duration-200",
                           isDragging && "opacity-50 scale-95"
                         )}
                         style={{ backgroundColor: s.color }}
