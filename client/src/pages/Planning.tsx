@@ -525,7 +525,7 @@ export default function Planning() {
         if (!open) setIsEditFavoritesOpen(false);
       }}>
         <DialogContent 
-          className="w-[calc(100vw-32px)] max-w-[380px] p-0 border-0 shadow-2xl bg-gradient-to-b from-background to-muted/30 rounded-3xl overflow-hidden" 
+          className="w-[calc(100vw-24px)] max-w-[420px] p-0 border-0 shadow-2xl bg-gradient-to-b from-background to-muted/30 rounded-3xl overflow-hidden" 
           dir={isRtl ? "rtl" : "ltr"}
         >
           <div className="bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 px-4 py-3 text-white">
@@ -671,7 +671,7 @@ export default function Planning() {
                           </FormControl>
                         </PopoverTrigger>
                         <PopoverContent 
-                          className="w-[calc(100vw-56px)] max-w-[356px] p-0 rounded-2xl border-2 shadow-xl" 
+                          className="w-[calc(100vw-48px)] max-w-[396px] p-0 rounded-2xl border-2 shadow-xl" 
                           align="center" 
                           side="top" 
                           sideOffset={4}
@@ -729,7 +729,7 @@ export default function Planning() {
 
                 {/* Quick Favorites - compact */}
                 {!editingAppointment && (
-                  <div className="col-span-3 flex items-center gap-1.5 overflow-x-auto pb-1" style={{ WebkitOverflowScrolling: 'touch' }}>
+                  <div className="col-span-3 flex items-center gap-1.5">
                     <Star className="w-4 h-4 text-amber-500 shrink-0" />
                     {favoriteServices.slice(0, 4).map((s: any) => (
                       <Button
@@ -738,7 +738,7 @@ export default function Planning() {
                         variant={form.watch("service") === s.name ? "default" : "outline"}
                         size="sm"
                         className={cn(
-                          "h-7 text-[10px] px-2.5 rounded-full font-medium transition-all whitespace-nowrap shrink-0",
+                          "h-7 text-[9px] px-2 rounded-full font-medium transition-all whitespace-nowrap",
                           form.watch("service") === s.name 
                             ? "bg-gradient-to-r from-pink-500 to-purple-500 border-0 text-white shadow-md" 
                             : "border-2 hover:border-purple-300"
@@ -752,7 +752,7 @@ export default function Planning() {
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="h-7 w-7 p-0 rounded-full hover:bg-purple-100 dark:hover:bg-purple-900/30 shrink-0"
+                      className="h-7 w-7 p-0 rounded-full hover:bg-purple-100 dark:hover:bg-purple-900/30"
                       onClick={() => setIsEditFavoritesOpen(!isEditFavoritesOpen)}
                     >
                       <Settings2 className="w-3.5 h-3.5" />
