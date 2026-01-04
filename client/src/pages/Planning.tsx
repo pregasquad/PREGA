@@ -413,22 +413,25 @@ export default function Planning() {
 
       {/* Board */}
       <div ref={boardRef} className="overflow-auto max-h-[calc(100vh-200px)] bg-card rounded-xl border shadow-sm relative">
-        {/* Current Time Line */}
-        {isToday && (
-          <div 
-            className="absolute left-0 right-0 z-20 pointer-events-none"
-            style={{ top: `${getCurrentTimePosition() + 48}px` }}
-          >
-            <div className="flex items-center">
-              <div className="w-3 h-3 md:w-2 md:h-2 rounded-full bg-red-500 shadow-lg animate-pulse" />
-              <div className="flex-1 h-1 md:h-0.5 bg-red-500 shadow-sm" />
-            </div>
-          </div>
-        )}
         <div 
-          className="grid" 
+          className="grid relative" 
           style={{ gridTemplateColumns: `80px repeat(${staffList.length}, minmax(120px, 1fr))` }}
         >
+          {/* Current Time Line - inside grid to match full width */}
+          {isToday && (
+            <div 
+              className="absolute left-0 right-0 z-20 pointer-events-none"
+              style={{ 
+                top: `${getCurrentTimePosition() + 48}px`,
+                gridColumn: `1 / -1`
+              }}
+            >
+              <div className="flex items-center w-full">
+                <div className="w-3 h-3 md:w-2 md:h-2 rounded-full bg-red-500 shadow-lg animate-pulse shrink-0" />
+                <div className="flex-1 h-1 md:h-0.5 bg-red-500 shadow-sm" />
+              </div>
+            </div>
+          )}
           {/* Top row - Staff headers (sticky) */}
           <div className="bg-muted/50 border-b border-l p-2 sticky top-0 z-10"></div>
           {staffList.map((s) => (
