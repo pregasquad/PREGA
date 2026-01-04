@@ -561,48 +561,53 @@ export default function Planning() {
                   <div
                     key={`${s.id}-${hour}`}
                     className={cn(
-                      "border-b p-1 min-h-[48px] transition-all duration-200",
+                      "border-b min-h-[48px]",
                       isRtl ? "border-r" : "border-l",
-                      booking 
-                        ? "text-white cursor-grab active:cursor-grabbing m-0.5 rounded-xl shadow-md z-10 relative" 
-                        : "bg-background hover:bg-muted/50 cursor-pointer",
-                      isDragOver && !booking && "bg-orange-100 dark:bg-orange-900/30 ring-2 ring-orange-500 ring-inset",
-                      isDragging && "opacity-50 scale-95"
+                      !booking && "bg-background hover:bg-muted/50 cursor-pointer p-1",
+                      isDragOver && !booking && "bg-orange-100 dark:bg-orange-900/30 ring-2 ring-orange-500 ring-inset"
                     )}
                     style={{ 
                       gridColumn: colNum,
-                      gridRow: booking ? `${rowNum} / span ${span}` : rowNum,
-                      backgroundColor: booking ? s.color : undefined
+                      gridRow: booking ? `${rowNum} / span ${span}` : rowNum
                     }}
-                    draggable={!!booking}
-                    onDragStart={(e) => booking && handleDragStart(e, booking)}
-                    onDragEnd={handleDragEnd}
                     onDragOver={(e) => !booking && handleDragOver(e, s.name, hour)}
                     onDragLeave={handleDragLeave}
                     onDrop={(e) => !booking && handleDrop(e, s.name, hour)}
-                    onClick={(e) => booking ? handleAppointmentClick(e, booking) : handleSlotClick(s.name, hour)}
+                    onClick={(e) => !booking && handleSlotClick(s.name, hour)}
                   >
                     {booking && (
-                      <div className="h-full flex flex-col justify-between p-1">
-                        <div>
-                          <div className="font-bold text-xs md:text-sm truncate">{booking.client || "—"}</div>
-                          <div className="text-[10px] md:text-xs opacity-90 truncate">{booking.service}</div>
-                          <div className="text-[9px] opacity-70">{booking.startTime}</div>
-                        </div>
-                        <div className="flex items-center justify-between mt-1">
-                          <span className="text-[10px] opacity-80">{booking.duration}د</span>
-                          <div className="flex items-center gap-1">
-                            <span className="font-bold text-xs">{booking.total} DH</span>
-                            {booking.paid ? (
-                              <Check className="w-3 h-3 text-white" />
-                            ) : (
-                              <button
-                                onClick={(e) => handleMarkAsPaid(e, booking)}
-                                className="bg-white/20 hover:bg-white/30 rounded-full p-0.5"
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
-                            )}
+                      <div 
+                        className={cn(
+                          "h-full m-0.5 p-2 rounded-xl shadow-md text-white cursor-grab active:cursor-grabbing transition-all duration-200",
+                          isDragging && "opacity-50 scale-95"
+                        )}
+                        style={{ backgroundColor: s.color }}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, booking)}
+                        onDragEnd={handleDragEnd}
+                        onClick={(e) => handleAppointmentClick(e, booking)}
+                      >
+                        <div className="h-full flex flex-col justify-between">
+                          <div>
+                            <div className="font-bold text-xs md:text-sm truncate">{booking.client || "—"}</div>
+                            <div className="text-[10px] md:text-xs opacity-90 truncate">{booking.service}</div>
+                            <div className="text-[9px] opacity-70">{booking.startTime}</div>
+                          </div>
+                          <div className="flex items-center justify-between mt-1">
+                            <span className="text-[10px] opacity-80">{booking.duration}د</span>
+                            <div className="flex items-center gap-1">
+                              <span className="font-bold text-xs">{booking.total} DH</span>
+                              {booking.paid ? (
+                                <Check className="w-3 h-3 text-white" />
+                              ) : (
+                                <button
+                                  onClick={(e) => handleMarkAsPaid(e, booking)}
+                                  className="bg-white/20 hover:bg-white/30 rounded-full p-0.5"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
