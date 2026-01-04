@@ -64,6 +64,12 @@ export default function Planning() {
   const updateMutation = useUpdateAppointment();
   const deleteMutation = useDeleteAppointment();
 
+  const playSuccessSound = () => {
+    const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleVQ2d4u9oYh+dGl4hpOOiYGAg4yWo6OblJWboqShmZGNjpSdp6qnop6bnJ+ipKSioJ6dn6CgoJ6cm5ucnZ+hoJ6bmp2goqSkoqCenp+hoqKhn56dnqChoqKhoJ6en6ChoaGgnpycnZ+hoqKhn56dnZ+goqKhoJ6dnp+goaGgn52cn6ChoaGgn52cnp+goaGgnpycnZ+goaGgnpycnZ+goaGgn52cnp+goaGgn52cnp+goaGgnpybnZ+goKCfnpydnp+goKCfnpycnZ6fn5+enZycnZ6fn5+enZycnZ6fn5+enZybnZ6fn5+enZycnZ6enp6dnJybnZ6enp2cnJucnZ6enp2cnJucnZ2dnZybm5ucnZ2dnZybm5qbnJydnZybm5qam5ycnJuampqam5ycm5uampqam5ubm5qamZqam5ubm5qZmZmam5uampmZmZmampqamZmYmJmampqZmJiYmJmZmZmYmJeXmJmZmZiXl5eXmJmYl5eXl5eXmJiXl5aWlpeXl5eWlpaWlpeXl5aWlZWVlpaWlpWVlZWVlZaVlZWUlJSUlZWVlJSUlJSUlJSUlJSUk5OTk5SUlJSTk5OTk5OTk5OSkpKSkpKSkpKSkpKRkZGRkZGSkpKRkZGRkZCRkZGQkJCQkJCQkJCQj4+Pj4+Pj5CQj4+Pj4+Ojo+Pjo6Ojo6Ojo6NjY2NjY2NjY2NjYyMjIyMjIyMjIyMjIuLi4uLi4uLi4uKioqKioqKioqKioqJiYmJiYmJiYmJiYiIiIiIiIiIiIiIh4eHh4eHh4eHh4eGhoaGhoaGhoaGhYWFhYWFhYWFhYWFhISEhISEhISEhISDg4ODg4ODg4ODgoKCgoKCgoKCgoKCgYGBgYGBgYGBgYGBgICAAACA');
+    audio.volume = 0.5;
+    audio.play().catch(() => {});
+  };
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState<any>(null);
 
@@ -205,6 +211,7 @@ export default function Planning() {
       updateMutation.mutate({ id: editingAppointment.id, ...data });
     } else {
       createMutation.mutate(data);
+      playSuccessSound();
     }
     setIsDialogOpen(false);
   };
@@ -237,6 +244,13 @@ export default function Planning() {
     return favoriteNames.map(name => services.find(s => s.name === name)).filter(Boolean);
   }, [services, favoriteNames]);
 
+  const filteredServices = useMemo(() => {
+    if (!serviceSearch.trim()) return services;
+    return services.filter(s => 
+      s.name.toLowerCase().includes(serviceSearch.toLowerCase())
+    );
+  }, [services, serviceSearch]);
+
   const toggleFavorite = (serviceName: string) => {
     setFavoriteNames(prev => {
       let updated: string[];
@@ -252,11 +266,6 @@ export default function Planning() {
       return updated;
     });
   };
-
-  const filteredServices = useMemo(() => {
-    if (!serviceSearch) return services;
-    return services.filter(s => s.name.toLowerCase().includes(serviceSearch.toLowerCase()));
-  }, [services, serviceSearch]);
 
   const getBooking = (staffName: string, hour: string) => {
     return appointments.find(a => a.staff === staffName && a.startTime === hour);
@@ -581,18 +590,54 @@ export default function Planning() {
                   render={({ field }) => (
                     <FormItem className="col-span-2 space-y-1">
                       <FormLabel className="text-[10px] text-muted-foreground">الخدمة</FormLabel>
-                      <Select onValueChange={handleServiceChange} defaultValue={field.value} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger className="h-8 rounded-lg text-xs">
-                            <SelectValue placeholder="اختر خدمة" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="max-h-60">
-                          {services.map(s => (
-                            <SelectItem key={s.id} value={s.name}>{s.name} - {s.price} DH</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              className="h-8 w-full justify-between rounded-lg text-xs"
+                            >
+                              {field.value || "اختر خدمة"}
+                              <Search className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[300px] p-0" align="start">
+                          <div className="p-2 border-b">
+                            <div className="relative">
+                              <Search className="absolute right-2 top-2 h-4 w-4 text-muted-foreground" />
+                              <Input
+                                placeholder="ابحث عن خدمة..."
+                                value={serviceSearch}
+                                onChange={(e) => setServiceSearch(e.target.value)}
+                                className="pr-8 h-8 text-xs"
+                              />
+                            </div>
+                          </div>
+                          <div className="max-h-60 overflow-y-auto p-1">
+                            {filteredServices.map(s => (
+                              <div
+                                key={s.id}
+                                className={cn(
+                                  "flex items-center justify-between p-2 rounded-lg cursor-pointer text-xs hover:bg-muted",
+                                  field.value === s.name && "bg-primary/10"
+                                )}
+                                onClick={() => {
+                                  handleServiceChange(s.name);
+                                  setServiceSearch("");
+                                }}
+                              >
+                                <span>{s.name}</span>
+                                <span className="text-muted-foreground">{s.price} DH</span>
+                              </div>
+                            ))}
+                            {filteredServices.length === 0 && (
+                              <div className="p-2 text-center text-xs text-muted-foreground">لا توجد نتائج</div>
+                            )}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                       
                       {/* Quick Favorites */}
                       {!editingAppointment && (
