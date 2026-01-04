@@ -8,92 +8,92 @@
   --font-sans: 'DM Sans', sans-serif;
   --font-display: 'Playfair Display', serif;
 
-  /* Salon Theme: Clean, Soft, Professional with accents */
+  /* Salon Theme: Black and Orange */
   --background: 0 0% 100%;
-  --foreground: 222 47% 11%;
+  --foreground: 0 0% 9%;
   
   /* Card: Solid white background */
   --card: 0 0% 100%;
-  --card-foreground: 222 47% 11%;
+  --card-foreground: 0 0% 9%;
   
   /* Popover/Dropdown: Solid white background */
   --popover: 0 0% 100%;
-  --popover-foreground: 222 47% 11%;
+  --popover-foreground: 0 0% 9%;
   
-  /* Primary: Elegant Purple/Indigo */
-  --primary: 262 83% 58%;
-  --primary-foreground: 210 40% 98%;
+  /* Primary: Vibrant Orange */
+  --primary: 24 95% 53%;
+  --primary-foreground: 0 0% 100%;
   
-  /* Secondary: Soft Gray/Lavender */
-  --secondary: 260 20% 96%;
-  --secondary-foreground: 222 47% 11%;
+  /* Secondary: Light Gray */
+  --secondary: 0 0% 96%;
+  --secondary-foreground: 0 0% 9%;
   
-  --muted: 210 40% 96.1%;
-  --muted-foreground: 215.4 16.3% 46.9%;
+  --muted: 0 0% 96%;
+  --muted-foreground: 0 0% 45%;
   
-  --accent: 262 83% 96%;
-  --accent-foreground: 222 47% 11%;
+  --accent: 24 95% 95%;
+  --accent-foreground: 0 0% 9%;
   
   --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 210 40% 98%;
+  --destructive-foreground: 0 0% 100%;
   
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
-  --ring: 262 83% 58%;
+  --border: 0 0% 90%;
+  --input: 0 0% 90%;
+  --ring: 24 95% 53%;
   
-  /* Sidebar */
-  --sidebar-background: 0 0% 100%;
-  --sidebar-foreground: 222 47% 11%;
-  --sidebar-primary: 262 83% 58%;
-  --sidebar-primary-foreground: 210 40% 98%;
-  --sidebar-accent: 262 83% 96%;
-  --sidebar-accent-foreground: 222 47% 11%;
-  --sidebar-border: 214.3 31.8% 91.4%;
-  --sidebar-ring: 262 83% 58%;
+  /* Sidebar: Dark/Black */
+  --sidebar-background: 0 0% 7%;
+  --sidebar-foreground: 0 0% 98%;
+  --sidebar-primary: 24 95% 53%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 0 0% 15%;
+  --sidebar-accent-foreground: 0 0% 98%;
+  --sidebar-border: 0 0% 20%;
+  --sidebar-ring: 24 95% 53%;
   
   --radius: 0.75rem;
 }
 
 .dark {
-  --background: 222.2 84% 4.9%;
-  --foreground: 210 40% 98%;
+  --background: 0 0% 7%;
+  --foreground: 0 0% 98%;
   
   /* Card: Solid dark background */
-  --card: 222.2 84% 6%;
-  --card-foreground: 210 40% 98%;
+  --card: 0 0% 10%;
+  --card-foreground: 0 0% 98%;
   
   /* Popover/Dropdown: Solid dark background */
-  --popover: 222.2 84% 6%;
-  --popover-foreground: 210 40% 98%;
+  --popover: 0 0% 10%;
+  --popover-foreground: 0 0% 98%;
   
-  --primary: 262 83% 58%;
-  --primary-foreground: 210 40% 98%;
+  --primary: 24 95% 53%;
+  --primary-foreground: 0 0% 100%;
   
-  --secondary: 217.2 32.6% 17.5%;
-  --secondary-foreground: 210 40% 98%;
+  --secondary: 0 0% 15%;
+  --secondary-foreground: 0 0% 98%;
   
-  --muted: 217.2 32.6% 17.5%;
-  --muted-foreground: 215 20.2% 65.1%;
+  --muted: 0 0% 15%;
+  --muted-foreground: 0 0% 65%;
   
-  --accent: 217.2 32.6% 17.5%;
-  --accent-foreground: 210 40% 98%;
+  --accent: 0 0% 15%;
+  --accent-foreground: 0 0% 98%;
   
   --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 210 40% 98%;
+  --destructive-foreground: 0 0% 98%;
   
-  --border: 217.2 32.6% 17.5%;
-  --input: 217.2 32.6% 17.5%;
-  --ring: 262 83% 58%;
+  --border: 0 0% 20%;
+  --input: 0 0% 20%;
+  --ring: 24 95% 53%;
   
-  /* Sidebar */
-  --sidebar-background: 222.2 84% 6%;
-  --sidebar-foreground: 210 40% 98%;
-  --sidebar-primary: 262 83% 58%;
-  --sidebar-primary-foreground: 210 40% 98%;
-  --sidebar-accent: 217.2 32.6% 17.5%;
-  --sidebar-accent-foreground: 210 40% 98%;
-  --sidebar-border: 217.2 32.6% 17.5%;
-  --sidebar-ring: 262 83% 58%;
+  /* Sidebar: Dark/Black */
+  --sidebar-background: 0 0% 5%;
+  --sidebar-foreground: 0 0% 98%;
+  --sidebar-primary: 24 95% 53%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 0 0% 12%;
+  --sidebar-accent-foreground: 0 0% 98%;
+  --sidebar-border: 0 0% 15%;
+  --sidebar-ring: 24 95% 53%;
 }
 
 @layer base {

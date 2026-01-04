@@ -528,7 +528,7 @@ export default function Planning() {
           className="w-[calc(100vw-24px)] max-w-[420px] p-0 border-0 shadow-2xl bg-gradient-to-b from-background to-muted/30 rounded-3xl overflow-hidden" 
           dir={isRtl ? "rtl" : "ltr"}
         >
-          <div className="bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 px-4 py-3 text-white">
+          <div className="bg-gradient-to-r from-orange-500 via-orange-600 to-amber-500 px-4 py-3 text-white">
             <DialogHeader>
               <DialogTitle className="text-base font-bold flex items-center gap-2">
                 <Sparkles className="w-5 h-5" />
@@ -591,7 +591,7 @@ export default function Planning() {
                   render={({ field }) => (
                     <FormItem className="col-span-3 space-y-0">
                       <FormControl>
-                        <Input placeholder={t("planning.client")} className="h-10 rounded-xl text-sm border-2 border-muted focus:border-purple-400 transition-colors" {...field} />
+                        <Input placeholder={t("planning.client")} className="h-10 rounded-xl text-sm border-2 border-muted focus:border-orange-400 transition-colors" {...field} />
                       </FormControl>
                     </FormItem>
                   )}
@@ -663,7 +663,7 @@ export default function Planning() {
                             <Button
                               variant="outline"
                               role="combobox"
-                              className="h-10 w-full justify-between rounded-xl text-xs border-2 border-muted hover:border-purple-400 transition-colors"
+                              className="h-10 w-full justify-between rounded-xl text-xs border-2 border-muted hover:border-orange-400 transition-colors"
                             >
                               <span className="truncate">{field.value || t("planning.selectService")}</span>
                               <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -677,7 +677,7 @@ export default function Planning() {
                           sideOffset={4}
                           onWheel={(e) => e.stopPropagation()}
                         >
-                          <div className="p-3 border-b bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30 rounded-t-2xl">
+                          <div className="p-3 border-b bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30 rounded-t-2xl">
                             <Input
                               placeholder={t("planning.searchService")}
                               value={serviceSearch}
@@ -697,7 +697,7 @@ export default function Planning() {
                           >
                             {Object.entries(groupedServices).map(([category, categoryServices]) => (
                               <div key={category}>
-                                <div className="px-2 py-1.5 text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase bg-purple-50 dark:bg-purple-950/30 rounded-lg mb-1 sticky top-0">
+                                <div className="px-2 py-1.5 text-[10px] font-bold text-orange-600 dark:text-orange-400 uppercase bg-orange-50 dark:bg-orange-950/30 rounded-lg mb-1 sticky top-0">
                                   {category}
                                 </div>
                                 {categoryServices.map(s => (
@@ -705,8 +705,8 @@ export default function Planning() {
                                     key={s.id}
                                     className={cn(
                                       "flex items-center justify-between p-2.5 rounded-xl cursor-pointer text-sm mb-1 transition-all",
-                                      "hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 dark:hover:from-purple-950/30 dark:hover:to-pink-950/30",
-                                      field.value === s.name && "bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/40 dark:to-pink-900/40 font-medium"
+                                      "hover:bg-gradient-to-r hover:from-orange-50 hover:to-amber-50 dark:hover:from-orange-950/30 dark:hover:to-amber-950/30",
+                                      field.value === s.name && "bg-gradient-to-r from-orange-100 to-amber-100 dark:from-orange-900/40 dark:to-amber-900/40 font-medium"
                                     )}
                                     onClick={() => {
                                       handleServiceChange(s.name);
@@ -715,7 +715,7 @@ export default function Planning() {
                                     }}
                                   >
                                     <span className="truncate">{s.name}</span>
-                                    <span className="text-xs font-bold text-purple-600 dark:text-purple-400">{s.price} DH</span>
+                                    <span className="text-xs font-bold text-orange-600 dark:text-orange-400">{s.price} DH</span>
                                   </div>
                                 ))}
                               </div>
@@ -740,8 +740,8 @@ export default function Planning() {
                         className={cn(
                           "h-7 text-[9px] px-2 rounded-full font-medium transition-all whitespace-nowrap",
                           form.watch("service") === s.name 
-                            ? "bg-gradient-to-r from-pink-500 to-purple-500 border-0 text-white shadow-md" 
-                            : "border-2 hover:border-purple-300"
+                            ? "bg-gradient-to-r from-orange-500 to-amber-500 border-0 text-white shadow-md" 
+                            : "border-2 hover:border-orange-300"
                         )}
                         onClick={() => handleServiceChange(s.name)}
                       >
@@ -752,7 +752,7 @@ export default function Planning() {
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="h-7 w-7 p-0 rounded-full hover:bg-purple-100 dark:hover:bg-purple-900/30"
+                      className="h-7 w-7 p-0 rounded-full hover:bg-orange-100 dark:hover:bg-orange-900/30"
                       onClick={() => setIsEditFavoritesOpen(!isEditFavoritesOpen)}
                     >
                       <Settings2 className="w-3.5 h-3.5" />
@@ -761,7 +761,7 @@ export default function Planning() {
                 )}
                 
                 {isEditFavoritesOpen && (
-                  <div className="col-span-3 border-2 border-dashed border-purple-200 dark:border-purple-800 rounded-xl p-2 bg-purple-50/50 dark:bg-purple-950/20">
+                  <div className="col-span-3 border-2 border-dashed border-orange-200 dark:border-orange-800 rounded-xl p-2 bg-orange-50/50 dark:bg-orange-950/20">
                     <ScrollArea className="h-[80px]">
                       <div className="flex flex-wrap gap-1">
                         {services.map((s) => (
@@ -772,7 +772,7 @@ export default function Planning() {
                             size="sm"
                             className={cn(
                               "h-6 text-[9px] px-2 rounded-full",
-                              favoriteIds.includes(s.id) && "bg-gradient-to-r from-pink-500 to-purple-500 border-0"
+                              favoriteIds.includes(s.id) && "bg-gradient-to-r from-orange-500 to-amber-500 border-0"
                             )}
                             onClick={() => toggleFavorite(s.id)}
                           >
@@ -804,7 +804,7 @@ export default function Planning() {
                 )}
                 <Button 
                   type="submit" 
-                  className="flex-1 h-11 text-sm font-black rounded-xl bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-600 hover:via-purple-600 hover:to-indigo-600 shadow-lg hover:shadow-xl transition-all" 
+                  className="flex-1 h-11 text-sm font-black rounded-xl bg-gradient-to-r from-orange-500 via-orange-600 to-amber-500 hover:from-orange-600 hover:via-orange-700 hover:to-amber-600 shadow-lg hover:shadow-xl transition-all" 
                   disabled={createMutation.isPending || updateMutation.isPending}
                 >
                   <Sparkles className="w-4 h-4 ml-2" />
