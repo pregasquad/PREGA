@@ -539,16 +539,23 @@ export default function Planning() {
                 const colNum = staffIndex + 2; // +2 because column 1 is time labels
                 const booking = getBooking(s.name, hour);
                 const isCovered = isSlotCovered(s.name, hour);
-
-                // For covered slots, don't render anything (the parent appointment spans this cell)
-                if (isCovered) {
-                  return null;
-                }
-
                 const span = booking ? getBookingSpan(booking) : 1;
-
                 const isDragOver = dragOverSlot?.staff === s.name && dragOverSlot?.time === hour;
                 const isDragging = draggedAppointment?.id === booking?.id;
+
+                // For covered slots, render empty cell with just borders to maintain grid lines
+                if (isCovered) {
+                  return (
+                    <div
+                      key={`${s.id}-${hour}`}
+                      className={cn(
+                        "border-b bg-transparent",
+                        isRtl ? "border-r" : "border-l"
+                      )}
+                      style={{ gridColumn: colNum, gridRow: rowNum }}
+                    />
+                  );
+                }
 
                 return (
                   <div
