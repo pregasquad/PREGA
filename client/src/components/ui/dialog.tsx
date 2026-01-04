@@ -37,6 +37,7 @@ const DialogContent = React.forwardRef<
     <DialogOverlay />
     <DialogPrimitive.Content
       ref={ref}
+      aria-describedby={undefined}
       onOpenAutoFocus={(e) => {
         e.preventDefault();
         onOpenAutoFocus?.(e);
