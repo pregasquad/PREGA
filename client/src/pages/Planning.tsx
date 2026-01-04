@@ -424,7 +424,10 @@ export default function Planning() {
       <div ref={boardRef} className="overflow-auto max-h-[calc(100vh-200px)] bg-card rounded-xl border shadow-sm relative">
         <div 
           className="grid relative" 
-          style={{ gridTemplateColumns: `80px repeat(${staffList.length}, minmax(120px, 1fr))` }}
+          style={{ 
+            gridTemplateColumns: `80px repeat(${staffList.length}, minmax(120px, 1fr))`,
+            gridAutoRows: '48px'
+          }}
         >
           {/* Current Time Line - inside grid to match full width (z-[5] so cards appear on top) */}
           {isToday && (
@@ -443,11 +446,12 @@ export default function Planning() {
             </div>
           )}
           {/* Top row - Staff headers (sticky) */}
-          <div className="bg-muted/50 border-b border-l p-2 sticky top-0 z-10"></div>
-          {staffList.map((s) => (
+          <div className="bg-muted/50 border-b border-l p-2 sticky top-0 z-10" style={{ gridColumn: 1, gridRow: 1 }}></div>
+          {staffList.map((s, staffIndex) => (
             <div 
               key={s.id} 
               className="bg-muted/50 border-b border-l p-2 md:p-3 font-bold text-center text-xs md:text-sm sticky top-0 z-10"
+              style={{ gridColumn: staffIndex + 2, gridRow: 1 }}
             >
               <div className="flex items-center justify-center gap-1">
                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
@@ -457,18 +461,23 @@ export default function Planning() {
           ))}
 
           {/* Time rows */}
-          {hours.map((hour) => (
+          {hours.map((hour, hourIndex) => {
+            const rowNum = hourIndex + 2; // +2 because row 1 is headers
+            return (
             <React.Fragment key={hour}>
               <div 
                 className="bg-muted/30 border-b border-l p-2 text-xs text-muted-foreground font-medium"
+                style={{ gridColumn: 1, gridRow: rowNum }}
               >
                 {hour}
               </div>
 
-              {staffList.map((s) => {
+              {staffList.map((s, staffIndex) => {
+                const colNum = staffIndex + 2; // +2 because column 1 is time labels
                 const booking = getBooking(s.name, hour);
                 const isCovered = isSlotCovered(s.name, hour);
 
+                // For covered slots, don't render anything (the parent appointment spans this cell)
                 if (isCovered) {
                   return null;
                 }
@@ -484,10 +493,11 @@ export default function Planning() {
                         ? "text-white cursor-pointer m-0.5 rounded-xl shadow-md z-10 relative" 
                         : "bg-background hover:bg-muted/50 cursor-pointer"
                     )}
-                    style={booking ? { 
-                      gridRow: `span ${span}`,
-                      backgroundColor: s.color 
-                    } : undefined}
+                    style={{ 
+                      gridColumn: colNum,
+                      gridRow: booking ? `${rowNum} / span ${span}` : rowNum,
+                      backgroundColor: booking ? s.color : undefined
+                    }}
                     onClick={(e) => booking ? handleAppointmentClick(e, booking) : handleSlotClick(s.name, hour)}
                   >
                     {booking && (
@@ -519,7 +529,7 @@ export default function Planning() {
                 );
               })}
             </React.Fragment>
-          ))}
+          );})}
         </div>
       </div>
 
