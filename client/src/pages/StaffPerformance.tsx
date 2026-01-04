@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -11,6 +12,7 @@ import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import type { Staff, Appointment, Service } from "@shared/schema";
 
 export default function StaffPerformance() {
+  const { t, i18n } = useTranslation();
   const [selectedMonth, setSelectedMonth] = useState(() => format(new Date(), "yyyy-MM"));
   const [selectedStaff, setSelectedStaff] = useState<string>("all");
 
@@ -108,15 +110,15 @@ export default function StaffPerformance() {
   );
 
   return (
-    <div className="p-6 space-y-6" dir="rtl">
+    <div className="p-6 space-y-6" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold">أداء الموظفين</h1>
-          <p className="text-muted-foreground">تحليل أداء فريق العمل والإنتاجية</p>
+          <h1 className="text-2xl font-bold">{t("staffPerformance.pageTitle")}</h1>
+          <p className="text-muted-foreground">{t("staffPerformance.pageDesc")}</p>
         </div>
         <div className="flex gap-4">
           <div>
-            <Label>الشهر</Label>
+            <Label>{t("staffPerformance.month")}</Label>
             <Select value={selectedMonth} onValueChange={setSelectedMonth}>
               <SelectTrigger className="w-48">
                 <SelectValue />
@@ -131,13 +133,13 @@ export default function StaffPerformance() {
             </Select>
           </div>
           <div>
-            <Label>الموظف</Label>
+            <Label>{t("staffPerformance.staff")}</Label>
             <Select value={selectedStaff} onValueChange={setSelectedStaff}>
               <SelectTrigger className="w-48">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">جميع الموظفين</SelectItem>
+                <SelectItem value="all">{t("staffPerformance.allStaff")}</SelectItem>
                 {staffList.map((s) => (
                   <SelectItem key={s.id} value={s.name}>
                     {s.name}
@@ -157,7 +159,7 @@ export default function StaffPerformance() {
                 <Users className="w-5 h-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">عدد الموظفين</p>
+                <p className="text-sm text-muted-foreground">{t("staffPerformance.staffCount")}</p>
                 <p className="text-2xl font-bold">{staffList.length}</p>
               </div>
             </div>
@@ -170,8 +172,8 @@ export default function StaffPerformance() {
                 <DollarSign className="w-5 h-5 text-green-600" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">إجمالي الإيرادات</p>
-                <p className="text-2xl font-bold">{totalRevenue} DH</p>
+                <p className="text-sm text-muted-foreground">{t("staffPerformance.totalRevenue")}</p>
+                <p className="text-2xl font-bold">{totalRevenue} {t("common.currency")}</p>
               </div>
             </div>
           </CardContent>
@@ -183,7 +185,7 @@ export default function StaffPerformance() {
                 <Calendar className="w-5 h-5 text-purple-600" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">إجمالي المواعيد</p>
+                <p className="text-sm text-muted-foreground">{t("staffPerformance.totalAppointments")}</p>
                 <p className="text-2xl font-bold">{totalAppointments}</p>
               </div>
             </div>
@@ -196,7 +198,7 @@ export default function StaffPerformance() {
                 <Award className="w-5 h-5 text-yellow-600" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">الأفضل أداءً</p>
+                <p className="text-sm text-muted-foreground">{t("staffPerformance.topPerformer")}</p>
                 <p className="text-xl font-bold">{topPerformer?.staffName || "-"}</p>
               </div>
             </div>
@@ -207,7 +209,7 @@ export default function StaffPerformance() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>مقارنة الأداء</CardTitle>
+            <CardTitle>{t("staffPerformance.performanceComparison")}</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -215,9 +217,9 @@ export default function StaffPerformance() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis />
-                <Tooltip formatter={(value: number) => `${value} DH`} />
-                <Bar dataKey="revenue" fill="#d63384" name="الإيرادات" />
-                <Bar dataKey="commission" fill="#20c997" name="العمولة" />
+                <Tooltip formatter={(value: number) => `${value} ${t("common.currency")}`} />
+                <Bar dataKey="revenue" fill="#d63384" name={t("staffPerformance.revenue")} />
+                <Bar dataKey="commission" fill="#20c997" name={t("staffPerformance.commission")} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -225,7 +227,7 @@ export default function StaffPerformance() {
 
         <Card>
           <CardHeader>
-            <CardTitle>توزيع الإيرادات</CardTitle>
+            <CardTitle>{t("staffPerformance.revenueDistribution")}</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -242,7 +244,7 @@ export default function StaffPerformance() {
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value: number) => `${value} DH`} />
+                <Tooltip formatter={(value: number) => `${value} ${t("common.currency")}`} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
@@ -251,7 +253,7 @@ export default function StaffPerformance() {
 
       <Card>
         <CardHeader>
-          <CardTitle>تفاصيل الموظفين</CardTitle>
+          <CardTitle>{t("staffPerformance.staffDetails")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -265,35 +267,35 @@ export default function StaffPerformance() {
                       {stats.staffName === topPerformer?.staffName && (
                         <Badge className="bg-yellow-500">
                           <Award className="w-3 h-3 ml-1" />
-                          الأفضل
+                          {t("staffPerformance.best")}
                         </Badge>
                       )}
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">المواعيد</span>
+                      <span className="text-muted-foreground">{t("staffPerformance.appointments")}</span>
                       <span className="font-bold">{stats.totalAppointments}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">الإيرادات</span>
-                      <span className="font-bold text-green-600">{stats.totalRevenue} DH</span>
+                      <span className="text-muted-foreground">{t("staffPerformance.revenue")}</span>
+                      <span className="font-bold text-green-600">{stats.totalRevenue} {t("common.currency")}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">العمولة</span>
-                      <span className="font-bold text-blue-600">{stats.totalCommission} DH</span>
+                      <span className="text-muted-foreground">{t("staffPerformance.commission")}</span>
+                      <span className="font-bold text-blue-600">{stats.totalCommission} {t("common.currency")}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">متوسط الموعد</span>
+                      <span className="text-muted-foreground">{t("staffPerformance.avgPerAppointment")}</span>
                       <span className="font-bold">
                         {stats.totalAppointments > 0
                           ? Math.round(stats.totalRevenue / stats.totalAppointments)
                           : 0}{" "}
-                        DH
+                        {t("common.currency")}
                       </span>
                     </div>
                     <div className="pt-2 border-t">
-                      <p className="text-sm text-muted-foreground mb-2">أكثر الخدمات</p>
+                      <p className="text-sm text-muted-foreground mb-2">{t("staffPerformance.topServices")}</p>
                       {Object.entries(stats.serviceBreakdown)
                         .sort((a, b) => b[1].count - a[1].count)
                         .slice(0, 3)

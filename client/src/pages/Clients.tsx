@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ import { Plus, Edit2, Trash2, User, Phone, Mail, Gift, Calendar, Star, Crown, Aw
 import type { Client, Appointment } from "@shared/schema";
 
 export default function Clients() {
+  const { t, i18n } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
@@ -57,7 +59,7 @@ export default function Clients() {
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       setIsAddDialogOpen(false);
       resetForm();
-      toast({ title: "تم إضافة العميل بنجاح" });
+      toast({ title: t("clients.clientAdded") });
     },
   });
 
@@ -75,7 +77,7 @@ export default function Clients() {
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       setIsEditDialogOpen(false);
       resetForm();
-      toast({ title: "تم تحديث بيانات العميل" });
+      toast({ title: t("clients.clientUpdated") });
     },
   });
 
@@ -85,7 +87,7 @@ export default function Clients() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
-      toast({ title: "تم حذف العميل" });
+      toast({ title: t("clients.clientDeleted") });
     },
   });
 
@@ -111,10 +113,10 @@ export default function Clients() {
   };
 
   const getLoyaltyTier = (points: number) => {
-    if (points >= 1000) return { name: "VIP", color: "bg-yellow-500", icon: Crown };
-    if (points >= 500) return { name: "ذهبي", color: "bg-amber-500", icon: Award };
-    if (points >= 100) return { name: "فضي", color: "bg-gray-400", icon: Star };
-    return { name: "برونزي", color: "bg-orange-600", icon: Star };
+    if (points >= 1000) return { name: t("clients.vip"), color: "bg-yellow-500", icon: Crown };
+    if (points >= 500) return { name: t("clients.gold"), color: "bg-amber-500", icon: Award };
+    if (points >= 100) return { name: t("clients.silver"), color: "bg-gray-400", icon: Star };
+    return { name: t("clients.bronze"), color: "bg-orange-600", icon: Star };
   };
 
   const filteredClients = clients.filter(
@@ -127,15 +129,15 @@ export default function Clients() {
   const ClientForm = ({ onSubmit, submitLabel }: { onSubmit: () => void; submitLabel: string }) => (
     <div className="space-y-4">
       <div>
-        <Label>الاسم *</Label>
+        <Label>{t("clients.name")} *</Label>
         <Input
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          placeholder="اسم العميل"
+          placeholder={t("clients.clientName")}
         />
       </div>
       <div>
-        <Label>رقم الهاتف</Label>
+        <Label>{t("clients.phone")}</Label>
         <Input
           value={formData.phone}
           onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
@@ -144,7 +146,7 @@ export default function Clients() {
         />
       </div>
       <div>
-        <Label>البريد الإلكتروني</Label>
+        <Label>{t("clients.email")}</Label>
         <Input
           type="email"
           value={formData.email}
@@ -154,7 +156,7 @@ export default function Clients() {
         />
       </div>
       <div>
-        <Label>تاريخ الميلاد</Label>
+        <Label>{t("clients.birthday")}</Label>
         <Input
           type="date"
           value={formData.birthday}
@@ -162,11 +164,11 @@ export default function Clients() {
         />
       </div>
       <div>
-        <Label>ملاحظات</Label>
+        <Label>{t("clients.notes")}</Label>
         <Input
           value={formData.notes}
           onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-          placeholder="ملاحظات إضافية..."
+          placeholder={t("clients.additionalNotes")}
         />
       </div>
       <Button onClick={onSubmit} className="w-full">
@@ -176,30 +178,30 @@ export default function Clients() {
   );
 
   if (isLoading) {
-    return <div className="p-6 text-center">جاري التحميل...</div>;
+    return <div className="p-6 text-center">{t("common.loading")}</div>;
   }
 
   return (
-    <div className="p-6 space-y-6" dir="rtl">
+    <div className="p-6 space-y-6" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold">العملاء</h1>
-          <p className="text-muted-foreground">إدارة قاعدة بيانات العملاء وبرنامج الولاء</p>
+          <h1 className="text-2xl font-bold">{t("clients.title")}</h1>
+          <p className="text-muted-foreground">{t("clients.pageDesc")}</p>
         </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={resetForm}>
               <Plus className="w-4 h-4 ml-2" />
-              إضافة عميل
+              {t("clients.addClient")}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>إضافة عميل جديد</DialogTitle>
+              <DialogTitle>{t("clients.newClient")}</DialogTitle>
             </DialogHeader>
             <ClientForm
               onSubmit={() => createMutation.mutate(formData)}
-              submitLabel="إضافة"
+              submitLabel={t("common.add")}
             />
           </DialogContent>
         </Dialog>
@@ -213,7 +215,7 @@ export default function Clients() {
                 <User className="w-5 h-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">إجمالي العملاء</p>
+                <p className="text-sm text-muted-foreground">{t("clients.totalAppointments")}</p>
                 <p className="text-2xl font-bold">{clients.length}</p>
               </div>
             </div>
@@ -226,7 +228,7 @@ export default function Clients() {
                 <Crown className="w-5 h-5 text-yellow-600" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">عملاء VIP</p>
+                <p className="text-sm text-muted-foreground">{t("clients.vip")} {t("clients.title")}</p>
                 <p className="text-2xl font-bold">
                   {clients.filter((c) => c.loyaltyPoints >= 1000).length}
                 </p>
@@ -241,7 +243,7 @@ export default function Clients() {
                 <Gift className="w-5 h-5 text-green-600" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">إجمالي النقاط</p>
+                <p className="text-sm text-muted-foreground">{t("clients.loyaltyPoints")}</p>
                 <p className="text-2xl font-bold">
                   {clients.reduce((sum, c) => sum + c.loyaltyPoints, 0)}
                 </p>
@@ -256,7 +258,7 @@ export default function Clients() {
                 <Calendar className="w-5 h-5 text-purple-600" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">إجمالي الزيارات</p>
+                <p className="text-sm text-muted-foreground">{t("clients.totalAppointments")}</p>
                 <p className="text-2xl font-bold">
                   {clients.reduce((sum, c) => sum + c.totalVisits, 0)}
                 </p>
@@ -269,9 +271,9 @@ export default function Clients() {
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
-            <CardTitle>قائمة العملاء</CardTitle>
+            <CardTitle>{t("clients.title")}</CardTitle>
             <Input
-              placeholder="بحث..."
+              placeholder={t("common.search") + "..."}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-64"
@@ -282,13 +284,13 @@ export default function Clients() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>الاسم</TableHead>
-                <TableHead>الهاتف</TableHead>
-                <TableHead>البريد</TableHead>
-                <TableHead>الزيارات</TableHead>
-                <TableHead>النقاط</TableHead>
-                <TableHead>المستوى</TableHead>
-                <TableHead>الإجراءات</TableHead>
+                <TableHead>{t("clients.name")}</TableHead>
+                <TableHead>{t("clients.phone")}</TableHead>
+                <TableHead>{t("clients.email")}</TableHead>
+                <TableHead>{t("clients.totalAppointments")}</TableHead>
+                <TableHead>{t("clients.loyaltyPoints")}</TableHead>
+                <TableHead>{t("common.status")}</TableHead>
+                <TableHead>{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -341,13 +343,13 @@ export default function Clients() {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>تعديل بيانات العميل</DialogTitle>
+            <DialogTitle>{t("clients.editClient")}</DialogTitle>
           </DialogHeader>
           <ClientForm
             onSubmit={() =>
               selectedClient && updateMutation.mutate({ id: selectedClient.id, data: formData })
             }
-            submitLabel="حفظ التغييرات"
+            submitLabel={t("common.save")}
           />
         </DialogContent>
       </Dialog>
@@ -355,14 +357,14 @@ export default function Clients() {
       <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>تفاصيل العميل</DialogTitle>
+            <DialogTitle>{t("clients.clientDetails")}</DialogTitle>
           </DialogHeader>
           {selectedClient && (
             <Tabs defaultValue="info">
               <TabsList className="w-full">
-                <TabsTrigger value="info" className="flex-1">المعلومات</TabsTrigger>
-                <TabsTrigger value="history" className="flex-1">سجل الزيارات</TabsTrigger>
-                <TabsTrigger value="loyalty" className="flex-1">برنامج الولاء</TabsTrigger>
+                <TabsTrigger value="info" className="flex-1">{t("clients.clientDetails")}</TabsTrigger>
+                <TabsTrigger value="history" className="flex-1">{t("clients.appointmentHistory")}</TabsTrigger>
+                <TabsTrigger value="loyalty" className="flex-1">{t("clients.loyaltyPoints")}</TabsTrigger>
               </TabsList>
               <TabsContent value="info" className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -372,15 +374,15 @@ export default function Clients() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Phone className="w-4 h-4 text-muted-foreground" />
-                    <span dir="ltr">{selectedClient.phone || "غير متوفر"}</span>
+                    <span dir="ltr">{selectedClient.phone || "-"}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Mail className="w-4 h-4 text-muted-foreground" />
-                    <span dir="ltr">{selectedClient.email || "غير متوفر"}</span>
+                    <span dir="ltr">{selectedClient.email || "-"}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Gift className="w-4 h-4 text-muted-foreground" />
-                    <span>{selectedClient.birthday || "غير متوفر"}</span>
+                    <span>{selectedClient.birthday || "-"}</span>
                   </div>
                 </div>
                 {selectedClient.notes && (
@@ -392,7 +394,7 @@ export default function Clients() {
               <TabsContent value="history">
                 <div className="space-y-2 max-h-64 overflow-y-auto">
                   {clientAppointments.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-4">لا توجد زيارات مسجلة</p>
+                    <p className="text-center text-muted-foreground py-4">{t("clients.noAppointments")}</p>
                   ) : (
                     clientAppointments.map((appt) => (
                       <div
@@ -406,9 +408,9 @@ export default function Clients() {
                           </p>
                         </div>
                         <div className="text-left">
-                          <p className="font-bold">{appt.total} DH</p>
+                          <p className="font-bold">{appt.total} {t("common.currency")}</p>
                           <Badge variant={appt.paid ? "default" : "destructive"}>
-                            {appt.paid ? "مدفوع" : "غير مدفوع"}
+                            {appt.paid ? t("common.paid") : t("common.unpaid")}
                           </Badge>
                         </div>
                       </div>
@@ -421,22 +423,22 @@ export default function Clients() {
                   <div className="grid grid-cols-3 gap-4 text-center">
                     <div className="p-4 bg-muted rounded-lg">
                       <p className="text-2xl font-bold text-primary">{selectedClient.loyaltyPoints}</p>
-                      <p className="text-sm text-muted-foreground">النقاط</p>
+                      <p className="text-sm text-muted-foreground">{t("clients.loyaltyPoints")}</p>
                     </div>
                     <div className="p-4 bg-muted rounded-lg">
                       <p className="text-2xl font-bold">{selectedClient.totalVisits}</p>
-                      <p className="text-sm text-muted-foreground">الزيارات</p>
+                      <p className="text-sm text-muted-foreground">{t("clients.totalAppointments")}</p>
                     </div>
                     <div className="p-4 bg-muted rounded-lg">
-                      <p className="text-2xl font-bold">{selectedClient.totalSpent} DH</p>
-                      <p className="text-sm text-muted-foreground">الإنفاق الكلي</p>
+                      <p className="text-2xl font-bold">{selectedClient.totalSpent} {t("common.currency")}</p>
+                      <p className="text-sm text-muted-foreground">{t("clients.totalSpent")}</p>
                     </div>
                   </div>
                   <div className="p-4 bg-gradient-to-r from-primary/20 to-primary/10 rounded-lg">
-                    <p className="text-sm text-muted-foreground mb-2">نظام المكافآت</p>
-                    <p className="text-sm">• 100 نقطة = خصم 10 درهم</p>
-                    <p className="text-sm">• 500 نقطة = خدمة مجانية (ماني كير)</p>
-                    <p className="text-sm">• 1000 نقطة = عضوية VIP + خصومات حصرية</p>
+                    <p className="text-sm text-muted-foreground mb-2">{t("clients.loyaltyPoints")}</p>
+                    <p className="text-sm">• 100 {t("clients.loyaltyPoints")} = 10 {t("common.currency")}</p>
+                    <p className="text-sm">• 500 {t("clients.loyaltyPoints")} = Free Service</p>
+                    <p className="text-sm">• 1000 {t("clients.loyaltyPoints")} = {t("clients.vip")}</p>
                   </div>
                 </div>
               </TabsContent>

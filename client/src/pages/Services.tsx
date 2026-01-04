@@ -16,6 +16,7 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import type { Product, Service, Category } from "@shared/schema";
+import { useTranslation } from "react-i18next";
 
 const serviceFormSchema = insertServiceSchema.extend({
   price: z.coerce.number(),
@@ -25,6 +26,7 @@ const serviceFormSchema = insertServiceSchema.extend({
 });
 
 export default function Services() {
+  const { t, i18n } = useTranslation();
   const { data: services = [] } = useServices();
   const { data: categories = [] } = useCategories();
   const { data: products = [] } = useQuery<Product[]>({
@@ -96,10 +98,10 @@ export default function Services() {
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto" dir="rtl">
+    <div className="space-y-6 max-w-5xl mx-auto" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
       <div>
-        <h1 className="text-3xl font-display font-bold">قائمة الخدمات</h1>
-        <p className="text-muted-foreground">إدارة العروض والأسعار الخاصة بك.</p>
+        <h1 className="text-3xl font-display font-bold">{t("services.pageTitle")}</h1>
+        <p className="text-muted-foreground">{t("services.pageDesc")}</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -108,7 +110,7 @@ export default function Services() {
             <CardHeader className="pb-4">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Tag className="w-5 h-5 text-primary" />
-                فئة جديدة
+                {t("services.newCategory")}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -119,12 +121,12 @@ export default function Services() {
                     name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormControl><Input placeholder="اسم الفئة" {...field} /></FormControl>
+                        <FormControl><Input placeholder={t("services.categoryName")} {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  <Button type="submit" className="w-full" disabled={createCategory.isPending}>إضافة</Button>
+                  <Button type="submit" className="w-full" disabled={createCategory.isPending}>{t("common.add")}</Button>
                 </form>
               </Form>
             </CardContent>
@@ -134,7 +136,7 @@ export default function Services() {
             <CardHeader className="pb-4">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Scissors className="w-5 h-5 text-primary" />
-                خدمة جديدة
+                {t("services.newService")}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -145,7 +147,7 @@ export default function Services() {
                     name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>اسم الخدمة</FormLabel>
+                        <FormLabel>{t("services.serviceName")}</FormLabel>
                         <FormControl><Input {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
@@ -157,7 +159,7 @@ export default function Services() {
                       name="price"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>السعر</FormLabel>
+                          <FormLabel>{t("common.price")}</FormLabel>
                           <FormControl><Input type="number" {...field} /></FormControl>
                         </FormItem>
                       )}
@@ -167,7 +169,7 @@ export default function Services() {
                       name="duration"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>المدة</FormLabel>
+                          <FormLabel>{t("common.duration")}</FormLabel>
                           <FormControl><Input type="number" {...field} /></FormControl>
                         </FormItem>
                       )}
@@ -177,7 +179,7 @@ export default function Services() {
                       name="commissionPercent"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>العمولة %</FormLabel>
+                          <FormLabel>{t("services.commissionPercent")}</FormLabel>
                           <FormControl><Input type="number" min={0} max={100} {...field} /></FormControl>
                         </FormItem>
                       )}
@@ -188,10 +190,10 @@ export default function Services() {
                     name="category"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>الفئة</FormLabel>
+                        <FormLabel>{t("services.category")}</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
-                            <SelectTrigger><SelectValue placeholder="اختر الفئة" /></SelectTrigger>
+                            <SelectTrigger><SelectValue placeholder={t("services.selectCategory")} /></SelectTrigger>
                           </FormControl>
                           <SelectContent>
                             {categories.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
@@ -207,29 +209,29 @@ export default function Services() {
                       <FormItem>
                         <FormLabel className="flex items-center gap-2">
                           <Package className="w-4 h-4" />
-                          منتج مرتبط (اختياري)
+                          {t("services.linkedProduct")} ({t("services.optional")})
                         </FormLabel>
                         <Select 
                           onValueChange={(val) => field.onChange(val === "none" ? null : Number(val))} 
                           value={field.value ? String(field.value) : "none"}
                         >
                           <FormControl>
-                            <SelectTrigger><SelectValue placeholder="اختر منتج" /></SelectTrigger>
+                            <SelectTrigger><SelectValue placeholder={t("services.selectProduct")} /></SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="none">بدون منتج</SelectItem>
+                            <SelectItem value="none">{t("services.noProduct")}</SelectItem>
                             {products?.map((p) => (
                               <SelectItem key={p.id} value={p.id.toString()}>
-                                {p.name} ({p.quantity} في المخزون)
+                                {p.name} ({p.quantity} {t("services.inStock")})
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
-                        <p className="text-xs text-muted-foreground">سيتم خصم المنتج تلقائياً عند حجز هذه الخدمة</p>
+                        <p className="text-xs text-muted-foreground">{t("services.autoDeductNote")}</p>
                       </FormItem>
                     )}
                   />
-                  <Button type="submit" className="w-full" disabled={createService.isPending}>إضافة</Button>
+                  <Button type="submit" className="w-full" disabled={createService.isPending}>{t("common.add")}</Button>
                 </form>
               </Form>
             </CardContent>
@@ -239,7 +241,7 @@ export default function Services() {
         <div className="lg:col-span-2 space-y-6">
           <Card className="shadow-lg shadow-black/5 border-border/50">
             <CardHeader>
-              <CardTitle>الخدمات الحالية</CardTitle>
+              <CardTitle>{t("services.currentServices")}</CardTitle>
             </CardHeader>
             <CardContent>
               {categories.map(category => {
@@ -267,11 +269,11 @@ export default function Services() {
                         <div key={service.id} className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border border-border group">
                           <div>
                             <h4 className="font-semibold">{service.name}</h4>
-                            <p className="text-sm text-muted-foreground">{service.duration} دقيقة • {service.price} DH • عمولة {service.commissionPercent ?? 50}%</p>
+                            <p className="text-sm text-muted-foreground">{service.duration} {t("common.minutes")} • {service.price} DH • {t("services.commission")} {service.commissionPercent ?? 50}%</p>
                             {service.linkedProductId && (
                               <p className="text-xs text-primary flex items-center gap-1 mt-1">
                                 <Package className="w-3 h-3" />
-                                {products?.find(p => p.id === service.linkedProductId)?.name || "منتج مرتبط"}
+                                {products?.find(p => p.id === service.linkedProductId)?.name || t("services.linkedProduct")}
                               </p>
                             )}
                           </div>
@@ -299,18 +301,18 @@ export default function Services() {
 
       <Dialog open={!!editingService} onOpenChange={() => setEditingService(null)}>
         <DialogContent>
-          <DialogHeader><DialogTitle>تعديل الخدمة</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t("services.editService")}</DialogTitle></DialogHeader>
           <Form {...editSForm}>
             <form onSubmit={editSForm.handleSubmit((data) => updateServiceMutation.mutate({ id: editingService!.id, data }))} className="space-y-4">
               <FormField control={editSForm.control} name="name" render={({ field }) => (
-                <FormItem><FormLabel>الاسم</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+                <FormItem><FormLabel>{t("common.name")}</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
               )} />
               <div className="grid grid-cols-2 gap-4">
                 <FormField control={editSForm.control} name="price" render={({ field }) => (
-                  <FormItem><FormLabel>السعر</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>
+                  <FormItem><FormLabel>{t("common.price")}</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>
                 )} />
                 <FormField control={editSForm.control} name="duration" render={({ field }) => (
-                  <FormItem><FormLabel>المدة</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>
+                  <FormItem><FormLabel>{t("common.duration")}</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>
                 )} />
               </div>
               <FormField
@@ -320,20 +322,20 @@ export default function Services() {
                   <FormItem>
                     <FormLabel className="flex items-center gap-2">
                       <Package className="w-4 h-4" />
-                      منتج مرتبط
+                      {t("services.linkedProduct")}
                     </FormLabel>
                     <Select 
                       onValueChange={(val) => field.onChange(val === "none" ? null : Number(val))} 
                       value={field.value ? String(field.value) : "none"}
                     >
                       <FormControl>
-                        <SelectTrigger><SelectValue placeholder="اختر منتج" /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder={t("services.selectProduct")} /></SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="none">بدون منتج</SelectItem>
+                        <SelectItem value="none">{t("services.noProduct")}</SelectItem>
                         {products?.map((p) => (
                           <SelectItem key={p.id} value={p.id.toString()}>
-                            {p.name} ({p.quantity} في المخزون)
+                            {p.name} ({p.quantity} {t("services.inStock")})
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -341,7 +343,7 @@ export default function Services() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full">حفظ التغييرات</Button>
+              <Button type="submit" className="w-full">{t("common.save")}</Button>
             </form>
           </Form>
         </DialogContent>
@@ -349,13 +351,13 @@ export default function Services() {
 
       <Dialog open={!!editingCategory} onOpenChange={() => setEditingCategory(null)}>
         <DialogContent>
-          <DialogHeader><DialogTitle>تعديل الفئة</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t("services.editCategory")}</DialogTitle></DialogHeader>
           <Form {...editCForm}>
             <form onSubmit={editCForm.handleSubmit((data) => updateCategoryMutation.mutate({ id: editingCategory!.id, data }))} className="space-y-4">
               <FormField control={editCForm.control} name="name" render={({ field }) => (
-                <FormItem><FormLabel>الاسم</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+                <FormItem><FormLabel>{t("common.name")}</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
               )} />
-              <Button type="submit" className="w-full">حفظ التغييرات</Button>
+              <Button type="submit" className="w-full">{t("common.save")}</Button>
             </form>
           </Form>
         </DialogContent>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { useTranslation } from "react-i18next";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,7 @@ const DEFAULT_CHARGE_TYPES = [
 ];
 
 export default function Charges() {
+  const { t, i18n } = useTranslation();
   const [type, setType] = useState("Produit");
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
@@ -58,7 +60,7 @@ export default function Charges() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/expense-categories"] });
       setNewCategoryName("");
-      toast({ title: "تم إضافة الفئة" });
+      toast({ title: t("expenses.categoryAdded") });
     },
   });
 
@@ -71,7 +73,7 @@ export default function Charges() {
       queryClient.invalidateQueries({ queryKey: ["/api/charges"] });
       setName("");
       setAmount("");
-      toast({ title: "تمت إضافة المصروف" });
+      toast({ title: t("expenses.expenseAdded") });
     },
   });
 
@@ -81,14 +83,14 @@ export default function Charges() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/charges"] });
-      toast({ title: "تم حذف المصروف" });
+      toast({ title: t("expenses.expenseDeleted") });
     },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !amount || !date) {
-      toast({ title: "يرجى ملء جميع الحقول", variant: "destructive" });
+      toast({ title: t("expenses.fillAllFields"), variant: "destructive" });
       return;
     }
     createMutation.mutate({
@@ -102,9 +104,9 @@ export default function Charges() {
   const totalCharges = charges.reduce((sum: number, c: any) => sum + c.amount, 0);
 
   return (
-    <div className="h-full flex flex-col gap-6" dir="rtl">
+    <div className="h-full flex flex-col gap-6" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl md:text-3xl font-display font-bold">المصاريف</h1>
+        <h1 className="text-2xl md:text-3xl font-display font-bold">{t("expenses.title")}</h1>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -112,13 +114,13 @@ export default function Charges() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Plus className="w-5 h-5" />
-              إضافة مصروف
+              {t("expenses.addExpense")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label>النوع</Label>
+                <Label>{t("expenses.type")}</Label>
                 <Select value={type} onValueChange={setType}>
                   <SelectTrigger>
                     <SelectValue />
@@ -134,16 +136,16 @@ export default function Charges() {
               </div>
 
               <div className="space-y-2">
-                <Label>الاسم</Label>
+                <Label>{t("common.name")}</Label>
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="مثال: شامبو"
+                  placeholder={t("expenses.namePlaceholder")}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label>المبلغ (DH)</Label>
+                <Label>{t("expenses.amount")} ({t("common.currency")})</Label>
                 <Input
                   type="number"
                   value={amount}
@@ -153,7 +155,7 @@ export default function Charges() {
               </div>
 
               <div className="space-y-2">
-                <Label>التاريخ</Label>
+                <Label>{t("common.date")}</Label>
                 <Input
                   type="date"
                   value={date}
@@ -162,7 +164,7 @@ export default function Charges() {
               </div>
 
               <Button type="submit" className="w-full" disabled={createMutation.isPending}>
-                إضافة
+                {t("common.add")}
               </Button>
             </form>
           </CardContent>
@@ -172,28 +174,28 @@ export default function Charges() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingDown className="w-5 h-5 text-destructive" />
-              إجمالي المصاريف
+              {t("expenses.totalExpenses")}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-4xl font-bold text-destructive">{totalCharges} DH</p>
+            <p className="text-4xl font-bold text-destructive">{totalCharges} {t("common.currency")}</p>
           </CardContent>
         </Card>
       </div>
 
       <Card className="flex-1">
         <CardHeader>
-          <CardTitle>قائمة المصاريف</CardTitle>
+          <CardTitle>{t("expenses.expenseList")}</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>النوع</TableHead>
-                <TableHead>الاسم</TableHead>
-                <TableHead>المبلغ</TableHead>
-                <TableHead>التاريخ</TableHead>
-                <TableHead className="w-[80px]">إجراء</TableHead>
+                <TableHead>{t("expenses.type")}</TableHead>
+                <TableHead>{t("common.name")}</TableHead>
+                <TableHead>{t("expenses.amount")}</TableHead>
+                <TableHead>{t("common.date")}</TableHead>
+                <TableHead className="w-[80px]">{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -203,7 +205,7 @@ export default function Charges() {
                     {chargeTypes.find((t: any) => t.name === charge.type)?.label || charge.type}
                   </TableCell>
                   <TableCell>{charge.name}</TableCell>
-                  <TableCell className="font-semibold">{charge.amount} DH</TableCell>
+                  <TableCell className="font-semibold">{charge.amount} {t("common.currency")}</TableCell>
                   <TableCell>{charge.date}</TableCell>
                   <TableCell>
                     {isAdmin && (
@@ -222,7 +224,7 @@ export default function Charges() {
               {charges.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                    لا توجد مصاريف مسجلة
+                    {t("expenses.noExpenses")}
                   </TableCell>
                 </TableRow>
               )}

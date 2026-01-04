@@ -13,8 +13,10 @@ import { insertProductSchema, insertStaffSchema } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useState } from "react";
 import type { Product } from "@shared/schema";
+import { useTranslation } from "react-i18next";
 
 export default function Inventory() {
+  const { t, i18n } = useTranslation();
   const { toast } = useToast();
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -43,7 +45,7 @@ export default function Inventory() {
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       setIsDialogOpen(false);
       productForm.reset();
-      toast({ title: "تمت إضافة المنتج" });
+      toast({ title: t("inventory.productAdded") });
     }
   });
 
@@ -56,7 +58,7 @@ export default function Inventory() {
       queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
       setIsStaffDialogOpen(false);
       staffForm.reset();
-      toast({ title: "تمت إضافة الموظف" });
+      toast({ title: t("staff.staffAdded") });
     }
   });
 
@@ -68,7 +70,7 @@ export default function Inventory() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       setEditingProduct(null);
-      toast({ title: "تم تحديث المنتج" });
+      toast({ title: t("inventory.productUpdated") });
     }
   });
 
@@ -78,7 +80,7 @@ export default function Inventory() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
-      toast({ title: "تم حذف المنتج" });
+      toast({ title: t("inventory.productDeleted") });
     }
   });
 
@@ -92,31 +94,31 @@ export default function Inventory() {
     },
   });
 
-  if (isLoading) return <div>جاري التحميل...</div>;
+  if (isLoading) return <div>{t("common.loading")}</div>;
 
   return (
-    <div className="p-6 space-y-6" dir="rtl">
+    <div className="p-6 space-y-6" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-3xl font-bold">المخزون</h1>
+        <h1 className="text-3xl font-bold">{t("inventory.title")}</h1>
         <div className="flex gap-2">
           <Dialog open={isStaffDialogOpen} onOpenChange={setIsStaffDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" className="gap-2">
                 <UserPlus className="h-4 w-4" />
-                إضافة موظف
+                {t("staff.addStaff")}
               </Button>
             </DialogTrigger>
             <DialogContent>
-              <DialogHeader><DialogTitle>إضافة موظف جديد</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle>{t("staff.addStaff")}</DialogTitle></DialogHeader>
               <Form {...staffForm}>
                 <form onSubmit={staffForm.handleSubmit((data) => createStaffMutation.mutate(data))} className="space-y-4">
                   <FormField control={staffForm.control} name="name" render={({ field }) => (
-                    <FormItem><FormLabel>الاسم</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+                    <FormItem><FormLabel>{t("common.name")}</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
                   )} />
                   <FormField control={staffForm.control} name="color" render={({ field }) => (
-                    <FormItem><FormLabel>اللون</FormLabel><FormControl><Input type="color" {...field} /></FormControl></FormItem>
+                    <FormItem><FormLabel>{t("staff.color")}</FormLabel><FormControl><Input type="color" {...field} /></FormControl></FormItem>
                   )} />
-                  <Button type="submit" className="w-full" disabled={createStaffMutation.isPending}>إضافة</Button>
+                  <Button type="submit" className="w-full" disabled={createStaffMutation.isPending}>{t("common.add")}</Button>
                 </form>
               </Form>
             </DialogContent>
@@ -126,12 +128,12 @@ export default function Inventory() {
             <DialogTrigger asChild>
               <Button className="gap-2">
                 <Plus className="h-4 w-4" />
-                منتج جديد
+                {t("inventory.newProduct")}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>إضافة منتج جديد</DialogTitle>
+                <DialogTitle>{t("inventory.newProduct")}</DialogTitle>
               </DialogHeader>
               <Form {...productForm}>
                 <form onSubmit={productForm.handleSubmit((data) => createProductMutation.mutate(data))} className="space-y-4">
@@ -140,7 +142,7 @@ export default function Inventory() {
                     name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>اسم المنتج</FormLabel>
+                        <FormLabel>{t("inventory.productName")}</FormLabel>
                         <FormControl><Input {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
@@ -151,13 +153,13 @@ export default function Inventory() {
                     name="quantity"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>الكمية الأولية</FormLabel>
+                        <FormLabel>{t("inventory.quantity")}</FormLabel>
                         <FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  <Button type="submit" className="w-full" disabled={createProductMutation.isPending}>إضافة</Button>
+                  <Button type="submit" className="w-full" disabled={createProductMutation.isPending}>{t("common.add")}</Button>
                 </form>
               </Form>
             </DialogContent>
@@ -179,13 +181,13 @@ export default function Inventory() {
             <CardContent>
               <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">الكمية الحالية:</span>
+                  <span className="text-sm text-muted-foreground">{t("inventory.quantity")}:</span>
                   <span className={`text-2xl font-bold ${product.quantity <= (product.lowStockThreshold || 5) ? 'text-destructive' : 'text-primary'}`}>
                     {product.quantity}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">حد التنبيه:</span>
+                  <span className="text-muted-foreground">{t("inventory.minStock")}:</span>
                   <span className="text-muted-foreground">{product.lowStockThreshold || 5}</span>
                 </div>
                 
@@ -217,10 +219,9 @@ export default function Inventory() {
                   </Button>
                 </div>
 
-                {/* Edit Product Dialog */}
                 <Dialog open={!!editingProduct} onOpenChange={(open) => !open && setEditingProduct(null)}>
                   <DialogContent>
-                    <DialogHeader><DialogTitle>تعديل المنتج</DialogTitle></DialogHeader>
+                    <DialogHeader><DialogTitle>{t("inventory.editProduct")}</DialogTitle></DialogHeader>
                     <Form {...productForm}>
                       <form onSubmit={productForm.handleSubmit((data) => updateProductMutation.mutate({ id: editingProduct!.id, data }))} className="space-y-4">
                         <FormField
@@ -228,12 +229,12 @@ export default function Inventory() {
                           name="name"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>اسم المنتج</FormLabel>
+                              <FormLabel>{t("inventory.productName")}</FormLabel>
                               <FormControl><Input {...field} /></FormControl>
                             </FormItem>
                           )}
                         />
-                        <Button type="submit" className="w-full">تحديث</Button>
+                        <Button type="submit" className="w-full">{t("common.save")}</Button>
                       </form>
                     </Form>
                   </DialogContent>
@@ -241,7 +242,7 @@ export default function Inventory() {
                 
                 {product.quantity <= (product.lowStockThreshold || 5) && (
                   <p className="text-xs text-destructive font-medium animate-pulse">
-                    ⚠️ تنبيه: المخزون منخفض!
+                    ⚠️ {t("inventory.stockAlert")}: {t("inventory.lowStock")}!
                   </p>
                 )}
               </div>

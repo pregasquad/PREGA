@@ -11,15 +11,17 @@ import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { DollarSign, Users, CalendarIcon, TrendingUp, Building2, Edit2, Check, X, RefreshCw, Plus, Trash2, Receipt, UserMinus, ChevronDown } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { io, Socket } from "socket.io-client";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay, parseISO, isAfter, isBefore, isEqual } from "date-fns";
-import { ar } from "date-fns/locale";
+import { ar, enUS, fr } from "date-fns/locale";
 import { apiRequest } from "@/lib/queryClient";
 import type { Staff, Service, Appointment, Charge, StaffDeduction } from "@shared/schema";
 
 type PeriodType = "day" | "week" | "month" | "custom";
 
 export default function Salaries() {
+  const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [period, setPeriod] = useState<PeriodType>("month");
@@ -32,6 +34,14 @@ export default function Salaries() {
   const [commissionRatesOpen, setCommissionRatesOpen] = useState(false);
   const [newCharge, setNewCharge] = useState({ type: "rent", name: "", amount: 0, date: format(new Date(), "yyyy-MM-dd") });
   const [newDeduction, setNewDeduction] = useState<{ staffName: string; type: "advance" | "loan" | "penalty" | "other"; description: string; amount: number; date: string }>({ staffName: "", type: "advance", description: "", amount: 0, date: format(new Date(), "yyyy-MM-dd") });
+
+  const getDateLocale = () => {
+    switch (i18n.language) {
+      case "ar": return ar;
+      case "fr": return fr;
+      default: return enUS;
+    }
+  };
 
   useEffect(() => {
     const socket: Socket = io();
@@ -237,7 +247,6 @@ export default function Salaries() {
   const totalAppointments = staffEarnings.reduce((sum, e) => sum + e.appointmentsCount, 0);
   const salonPortion = totalRevenue - totalCommissions;
 
-  // Calculate filtered expenses and deductions
   const filteredCharges = charges.filter(c => {
     const chargeDate = startOfDay(parseISO(c.date));
     return (isAfter(chargeDate, startOfDay(start)) || isEqual(chargeDate, startOfDay(start))) &&
@@ -257,16 +266,38 @@ export default function Salaries() {
   const netProfit = salonPortion - totalExpenses;
   const netStaffPayable = totalCommissions - totalDeductions;
 
+  const getChargeTypeLabel = (type: string) => {
+    switch (type) {
+      case "rent": return t("salaries.rent");
+      case "utilities": return t("salaries.utilities");
+      case "products": return t("salaries.products");
+      case "equipment": return t("salaries.equipment");
+      case "maintenance": return t("salaries.maintenance");
+      case "other": return t("salaries.other");
+      default: return type;
+    }
+  };
+
+  const getDeductionTypeLabel = (type: string) => {
+    switch (type) {
+      case "advance": return t("salaries.advance");
+      case "loan": return t("salaries.loan");
+      case "penalty": return t("salaries.penalty");
+      case "other": return t("salaries.other");
+      default: return type;
+    }
+  };
+
   return (
-    <div className="space-y-6 max-w-6xl mx-auto" dir="rtl">
+    <div className="space-y-6 max-w-6xl mx-auto" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-display font-bold">الرواتب والعمولات</h1>
-          <p className="text-muted-foreground">حساب أرباح الموظفين بناءً على الخدمات المقدمة</p>
+          <h1 className="text-3xl font-display font-bold">{t("salaries.pageTitle")}</h1>
+          <p className="text-muted-foreground">{t("salaries.pageDesc")}</p>
         </div>
         <div className="flex items-center gap-3">
           <span className="text-xs text-muted-foreground">
-            آخر تحديث: {format(lastUpdate, "HH:mm:ss", { locale: ar })}
+            {t("salaries.lastUpdate")}: {format(lastUpdate, "HH:mm:ss", { locale: getDateLocale() })}
           </span>
           <Button
             variant="outline"
@@ -276,8 +307,8 @@ export default function Salaries() {
               setLastUpdate(new Date());
             }}
           >
-            <RefreshCw className="h-4 w-4 ml-2" />
-            تحديث
+            <RefreshCw className={`h-4 w-4 ${i18n.language === "ar" ? "ml-2" : "mr-2"}`} />
+            {t("common.refresh")}
           </Button>
         </div>
       </div>
@@ -285,20 +316,20 @@ export default function Salaries() {
       <div className="flex flex-wrap gap-4 items-center">
         <Select value={period} onValueChange={(v) => setPeriod(v as PeriodType)}>
           <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder="الفترة" />
+            <SelectValue placeholder={t("salaries.period")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="day">يوم</SelectItem>
-            <SelectItem value="week">أسبوع</SelectItem>
-            <SelectItem value="month">شهر</SelectItem>
+            <SelectItem value="day">{t("salaries.day")}</SelectItem>
+            <SelectItem value="week">{t("salaries.week")}</SelectItem>
+            <SelectItem value="month">{t("salaries.month")}</SelectItem>
           </SelectContent>
         </Select>
 
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" className="w-[200px] justify-start text-right">
-              <CalendarIcon className="ml-2 h-4 w-4" />
-              {format(selectedDate, "PPP", { locale: ar })}
+            <Button variant="outline" className={`w-[200px] justify-start ${i18n.language === "ar" ? "text-right" : "text-left"}`}>
+              <CalendarIcon className={`h-4 w-4 ${i18n.language === "ar" ? "ml-2" : "mr-2"}`} />
+              {format(selectedDate, "PPP", { locale: getDateLocale() })}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
@@ -313,10 +344,10 @@ export default function Salaries() {
 
         <Select value={selectedStaff} onValueChange={setSelectedStaff}>
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="الموظف" />
+            <SelectValue placeholder={t("salaries.staff")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">جميع الموظفين</SelectItem>
+            <SelectItem value="all">{t("salaries.allStaff")}</SelectItem>
             {staff.map((s) => (
               <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
             ))}
@@ -327,92 +358,89 @@ export default function Salaries() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">إجمالي الإيرادات</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("salaries.totalRevenue")}</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalRevenue.toLocaleString()} د.م</div>
+            <div className="text-2xl font-bold">{totalRevenue.toLocaleString()} {t("common.currency")}</div>
             <p className="text-xs text-muted-foreground">
-              {format(start, "d MMM", { locale: ar })} - {format(end, "d MMM yyyy", { locale: ar })}
+              {format(start, "d MMM", { locale: getDateLocale() })} - {format(end, "d MMM yyyy", { locale: getDateLocale() })}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">عمولات الموظفين</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("salaries.staffCommissions")}</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{totalCommissions.toLocaleString()} د.م</div>
-            <p className="text-xs text-muted-foreground">المبلغ المستحق للموظفين</p>
+            <div className="text-2xl font-bold text-green-600">{totalCommissions.toLocaleString()} {t("common.currency")}</div>
+            <p className="text-xs text-muted-foreground">{t("salaries.amountDueToStaff")}</p>
           </CardContent>
         </Card>
 
         <Card className="bg-primary/5 border-primary/20">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">حصة الصالون</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("salaries.salonShare")}</CardTitle>
             <Building2 className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-primary">{salonPortion.toLocaleString()} د.م</div>
-            <p className="text-xs text-muted-foreground">الباقي للصالون بعد العمولات</p>
+            <div className="text-2xl font-bold text-primary">{salonPortion.toLocaleString()} {t("common.currency")}</div>
+            <p className="text-xs text-muted-foreground">{t("salaries.remainingForSalon")}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">عدد المواعيد</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("salaries.appointmentsCount")}</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalAppointments}</div>
-            <p className="text-xs text-muted-foreground">المواعيد المدفوعة</p>
+            <p className="text-xs text-muted-foreground">{t("salaries.paidAppointments")}</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* الميزانية - Budget Summary */}
       <Card className="border-2 border-dashed">
         <CardHeader>
-          <CardTitle className="text-xl">الميزانية</CardTitle>
+          <CardTitle className="text-xl">{t("salaries.budget")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Salon Side */}
             <div className="space-y-3 p-4 bg-primary/5 rounded-lg">
-              <h3 className="font-bold text-lg border-b pb-2">حساب الصالون</h3>
+              <h3 className="font-bold text-lg border-b pb-2">{t("salaries.salonAccount")}</h3>
               <div className="flex justify-between">
-                <span>حصة الصالون من الإيرادات:</span>
-                <span className="font-semibold text-primary">{salonPortion.toLocaleString()} د.م</span>
+                <span>{t("salaries.salonRevenueShare")}:</span>
+                <span className="font-semibold text-primary">{salonPortion.toLocaleString()} {t("common.currency")}</span>
               </div>
               <div className="flex justify-between text-red-600">
-                <span>إجمالي المصاريف:</span>
-                <span className="font-semibold">- {totalExpenses.toLocaleString()} د.م</span>
+                <span>{t("salaries.totalExpenses")}:</span>
+                <span className="font-semibold">- {totalExpenses.toLocaleString()} {t("common.currency")}</span>
               </div>
               <div className="flex justify-between pt-2 border-t-2 text-lg">
-                <span className="font-bold">صافي ربح الصالون:</span>
+                <span className="font-bold">{t("salaries.salonNetProfit")}:</span>
                 <span className={`font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {netProfit.toLocaleString()} د.م
+                  {netProfit.toLocaleString()} {t("common.currency")}
                 </span>
               </div>
             </div>
 
-            {/* Staff Side */}
             <div className="space-y-3 p-4 bg-green-50 rounded-lg">
-              <h3 className="font-bold text-lg border-b pb-2">حساب الموظفين</h3>
+              <h3 className="font-bold text-lg border-b pb-2">{t("salaries.staffAccount")}</h3>
               <div className="flex justify-between">
-                <span>إجمالي العمولات المستحقة:</span>
-                <span className="font-semibold text-green-600">{totalCommissions.toLocaleString()} د.م</span>
+                <span>{t("salaries.totalCommissionsDue")}:</span>
+                <span className="font-semibold text-green-600">{totalCommissions.toLocaleString()} {t("common.currency")}</span>
               </div>
               <div className="flex justify-between text-orange-600">
-                <span>إجمالي الخصومات:</span>
-                <span className="font-semibold">- {totalDeductions.toLocaleString()} د.م</span>
+                <span>{t("salaries.totalDeductions")}:</span>
+                <span className="font-semibold">- {totalDeductions.toLocaleString()} {t("common.currency")}</span>
               </div>
               <div className="flex justify-between pt-2 border-t-2 text-lg">
-                <span className="font-bold">صافي المستحق للموظفين:</span>
+                <span className="font-bold">{t("salaries.netDueToStaff")}:</span>
                 <span className={`font-bold ${netStaffPayable >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {netStaffPayable.toLocaleString()} د.م
+                  {netStaffPayable.toLocaleString()} {t("common.currency")}
                 </span>
               </div>
             </div>
@@ -422,17 +450,17 @@ export default function Salaries() {
 
       <Card>
         <CardHeader>
-          <CardTitle>تفاصيل أرباح الموظفين</CardTitle>
+          <CardTitle>{t("salaries.staffEarningsDetails")}</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-right">الموظف</TableHead>
-                <TableHead className="text-right">عدد المواعيد</TableHead>
-                <TableHead className="text-right">إجمالي الإيرادات</TableHead>
-                <TableHead className="text-right">العمولة المستحقة</TableHead>
-                <TableHead className="text-right">حصة الصالون</TableHead>
+                <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("salaries.staff")}</TableHead>
+                <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("salaries.appointmentsCount")}</TableHead>
+                <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("salaries.totalRevenue")}</TableHead>
+                <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("salaries.commissionDue")}</TableHead>
+                <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("salaries.salonShare")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -440,19 +468,19 @@ export default function Salaries() {
                 <TableRow key={earning.name}>
                   <TableCell className="font-medium">{earning.name}</TableCell>
                   <TableCell>{earning.appointmentsCount}</TableCell>
-                  <TableCell>{earning.totalRevenue.toLocaleString()} د.م</TableCell>
+                  <TableCell>{earning.totalRevenue.toLocaleString()} {t("common.currency")}</TableCell>
                   <TableCell className="text-green-600 font-semibold">
-                    {earning.totalCommission.toLocaleString()} د.م
+                    {earning.totalCommission.toLocaleString()} {t("common.currency")}
                   </TableCell>
                   <TableCell className="text-primary font-semibold">
-                    {(earning.totalRevenue - earning.totalCommission).toLocaleString()} د.م
+                    {(earning.totalRevenue - earning.totalCommission).toLocaleString()} {t("common.currency")}
                   </TableCell>
                 </TableRow>
               ))}
               {staffEarnings.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                    لا توجد بيانات للفترة المحددة
+                    {t("salaries.noDataForPeriod")}
                   </TableCell>
                 </TableRow>
               )}
@@ -464,18 +492,18 @@ export default function Salaries() {
       {selectedStaff !== "all" && (
         <Card>
           <CardHeader>
-            <CardTitle>تفاصيل الخدمات - {selectedStaff}</CardTitle>
+            <CardTitle>{t("salaries.serviceDetails")} - {selectedStaff}</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-right">الخدمة</TableHead>
-                  <TableHead className="text-right">نسبة العمولة</TableHead>
-                  <TableHead className="text-right">عدد المرات</TableHead>
-                  <TableHead className="text-right">الإيرادات</TableHead>
-                  <TableHead className="text-right">العمولة</TableHead>
-                  <TableHead className="text-right">حصة الصالون</TableHead>
+                  <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("salaries.service")}</TableHead>
+                  <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("salaries.commissionPercent")}</TableHead>
+                  <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("salaries.times")}</TableHead>
+                  <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("salaries.revenue")}</TableHead>
+                  <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("salaries.commission")}</TableHead>
+                  <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("salaries.salonShare")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -489,12 +517,12 @@ export default function Salaries() {
                       <TableCell className="font-medium">{serviceName}</TableCell>
                       <TableCell>{getServiceCommission(serviceName)}%</TableCell>
                       <TableCell>{data.count}</TableCell>
-                      <TableCell>{data.revenue.toLocaleString()} د.م</TableCell>
+                      <TableCell>{data.revenue.toLocaleString()} {t("common.currency")}</TableCell>
                       <TableCell className="text-green-600">
-                        {data.commission.toLocaleString()} د.م
+                        {data.commission.toLocaleString()} {t("common.currency")}
                       </TableCell>
                       <TableCell className="text-primary">
-                        {(data.revenue - data.commission).toLocaleString()} د.م
+                        {(data.revenue - data.commission).toLocaleString()} {t("common.currency")}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -509,7 +537,7 @@ export default function Salaries() {
           <CollapsibleTrigger asChild>
             <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
               <div className="flex items-center justify-between">
-                <CardTitle>نسب العمولة حسب الخدمة</CardTitle>
+                <CardTitle>{t("salaries.commissionRatesByService")}</CardTitle>
                 <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform duration-200 ${commissionRatesOpen ? 'rotate-180' : ''}`} />
               </div>
             </CardHeader>
@@ -519,12 +547,12 @@ export default function Salaries() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-right">الخدمة</TableHead>
-                    <TableHead className="text-right">السعر</TableHead>
-                    <TableHead className="text-right">نسبة العمولة</TableHead>
-                    <TableHead className="text-right">عمولة الموظف</TableHead>
-                    <TableHead className="text-right">حصة الصالون</TableHead>
-                    <TableHead className="text-right w-[100px]">تعديل</TableHead>
+                    <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("salaries.service")}</TableHead>
+                    <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("salaries.price")}</TableHead>
+                    <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("salaries.commissionPercent")}</TableHead>
+                    <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("salaries.staffCommission")}</TableHead>
+                    <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("salaries.salonShare")}</TableHead>
+                    <TableHead className={`${i18n.language === "ar" ? "text-right" : "text-left"} w-[100px]`}>{t("common.edit")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -537,7 +565,7 @@ export default function Salaries() {
                     return (
                       <TableRow key={service.id}>
                         <TableCell className="font-medium">{service.name}</TableCell>
-                        <TableCell>{service.price} د.م</TableCell>
+                        <TableCell>{service.price} {t("common.currency")}</TableCell>
                         <TableCell>
                           {isEditing ? (
                             <div className="flex items-center gap-2">
@@ -556,10 +584,10 @@ export default function Salaries() {
                           )}
                         </TableCell>
                         <TableCell className="text-green-600">
-                          {staffAmount} د.م
+                          {staffAmount} {t("common.currency")}
                         </TableCell>
                         <TableCell className="text-primary">
-                          {salonAmount} د.م
+                          {salonAmount} {t("common.currency")}
                         </TableCell>
                         <TableCell>
                           {isEditing ? (
@@ -603,51 +631,50 @@ export default function Salaries() {
         </Card>
       </Collapsible>
 
-      {/* Expenses Section */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Receipt className="h-5 w-5" />
-            المصاريف والتكاليف
+            {t("salaries.expensesAndCosts")}
           </CardTitle>
           <Dialog open={showChargeDialog} onOpenChange={setShowChargeDialog}>
             <DialogTrigger asChild>
               <Button size="sm">
-                <Plus className="h-4 w-4 ml-2" />
-                إضافة مصروف
+                <Plus className={`h-4 w-4 ${i18n.language === "ar" ? "ml-2" : "mr-2"}`} />
+                {t("salaries.addExpense")}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>إضافة مصروف جديد</DialogTitle>
+                <DialogTitle>{t("salaries.addNewExpense")}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label>نوع المصروف</Label>
+                  <Label>{t("salaries.expenseType")}</Label>
                   <Select value={newCharge.type} onValueChange={(v) => setNewCharge({ ...newCharge, type: v })}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="rent">إيجار</SelectItem>
-                      <SelectItem value="utilities">مرافق (ماء/كهرباء)</SelectItem>
-                      <SelectItem value="products">منتجات</SelectItem>
-                      <SelectItem value="equipment">معدات</SelectItem>
-                      <SelectItem value="maintenance">صيانة</SelectItem>
-                      <SelectItem value="other">أخرى</SelectItem>
+                      <SelectItem value="rent">{t("salaries.rent")}</SelectItem>
+                      <SelectItem value="utilities">{t("salaries.utilities")}</SelectItem>
+                      <SelectItem value="products">{t("salaries.products")}</SelectItem>
+                      <SelectItem value="equipment">{t("salaries.equipment")}</SelectItem>
+                      <SelectItem value="maintenance">{t("salaries.maintenance")}</SelectItem>
+                      <SelectItem value="other">{t("salaries.other")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label>الوصف</Label>
+                  <Label>{t("common.description")}</Label>
                   <Input
                     value={newCharge.name}
                     onChange={(e) => setNewCharge({ ...newCharge, name: e.target.value })}
-                    placeholder="وصف المصروف"
+                    placeholder={t("salaries.expenseDescription")}
                   />
                 </div>
                 <div>
-                  <Label>المبلغ (د.م)</Label>
+                  <Label>{t("salaries.amountDH")}</Label>
                   <Input
                     type="number"
                     value={newCharge.amount || ""}
@@ -656,7 +683,7 @@ export default function Salaries() {
                   />
                 </div>
                 <div>
-                  <Label>التاريخ</Label>
+                  <Label>{t("common.date")}</Label>
                   <Input
                     type="date"
                     value={newCharge.date}
@@ -668,7 +695,7 @@ export default function Salaries() {
                   onClick={() => createChargeMutation.mutate(newCharge)}
                   disabled={!newCharge.name || !newCharge.amount || createChargeMutation.isPending}
                 >
-                  حفظ
+                  {t("common.save")}
                 </Button>
               </div>
             </DialogContent>
@@ -678,27 +705,20 @@ export default function Salaries() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-right">النوع</TableHead>
-                <TableHead className="text-right">الوصف</TableHead>
-                <TableHead className="text-right">المبلغ</TableHead>
-                <TableHead className="text-right">التاريخ</TableHead>
-                <TableHead className="text-right w-[60px]"></TableHead>
+                <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("common.type")}</TableHead>
+                <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("common.description")}</TableHead>
+                <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("common.amount")}</TableHead>
+                <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("common.date")}</TableHead>
+                <TableHead className={`${i18n.language === "ar" ? "text-right" : "text-left"} w-[60px]`}></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredCharges.map((charge) => (
                 <TableRow key={charge.id}>
-                  <TableCell>
-                    {charge.type === "rent" && "إيجار"}
-                    {charge.type === "utilities" && "مرافق"}
-                    {charge.type === "products" && "منتجات"}
-                    {charge.type === "equipment" && "معدات"}
-                    {charge.type === "maintenance" && "صيانة"}
-                    {charge.type === "other" && "أخرى"}
-                  </TableCell>
+                  <TableCell>{getChargeTypeLabel(charge.type)}</TableCell>
                   <TableCell>{charge.name}</TableCell>
-                  <TableCell className="text-red-600 font-semibold">{charge.amount.toLocaleString()} د.م</TableCell>
-                  <TableCell>{format(parseISO(charge.date), "d MMM yyyy", { locale: ar })}</TableCell>
+                  <TableCell className="text-red-600 font-semibold">{charge.amount.toLocaleString()} {t("common.currency")}</TableCell>
+                  <TableCell>{format(parseISO(charge.date), "d MMM yyyy", { locale: getDateLocale() })}</TableCell>
                   <TableCell>
                     <Button
                       variant="ghost"
@@ -714,7 +734,7 @@ export default function Salaries() {
               {filteredCharges.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                    لا توجد مصاريف للفترة المحددة
+                    {t("salaries.noExpensesForPeriod")}
                   </TableCell>
                 </TableRow>
               )}
@@ -723,30 +743,29 @@ export default function Salaries() {
         </CardContent>
       </Card>
 
-      {/* Staff Deductions Section */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <UserMinus className="h-5 w-5" />
-            خصومات الموظفين
+            {t("salaries.staffDeductions")}
           </CardTitle>
           <Dialog open={showDeductionDialog} onOpenChange={setShowDeductionDialog}>
             <DialogTrigger asChild>
               <Button size="sm">
-                <Plus className="h-4 w-4 ml-2" />
-                إضافة خصم
+                <Plus className={`h-4 w-4 ${i18n.language === "ar" ? "ml-2" : "mr-2"}`} />
+                {t("salaries.addDeduction")}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>إضافة خصم للموظف</DialogTitle>
+                <DialogTitle>{t("salaries.addStaffDeduction")}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label>الموظف</Label>
+                  <Label>{t("salaries.staff")}</Label>
                   <Select value={newDeduction.staffName} onValueChange={(v) => setNewDeduction({ ...newDeduction, staffName: v })}>
                     <SelectTrigger>
-                      <SelectValue placeholder="اختر الموظف" />
+                      <SelectValue placeholder={t("salaries.selectStaff")} />
                     </SelectTrigger>
                     <SelectContent>
                       {staff.map((s) => (
@@ -756,29 +775,29 @@ export default function Salaries() {
                   </Select>
                 </div>
                 <div>
-                  <Label>نوع الخصم</Label>
+                  <Label>{t("salaries.deductionType")}</Label>
                   <Select value={newDeduction.type} onValueChange={(v) => setNewDeduction({ ...newDeduction, type: v as "advance" | "loan" | "penalty" | "other" })}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="advance">سلفة</SelectItem>
-                      <SelectItem value="loan">قرض</SelectItem>
-                      <SelectItem value="penalty">غرامة</SelectItem>
-                      <SelectItem value="other">أخرى</SelectItem>
+                      <SelectItem value="advance">{t("salaries.advance")}</SelectItem>
+                      <SelectItem value="loan">{t("salaries.loan")}</SelectItem>
+                      <SelectItem value="penalty">{t("salaries.penalty")}</SelectItem>
+                      <SelectItem value="other">{t("salaries.other")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label>الوصف</Label>
+                  <Label>{t("common.description")}</Label>
                   <Input
                     value={newDeduction.description}
                     onChange={(e) => setNewDeduction({ ...newDeduction, description: e.target.value })}
-                    placeholder="وصف الخصم"
+                    placeholder={t("salaries.deductionDescription")}
                   />
                 </div>
                 <div>
-                  <Label>المبلغ (د.م)</Label>
+                  <Label>{t("salaries.amountDH")}</Label>
                   <Input
                     type="number"
                     value={newDeduction.amount || ""}
@@ -787,7 +806,7 @@ export default function Salaries() {
                   />
                 </div>
                 <div>
-                  <Label>التاريخ</Label>
+                  <Label>{t("common.date")}</Label>
                   <Input
                     type="date"
                     value={newDeduction.date}
@@ -799,7 +818,7 @@ export default function Salaries() {
                   onClick={() => createDeductionMutation.mutate(newDeduction)}
                   disabled={!newDeduction.staffName || !newDeduction.description || !newDeduction.amount || createDeductionMutation.isPending}
                 >
-                  حفظ
+                  {t("common.save")}
                 </Button>
               </div>
             </DialogContent>
@@ -809,27 +828,22 @@ export default function Salaries() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-right">الموظف</TableHead>
-                <TableHead className="text-right">النوع</TableHead>
-                <TableHead className="text-right">الوصف</TableHead>
-                <TableHead className="text-right">المبلغ</TableHead>
-                <TableHead className="text-right">التاريخ</TableHead>
-                <TableHead className="text-right w-[60px]"></TableHead>
+                <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("salaries.staff")}</TableHead>
+                <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("common.type")}</TableHead>
+                <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("common.description")}</TableHead>
+                <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("common.amount")}</TableHead>
+                <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("common.date")}</TableHead>
+                <TableHead className={`${i18n.language === "ar" ? "text-right" : "text-left"} w-[60px]`}></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredDeductions.map((deduction) => (
                 <TableRow key={deduction.id}>
                   <TableCell className="font-medium">{deduction.staffName}</TableCell>
-                  <TableCell>
-                    {deduction.type === "advance" && "سلفة"}
-                    {deduction.type === "loan" && "قرض"}
-                    {deduction.type === "penalty" && "غرامة"}
-                    {deduction.type === "other" && "أخرى"}
-                  </TableCell>
+                  <TableCell>{getDeductionTypeLabel(deduction.type)}</TableCell>
                   <TableCell>{deduction.description}</TableCell>
-                  <TableCell className="text-orange-600 font-semibold">{deduction.amount.toLocaleString()} د.م</TableCell>
-                  <TableCell>{format(parseISO(deduction.date), "d MMM yyyy", { locale: ar })}</TableCell>
+                  <TableCell className="text-orange-600 font-semibold">{deduction.amount.toLocaleString()} {t("common.currency")}</TableCell>
+                  <TableCell>{format(parseISO(deduction.date), "d MMM yyyy", { locale: getDateLocale() })}</TableCell>
                   <TableCell>
                     <Button
                       variant="ghost"
@@ -845,7 +859,7 @@ export default function Salaries() {
               {filteredDeductions.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                    لا توجد خصومات للفترة المحددة
+                    {t("salaries.noDeductionsForPeriod")}
                   </TableCell>
                 </TableRow>
               )}
