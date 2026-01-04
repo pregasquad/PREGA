@@ -336,9 +336,14 @@ export default function Planning() {
               variant="ghost" 
               size="icon" 
               className="h-7 w-7"
-              onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/appointments"] })}
+              onClick={() => {
+                queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+                queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
+                queryClient.invalidateQueries({ queryKey: ["/api/services"] });
+                toast({ title: "تم التحديث", description: "تم تحديث البيانات بنجاح" });
+              }}
             >
-              <RefreshCw className="w-3 h-3" />
+              <RefreshCw className={cn("w-3 h-3", loadingApps && "animate-spin")} />
             </Button>
           </div>
 
@@ -657,31 +662,35 @@ export default function Planning() {
                       
                       {/* Quick Favorites */}
                       {!editingAppointment && (
-                        <div className="pt-1">
-                          <div className="flex items-center gap-1">
+                        <div className="pt-2">
+                          <p className="text-[10px] text-muted-foreground mb-1">الخدمات المفضلة:</p>
+                          <div className="flex flex-wrap items-center gap-2">
                             {favoriteServices.slice(0, 4).map((s: any) => (
                               <Button
                                 key={s.id}
                                 type="button"
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
                                 className={cn(
-                                  "h-6 text-[9px] px-1.5 rounded-full shrink-0",
-                                  field.value === s.name ? "bg-primary text-primary-foreground" : "bg-muted/50 hover:bg-muted"
+                                  "h-9 text-xs px-3 rounded-xl font-medium transition-all",
+                                  field.value === s.name 
+                                    ? "bg-gradient-to-r from-pink-500 to-purple-500 text-white border-0 shadow-lg" 
+                                    : "bg-muted/30 hover:bg-muted border-2 hover:border-primary/50"
                                 )}
                                 onClick={() => handleServiceChange(s.name)}
                               >
+                                {field.value === s.name && <Check className="w-3 h-3 ml-1" />}
                                 {s.name}
                               </Button>
                             ))}
                             <Button
                               type="button"
                               variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0 rounded-full text-muted-foreground hover:text-primary shrink-0"
+                              size="icon"
+                              className="h-9 w-9 rounded-xl text-muted-foreground hover:text-primary hover:bg-muted"
                               onClick={() => setIsEditFavoritesOpen(!isEditFavoritesOpen)}
                             >
-                              <Settings2 className="w-3 h-3" />
+                              <Settings2 className="w-4 h-4" />
                             </Button>
                           </div>
                           
