@@ -425,7 +425,7 @@ export default function Planning() {
         <div 
           className="grid relative" 
           style={{ 
-            gridTemplateColumns: `80px repeat(${staffList.length}, minmax(120px, 1fr))`,
+            gridTemplateColumns: `55px repeat(${staffList.length}, minmax(120px, 1fr))`,
             gridAutoRows: '48px'
           }}
         >
@@ -446,7 +446,7 @@ export default function Planning() {
             </div>
           )}
           {/* Top row - Staff headers (sticky) */}
-          <div className="bg-card border-b border-l p-2 sticky top-0 left-0 z-20" style={{ gridColumn: 1, gridRow: 1 }}></div>
+          <div className="bg-card border-b border-r p-1 sticky top-0 left-0 z-30" style={{ gridColumn: 1, gridRow: 1 }}></div>
           {staffList.map((s, staffIndex) => (
             <div 
               key={s.id} 
@@ -466,7 +466,7 @@ export default function Planning() {
             return (
             <React.Fragment key={hour}>
               <div 
-                className="bg-card border-b border-l p-2 text-xs text-muted-foreground font-medium sticky left-0 z-10"
+                className="bg-card border-b border-r p-1 text-xs text-muted-foreground font-medium sticky left-0 z-30"
                 style={{ gridColumn: 1, gridRow: rowNum }}
               >
                 {hour}
