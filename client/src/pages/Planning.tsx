@@ -434,8 +434,8 @@ export default function Planning() {
               }}
             >
               <div className="flex items-center w-full">
-                <div className="w-3 h-3 md:w-2 md:h-2 rounded-full bg-red-500 shadow-lg animate-pulse shrink-0" />
-                <div className="flex-1 h-1 md:h-0.5 bg-red-500 shadow-sm" />
+                <div className="w-3 h-3 md:w-2 md:h-2 rounded-full bg-orange-500 shadow-lg animate-pulse shrink-0" />
+                <div className="flex-1 h-1 md:h-0.5 bg-orange-500 shadow-sm" />
               </div>
             </div>
           )}
@@ -730,7 +730,6 @@ export default function Planning() {
                 {/* Quick Favorites - compact */}
                 {!editingAppointment && (
                   <div className="col-span-3 flex items-center gap-1.5">
-                    <Star className="w-4 h-4 text-amber-500 shrink-0" />
                     {favoriteServices.slice(0, 4).map((s: any) => (
                       <Button
                         key={s.id}

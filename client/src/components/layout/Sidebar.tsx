@@ -175,7 +175,7 @@ export function Sidebar() {
           <div className="flex items-center gap-3">
             <img src="/logo.png" alt="PREGA SQUAD" className="w-12 h-12 rounded-full object-cover" />
             <div>
-              <h1 className="text-lg font-display font-bold text-primary">PREGA SQUAD</h1>
+              <h1 className="text-lg font-display font-bold text-orange-500">PREGA SQUAD</h1>
               <p className="text-[10px] text-muted-foreground tracking-wide">Be Humble</p>
             </div>
           </div>
