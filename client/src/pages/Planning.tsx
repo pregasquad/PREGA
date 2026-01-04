@@ -518,7 +518,7 @@ export default function Planning() {
         if (!open) setIsEditFavoritesOpen(false);
       }}>
         <DialogContent 
-          className="sm:max-w-[360px] p-0 border border-border shadow-xl bg-background rounded-xl" 
+          className="w-[calc(100vw-32px)] max-w-[380px] p-0 border border-border shadow-xl bg-background rounded-xl" 
           dir={isRtl ? "rtl" : "ltr"}
         >
           <div className="bg-primary px-3 py-2 text-primary-foreground">
@@ -663,7 +663,7 @@ export default function Planning() {
                               </Button>
                             </FormControl>
                           </PopoverTrigger>
-                          <PopoverContent className="w-[calc(100vw-48px)] sm:w-[336px] p-0" align="center">
+                          <PopoverContent className="w-[calc(100vw-56px)] max-w-[356px] p-0" align="center">
                             <div className="p-2 border-b">
                               <Input
                                 placeholder={t("planning.searchService")}
