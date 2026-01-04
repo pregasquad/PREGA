@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,9 +9,23 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit2, Trash2, User, Phone, Mail, Gift, Calendar, Star, Crown, Award } from "lucide-react";
-import type { Client, Appointment } from "@shared/schema";
+import { Plus, Edit2, Trash2, User, Phone, Mail, Gift, Calendar as CalendarIcon, Star, Crown, Award, Zap, Clock } from "lucide-react";
+import { format, startOfToday } from "date-fns";
+import { ar, enUS, fr } from "date-fns/locale";
+import { cn } from "@/lib/utils";
+import type { Client, Appointment, Service, Staff } from "@shared/schema";
+
+const TIME_SLOTS = [
+  "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
+  "12:00", "12:30", "13:00", "13:30", "14:00", "14:30",
+  "15:00", "15:30", "16:00", "16:30", "17:00", "17:30",
+  "18:00", "18:30", "19:00", "19:30", "20:00", "20:30",
+  "21:00", "21:30", "22:00", "22:30", "23:00", "23:30"
+];
 
 export default function Clients() {
   const { t, i18n } = useTranslation();
@@ -21,7 +35,16 @@ export default function Clients() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [isQuickBookOpen, setIsQuickBookOpen] = useState(false);
+  const [quickBookClient, setQuickBookClient] = useState<Client | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+
+  const [quickBookData, setQuickBookData] = useState({
+    date: startOfToday(),
+    time: "",
+    serviceId: "",
+    staffId: "",
+  });
 
   const [formData, setFormData] = useState({
     name: "",
@@ -31,8 +54,24 @@ export default function Clients() {
     notes: "",
   });
 
+  const getDateLocale = () => {
+    switch (i18n.language) {
+      case "ar": return ar;
+      case "fr": return fr;
+      default: return enUS;
+    }
+  };
+
   const { data: clients = [], isLoading } = useQuery<Client[]>({
     queryKey: ["/api/clients"],
+  });
+
+  const { data: services = [] } = useQuery<Service[]>({
+    queryKey: ["/api/services"],
+  });
+
+  const { data: staffList = [] } = useQuery<Staff[]>({
+    queryKey: ["/api/staff"],
   });
 
   const { data: clientAppointments = [] } = useQuery<Appointment[]>({
@@ -44,6 +83,36 @@ export default function Clients() {
     },
     enabled: !!selectedClient?.id,
   });
+
+  const { data: quickBookClientHistory = [] } = useQuery<Appointment[]>({
+    queryKey: ["/api/clients", quickBookClient?.id, "appointments"],
+    queryFn: async () => {
+      if (!quickBookClient?.id) return [];
+      const res = await fetch(`/api/clients/${quickBookClient.id}/appointments`);
+      return res.json();
+    },
+    enabled: !!quickBookClient?.id,
+  });
+
+  const frequentServices = useMemo(() => {
+    if (!quickBookClientHistory.length) return [];
+    const serviceCounts: Record<string, { name: string; count: number; serviceId?: number }> = {};
+    quickBookClientHistory.forEach((appt) => {
+      if (appt.service) {
+        if (!serviceCounts[appt.service]) {
+          serviceCounts[appt.service] = { name: appt.service, count: 0 };
+        }
+        serviceCounts[appt.service].count++;
+        const matchingService = services.find(s => s.name === appt.service);
+        if (matchingService) {
+          serviceCounts[appt.service].serviceId = matchingService.id;
+        }
+      }
+    });
+    return Object.values(serviceCounts)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+  }, [quickBookClientHistory, services]);
 
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -91,6 +160,26 @@ export default function Clients() {
     },
   });
 
+  const quickBookMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await fetch("/api/appointments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to book");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      setIsQuickBookOpen(false);
+      setQuickBookClient(null);
+      setQuickBookData({ date: startOfToday(), time: "", serviceId: "", staffId: "" });
+      toast({ title: t("clients.bookingSuccess") });
+    },
+  });
+
   const resetForm = () => {
     setFormData({ name: "", phone: "", email: "", birthday: "", notes: "" });
   };
@@ -110,6 +199,34 @@ export default function Clients() {
   const handleViewDetails = (client: Client) => {
     setSelectedClient(client);
     setIsDetailDialogOpen(true);
+  };
+
+  const handleQuickBook = (client: Client, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setQuickBookClient(client);
+    setQuickBookData({ date: startOfToday(), time: "", serviceId: "", staffId: "" });
+    setIsQuickBookOpen(true);
+  };
+
+  const handleSubmitQuickBook = () => {
+    if (!quickBookClient || !quickBookData.serviceId || !quickBookData.time || !quickBookData.staffId) return;
+    
+    const service = services.find(s => s.id === parseInt(quickBookData.serviceId));
+    const staff = staffList.find(s => s.id === parseInt(quickBookData.staffId));
+    if (!service || !staff) return;
+
+    quickBookMutation.mutate({
+      client: quickBookClient.name,
+      phone: quickBookClient.phone || "",
+      service: service.name,
+      staff: staff.name,
+      date: format(quickBookData.date, "yyyy-MM-dd"),
+      startTime: quickBookData.time,
+      duration: service.duration,
+      price: service.price,
+      total: service.price,
+      paid: false,
+    });
   };
 
   const getLoyaltyTier = (points: number) => {
@@ -255,7 +372,7 @@ export default function Clients() {
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-purple-100 rounded-lg">
-                <Calendar className="w-5 h-5 text-purple-600" />
+                <CalendarIcon className="w-5 h-5 text-purple-600" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">{t("clients.totalAppointments")}</p>
@@ -315,7 +432,16 @@ export default function Clients() {
                       </Badge>
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
-                      <div className="flex gap-2">
+                      <div className="flex gap-1">
+                        <Button
+                          variant="default"
+                          size="sm"
+                          className="gap-1"
+                          onClick={(e) => handleQuickBook(client, e)}
+                        >
+                          <Zap className="w-3 h-3" />
+                          {t("clients.quickBook")}
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -351,6 +477,146 @@ export default function Clients() {
             }
             submitLabel={t("common.save")}
           />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isQuickBookOpen} onOpenChange={setIsQuickBookOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Zap className="w-5 h-5 text-primary" />
+              {t("clients.quickBookTitle")}
+            </DialogTitle>
+          </DialogHeader>
+          {quickBookClient && (
+            <div className="space-y-4">
+              <div className="p-3 bg-muted rounded-lg">
+                <div className="flex items-center gap-2">
+                  <User className="w-4 h-4 text-muted-foreground" />
+                  <span className="font-medium">{quickBookClient.name}</span>
+                </div>
+                {quickBookClient.phone && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <Phone className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm" dir="ltr">{quickBookClient.phone}</span>
+                  </div>
+                )}
+              </div>
+
+              {frequentServices.length > 0 && (
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">{t("clients.frequentServices")}</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {frequentServices.map((svc) => (
+                      <Button
+                        key={svc.name}
+                        variant={quickBookData.serviceId === String(svc.serviceId) ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => svc.serviceId && setQuickBookData({ ...quickBookData, serviceId: String(svc.serviceId) })}
+                        disabled={!svc.serviceId}
+                      >
+                        {svc.name} ({svc.count}x)
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <Label>{t("clients.allServices")}</Label>
+                <Select
+                  value={quickBookData.serviceId}
+                  onValueChange={(v) => setQuickBookData({ ...quickBookData, serviceId: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t("planning.selectService")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {services.map((svc) => (
+                      <SelectItem key={svc.id} value={String(svc.id)}>
+                        {svc.name} - {svc.price} {t("common.currency")}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>{t("clients.selectStaff")}</Label>
+                <Select
+                  value={quickBookData.staffId}
+                  onValueChange={(v) => setQuickBookData({ ...quickBookData, staffId: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t("clients.selectStaff")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {staffList.map((staff) => (
+                      <SelectItem key={staff.id} value={String(staff.id)}>
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: staff.color }} />
+                          {staff.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>{t("clients.selectDate")}</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start">
+                        <CalendarIcon className="w-4 h-4 mr-2" />
+                        {format(quickBookData.date, "PPP", { locale: getDateLocale() })}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={quickBookData.date}
+                        onSelect={(d) => d && setQuickBookData({ ...quickBookData, date: d })}
+                        locale={getDateLocale()}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div>
+                  <Label>{t("clients.selectTime")}</Label>
+                  <Select
+                    value={quickBookData.time}
+                    onValueChange={(v) => setQuickBookData({ ...quickBookData, time: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={t("clients.selectTime")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TIME_SLOTS.map((time) => (
+                        <SelectItem key={time} value={time}>
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-3 h-3" />
+                            {time}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <Button
+                onClick={handleSubmitQuickBook}
+                className="w-full"
+                disabled={!quickBookData.serviceId || !quickBookData.time || !quickBookData.staffId || quickBookMutation.isPending}
+              >
+                <Zap className="w-4 h-4 mr-2" />
+                {quickBookMutation.isPending ? t("common.loading") : t("clients.bookNow")}
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -390,6 +656,16 @@ export default function Clients() {
                     <p className="text-sm">{selectedClient.notes}</p>
                   </div>
                 )}
+                <Button 
+                  className="w-full gap-2" 
+                  onClick={() => {
+                    setIsDetailDialogOpen(false);
+                    handleQuickBook(selectedClient, { stopPropagation: () => {} } as React.MouseEvent);
+                  }}
+                >
+                  <Zap className="w-4 h-4" />
+                  {t("clients.quickBook")}
+                </Button>
               </TabsContent>
               <TabsContent value="history">
                 <div className="space-y-2 max-h-64 overflow-y-auto">

@@ -103,3 +103,10 @@ Preferred communication style: Simple, everyday language.
 - Added multi-language support (French, English, Arabic) with RTL handling for Arabic
 - Created LanguageSwitcher component with flag icons and persistent language preference
 - Translations organized in client/src/i18n/locales/ with keys following {feature}.{key} pattern
+- Added language switcher and full i18n support to Home page
+- Schedule times now run from 00:00 to 23:30 (full 24-hour day)
+- Added Quick Booking feature from client profiles:
+  - One-click "Quick Book" button in client table
+  - Shows client's frequent/past services for quick selection
+  - Pre-fills client info (name, phone) automatically
+  - Available from both client list and client detail dialog
