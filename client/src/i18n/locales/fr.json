@@ -125,5 +125,15 @@
     "en": "Anglais",
     "fr": "Français",
     "ar": "Arabe"
+  },
+  "sidebar": {
+    "notifications": "Notifications",
+    "notification": "notification",
+    "clearAll": "Tout effacer",
+    "noNotifications": "Aucune notification",
+    "viewAllInPlanning": "Voir tout dans Planning",
+    "admin": "Administrateur",
+    "user": "Utilisateur",
+    "fullAccess": "Accès complet"
   }
 }

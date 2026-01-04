@@ -2,6 +2,7 @@ import { Link, useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { io, Socket } from "socket.io-client";
+import { useTranslation } from "react-i18next";
 import { 
   Home,
   CalendarDays, 
@@ -38,16 +39,16 @@ import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 
 const NAV_ITEMS = [
-  { label: "الرئيسية", href: "/home", icon: Home },
-  { label: "التخطيط", href: "/planning", icon: CalendarDays },
-  { label: "الخدمات", href: "/services", icon: Scissors },
-  { label: "العملاء", href: "/clients", icon: Users },
-  { label: "المخزون", href: "/inventory", icon: Package },
-  { label: "المصاريف", href: "/charges", icon: Wallet },
-  { label: "الرواتب", href: "/salaries", icon: DollarSign },
-  { label: "أداء الموظفين", href: "/staff-performance", icon: TrendingUp },
-  { label: "التقارير", href: "/reports", icon: BarChart3 },
-  { label: "صفحة الحجز", href: "/booking", icon: ExternalLink, external: true },
+  { labelKey: "nav.home", href: "/home", icon: Home },
+  { labelKey: "nav.planning", href: "/planning", icon: CalendarDays },
+  { labelKey: "nav.services", href: "/services", icon: Scissors },
+  { labelKey: "nav.clients", href: "/clients", icon: Users },
+  { labelKey: "nav.inventory", href: "/inventory", icon: Package },
+  { labelKey: "nav.expenses", href: "/charges", icon: Wallet },
+  { labelKey: "nav.salaries", href: "/salaries", icon: DollarSign },
+  { labelKey: "nav.staffPerformance", href: "/staff-performance", icon: TrendingUp },
+  { labelKey: "nav.reports", href: "/reports", icon: BarChart3 },
+  { labelKey: "nav.booking", href: "/booking", icon: ExternalLink, external: true },
 ];
 
 interface StoredNotification {
@@ -64,6 +65,8 @@ export function Sidebar() {
   const [location, setLocation] = useLocation();
   const { isMobile, setOpenMobile } = useSidebar();
   const queryClient = useQueryClient();
+  const { t, i18n } = useTranslation();
+  const isRtl = i18n.language === "ar";
   const isAdmin = typeof window !== 'undefined' && sessionStorage.getItem("admin_authenticated") === "true";
   const [newBookingFlash, setNewBookingFlash] = useState(false);
   const [notifications, setNotifications] = useState<StoredNotification[]>(() => {
@@ -166,7 +169,7 @@ export function Sidebar() {
   };
 
   return (
-    <ShadcnSidebar side="right" dir="rtl" className="hidden md:flex">
+    <ShadcnSidebar side={isRtl ? "right" : "left"} dir={isRtl ? "rtl" : "ltr"} className="hidden md:flex">
       <SidebarHeader className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -195,15 +198,15 @@ export function Sidebar() {
                 )}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-80 p-0" align="start" side="left">
+            <PopoverContent className="w-80 p-0" align="start" side={isRtl ? "left" : "right"}>
               <div className="p-3 border-b bg-muted/30 flex items-center justify-between">
                 <div>
                   <h3 className="font-bold text-sm flex items-center gap-2">
                     <Bell className="w-4 h-4" />
-                    الإشعارات
+                    {t("sidebar.notifications")}
                   </h3>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {notifications.length} إشعار
+                    {notifications.length} {t("sidebar.notification")}
                   </p>
                 </div>
                 {notifications.length > 0 && (
@@ -213,14 +216,14 @@ export function Sidebar() {
                     className="text-xs text-muted-foreground hover:text-destructive"
                     onClick={clearNotifications}
                   >
-                    مسح الكل
+                    {t("sidebar.clearAll")}
                   </Button>
                 )}
               </div>
               <ScrollArea className="max-h-[350px]">
                 {notifications.length === 0 ? (
                   <div className="p-6 text-center text-muted-foreground text-sm">
-                    لا توجد إشعارات
+                    {t("sidebar.noNotifications")}
                   </div>
                 ) : (
                   <div className="p-2 space-y-2">
@@ -272,7 +275,7 @@ export function Sidebar() {
                       if (isMobile) setOpenMobile(false);
                     }}
                   >
-                    عرض الكل في التخطيط
+                    {t("sidebar.viewAllInPlanning")}
                   </Button>
                 </div>
               )}
@@ -285,12 +288,13 @@ export function Sidebar() {
         <SidebarMenu>
           {NAV_ITEMS.map((item) => {
             const isActive = location === item.href;
+            const label = t(item.labelKey);
             return (
               <SidebarMenuItem key={item.href}>
                 <SidebarMenuButton
                   asChild
                   isActive={isActive}
-                  tooltip={item.label}
+                  tooltip={label}
                   onClick={handleNavClick}
                   className={cn(
                     "h-12 rounded-xl transition-all duration-200 px-4",
@@ -302,12 +306,12 @@ export function Sidebar() {
                   {item.external ? (
                     <a href={item.href} target="_blank" rel="noopener noreferrer">
                       <item.icon className={cn("w-5 h-5", isActive ? "stroke-[2.5]" : "stroke-[2]")} />
-                      <span className="font-medium text-base">{item.label}</span>
+                      <span className="font-medium text-base">{label}</span>
                     </a>
                   ) : (
                     <Link href={item.href}>
                       <item.icon className={cn("w-5 h-5", isActive ? "stroke-[2.5]" : "stroke-[2]")} />
-                      <span className="font-medium text-base">{item.label}</span>
+                      <span className="font-medium text-base">{label}</span>
                     </Link>
                   )}
                 </SidebarMenuButton>
@@ -327,10 +331,10 @@ export function Sidebar() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold truncate text-foreground">
-              {isAdmin ? "مدير" : "مستخدم"}
+              {isAdmin ? t("sidebar.admin") : t("sidebar.user")}
             </p>
             {isAdmin && (
-              <p className="text-[10px] text-emerald-500">صلاحيات كاملة</p>
+              <p className="text-[10px] text-emerald-500">{t("sidebar.fullAccess")}</p>
             )}
           </div>
           {isAdmin && (
@@ -339,7 +343,7 @@ export function Sidebar() {
               size="icon"
               className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
               onClick={handleAdminLogout}
-              title="تسجيل الخروج"
+              title={t("auth.logout")}
             >
               <LogOut className="w-4 h-4" />
             </Button>
