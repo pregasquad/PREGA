@@ -420,8 +420,8 @@ export default function Planning() {
             style={{ top: `${getCurrentTimePosition() + 48}px` }}
           >
             <div className="flex items-center">
-              <div className="w-2 h-2 rounded-full bg-red-500 shadow-lg animate-pulse" />
-              <div className="flex-1 h-0.5 bg-red-500 shadow-sm" />
+              <div className="w-3 h-3 md:w-2 md:h-2 rounded-full bg-red-500 shadow-lg animate-pulse" />
+              <div className="flex-1 h-1 md:h-0.5 bg-red-500 shadow-sm" />
             </div>
           </div>
         )}
