@@ -668,7 +668,7 @@ export default function Planning() {
                             </Button>
                           </FormControl>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[calc(100vw-56px)] max-w-[356px] p-0" align="center">
+                        <PopoverContent className="w-[calc(100vw-56px)] max-w-[356px] p-0" align="center" side="top" sideOffset={4}>
                           <div className="p-2 border-b">
                             <Input
                               placeholder={t("planning.searchService")}
