@@ -34,9 +34,9 @@ const hours = [
 ];
 
 const formSchema = insertAppointmentSchema.extend({
-  price: z.coerce.number(),
-  duration: z.coerce.number(),
-  total: z.coerce.number(),
+  price: z.coerce.number().min(0),
+  duration: z.coerce.number().min(1),
+  total: z.coerce.number().min(0),
 });
 
 type AppointmentFormValues = z.infer<typeof formSchema>;
