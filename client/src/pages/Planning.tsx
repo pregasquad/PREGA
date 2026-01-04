@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CalendarIcon, ChevronLeft, ChevronRight, Plus, Trash2, Check, X, Search, Star, RefreshCw } from "lucide-react";
+import { CalendarIcon, ChevronLeft, ChevronRight, Plus, Trash2, Check, X, Search, Star, RefreshCw, Sparkles, CreditCard, Settings2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -441,235 +441,244 @@ export default function Planning() {
       </div>
 
       {/* Appointment Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto" dir="rtl">
-          <DialogHeader>
-            <DialogTitle>{editingAppointment ? "تعديل الحجز" : "حجز جديد"}</DialogTitle>
-          </DialogHeader>
-
+      <Dialog open={isDialogOpen} onOpenChange={(open) => {
+        setIsDialogOpen(open);
+        if (!open) setIsEditFavoritesOpen(false);
+      }}>
+        <DialogContent className="sm:max-w-[380px] p-0 overflow-hidden border-2 border-primary/20 shadow-2xl bg-gradient-to-br from-pink-50/80 via-white to-cyan-50/80 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900" dir="rtl">
+          {/* Compact Header */}
+          <div className="bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 px-3 py-2 text-white">
+            <DialogHeader>
+              <DialogTitle className="text-sm font-black flex items-center gap-2 text-white">
+                <Sparkles className="w-3 h-3" />
+                {editingAppointment ? "تعديل الموعد" : "موعد جديد"}
+              </DialogTitle>
+            </DialogHeader>
+          </div>
+          
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              {/* Favorite Services */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs text-muted-foreground">خدمات مفضلة</Label>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 text-xs"
-                    onClick={() => setIsEditFavoritesOpen(!isEditFavoritesOpen)}
-                  >
-                    <Star className="w-3 h-3 ml-1" />
-                    تعديل
-                  </Button>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {favoriteServices.map((service: any) => (
-                    <Button
-                      key={service.id}
-                      type="button"
-                      variant={form.watch("service") === service.name ? "default" : "outline"}
-                      size="sm"
-                      className="text-xs h-8 justify-start"
-                      onClick={() => handleServiceChange(service.name)}
-                    >
-                      {service.name}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Edit Favorites */}
-              {isEditFavoritesOpen && (
-                <div className="border rounded-lg p-3 space-y-2 bg-muted/30">
-                  <Label className="text-xs">اختر حتى 4 خدمات مفضلة</Label>
-                  <div className="relative">
-                    <Search className="absolute right-2 top-2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      placeholder="بحث..."
-                      value={serviceSearch}
-                      onChange={(e) => setServiceSearch(e.target.value)}
-                      className="pr-8 h-8 text-xs"
-                    />
-                  </div>
-                  <div className="max-h-32 overflow-y-auto space-y-1">
-                    {filteredServices.slice(0, 20).map((service: any) => (
-                      <div
-                        key={service.id}
-                        className={cn(
-                          "flex items-center justify-between p-2 rounded cursor-pointer text-xs",
-                          favoriteNames.includes(service.name) ? "bg-primary/10" : "hover:bg-muted"
-                        )}
-                        onClick={() => toggleFavorite(service.name)}
-                      >
-                        <span>{service.name}</span>
-                        {favoriteNames.includes(service.name) && <Star className="w-3 h-3 fill-primary text-primary" />}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Service Selector */}
-              <FormField
-                control={form.control}
-                name="service"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>الخدمة</FormLabel>
-                    <Select value={field.value} onValueChange={handleServiceChange}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="اختر خدمة" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent className="max-h-60">
-                        {services.map((s: any) => (
-                          <SelectItem key={s.id} value={s.name}>
-                            {s.name} - {s.price} DH
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Client */}
-              <FormField
-                control={form.control}
-                name="client"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>العميل</FormLabel>
-                    <FormControl>
-                      <Input placeholder="اسم العميل (رقم الهاتف)" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Staff */}
-              <FormField
-                control={form.control}
-                name="staff"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>الموظف</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="اختر موظف" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {staffList.map((s: any) => (
-                          <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Time */}
-              <FormField
-                control={form.control}
-                name="startTime"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>الوقت</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent className="max-h-60">
-                        {hours.map(h => (
-                          <SelectItem key={h} value={h}>{h}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Duration & Price */}
-              <div className="grid grid-cols-2 gap-3">
-                <FormField
-                  control={form.control}
-                  name="duration"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>المدة (دقيقة)</FormLabel>
-                      <FormControl>
-                        <Input type="number" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+            <form onSubmit={form.handleSubmit(onSubmit)} className="p-3 space-y-2">
+              
+              {/* Price Row */}
+              <div className="flex items-center gap-2 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 rounded-lg p-2 border border-emerald-500/30">
+                <CreditCard className="w-4 h-4 text-emerald-600 shrink-0" />
                 <FormField
                   control={form.control}
                   name="total"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>المجموع (DH)</FormLabel>
+                    <FormItem className="flex-1 space-y-0">
                       <FormControl>
-                        <Input type="number" {...field} />
+                        <Input 
+                          type="number" 
+                          placeholder="السعر"
+                          className="text-xl h-10 font-black border-0 bg-white dark:bg-gray-800 rounded-lg text-center" 
+                          {...field} 
+                        />
                       </FormControl>
-                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <span className="text-sm font-bold text-emerald-600">DH</span>
+              </div>
+
+              {/* All Fields Grid */}
+              <div className="grid grid-cols-2 gap-2">
+                <FormField
+                  control={form.control}
+                  name="client"
+                  render={({ field }) => (
+                    <FormItem className="col-span-2 space-y-1">
+                      <FormLabel className="text-[10px] text-muted-foreground">العميل</FormLabel>
+                      <FormControl>
+                        <Input placeholder="اسم العميل..." className="h-8 rounded-lg text-xs" {...field} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="staff"
+                  render={({ field }) => (
+                    <FormItem className="space-y-1">
+                      <FormLabel className="text-[10px] text-muted-foreground">الموظف</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="h-8 rounded-lg text-xs">
+                            <SelectValue placeholder="اختر" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {staffList.map(s => (
+                            <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="startTime"
+                  render={({ field }) => (
+                    <FormItem className="space-y-1">
+                      <FormLabel className="text-[10px] text-muted-foreground">الوقت</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="h-8 rounded-lg text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="max-h-60">
+                          {hours.map(h => (
+                            <SelectItem key={h} value={h}>{h}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="duration"
+                  render={({ field }) => (
+                    <FormItem className="space-y-1">
+                      <FormLabel className="text-[10px] text-muted-foreground">المدة (د)</FormLabel>
+                      <FormControl>
+                        <Input type="number" className="h-8 rounded-lg text-xs" {...field} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="paid"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center gap-2 pt-4">
+                      <FormControl>
+                        <input
+                          type="checkbox"
+                          checked={field.value}
+                          onChange={field.onChange}
+                          className="w-4 h-4 accent-emerald-500"
+                        />
+                      </FormControl>
+                      <FormLabel className="!mt-0 text-xs">مدفوع</FormLabel>
+                    </FormItem>
+                  )}
+                />
+
+                {/* Service with Quick Favorites */}
+                <FormField
+                  control={form.control}
+                  name="service"
+                  render={({ field }) => (
+                    <FormItem className="col-span-2 space-y-1">
+                      <FormLabel className="text-[10px] text-muted-foreground">الخدمة</FormLabel>
+                      <Select onValueChange={handleServiceChange} defaultValue={field.value} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="h-8 rounded-lg text-xs">
+                            <SelectValue placeholder="اختر خدمة" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="max-h-60">
+                          {services.map(s => (
+                            <SelectItem key={s.id} value={s.name}>{s.name} - {s.price} DH</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      
+                      {/* Quick Favorites */}
+                      {!editingAppointment && (
+                        <div className="pt-1">
+                          <div className="flex items-center gap-1">
+                            {favoriteServices.slice(0, 4).map((s: any) => (
+                              <Button
+                                key={s.id}
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className={cn(
+                                  "h-6 text-[9px] px-1.5 rounded-full shrink-0",
+                                  field.value === s.name ? "bg-primary text-primary-foreground" : "bg-muted/50 hover:bg-muted"
+                                )}
+                                onClick={() => handleServiceChange(s.name)}
+                              >
+                                {s.name}
+                              </Button>
+                            ))}
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 rounded-full text-muted-foreground hover:text-primary shrink-0"
+                              onClick={() => setIsEditFavoritesOpen(!isEditFavoritesOpen)}
+                            >
+                              <Settings2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                          
+                          {isEditFavoritesOpen && (
+                            <div className="mt-2 border border-dashed border-primary/30 rounded-lg p-2 bg-primary/5 max-h-[120px] overflow-y-auto">
+                              <p className="text-[9px] text-muted-foreground mb-1">اختر حتى 4 ({favoriteNames.length}/4)</p>
+                              <div className="flex flex-wrap gap-1">
+                                {services.map((s) => (
+                                  <Button
+                                    key={s.id}
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className={cn(
+                                      "h-5 text-[9px] px-1.5 rounded-full",
+                                      favoriteNames.includes(s.name) 
+                                        ? "bg-primary text-primary-foreground border-primary" 
+                                        : "border-border/50"
+                                    )}
+                                    onClick={() => toggleFavorite(s.name)}
+                                  >
+                                    {favoriteNames.includes(s.name) && <Check className="w-2 h-2 ml-0.5" />}
+                                    {s.name}
+                                  </Button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </FormItem>
                   )}
                 />
               </div>
 
-              {/* Paid */}
-              <FormField
-                control={form.control}
-                name="paid"
-                render={({ field }) => (
-                  <FormItem className="flex items-center gap-2">
-                    <FormControl>
-                      <input
-                        type="checkbox"
-                        checked={field.value}
-                        onChange={field.onChange}
-                        className="w-4 h-4"
-                      />
-                    </FormControl>
-                    <FormLabel className="!mt-0">تم الدفع</FormLabel>
-                  </FormItem>
-                )}
-              />
-
-              <DialogFooter className="gap-2">
-                {editingAppointment && isAdmin && (
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-1">
+                {editingAppointment && (
                   <Button
                     type="button"
                     variant="destructive"
+                    className="h-10 px-4 rounded-lg font-bold text-sm"
                     onClick={() => {
-                      if (confirm("هل أنت متأكد من الحذف؟")) {
+                      if (confirm("هل أنت متأكد من حذف هذا الموعد؟")) {
                         deleteMutation.mutate(editingAppointment.id);
                         setIsDialogOpen(false);
                       }
                     }}
                   >
-                    <Trash2 className="w-4 h-4 ml-1" />
-                    حذف
+                    <Trash2 className="w-4 h-4" />
                   </Button>
                 )}
-                <Button type="submit">
-                  <Check className="w-4 h-4 ml-1" />
-                  {editingAppointment ? "حفظ" : "إضافة"}
+                <Button 
+                  type="submit" 
+                  className="flex-1 h-11 text-sm font-black rounded-lg bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-600 hover:via-purple-600 hover:to-indigo-600 shadow-lg transition-all" 
+                  disabled={createMutation.isPending || updateMutation.isPending}
+                >
+                  <Sparkles className="w-4 h-4 ml-2" />
+                  {editingAppointment ? "تحديث" : "تأكيد الموعد"}
                 </Button>
-              </DialogFooter>
+              </div>
             </form>
           </Form>
         </DialogContent>
