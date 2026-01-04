@@ -13,18 +13,22 @@ import {
   ExternalLink,
   Wallet,
   LogOut,
+  LogIn,
   ShieldCheck,
   Bell,
   Clock,
   User,
   DollarSign,
   Users,
-  TrendingUp
+  TrendingUp,
+  Lock
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import {
   Sidebar as ShadcnSidebar,
   SidebarContent,
@@ -67,8 +71,14 @@ export function Sidebar() {
   const queryClient = useQueryClient();
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === "ar";
-  const isAdmin = typeof window !== 'undefined' && sessionStorage.getItem("admin_authenticated") === "true";
+  const [isAdminState, setIsAdminState] = useState(() => 
+    typeof window !== 'undefined' && sessionStorage.getItem("admin_authenticated") === "true"
+  );
+  const isAdmin = isAdminState;
   const [newBookingFlash, setNewBookingFlash] = useState(false);
+  const [loginDialogOpen, setLoginDialogOpen] = useState(false);
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginError, setLoginError] = useState(false);
   const [notifications, setNotifications] = useState<StoredNotification[]>(() => {
     const stored = localStorage.getItem("booking_notifications");
     return stored ? JSON.parse(stored) : [];
@@ -162,9 +172,24 @@ export function Sidebar() {
 
   const handleAdminLogout = () => {
     sessionStorage.removeItem("admin_authenticated");
+    setIsAdminState(false);
     setLocation("/planning");
     if (isMobile) {
       setOpenMobile(false);
+    }
+  };
+
+  const handleAdminLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (loginPassword === "hisoka123") {
+      sessionStorage.setItem("admin_authenticated", "true");
+      setIsAdminState(true);
+      setLoginDialogOpen(false);
+      setLoginPassword("");
+      setLoginError(false);
+    } else {
+      setLoginError(true);
+      setLoginPassword("");
     }
   };
 
@@ -337,7 +362,7 @@ export function Sidebar() {
               <p className="text-[10px] text-emerald-500">{t("sidebar.fullAccess")}</p>
             )}
           </div>
-          {isAdmin && (
+          {isAdmin ? (
             <Button
               variant="ghost"
               size="icon"
@@ -347,9 +372,57 @@ export function Sidebar() {
             >
               <LogOut className="w-4 h-4" />
             </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-primary hover:bg-primary/10 hover:text-primary"
+              onClick={() => setLoginDialogOpen(true)}
+              title={t("auth.login")}
+            >
+              <LogIn className="w-4 h-4" />
+            </Button>
           )}
         </div>
       </SidebarFooter>
+
+      <Dialog open={loginDialogOpen} onOpenChange={(open) => {
+        setLoginDialogOpen(open);
+        if (!open) {
+          setLoginPassword("");
+          setLoginError(false);
+        }
+      }}>
+        <DialogContent className="w-[calc(100vw-24px)] max-w-[380px] p-0 border-0 shadow-2xl bg-gradient-to-b from-background to-muted/30 rounded-3xl overflow-hidden">
+          <div className="bg-gradient-to-r from-orange-500 via-orange-600 to-amber-500 px-4 py-3 text-white">
+            <DialogHeader>
+              <DialogTitle className="text-base font-bold flex items-center gap-2">
+                <Lock className="w-5 h-5" />
+                {t("auth.adminLogin")}
+              </DialogTitle>
+            </DialogHeader>
+          </div>
+          <form onSubmit={handleAdminLogin} className="p-4 space-y-4">
+            <Input
+              type="password"
+              placeholder={t("auth.password")}
+              value={loginPassword}
+              onChange={(e) => setLoginPassword(e.target.value)}
+              className={cn(
+                "h-11 rounded-xl",
+                loginError && "border-destructive focus-visible:ring-destructive"
+              )}
+              autoFocus
+            />
+            {loginError && (
+              <p className="text-xs text-destructive font-bold">{t("auth.wrongPassword")}</p>
+            )}
+            <Button type="submit" className="w-full h-11 rounded-xl bg-gradient-to-r from-orange-500 via-orange-600 to-amber-500 hover:from-orange-600 hover:via-orange-700 hover:to-amber-600">
+              {t("auth.login")}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </ShadcnSidebar>
   );
 }
