@@ -43,6 +43,25 @@ type AppointmentFormValues = z.infer<typeof formSchema>;
 export default function Planning() {
   const [date, setDate] = useState<Date>(startOfToday());
   const [serviceSearch, setServiceSearch] = useState("");
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const getCurrentTimePosition = () => {
+    const now = currentTime;
+    const currentHour = now.getHours();
+    const currentMinutes = now.getMinutes();
+    const totalMinutes = currentHour * 60 + currentMinutes;
+    const startMinutes = 0;
+    const slotHeight = 48;
+    const position = ((totalMinutes - startMinutes) / 30) * slotHeight;
+    return position;
+  };
+
+  const isToday = format(date, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
   const [isEditFavoritesOpen, setIsEditFavoritesOpen] = useState(false);
   const [favoriteNames, setFavoriteNames] = useState<string[]>(() => {
     try {
@@ -373,7 +392,19 @@ export default function Planning() {
       </div>
 
       {/* Board */}
-      <div className="overflow-x-auto bg-card rounded-xl border shadow-sm">
+      <div className="overflow-x-auto bg-card rounded-xl border shadow-sm relative">
+        {/* Current Time Line */}
+        {isToday && (
+          <div 
+            className="absolute left-0 right-0 z-20 pointer-events-none"
+            style={{ top: `${getCurrentTimePosition() + 48}px` }}
+          >
+            <div className="flex items-center">
+              <div className="w-2 h-2 rounded-full bg-red-500 shadow-lg animate-pulse" />
+              <div className="flex-1 h-0.5 bg-red-500 shadow-sm" />
+            </div>
+          </div>
+        )}
         <div 
           className="grid" 
           style={{ gridTemplateColumns: `80px repeat(${staffList.length}, minmax(120px, 1fr))` }}
