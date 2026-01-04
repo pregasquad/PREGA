@@ -417,10 +417,10 @@ export default function Planning() {
           className="grid relative" 
           style={{ gridTemplateColumns: `80px repeat(${staffList.length}, minmax(120px, 1fr))` }}
         >
-          {/* Current Time Line - inside grid to match full width */}
+          {/* Current Time Line - inside grid to match full width (z-[5] so cards appear on top) */}
           {isToday && (
             <div 
-              className="absolute left-0 right-0 z-20 pointer-events-none"
+              className="absolute left-0 right-0 z-[5] pointer-events-none"
               style={{ 
                 top: `${getCurrentTimePosition() + 48}px`,
                 gridColumn: `1 / -1`
@@ -471,7 +471,7 @@ export default function Planning() {
                     className={cn(
                       "border-b border-l p-1 min-h-[48px] transition-colors",
                       booking 
-                        ? "text-white cursor-pointer m-0.5 rounded-xl shadow-md" 
+                        ? "text-white cursor-pointer m-0.5 rounded-xl shadow-md z-10 relative" 
                         : "bg-background hover:bg-muted/50 cursor-pointer"
                     )}
                     style={booking ? { 
