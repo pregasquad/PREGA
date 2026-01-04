@@ -1,0 +1,62 @@
+import { useState } from "react";
+
+const staff = ["Barber 1", "Barber 2", "Barber 3"];
+const hours = [
+  "09:00","09:30","10:00","10:30","11:00","11:30",
+  "12:00","12:30","14:00","14:30","15:00","15:30","16:00"
+];
+
+export default function PlanningBoard() {
+  const [appointments, setAppointments] = useState([
+    { staff: "Barber 1", time: "10:00", client: "Ahmed" },
+    { staff: "Barber 2", time: "11:30", client: "Sara" },
+  ]);
+
+  return (
+    <div className="min-h-screen bg-gray-100 p-4">
+      {/* Header */}
+      <div className="mb-4 flex justify-between items-center">
+        <h1 className="text-2xl font-bold">PREGA SQUAD – Planning</h1>
+        <button className="bg-black text-white px-4 py-2 rounded-xl">+ New booking</button>
+      </div>
+
+      {/* Board */}
+      <div className="overflow-x-auto">
+        <div className="grid" style={{ gridTemplateColumns: `120px repeat(${staff.length}, 1fr)` }}>
+          {/* Top row */}
+          <div className="bg-white border"></div>
+          {staff.map((s) => (
+            <div key={s} className="bg-white border p-3 font-semibold text-center">{s}</div>
+          ))}
+
+          {/* Time rows */}
+          {hours.map((hour) => (
+            <>
+              <div key={hour} className="bg-white border p-2 text-sm text-gray-500">{hour}</div>
+
+              {staff.map((s) => {
+                const booking = appointments.find(
+                  (a) => a.staff === s && a.time === hour
+                );
+
+                return (
+                  <div
+                    key={s + hour}
+                    className={`border h-14 p-1 ${booking ? "bg-black text-white rounded-lg" : "bg-white"}`}
+                  >
+                    {booking && (
+                      <div className="text-xs">
+                        <div className="font-semibold">{booking.client}</div>
+                        <div className="opacity-80">Booked</div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
