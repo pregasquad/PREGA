@@ -48,6 +48,8 @@ export default function Planning() {
   const [serviceSearch, setServiceSearch] = useState("");
   const [currentTime, setCurrentTime] = useState(new Date());
   const boardRef = useRef<HTMLDivElement>(null);
+  const liveLineRef = useRef<HTMLDivElement>(null);
+
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
@@ -74,14 +76,14 @@ export default function Planning() {
 
   const isToday = format(date, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
 
+  // Fast auto-scroll to live line when page loads or date changes
   useEffect(() => {
-    if (isToday && boardRef.current) {
-      const position = getCurrentTimePosition();
+    if (isToday && liveLineRef.current) {
       setTimeout(() => {
-        boardRef.current?.scrollTo({ top: Math.max(0, position - 100), behavior: "smooth" });
-      }, 300);
+        liveLineRef.current?.scrollIntoView({ behavior: 'instant', block: 'center' });
+      }, 50);
     }
-  }, [date]);
+  }, [date, isToday]);
   const [isEditFavoritesOpen, setIsEditFavoritesOpen] = useState(false);
   const [servicePopoverOpen, setServicePopoverOpen] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<number[]>(() => {
@@ -427,6 +429,7 @@ export default function Planning() {
           {/* Current Time Line - inside grid to match full width (z-[5] so cards appear on top) */}
           {isToday && (
             <div 
+              ref={liveLineRef}
               className="absolute left-0 right-0 z-[5] pointer-events-none"
               style={{ 
                 top: `${getCurrentTimePosition() + 48}px`,
