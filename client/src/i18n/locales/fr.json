@@ -181,7 +181,13 @@
     "fillAllFields": "Veuillez remplir tous les champs",
     "namePlaceholder": "Exemple: Shampooing",
     "expenseList": "Liste des Dépenses",
-    "noExpenses": "Aucune dépense enregistrée"
+    "noExpenses": "Aucune dépense enregistrée",
+    "product": "Produit",
+    "rent": "Loyer",
+    "water": "Eau",
+    "electricity": "Électricité",
+    "salary": "Salaire",
+    "other": "Autre"
   },
   "salaries": {
     "title": "Salaires",

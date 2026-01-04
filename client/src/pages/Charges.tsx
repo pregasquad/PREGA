@@ -12,13 +12,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, TrendingDown, FolderPlus } from "lucide-react";
 
-const DEFAULT_CHARGE_TYPES = [
-  { id: 0, name: "Produit", label: "منتج" },
-  { id: 0, name: "Loyer", label: "إيجار" },
-  { id: 0, name: "Eau", label: "ماء" },
-  { id: 0, name: "Electricité", label: "كهرباء" },
-  { id: 0, name: "Salaire", label: "راتب" },
-  { id: 0, name: "Autre", label: "أخرى" },
+const DEFAULT_CHARGE_TYPES_KEYS = [
+  { id: 0, key: "expenses.product", value: "Produit" },
+  { id: 0, key: "expenses.rent", value: "Loyer" },
+  { id: 0, key: "expenses.water", value: "Eau" },
+  { id: 0, key: "expenses.electricity", value: "Electricité" },
+  { id: 0, key: "expenses.salary", value: "Salaire" },
+  { id: 0, key: "expenses.other", value: "Autre" },
 ];
 
 export default function Charges() {
@@ -48,9 +48,15 @@ export default function Charges() {
     },
   });
 
+  const defaultChargeTypes = DEFAULT_CHARGE_TYPES_KEYS.map(item => ({
+    id: item.id,
+    name: item.value,
+    label: t(item.key)
+  }));
+
   const chargeTypes = categories.length > 0 
     ? categories.map((c: any) => ({ id: c.id, name: c.name, label: c.name }))
-    : DEFAULT_CHARGE_TYPES;
+    : defaultChargeTypes;
 
   const createCategoryMutation = useMutation({
     mutationFn: async (name: string) => {

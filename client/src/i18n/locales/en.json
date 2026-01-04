@@ -181,7 +181,13 @@
     "fillAllFields": "Please fill all fields",
     "namePlaceholder": "Example: Shampoo",
     "expenseList": "Expense List",
-    "noExpenses": "No expenses recorded"
+    "noExpenses": "No expenses recorded",
+    "product": "Product",
+    "rent": "Rent",
+    "water": "Water",
+    "electricity": "Electricity",
+    "salary": "Salary",
+    "other": "Other"
   },
   "salaries": {
     "title": "Salaries",

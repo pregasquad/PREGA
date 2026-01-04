@@ -17,9 +17,9 @@ import { cn } from "@/lib/utils";
 import { z } from "zod";
 
 const bookingSchema = z.object({
-  client: z.string().min(1, "الاسم مطلوب"),
-  service: z.string().min(1, "الخدمة مطلوبة"),
-  staff: z.string().min(1, "الموظف مطلوب"),
+  client: z.string().min(1),
+  service: z.string().min(1),
+  staff: z.string().min(1),
   duration: z.coerce.number(),
   price: z.coerce.number(),
   total: z.coerce.number(),

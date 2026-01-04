@@ -181,7 +181,13 @@
     "fillAllFields": "يرجى ملء جميع الحقول",
     "namePlaceholder": "مثال: شامبو",
     "expenseList": "قائمة المصاريف",
-    "noExpenses": "لا توجد مصاريف مسجلة"
+    "noExpenses": "لا توجد مصاريف مسجلة",
+    "product": "منتج",
+    "rent": "إيجار",
+    "water": "ماء",
+    "electricity": "كهرباء",
+    "salary": "راتب",
+    "other": "أخرى"
   },
   "salaries": {
     "title": "الرواتب",
