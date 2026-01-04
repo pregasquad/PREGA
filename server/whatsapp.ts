@@ -106,7 +106,6 @@ export async function sendWhatsAppMessage(
       body: JSON.stringify({
         messaging_product: "whatsapp",
         recipient_type: "individual",
-        from: WHATSAPP_FROM_NUMBER,
         to: formattedPhone,
         type: "text",
         text: {
@@ -144,18 +143,12 @@ export async function sendBookingConfirmation(
   appointmentTime: string,
   serviceName: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  const message = `مرحباً ${clientName} 👋
-
-✅ تم تأكيد حجزك بنجاح!
-
-📅 التاريخ: ${appointmentDate}
-⏰ الوقت: ${appointmentTime}
-💇 الخدمة: ${serviceName}
-
-شكراً لاختيارك PREGASQUAD! 💜
-نتطلع لرؤيتك ✨`;
-
-  return sendWhatsAppMessage(clientPhone, message);
+  return sendWhatsAppTemplate(
+    clientPhone,
+    "pregasquad1",
+    "ar",
+    [clientName, appointmentDate, appointmentTime, serviceName]
+  );
 }
 
 export async function sendAppointmentReminder(
@@ -165,15 +158,10 @@ export async function sendAppointmentReminder(
   appointmentTime: string,
   serviceName: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  const message = `مرحباً ${clientName} 👋
-
-🔔 تذكير بموعدك في PREGASQUAD
-
-📅 التاريخ: ${appointmentDate}
-⏰ الوقت: ${appointmentTime}
-💇 الخدمة: ${serviceName}
-
-نتطلع لرؤيتك! ✨`;
-
-  return sendWhatsAppMessage(clientPhone, message);
+  return sendWhatsAppTemplate(
+    clientPhone,
+    "pregasquad1",
+    "ar",
+    [clientName, appointmentDate, appointmentTime, serviceName]
+  );
 }

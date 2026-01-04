@@ -77,9 +77,7 @@
     "stockInsufficient": "Insufficient stock for",
     "bookingCreated": "Booking created successfully",
     "bookingUpdated": "Booking updated successfully",
-    "bookingDeleted": "Booking deleted successfully",
-    "appointmentMoved": "Appointment moved",
-    "moveError": "Failed to move appointment"
+    "bookingDeleted": "Booking deleted successfully"
   },
   "services": {
     "title": "Services",

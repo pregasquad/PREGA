@@ -86,8 +86,6 @@ export default function Planning() {
   }, [date, isToday]);
   const [isEditFavoritesOpen, setIsEditFavoritesOpen] = useState(false);
   const [servicePopoverOpen, setServicePopoverOpen] = useState(false);
-  const [draggedAppointment, setDraggedAppointment] = useState<any>(null);
-  const [dragOverSlot, setDragOverSlot] = useState<{staff: string, time: string} | null>(null);
   const [favoriteIds, setFavoriteIds] = useState<number[]>(() => {
     try {
       const stored = localStorage.getItem('favoriteServiceIds');
@@ -285,55 +283,6 @@ export default function Planning() {
     }
   };
 
-  const handleDragStart = (e: React.DragEvent, appointment: any) => {
-    setDraggedAppointment(appointment);
-    e.dataTransfer.effectAllowed = "move";
-    e.dataTransfer.setData("text/plain", appointment.id.toString());
-  };
-
-  const handleDragEnd = () => {
-    setDraggedAppointment(null);
-    setDragOverSlot(null);
-  };
-
-  const handleDragOver = (e: React.DragEvent, staffName: string, time: string) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-    setDragOverSlot({ staff: staffName, time });
-  };
-
-  const handleDragLeave = () => {
-    setDragOverSlot(null);
-  };
-
-  const handleDrop = async (e: React.DragEvent, staffName: string, newTime: string) => {
-    e.preventDefault();
-    setDragOverSlot(null);
-    
-    if (!draggedAppointment) return;
-    
-    const staffMember = staffList.find(s => s.name === staffName);
-    if (!staffMember) return;
-
-    try {
-      await apiRequest("PUT", `/api/appointments/${draggedAppointment.id}`, {
-        ...draggedAppointment,
-        staff: staffName,
-        startTime: newTime,
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
-      toast({ 
-        title: t("planning.appointmentMoved"), 
-        description: `${draggedAppointment.client} → ${staffName} @ ${newTime}` 
-      });
-      playSuccessSound();
-    } catch (error) {
-      toast({ title: t("common.error"), description: t("planning.moveError"), variant: "destructive" });
-    }
-    
-    setDraggedAppointment(null);
-  };
-
   const favoriteServices = useMemo(() => {
     return favoriteIds.map(id => services.find(s => s.id === id)).filter(Boolean);
   }, [services, favoriteIds]);
@@ -476,7 +425,7 @@ export default function Planning() {
         <div 
           className="grid relative" 
           style={{ 
-            gridTemplateColumns: `55px repeat(${staffList.length}, minmax(120px, 1fr))`,
+            gridTemplateColumns: `80px repeat(${staffList.length}, minmax(120px, 1fr))`,
             gridAutoRows: '48px'
           }}
         >
@@ -497,23 +446,14 @@ export default function Planning() {
             </div>
           )}
           {/* Top row - Staff headers (sticky) */}
-          <div 
-            className={cn(
-              "bg-card border-b sticky top-0 z-30",
-              isRtl ? "right-0 border-l" : "left-0 border-r"
-            )} 
-            style={{ gridColumn: 1, gridRow: 1, minHeight: '48px' }}
-          />
+          <div className="bg-muted/50 border-b border-l p-2 sticky top-0 left-0 z-20" style={{ gridColumn: 1, gridRow: 1 }}></div>
           {staffList.map((s, staffIndex) => (
             <div 
               key={s.id} 
-              className={cn(
-                "bg-muted/50 border-b p-2 md:p-3 font-bold text-center text-xs md:text-sm sticky top-0 z-20",
-                isRtl ? "border-r" : "border-l"
-              )}
-              style={{ gridColumn: staffIndex + 2, gridRow: 1, minHeight: '48px' }}
+              className="bg-muted/50 border-b border-l p-2 md:p-3 font-bold text-center text-xs md:text-sm sticky top-0 z-10"
+              style={{ gridColumn: staffIndex + 2, gridRow: 1 }}
             >
-              <div className="flex items-center justify-center gap-1 h-full">
+              <div className="flex items-center justify-center gap-1">
                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
                 <span>{s.name}</span>
               </div>
@@ -526,10 +466,7 @@ export default function Planning() {
             return (
             <React.Fragment key={hour}>
               <div 
-                className={cn(
-                  "bg-card border-b p-1 text-xs text-muted-foreground font-medium sticky z-30 flex items-center justify-center",
-                  isRtl ? "right-0 border-l" : "left-0 border-r"
-                )}
+                className="bg-muted/30 border-b border-l p-2 text-xs text-muted-foreground font-medium sticky left-0 z-10"
                 style={{ gridColumn: 1, gridRow: rowNum }}
               >
                 {hour}
@@ -539,75 +476,51 @@ export default function Planning() {
                 const colNum = staffIndex + 2; // +2 because column 1 is time labels
                 const booking = getBooking(s.name, hour);
                 const isCovered = isSlotCovered(s.name, hour);
-                const span = booking ? getBookingSpan(booking) : 1;
-                const isDragOver = dragOverSlot?.staff === s.name && dragOverSlot?.time === hour;
-                const isDragging = draggedAppointment?.id === booking?.id;
 
-                // For covered slots, render empty cell with just borders to maintain grid lines
+                // For covered slots, don't render anything (the parent appointment spans this cell)
                 if (isCovered) {
-                  return (
-                    <div
-                      key={`${s.id}-${hour}`}
-                      className={cn(
-                        "border-b bg-transparent",
-                        isRtl ? "border-r" : "border-l"
-                      )}
-                      style={{ gridColumn: colNum, gridRow: rowNum }}
-                    />
-                  );
+                  return null;
                 }
+
+                const span = booking ? getBookingSpan(booking) : 1;
 
                 return (
                   <div
                     key={`${s.id}-${hour}`}
                     className={cn(
-                      "border-b min-h-[48px]",
-                      isRtl ? "border-r" : "border-l",
-                      !booking && "bg-background hover:bg-muted/50 cursor-pointer p-1",
-                      isDragOver && !booking && "bg-orange-100 dark:bg-orange-900/30 ring-2 ring-orange-500 ring-inset"
+                      "border-b border-l p-1 min-h-[48px] transition-colors",
+                      booking 
+                        ? "text-white cursor-pointer m-0.5 rounded-xl shadow-md z-10 relative" 
+                        : "bg-background hover:bg-muted/50 cursor-pointer"
                     )}
                     style={{ 
                       gridColumn: colNum,
-                      gridRow: booking ? `${rowNum} / span ${span}` : rowNum
+                      gridRow: booking ? `${rowNum} / span ${span}` : rowNum,
+                      backgroundColor: booking ? s.color : undefined
                     }}
-                    onDragOver={(e) => !booking && handleDragOver(e, s.name, hour)}
-                    onDragLeave={handleDragLeave}
-                    onDrop={(e) => !booking && handleDrop(e, s.name, hour)}
-                    onClick={(e) => !booking && handleSlotClick(s.name, hour)}
+                    onClick={(e) => booking ? handleAppointmentClick(e, booking) : handleSlotClick(s.name, hour)}
                   >
                     {booking && (
-                      <div 
-                        className={cn(
-                          "h-full m-0.5 p-2 rounded-xl shadow-md text-white cursor-grab active:cursor-grabbing transition-all duration-200",
-                          isDragging && "opacity-50 scale-95"
-                        )}
-                        style={{ backgroundColor: s.color }}
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, booking)}
-                        onDragEnd={handleDragEnd}
-                        onClick={(e) => handleAppointmentClick(e, booking)}
-                      >
-                        <div className="h-full flex flex-col justify-between">
-                          <div>
-                            <div className="font-bold text-xs md:text-sm truncate">{booking.client || "—"}</div>
-                            <div className="text-[10px] md:text-xs opacity-90 truncate">{booking.service}</div>
-                            <div className="text-[9px] opacity-70">{booking.startTime}</div>
-                          </div>
-                          <div className="flex items-center justify-between mt-1">
-                            <span className="text-[10px] opacity-80">{booking.duration}د</span>
-                            <div className="flex items-center gap-1">
-                              <span className="font-bold text-xs">{booking.total} DH</span>
-                              {booking.paid ? (
-                                <Check className="w-3 h-3 text-white" />
-                              ) : (
-                                <button
-                                  onClick={(e) => handleMarkAsPaid(e, booking)}
-                                  className="bg-white/20 hover:bg-white/30 rounded-full p-0.5"
-                                >
-                                  <X className="w-3 h-3" />
-                                </button>
-                              )}
-                            </div>
+                      <div className="h-full flex flex-col justify-between p-1">
+                        <div>
+                          <div className="font-bold text-xs md:text-sm truncate">{booking.client || "—"}</div>
+                          <div className="text-[10px] md:text-xs opacity-90 truncate">{booking.service}</div>
+                          <div className="text-[9px] opacity-70">{booking.startTime}</div>
+                        </div>
+                        <div className="flex items-center justify-between mt-1">
+                          <span className="text-[10px] opacity-80">{booking.duration}د</span>
+                          <div className="flex items-center gap-1">
+                            <span className="font-bold text-xs">{booking.total} DH</span>
+                            {booking.paid ? (
+                              <Check className="w-3 h-3 text-white" />
+                            ) : (
+                              <button
+                                onClick={(e) => handleMarkAsPaid(e, booking)}
+                                className="bg-white/20 hover:bg-white/30 rounded-full p-0.5"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
