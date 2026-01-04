@@ -446,7 +446,7 @@ export default function Planning() {
             </div>
           )}
           {/* Top row - Staff headers (sticky) */}
-          <div className="bg-muted/50 border-b border-l p-2 sticky top-0 z-10" style={{ gridColumn: 1, gridRow: 1 }}></div>
+          <div className="bg-muted/50 border-b border-l p-2 sticky top-0 left-0 z-20" style={{ gridColumn: 1, gridRow: 1 }}></div>
           {staffList.map((s, staffIndex) => (
             <div 
               key={s.id} 
@@ -466,7 +466,7 @@ export default function Planning() {
             return (
             <React.Fragment key={hour}>
               <div 
-                className="bg-muted/30 border-b border-l p-2 text-xs text-muted-foreground font-medium"
+                className="bg-muted/30 border-b border-l p-2 text-xs text-muted-foreground font-medium sticky left-0 z-10"
                 style={{ gridColumn: 1, gridRow: rowNum }}
               >
                 {hour}
