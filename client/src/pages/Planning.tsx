@@ -625,38 +625,39 @@ export default function Planning() {
                               {filteredServices.length} خدمة متاحة
                             </p>
                           </div>
-                          <ScrollArea className="h-[250px]">
-                            <div className="p-2 space-y-1">
-                              {filteredServices.map(s => (
-                                <div
-                                  key={s.id}
-                                  className={cn(
-                                    "flex items-center justify-between p-3 rounded-xl cursor-pointer text-sm transition-all",
-                                    "hover:bg-gradient-to-r hover:from-primary/10 hover:to-transparent",
-                                    field.value === s.name 
-                                      ? "bg-gradient-to-r from-primary/20 to-primary/5 border-r-4 border-primary font-medium" 
-                                      : "hover:translate-x-1"
-                                  )}
-                                  onClick={() => {
-                                    handleServiceChange(s.name);
-                                    setServiceSearch("");
-                                  }}
-                                >
-                                  <div className="flex items-center gap-2">
-                                    {field.value === s.name && <Check className="h-4 w-4 text-primary" />}
-                                    <span>{s.name}</span>
-                                  </div>
-                                  <span className="text-xs font-bold text-primary">{s.price} DH</span>
+                          <div 
+                            className="h-[250px] overflow-y-auto overscroll-contain p-2 space-y-1"
+                            style={{ scrollbarWidth: 'thin' }}
+                          >
+                            {filteredServices.map(s => (
+                              <div
+                                key={s.id}
+                                className={cn(
+                                  "flex items-center justify-between p-3 rounded-xl cursor-pointer text-sm transition-all",
+                                  "hover:bg-gradient-to-r hover:from-primary/10 hover:to-transparent",
+                                  field.value === s.name 
+                                    ? "bg-gradient-to-r from-primary/20 to-primary/5 border-r-4 border-primary font-medium" 
+                                    : "hover:translate-x-1"
+                                )}
+                                onClick={() => {
+                                  handleServiceChange(s.name);
+                                  setServiceSearch("");
+                                }}
+                              >
+                                <div className="flex items-center gap-2">
+                                  {field.value === s.name && <Check className="h-4 w-4 text-primary" />}
+                                  <span>{s.name}</span>
                                 </div>
-                              ))}
-                              {filteredServices.length === 0 && (
-                                <div className="p-6 text-center">
-                                  <Search className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
-                                  <p className="text-sm text-muted-foreground">لا توجد نتائج</p>
-                                </div>
-                              )}
-                            </div>
-                          </ScrollArea>
+                                <span className="text-xs font-bold text-primary">{s.price} DH</span>
+                              </div>
+                            ))}
+                            {filteredServices.length === 0 && (
+                              <div className="p-6 text-center">
+                                <Search className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
+                                <p className="text-sm text-muted-foreground">لا توجد نتائج</p>
+                              </div>
+                            )}
+                          </div>
                         </PopoverContent>
                       </Popover>
                       
