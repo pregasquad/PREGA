@@ -495,6 +495,7 @@ export default function Planning() {
                         <div>
                           <div className="font-bold text-xs md:text-sm truncate">{booking.client || "—"}</div>
                           <div className="text-[10px] md:text-xs opacity-90 truncate">{booking.service}</div>
+                          <div className="text-[9px] opacity-70">{booking.startTime}</div>
                         </div>
                         <div className="flex items-center justify-between mt-1">
                           <span className="text-[10px] opacity-80">{booking.duration}د</span>
