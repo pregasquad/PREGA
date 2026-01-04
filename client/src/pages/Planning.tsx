@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { format, addDays, startOfToday, parseISO } from "date-fns";
+import { useTranslation } from "react-i18next";
 import { useAppointments, useStaff, useServices, useCreateAppointment, useUpdateAppointment, useDeleteAppointment } from "@/hooks/use-salon-data";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useSearch, useLocation } from "wouter";
@@ -41,6 +42,8 @@ const formSchema = insertAppointmentSchema.extend({
 type AppointmentFormValues = z.infer<typeof formSchema>;
 
 export default function Planning() {
+  const { t, i18n } = useTranslation();
+  const isRtl = i18n.language === "ar";
   const [date, setDate] = useState<Date>(startOfToday());
   const [serviceSearch, setServiceSearch] = useState("");
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -271,9 +274,9 @@ export default function Planning() {
         paid: true
       });
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
-      toast({ title: "تم التأكيد", description: "تم تأكيد الدفع بنجاح" });
+      toast({ title: t("planning.paymentConfirmed"), description: t("planning.paymentConfirmedDesc") });
     } catch (error) {
-      toast({ title: "خطأ", description: "فشل تأكيد الدفع", variant: "destructive" });
+      toast({ title: t("common.error"), description: t("planning.paymentError"), variant: "destructive" });
     }
   };
 
@@ -296,7 +299,7 @@ export default function Planning() {
       } else if (prev.length < 6) {
         updated = [...prev, serviceName];
       } else {
-        toast({ title: "الحد الأقصى 6 خدمات", variant: "destructive" });
+        toast({ title: t("planning.maxFavorites"), variant: "destructive" });
         return prev;
       }
       localStorage.setItem('favoriteServiceNames', JSON.stringify(updated));
@@ -327,10 +330,10 @@ export default function Planning() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-2 md:p-4" dir="rtl">
+    <div className="min-h-screen bg-background p-2 md:p-4" dir={isRtl ? "rtl" : "ltr"}>
       {/* Header */}
       <div className="mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-        <h1 className="text-xl md:text-2xl font-bold">PREGA SQUAD – التخطيط</h1>
+        <h1 className="text-xl md:text-2xl font-bold">{t("planning.title")}</h1>
         
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
           {/* Staff Revenue */}
@@ -376,7 +379,7 @@ export default function Planning() {
                 queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
                 queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
                 queryClient.invalidateQueries({ queryKey: ["/api/services"] });
-                toast({ title: "تم التحديث", description: "تم تحديث البيانات بنجاح" });
+                toast({ title: t("common.refreshed"), description: t("common.dataUpdated") });
               }}
             >
               <RefreshCw className={cn("w-3 h-3", loadingApps && "animate-spin")} />
@@ -403,7 +406,7 @@ export default function Planning() {
             className="bg-black text-white px-3 py-1 rounded-xl text-sm"
           >
             <Plus className="w-4 h-4 ml-1" />
-            حجز جديد
+            {t("planning.newBooking")}
           </Button>
         </div>
       </div>
@@ -511,13 +514,13 @@ export default function Planning() {
         setIsDialogOpen(open);
         if (!open) setIsEditFavoritesOpen(false);
       }}>
-        <DialogContent className="sm:max-w-[380px] p-0 overflow-hidden border-2 border-primary/20 shadow-2xl bg-gradient-to-br from-pink-50/80 via-white to-cyan-50/80 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900" dir="rtl">
+        <DialogContent className="sm:max-w-[380px] p-0 overflow-hidden border-2 border-primary/20 shadow-2xl bg-gradient-to-br from-pink-50/80 via-white to-cyan-50/80 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900" dir={isRtl ? "rtl" : "ltr"}>
           {/* Compact Header */}
           <div className="bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 px-3 py-2 text-white">
             <DialogHeader>
               <DialogTitle className="text-sm font-black flex items-center gap-2 text-white">
                 <Sparkles className="w-3 h-3" />
-                {editingAppointment ? "تعديل الموعد" : "موعد جديد"}
+                {editingAppointment ? t("planning.editBooking") : t("planning.newBooking")}
               </DialogTitle>
             </DialogHeader>
           </div>
@@ -536,7 +539,7 @@ export default function Planning() {
                       <FormControl>
                         <Input 
                           type="number" 
-                          placeholder="السعر"
+                          placeholder={t("common.price")}
                           className="text-xl h-10 font-black border-0 bg-white dark:bg-gray-800 rounded-lg text-center" 
                           {...field} 
                         />
@@ -554,9 +557,9 @@ export default function Planning() {
                   name="client"
                   render={({ field }) => (
                     <FormItem className="col-span-2 space-y-1">
-                      <FormLabel className="text-[10px] text-muted-foreground">العميل</FormLabel>
+                      <FormLabel className="text-[10px] text-muted-foreground">{t("planning.client")}</FormLabel>
                       <FormControl>
-                        <Input placeholder="اسم العميل..." className="h-8 rounded-lg text-xs" {...field} />
+                        <Input placeholder={t("clients.name")} className="h-8 rounded-lg text-xs" {...field} />
                       </FormControl>
                     </FormItem>
                   )}
@@ -567,11 +570,11 @@ export default function Planning() {
                   name="staff"
                   render={({ field }) => (
                     <FormItem className="space-y-1">
-                      <FormLabel className="text-[10px] text-muted-foreground">الموظف</FormLabel>
+                      <FormLabel className="text-[10px] text-muted-foreground">{t("planning.staff")}</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                         <FormControl>
                           <SelectTrigger className="h-8 rounded-lg text-xs">
-                            <SelectValue placeholder="اختر" />
+                            <SelectValue placeholder={t("common.select")} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -589,7 +592,7 @@ export default function Planning() {
                   name="startTime"
                   render={({ field }) => (
                     <FormItem className="space-y-1">
-                      <FormLabel className="text-[10px] text-muted-foreground">الوقت</FormLabel>
+                      <FormLabel className="text-[10px] text-muted-foreground">{t("planning.time")}</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                         <FormControl>
                           <SelectTrigger className="h-8 rounded-lg text-xs">
@@ -611,7 +614,7 @@ export default function Planning() {
                   name="duration"
                   render={({ field }) => (
                     <FormItem className="space-y-1">
-                      <FormLabel className="text-[10px] text-muted-foreground">المدة (د)</FormLabel>
+                      <FormLabel className="text-[10px] text-muted-foreground">{t("common.duration")} ({t("common.minutes")})</FormLabel>
                       <FormControl>
                         <Input type="number" className="h-8 rounded-lg text-xs" {...field} />
                       </FormControl>
@@ -632,7 +635,7 @@ export default function Planning() {
                           className="w-4 h-4 accent-emerald-500"
                         />
                       </FormControl>
-                      <FormLabel className="!mt-0 text-xs">مدفوع</FormLabel>
+                      <FormLabel className="!mt-0 text-xs">{t("common.paid")}</FormLabel>
                     </FormItem>
                   )}
                 />
@@ -643,7 +646,7 @@ export default function Planning() {
                   name="service"
                   render={({ field }) => (
                     <FormItem className="col-span-2 space-y-1">
-                      <FormLabel className="text-[10px] text-muted-foreground">الخدمة</FormLabel>
+                      <FormLabel className="text-[10px] text-muted-foreground">{t("planning.service")}</FormLabel>
                       <Popover>
                         <PopoverTrigger asChild>
                           <FormControl>
@@ -652,7 +655,7 @@ export default function Planning() {
                               role="combobox"
                               className="h-9 w-full justify-between rounded-lg text-xs border-2 hover:border-primary/50 transition-colors"
                             >
-                              <span className="truncate">{field.value || "اختر خدمة..."}</span>
+                              <span className="truncate">{field.value || t("planning.selectService")}</span>
                               <Search className="ml-2 h-4 w-4 shrink-0 text-muted-foreground" />
                             </Button>
                           </FormControl>
@@ -666,7 +669,7 @@ export default function Planning() {
                             <div className="relative">
                               <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                               <Input
-                                placeholder="ابحث عن خدمة..."
+                                placeholder={t("planning.searchService")}
                                 value={serviceSearch}
                                 onChange={(e) => setServiceSearch(e.target.value)}
                                 className="pr-10 h-10 text-sm rounded-lg border-2 focus:border-primary"
@@ -674,7 +677,7 @@ export default function Planning() {
                               />
                             </div>
                             <p className="text-[10px] text-muted-foreground mt-2 text-center">
-                              {filteredServices.length} خدمة متاحة
+                              {filteredServices.length} {t("planning.servicesAvailable")}
                             </p>
                           </div>
                           <div 
@@ -711,7 +714,7 @@ export default function Planning() {
                             {filteredServices.length === 0 && (
                               <div className="p-6 text-center">
                                 <Search className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
-                                <p className="text-sm text-muted-foreground">لا توجد نتائج</p>
+                                <p className="text-sm text-muted-foreground">{t("common.noResults")}</p>
                               </div>
                             )}
                           </div>
@@ -721,7 +724,7 @@ export default function Planning() {
                       {/* Quick Favorites */}
                       {!editingAppointment && (
                         <div className="pt-2">
-                          <p className="text-[10px] text-muted-foreground mb-1">الخدمات المفضلة:</p>
+                          <p className="text-[10px] text-muted-foreground mb-1">{t("planning.favoriteServices")}</p>
                           <div className="flex flex-wrap items-center gap-2">
                             {favoriteServices.slice(0, 6).map((s: any) => (
                               <Button
@@ -754,7 +757,7 @@ export default function Planning() {
                           
                           {isEditFavoritesOpen && (
                             <div className="mt-2 border border-dashed border-primary/30 rounded-lg p-2 bg-primary/5 max-h-[120px] overflow-y-auto">
-                              <p className="text-[9px] text-muted-foreground mb-1">اختر حتى 6 ({favoriteNames.length}/6)</p>
+                              <p className="text-[9px] text-muted-foreground mb-1">{t("planning.selectUpTo")} ({favoriteNames.length}/6)</p>
                               <div className="flex flex-wrap gap-1">
                                 {services.map((s) => (
                                   <Button
@@ -792,7 +795,7 @@ export default function Planning() {
                     variant="destructive"
                     className="h-10 px-4 rounded-lg font-bold text-sm"
                     onClick={() => {
-                      if (confirm("هل أنت متأكد من حذف هذا الموعد؟")) {
+                      if (confirm(t("planning.deleteConfirm"))) {
                         deleteMutation.mutate(editingAppointment.id);
                         setIsDialogOpen(false);
                       }
@@ -807,7 +810,7 @@ export default function Planning() {
                   disabled={createMutation.isPending || updateMutation.isPending}
                 >
                   <Sparkles className="w-4 h-4 ml-2" />
-                  {editingAppointment ? "تحديث" : "تأكيد الموعد"}
+                  {editingAppointment ? t("planning.updateBooking") : t("planning.confirmBooking")}
                 </Button>
               </div>
             </form>

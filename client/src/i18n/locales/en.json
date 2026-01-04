@@ -22,6 +22,7 @@
     "noResults": "No results",
     "confirm": "Confirm",
     "close": "Close",
+    "select": "Select",
     "paid": "Paid",
     "unpaid": "Unpaid",
     "total": "Total",
@@ -30,7 +31,9 @@
     "minutes": "minutes",
     "refresh": "Refresh",
     "refreshed": "Refreshed",
-    "dataUpdated": "Data updated successfully"
+    "dataUpdated": "Data updated successfully",
+    "error": "Error",
+    "success": "Success"
   },
   "planning": {
     "title": "PREGA SQUAD - Planning",
@@ -51,7 +54,10 @@
     "updateBooking": "Update",
     "deleteConfirm": "Are you sure you want to delete this appointment?",
     "paymentConfirmed": "Payment Confirmed",
-    "paymentConfirmedDesc": "Payment confirmed successfully"
+    "paymentConfirmedDesc": "Payment confirmed successfully",
+    "paymentError": "Payment confirmation failed",
+    "editFavorites": "Edit Favorites",
+    "stockInsufficient": "Insufficient stock for"
   },
   "services": {
     "title": "Services",

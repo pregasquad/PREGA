@@ -22,6 +22,7 @@
     "noResults": "Aucun résultat",
     "confirm": "Confirmer",
     "close": "Fermer",
+    "select": "Sélectionner",
     "paid": "Payé",
     "unpaid": "Non payé",
     "total": "Total",
@@ -30,7 +31,9 @@
     "minutes": "minutes",
     "refresh": "Actualiser",
     "refreshed": "Actualisé",
-    "dataUpdated": "Données mises à jour avec succès"
+    "dataUpdated": "Données mises à jour avec succès",
+    "error": "Erreur",
+    "success": "Succès"
   },
   "planning": {
     "title": "PREGA SQUAD - Planning",
@@ -51,7 +54,10 @@
     "updateBooking": "Mettre à jour",
     "deleteConfirm": "Êtes-vous sûr de vouloir supprimer ce rendez-vous?",
     "paymentConfirmed": "Paiement Confirmé",
-    "paymentConfirmedDesc": "Paiement confirmé avec succès"
+    "paymentConfirmedDesc": "Paiement confirmé avec succès",
+    "paymentError": "Échec de la confirmation du paiement",
+    "editFavorites": "Modifier les favoris",
+    "stockInsufficient": "Stock insuffisant pour"
   },
   "services": {
     "title": "Services",

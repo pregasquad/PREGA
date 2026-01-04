@@ -22,6 +22,7 @@
     "noResults": "لا توجد نتائج",
     "confirm": "تأكيد",
     "close": "إغلاق",
+    "select": "اختر",
     "paid": "مدفوع",
     "unpaid": "غير مدفوع",
     "total": "المجموع",
@@ -30,7 +31,9 @@
     "minutes": "دقيقة",
     "refresh": "تحديث",
     "refreshed": "تم التحديث",
-    "dataUpdated": "تم تحديث البيانات بنجاح"
+    "dataUpdated": "تم تحديث البيانات بنجاح",
+    "error": "خطأ",
+    "success": "نجاح"
   },
   "planning": {
     "title": "PREGA SQUAD - التخطيط",
@@ -51,7 +54,10 @@
     "updateBooking": "تحديث",
     "deleteConfirm": "هل أنت متأكد من حذف هذا الموعد؟",
     "paymentConfirmed": "تم التأكيد",
-    "paymentConfirmedDesc": "تم تأكيد الدفع بنجاح"
+    "paymentConfirmedDesc": "تم تأكيد الدفع بنجاح",
+    "paymentError": "فشل تأكيد الدفع",
+    "editFavorites": "تعديل المفضلة",
+    "stockInsufficient": "المخزون غير كافٍ لـ"
   },
   "services": {
     "title": "الخدمات",
