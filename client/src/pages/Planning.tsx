@@ -668,7 +668,13 @@ export default function Planning() {
                             </Button>
                           </FormControl>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[calc(100vw-56px)] max-w-[356px] p-0" align="center" side="top" sideOffset={4}>
+                        <PopoverContent 
+                          className="w-[calc(100vw-56px)] max-w-[356px] p-0" 
+                          align="center" 
+                          side="top" 
+                          sideOffset={4}
+                          onWheel={(e) => e.stopPropagation()}
+                        >
                           <div className="p-2 border-b">
                             <Input
                               placeholder={t("planning.searchService")}
@@ -677,35 +683,42 @@ export default function Planning() {
                               className="h-8 text-sm"
                             />
                           </div>
-                          <ScrollArea className="h-[200px]">
-                            <div className="p-1">
-                              {Object.entries(groupedServices).map(([category, categoryServices]) => (
-                                <div key={category}>
-                                  <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase bg-muted/50 sticky top-0">
-                                    {category}
-                                  </div>
-                                  {categoryServices.map(s => (
-                                    <div
-                                      key={s.id}
-                                      className={cn(
-                                        "flex items-center justify-between p-2 rounded cursor-pointer text-sm",
-                                        "hover:bg-muted",
-                                        field.value === s.name && "bg-primary/10"
-                                      )}
-                                      onClick={() => {
-                                        handleServiceChange(s.name);
-                                        setServiceSearch("");
-                                        setServicePopoverOpen(false);
-                                      }}
-                                    >
-                                      <span className="truncate">{s.name}</span>
-                                      <span className="text-xs font-medium text-primary">{s.price} DH</span>
-                                    </div>
-                                  ))}
+                          <div 
+                            className="max-h-[200px] overflow-y-auto p-1"
+                            style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
+                            onWheel={(e) => {
+                              e.stopPropagation();
+                              const target = e.currentTarget;
+                              target.scrollTop += e.deltaY;
+                            }}
+                            onTouchMove={(e) => e.stopPropagation()}
+                          >
+                            {Object.entries(groupedServices).map(([category, categoryServices]) => (
+                              <div key={category}>
+                                <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase bg-muted/50 sticky top-0">
+                                  {category}
                                 </div>
-                              ))}
-                            </div>
-                          </ScrollArea>
+                                {categoryServices.map(s => (
+                                  <div
+                                    key={s.id}
+                                    className={cn(
+                                      "flex items-center justify-between p-2 rounded cursor-pointer text-sm",
+                                      "hover:bg-muted",
+                                      field.value === s.name && "bg-primary/10"
+                                    )}
+                                    onClick={() => {
+                                      handleServiceChange(s.name);
+                                      setServiceSearch("");
+                                      setServicePopoverOpen(false);
+                                    }}
+                                  >
+                                    <span className="truncate">{s.name}</span>
+                                    <span className="text-xs font-medium text-primary">{s.price} DH</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ))}
+                          </div>
                         </PopoverContent>
                       </Popover>
                     </FormItem>
