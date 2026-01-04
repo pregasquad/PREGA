@@ -729,7 +729,8 @@ export default function Planning() {
 
                 {/* Quick Favorites - compact */}
                 {!editingAppointment && (
-                  <div className="col-span-3 flex flex-wrap gap-1.5">
+                  <div className="col-span-3 flex items-center gap-1.5 overflow-x-auto pb-1" style={{ WebkitOverflowScrolling: 'touch' }}>
+                    <Star className="w-4 h-4 text-amber-500 shrink-0" />
                     {favoriteServices.slice(0, 4).map((s: any) => (
                       <Button
                         key={s.id}
@@ -737,7 +738,7 @@ export default function Planning() {
                         variant={form.watch("service") === s.name ? "default" : "outline"}
                         size="sm"
                         className={cn(
-                          "h-8 text-[10px] px-3 rounded-full font-medium transition-all",
+                          "h-7 text-[10px] px-2.5 rounded-full font-medium transition-all whitespace-nowrap shrink-0",
                           form.watch("service") === s.name 
                             ? "bg-gradient-to-r from-pink-500 to-purple-500 border-0 text-white shadow-md" 
                             : "border-2 hover:border-purple-300"
@@ -751,10 +752,10 @@ export default function Planning() {
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="h-8 w-8 p-0 rounded-full hover:bg-purple-100 dark:hover:bg-purple-900/30"
+                      className="h-7 w-7 p-0 rounded-full hover:bg-purple-100 dark:hover:bg-purple-900/30 shrink-0"
                       onClick={() => setIsEditFavoritesOpen(!isEditFavoritesOpen)}
                     >
-                      <Settings2 className="w-4 h-4" />
+                      <Settings2 className="w-3.5 h-3.5" />
                     </Button>
                   </div>
                 )}
