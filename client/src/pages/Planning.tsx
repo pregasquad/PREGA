@@ -83,12 +83,13 @@ export default function Planning() {
     }
   }, [date]);
   const [isEditFavoritesOpen, setIsEditFavoritesOpen] = useState(false);
-  const [favoriteNames, setFavoriteNames] = useState<string[]>(() => {
+  const [servicePopoverOpen, setServicePopoverOpen] = useState(false);
+  const [favoriteIds, setFavoriteIds] = useState<number[]>(() => {
     try {
-      const stored = localStorage.getItem('favoriteServiceNames');
-      return stored ? JSON.parse(stored) : ["Brushing", "Manicure Simple", "Soin Classique", "Sourcils"];
+      const stored = localStorage.getItem('favoriteServiceIds');
+      return stored ? JSON.parse(stored) : [];
     } catch {
-      return ["Brushing", "Manicure Simple", "Soin Classique", "Sourcils"];
+      return [];
     }
   });
   const { toast } = useToast();
@@ -281,28 +282,34 @@ export default function Planning() {
   };
 
   const favoriteServices = useMemo(() => {
-    return favoriteNames.map(name => services.find(s => s.name === name)).filter(Boolean);
-  }, [services, favoriteNames]);
+    return favoriteIds.map(id => services.find(s => s.id === id)).filter(Boolean);
+  }, [services, favoriteIds]);
 
-  const filteredServices = useMemo(() => {
-    if (!serviceSearch.trim()) return services;
-    return services.filter(s => 
-      s.name.toLowerCase().includes(serviceSearch.toLowerCase())
-    );
-  }, [services, serviceSearch]);
+  const groupedServices = useMemo(() => {
+    const groups: Record<string, typeof services> = {};
+    const list = serviceSearch.trim() 
+      ? services.filter(s => s.name.toLowerCase().includes(serviceSearch.toLowerCase()))
+      : services;
+    list.forEach(s => {
+      const cat = s.category || t("common.other");
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(s);
+    });
+    return groups;
+  }, [services, serviceSearch, t]);
 
-  const toggleFavorite = (serviceName: string) => {
-    setFavoriteNames(prev => {
-      let updated: string[];
-      if (prev.includes(serviceName)) {
-        updated = prev.filter(n => n !== serviceName);
+  const toggleFavorite = (serviceId: number) => {
+    setFavoriteIds(prev => {
+      let updated: number[];
+      if (prev.includes(serviceId)) {
+        updated = prev.filter(id => id !== serviceId);
       } else if (prev.length < 6) {
-        updated = [...prev, serviceName];
+        updated = [...prev, serviceId];
       } else {
         toast({ title: t("planning.maxFavorites"), variant: "destructive" });
         return prev;
       }
-      localStorage.setItem('favoriteServiceNames', JSON.stringify(updated));
+      localStorage.setItem('favoriteServiceIds', JSON.stringify(updated));
       return updated;
     });
   };
@@ -646,61 +653,67 @@ export default function Planning() {
                 <FormField
                   control={form.control}
                   name="service"
-                  render={({ field }) => {
-                    const [servicePopoverOpen, setServicePopoverOpen] = React.useState(false);
-                    return (
-                      <FormItem className="col-span-3 space-y-0">
-                        <Popover open={servicePopoverOpen} onOpenChange={setServicePopoverOpen}>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                className="h-9 w-full justify-between rounded-lg text-xs"
-                              >
-                                <span className="truncate">{field.value || t("planning.selectService")}</span>
-                                <Search className="h-3 w-3 shrink-0 text-muted-foreground" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-[calc(100vw-56px)] max-w-[356px] p-0" align="center">
-                            <div className="p-2 border-b">
-                              <Input
-                                placeholder={t("planning.searchService")}
-                                value={serviceSearch}
-                                onChange={(e) => setServiceSearch(e.target.value)}
-                                className="h-8 text-sm"
-                              />
-                            </div>
-                            <div className="max-h-[200px] overflow-y-auto p-1">
-                              {filteredServices.map(s => (
-                                <div
-                                  key={s.id}
-                                  className={cn(
-                                    "flex items-center justify-between p-2 rounded cursor-pointer text-sm",
-                                    "hover:bg-muted",
-                                    field.value === s.name && "bg-primary/10"
-                                  )}
-                                  onClick={() => {
-                                    handleServiceChange(s.name);
-                                    setServiceSearch("");
-                                    setServicePopoverOpen(false);
-                                  }}
-                                >
-                                  <span className="truncate">{s.name}</span>
-                                  <span className="text-xs font-medium text-primary">{s.price} DH</span>
+                  render={({ field }) => (
+                    <FormItem className="col-span-3 space-y-0">
+                      <Popover open={servicePopoverOpen} onOpenChange={setServicePopoverOpen}>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              className="h-9 w-full justify-between rounded-lg text-xs"
+                            >
+                              <span className="truncate">{field.value || t("planning.selectService")}</span>
+                              <Search className="h-3 w-3 shrink-0 text-muted-foreground" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[calc(100vw-56px)] max-w-[356px] p-0" align="center">
+                          <div className="p-2 border-b">
+                            <Input
+                              placeholder={t("planning.searchService")}
+                              value={serviceSearch}
+                              onChange={(e) => setServiceSearch(e.target.value)}
+                              className="h-8 text-sm"
+                            />
+                          </div>
+                          <ScrollArea className="h-[200px]">
+                            <div className="p-1">
+                              {Object.entries(groupedServices).map(([category, categoryServices]) => (
+                                <div key={category}>
+                                  <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase bg-muted/50 sticky top-0">
+                                    {category}
+                                  </div>
+                                  {categoryServices.map(s => (
+                                    <div
+                                      key={s.id}
+                                      className={cn(
+                                        "flex items-center justify-between p-2 rounded cursor-pointer text-sm",
+                                        "hover:bg-muted",
+                                        field.value === s.name && "bg-primary/10"
+                                      )}
+                                      onClick={() => {
+                                        handleServiceChange(s.name);
+                                        setServiceSearch("");
+                                        setServicePopoverOpen(false);
+                                      }}
+                                    >
+                                      <span className="truncate">{s.name}</span>
+                                      <span className="text-xs font-medium text-primary">{s.price} DH</span>
+                                    </div>
+                                  ))}
                                 </div>
                               ))}
                             </div>
-                          </PopoverContent>
-                        </Popover>
-                      </FormItem>
-                    );
-                  }}
+                          </ScrollArea>
+                        </PopoverContent>
+                      </Popover>
+                    </FormItem>
+                  )}
                 />
 
                 {/* Quick Favorites - compact */}
-                {!editingAppointment && favoriteServices.length > 0 && (
+                {!editingAppointment && (
                   <div className="col-span-3 flex flex-wrap gap-1">
                     {favoriteServices.slice(0, 4).map((s: any) => (
                       <Button
@@ -727,21 +740,23 @@ export default function Planning() {
                 )}
                 
                 {isEditFavoritesOpen && (
-                  <div className="col-span-3 border rounded p-2 bg-muted/30 max-h-[80px] overflow-y-auto">
-                    <div className="flex flex-wrap gap-1">
-                      {services.map((s) => (
-                        <Button
-                          key={s.id}
-                          type="button"
-                          variant={favoriteNames.includes(s.name) ? "default" : "outline"}
-                          size="sm"
-                          className="h-5 text-[9px] px-1"
-                          onClick={() => toggleFavorite(s.name)}
-                        >
-                          {s.name}
-                        </Button>
-                      ))}
-                    </div>
+                  <div className="col-span-3 border rounded p-2 bg-muted/30">
+                    <ScrollArea className="h-[80px]">
+                      <div className="flex flex-wrap gap-1">
+                        {services.map((s) => (
+                          <Button
+                            key={s.id}
+                            type="button"
+                            variant={favoriteIds.includes(s.id) ? "default" : "outline"}
+                            size="sm"
+                            className="h-5 text-[9px] px-1"
+                            onClick={() => toggleFavorite(s.id)}
+                          >
+                            {s.name}
+                          </Button>
+                        ))}
+                      </div>
+                    </ScrollArea>
                   </div>
                 )}
               </div>
