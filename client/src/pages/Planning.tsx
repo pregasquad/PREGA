@@ -112,6 +112,7 @@ export default function Planning() {
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState<any>(null);
+  const [servicePopoverOpen, setServicePopoverOpen] = useState(false);
 
   const form = useForm<AppointmentFormValues>({
     resolver: zodResolver(formSchema),
@@ -646,57 +647,54 @@ export default function Planning() {
                 <FormField
                   control={form.control}
                   name="service"
-                  render={({ field }) => {
-                    const [servicePopoverOpen, setServicePopoverOpen] = React.useState(false);
-                    return (
-                      <FormItem className="col-span-3 space-y-0">
-                        <Popover open={servicePopoverOpen} onOpenChange={setServicePopoverOpen}>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                className="h-9 w-full justify-between rounded-lg text-xs"
+                  render={({ field }) => (
+                    <FormItem className="col-span-3 space-y-0">
+                      <Popover open={servicePopoverOpen} onOpenChange={setServicePopoverOpen}>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              className="h-9 w-full justify-between rounded-lg text-xs"
+                            >
+                              <span className="truncate">{field.value || t("planning.selectService")}</span>
+                              <Search className="h-3 w-3 shrink-0 text-muted-foreground" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[calc(100vw-56px)] max-w-[356px] p-0" align="center">
+                          <div className="p-2 border-b">
+                            <Input
+                              placeholder={t("planning.searchService")}
+                              value={serviceSearch}
+                              onChange={(e) => setServiceSearch(e.target.value)}
+                              className="h-8 text-sm"
+                            />
+                          </div>
+                          <div className="max-h-[200px] overflow-y-auto p-1">
+                            {filteredServices.map(s => (
+                              <div
+                                key={s.id}
+                                className={cn(
+                                  "flex items-center justify-between p-2 rounded cursor-pointer text-sm",
+                                  "hover:bg-muted",
+                                  field.value === s.name && "bg-primary/10"
+                                )}
+                                onClick={() => {
+                                  handleServiceChange(s.name);
+                                  setServiceSearch("");
+                                  setServicePopoverOpen(false);
+                                }}
                               >
-                                <span className="truncate">{field.value || t("planning.selectService")}</span>
-                                <Search className="h-3 w-3 shrink-0 text-muted-foreground" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-[calc(100vw-56px)] max-w-[356px] p-0" align="center">
-                            <div className="p-2 border-b">
-                              <Input
-                                placeholder={t("planning.searchService")}
-                                value={serviceSearch}
-                                onChange={(e) => setServiceSearch(e.target.value)}
-                                className="h-8 text-sm"
-                              />
-                            </div>
-                            <div className="max-h-[200px] overflow-y-auto p-1">
-                              {filteredServices.map(s => (
-                                <div
-                                  key={s.id}
-                                  className={cn(
-                                    "flex items-center justify-between p-2 rounded cursor-pointer text-sm",
-                                    "hover:bg-muted",
-                                    field.value === s.name && "bg-primary/10"
-                                  )}
-                                  onClick={() => {
-                                    handleServiceChange(s.name);
-                                    setServiceSearch("");
-                                    setServicePopoverOpen(false);
-                                  }}
-                                >
-                                  <span className="truncate">{s.name}</span>
-                                  <span className="text-xs font-medium text-primary">{s.price} DH</span>
-                                </div>
-                              ))}
-                            </div>
-                          </PopoverContent>
-                        </Popover>
-                      </FormItem>
-                    );
-                  }}
+                                <span className="truncate">{s.name}</span>
+                                <span className="text-xs font-medium text-primary">{s.price} DH</span>
+                              </div>
+                            ))}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </FormItem>
+                  )}
                 />
 
                 {/* Quick Favorites - compact */}
