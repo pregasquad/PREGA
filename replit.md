@@ -18,6 +18,7 @@ Preferred communication style: Simple, everyday language.
 - **Styling**: Tailwind CSS with CSS variables for theming
 - **Forms**: React Hook Form with Zod validation
 - **Charts**: Recharts for analytics dashboards
+- **Internationalization**: react-i18next with French (default), English, and Arabic languages
 
 ### Backend Architecture
 - **Runtime**: Node.js with Express
@@ -43,6 +44,9 @@ Preferred communication style: Simple, everyday language.
 │   ├── components/      # UI components (shadcn/ui)
 │   ├── hooks/           # Custom React hooks
 │   ├── pages/           # Route components
+│   ├── i18n/            # Internationalization config and translations
+│   │   ├── config.ts    # i18next configuration
+│   │   └── locales/     # Translation files (en.json, fr.json, ar.json)
 │   └── lib/             # Utilities and query client
 ├── server/              # Express backend
 │   ├── routes.ts        # API route definitions
@@ -96,3 +100,6 @@ Preferred communication style: Simple, everyday language.
 - Migrated database from TiDB/MySQL to PostgreSQL using Neon serverless
 - Updated Drizzle ORM configuration for PostgreSQL dialect
 - Updated schema from mysql-core to pg-core
+- Added multi-language support (French, English, Arabic) with RTL handling for Arabic
+- Created LanguageSwitcher component with flag icons and persistent language preference
+- Translations organized in client/src/i18n/locales/ with keys following {feature}.{key} pattern
