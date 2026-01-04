@@ -412,6 +412,7 @@ export function Sidebar() {
                 "h-11 rounded-xl",
                 loginError && "border-destructive focus-visible:ring-destructive"
               )}
+              autoComplete="current-password"
               autoFocus
             />
             {loginError && (

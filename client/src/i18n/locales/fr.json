@@ -353,7 +353,9 @@
     "logout": "Déconnexion",
     "adminLogin": "Connexion Admin",
     "password": "Mot de passe",
-    "wrongPassword": "Mot de passe incorrect"
+    "wrongPassword": "Mot de passe incorrect",
+    "protectedArea": "Zone Protégée",
+    "enterPasswordPrompt": "Veuillez entrer le mot de passe pour accéder à cette page"
   },
   "language": {
     "select": "Langue",

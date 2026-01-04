@@ -4,12 +4,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Lock, X } from "lucide-react";
 import { useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 
 interface AdminLockProps {
   children: React.ReactNode;
 }
 
 export function AdminLock({ children }: AdminLockProps) {
+  const { t } = useTranslation();
   const [isLocked, setIsLocked] = useState(() => {
     if (typeof window !== 'undefined') {
       return sessionStorage.getItem("admin_authenticated") !== "true";
@@ -63,21 +65,22 @@ export function AdminLock({ children }: AdminLockProps) {
           <div className="p-3 rounded-full bg-primary/10">
             <Lock className="w-8 h-8 text-primary" />
           </div>
-          <h2 className="text-2xl font-bold font-display">منطقة محمية</h2>
-          <p className="text-muted-foreground">يرجى إدخال كلمة المرور للوصول إلى هذه الصفحة</p>
+          <h2 className="text-2xl font-bold font-display">{t("auth.protectedArea")}</h2>
+          <p className="text-muted-foreground">{t("auth.enterPasswordPrompt")}</p>
           
           <form onSubmit={handleLogin} className="w-full space-y-4 mt-4">
             <Input
               type="password"
-              placeholder="كلمة المرور"
+              placeholder={t("auth.password")}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className={error ? "border-destructive focus-visible:ring-destructive" : ""}
+              autoComplete="current-password"
               autoFocus
             />
-            {error && <p className="text-xs text-destructive font-bold">كلمة المرور غير صحيحة</p>}
+            {error && <p className="text-xs text-destructive font-bold">{t("auth.wrongPassword")}</p>}
             <Button type="submit" className="w-full h-11 text-lg">
-              دخول
+              {t("auth.login")}
             </Button>
           </form>
         </div>

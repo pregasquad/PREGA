@@ -353,7 +353,9 @@
     "logout": "تسجيل الخروج",
     "adminLogin": "دخول المدير",
     "password": "كلمة المرور",
-    "wrongPassword": "كلمة المرور خاطئة"
+    "wrongPassword": "كلمة المرور خاطئة",
+    "protectedArea": "منطقة محمية",
+    "enterPasswordPrompt": "يرجى إدخال كلمة المرور للوصول إلى هذه الصفحة"
   },
   "language": {
     "select": "اللغة",

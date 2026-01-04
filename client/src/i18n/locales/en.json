@@ -353,7 +353,9 @@
     "logout": "Logout",
     "adminLogin": "Admin Login",
     "password": "Password",
-    "wrongPassword": "Wrong password"
+    "wrongPassword": "Wrong password",
+    "protectedArea": "Protected Area",
+    "enterPasswordPrompt": "Please enter the password to access this page"
   },
   "language": {
     "select": "Language",
