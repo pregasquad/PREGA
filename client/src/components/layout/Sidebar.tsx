@@ -223,7 +223,7 @@ export function Sidebar() {
                 )}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-80 p-0" align="start" side={isRtl ? "left" : "right"}>
+            <PopoverContent className="w-80 p-0" align={isRtl ? "end" : "start"} side={isRtl ? "left" : "right"} dir={isRtl ? "rtl" : "ltr"}>
               <div className="p-3 border-b bg-muted/30 flex items-center justify-between">
                 <div>
                   <h3 className="font-bold text-sm flex items-center gap-2">
@@ -271,7 +271,7 @@ export function Sidebar() {
                               {notif.service}
                             </p>
                           </div>
-                          <div className="text-left shrink-0">
+                          <div className={cn("shrink-0", isRtl ? "text-right" : "text-left")}>
                             <p className="text-xs font-bold text-primary">{notif.total} DH</p>
                           </div>
                         </div>
