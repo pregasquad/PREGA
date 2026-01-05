@@ -299,11 +299,11 @@ export default function Clients() {
   }
 
   return (
-    <div className="p-6 space-y-6" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
-      <div className="flex justify-between items-center">
+    <div className="p-2 md:p-4 lg:p-6 space-y-4 md:space-y-6" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h1 className="text-2xl font-bold">{t("clients.title")}</h1>
-          <p className="text-muted-foreground">{t("clients.pageDesc")}</p>
+          <h1 className="text-xl md:text-2xl font-bold">{t("clients.title")}</h1>
+          <p className="text-sm md:text-base text-muted-foreground">{t("clients.pageDesc")}</p>
         </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>

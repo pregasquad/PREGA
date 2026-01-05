@@ -122,17 +122,17 @@ export default function StaffPerformance() {
   }
 
   return (
-    <div className="p-6 space-y-6" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
-      <div className="flex justify-between items-center">
+    <div className="p-2 md:p-4 lg:p-6 space-y-4 md:space-y-6" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h1 className="text-2xl font-bold">{t("staffPerformance.pageTitle")}</h1>
-          <p className="text-muted-foreground">{t("staffPerformance.pageDesc")}</p>
+          <h1 className="text-xl md:text-2xl font-bold">{t("staffPerformance.pageTitle")}</h1>
+          <p className="text-sm md:text-base text-muted-foreground">{t("staffPerformance.pageDesc")}</p>
         </div>
-        <div className="flex gap-4">
+        <div className="flex flex-wrap gap-2 md:gap-4">
           <div>
-            <Label>{t("staffPerformance.month")}</Label>
+            <Label className="text-xs md:text-sm">{t("staffPerformance.month")}</Label>
             <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-              <SelectTrigger className="w-48">
+              <SelectTrigger className="w-36 md:w-48">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -145,9 +145,9 @@ export default function StaffPerformance() {
             </Select>
           </div>
           <div>
-            <Label>{t("staffPerformance.staff")}</Label>
+            <Label className="text-xs md:text-sm">{t("staffPerformance.staff")}</Label>
             <Select value={selectedStaff} onValueChange={setSelectedStaff}>
-              <SelectTrigger className="w-48">
+              <SelectTrigger className="w-36 md:w-48">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -163,7 +163,7 @@ export default function StaffPerformance() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
@@ -218,13 +218,13 @@ export default function StaffPerformance() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         <Card>
-          <CardHeader>
-            <CardTitle>{t("staffPerformance.performanceComparison")}</CardTitle>
+          <CardHeader className="pb-2 md:pb-4">
+            <CardTitle className="text-base md:text-lg">{t("staffPerformance.performanceComparison")}</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250}>
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
@@ -238,11 +238,11 @@ export default function StaffPerformance() {
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>{t("staffPerformance.revenueDistribution")}</CardTitle>
+          <CardHeader className="pb-2 md:pb-4">
+            <CardTitle className="text-base md:text-lg">{t("staffPerformance.revenueDistribution")}</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250}>
               <PieChart>
                 <Pie
                   data={pieData}
@@ -264,11 +264,11 @@ export default function StaffPerformance() {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>{t("staffPerformance.staffDetails")}</CardTitle>
+        <CardHeader className="pb-2 md:pb-4">
+          <CardTitle className="text-base md:text-lg">{t("staffPerformance.staffDetails")}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
             {allStaffStats.map((stats, i) => {
               const staffInfo = staffList.find((s) => s.name === stats.staffName);
               return (

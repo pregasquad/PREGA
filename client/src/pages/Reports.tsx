@@ -149,11 +149,11 @@ export default function Reports() {
   }, [viewMode, t]);
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto p-6" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-4 md:space-y-6 max-w-6xl mx-auto p-2 md:p-4 lg:p-6" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 md:gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold">{t("reports.pageTitle")}</h1>
-          <p className="text-muted-foreground">{t("reports.pageDesc")}</p>
+          <h1 className="text-xl md:text-2xl lg:text-3xl font-display font-bold">{t("reports.pageTitle")}</h1>
+          <p className="text-sm md:text-base text-muted-foreground">{t("reports.pageDesc")}</p>
         </div>
 
         <div className="flex items-center gap-2">

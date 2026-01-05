@@ -98,14 +98,14 @@ export default function Services() {
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
+    <div className="space-y-4 md:space-y-6 max-w-5xl mx-auto px-2 md:px-0" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
       <div>
-        <h1 className="text-3xl font-display font-bold">{t("services.pageTitle")}</h1>
-        <p className="text-muted-foreground">{t("services.pageDesc")}</p>
+        <h1 className="text-xl md:text-2xl lg:text-3xl font-display font-bold">{t("services.pageTitle")}</h1>
+        <p className="text-sm md:text-base text-muted-foreground">{t("services.pageDesc")}</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+        <div className="lg:col-span-1 space-y-4 md:space-y-6">
           <Card className="shadow-lg shadow-black/5 border-border/50">
             <CardHeader className="pb-4">
               <CardTitle className="text-lg flex items-center gap-2">
@@ -153,7 +153,7 @@ export default function Services() {
                       </FormItem>
                     )}
                   />
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
                     <FormField
                       control={sForm.control}
                       name="price"

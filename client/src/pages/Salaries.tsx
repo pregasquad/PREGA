@@ -289,14 +289,14 @@ export default function Salaries() {
   };
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6 max-w-6xl mx-auto px-2 md:px-0" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-display font-bold">{t("salaries.pageTitle")}</h1>
-          <p className="text-muted-foreground">{t("salaries.pageDesc")}</p>
+          <h1 className="text-xl md:text-2xl lg:text-3xl font-display font-bold">{t("salaries.pageTitle")}</h1>
+          <p className="text-sm md:text-base text-muted-foreground">{t("salaries.pageDesc")}</p>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-muted-foreground">
+        <div className="flex items-center gap-2 md:gap-3">
+          <span className="text-xs text-muted-foreground hidden sm:inline">
             {t("salaries.lastUpdate")}: {format(lastUpdate, "HH:mm:ss", { locale: getDateLocale() })}
           </span>
           <Button
@@ -308,12 +308,12 @@ export default function Salaries() {
             }}
           >
             <RefreshCw className={`h-4 w-4 ${i18n.language === "ar" ? "ml-2" : "mr-2"}`} />
-            {t("common.refresh")}
+            <span className="hidden sm:inline">{t("common.refresh")}</span>
           </Button>
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-4 items-center">
+      <div className="flex flex-wrap gap-2 md:gap-4 items-center">
         <Select value={period} onValueChange={(v) => setPeriod(v as PeriodType)}>
           <SelectTrigger className="w-[150px]">
             <SelectValue placeholder={t("salaries.period")} />

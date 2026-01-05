@@ -97,9 +97,9 @@ export default function Inventory() {
   if (isLoading) return <div>{t("common.loading")}</div>;
 
   return (
-    <div className="p-6 space-y-6" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-3xl font-bold">{t("inventory.title")}</h1>
+    <div className="p-2 md:p-4 lg:p-6 space-y-4 md:space-y-6" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 md:gap-4">
+        <h1 className="text-xl md:text-2xl lg:text-3xl font-bold">{t("inventory.title")}</h1>
         <div className="flex gap-2">
           <Dialog open={isStaffDialogOpen} onOpenChange={setIsStaffDialogOpen}>
             <DialogTrigger asChild>
