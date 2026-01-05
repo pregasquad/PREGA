@@ -119,6 +119,8 @@ export default function Planning() {
   }, [date, isToday]);
   const [isEditFavoritesOpen, setIsEditFavoritesOpen] = useState(false);
   const [servicePopoverOpen, setServicePopoverOpen] = useState(false);
+  const [appointmentSearch, setAppointmentSearch] = useState("");
+  const [showSearchInput, setShowSearchInput] = useState(false);
   const [draggedAppointment, setDraggedAppointment] = useState<any>(null);
   const [dragOverSlot, setDragOverSlot] = useState<{staff: string, time: string} | null>(null);
   const pageRef = useRef<HTMLDivElement>(null);
@@ -226,6 +228,18 @@ export default function Planning() {
     });
     return { total, perStaff };
   }, [appointments, staffList]);
+
+  const searchResults = useMemo(() => {
+    if (!appointmentSearch.trim()) return { matches: [], total: 0, count: 0 };
+    const searchLower = appointmentSearch.toLowerCase();
+    const matches = appointments.filter(app => 
+      app.client?.toLowerCase().includes(searchLower) ||
+      app.service?.toLowerCase().includes(searchLower) ||
+      app.staff?.toLowerCase().includes(searchLower)
+    );
+    const total = matches.reduce((sum, app) => sum + (app.total || 0), 0);
+    return { matches, total, count: matches.length };
+  }, [appointments, appointmentSearch]);
 
   const handleSlotClick = (staffName: string, time: string) => {
     form.reset({
@@ -448,6 +462,47 @@ export default function Planning() {
           {/* Total */}
           <div className="bg-primary text-primary-foreground px-3 py-1 rounded-lg text-sm font-bold">
             {stats.total} DH
+          </div>
+
+          {/* Search with Price */}
+          <div className="flex items-center gap-1 bg-card rounded-lg border p-1">
+            {showSearchInput ? (
+              <>
+                <Input
+                  type="text"
+                  placeholder={t("common.search") + "..."}
+                  value={appointmentSearch}
+                  onChange={(e) => setAppointmentSearch(e.target.value)}
+                  className="h-7 w-32 md:w-40 text-xs border-0 focus-visible:ring-0"
+                  autoFocus
+                />
+                {appointmentSearch && searchResults.count > 0 && (
+                  <div className="bg-green-500 text-white px-2 py-0.5 rounded text-xs font-bold whitespace-nowrap">
+                    {searchResults.count} = {searchResults.total} DH
+                  </div>
+                )}
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-7 w-7"
+                  onClick={() => {
+                    setShowSearchInput(false);
+                    setAppointmentSearch("");
+                  }}
+                >
+                  <X className="w-3 h-3" />
+                </Button>
+              </>
+            ) : (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-7 w-7"
+                onClick={() => setShowSearchInput(true)}
+              >
+                <Search className="w-4 h-4" />
+              </Button>
+            )}
           </div>
 
           {/* Date Navigation */}
