@@ -374,10 +374,10 @@ export async function registerRoutes(
     }
   });
 
-  // WhatsApp Notifications
+  // WhatsApp Notifications (SendZen)
   app.post("/api/notifications/send", async (req, res) => {
     try {
-      const { sendWhatsAppMessage } = await import("./whatsapp");
+      const { sendWhatsAppMessage } = await import("./sendzen");
       const { phone, message } = z.object({
         phone: z.string(),
         message: z.string(),
@@ -397,7 +397,7 @@ export async function registerRoutes(
 
   app.post("/api/notifications/appointment-reminder", async (req, res) => {
     try {
-      const { sendAppointmentReminder } = await import("./whatsapp");
+      const { sendAppointmentReminder } = await import("./sendzen");
       const { clientPhone, clientName, appointmentDate, appointmentTime, serviceName } = z.object({
         clientPhone: z.string(),
         clientName: z.string(),
@@ -420,7 +420,7 @@ export async function registerRoutes(
 
   app.post("/api/notifications/booking-confirmation", async (req, res) => {
     try {
-      const { sendBookingConfirmation } = await import("./whatsapp");
+      const { sendBookingConfirmation } = await import("./sendzen");
       const { clientPhone, clientName, appointmentDate, appointmentTime, serviceName } = z.object({
         clientPhone: z.string(),
         clientName: z.string(),
