@@ -13,7 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CalendarIcon, ChevronLeft, ChevronRight, Plus, Trash2, Check, X, Search, Star, RefreshCw, Sparkles, CreditCard, Settings2, Paintbrush } from "lucide-react";
+import { CalendarIcon, ChevronLeft, ChevronRight, Plus, Trash2, Check, X, Search, Star, RefreshCw, Sparkles, CreditCard, Settings2, Brush } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -529,11 +529,11 @@ export default function Planning() {
                 right: 0,
               }}
             >
-              {/* Brush icon - sticky to time column */}
-              <div className="w-[55px] shrink-0 sticky ltr:left-0 rtl:right-0 z-[50] flex items-center justify-center">
+              {/* Makeup brush icon - sticky to time column, shifted right */}
+              <div className="w-[70px] shrink-0 sticky ltr:left-0 rtl:right-0 z-[50] flex items-center ltr:justify-end rtl:justify-start ltr:pr-1 rtl:pl-1">
                 <div className="relative flex items-center justify-center">
                   <div className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 shadow-xl flex items-center justify-center border-2 border-white dark:border-gray-800">
-                    <Paintbrush className="w-4 h-4 text-white" />
+                    <Brush className="w-4 h-4 text-white" />
                   </div>
                   <div className="absolute inset-0 w-9 h-9 rounded-full bg-orange-500 animate-ping opacity-30" />
                 </div>
