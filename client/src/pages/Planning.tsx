@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
-import { format, addDays, startOfToday, parseISO } from "date-fns";
+import { format, addDays, startOfToday, parseISO, subDays } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { useAppointments, useStaff, useServices, useCreateAppointment, useUpdateAppointment, useDeleteAppointment } from "@/hooks/use-salon-data";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -41,10 +41,21 @@ const formSchema = insertAppointmentSchema.extend({
 
 type AppointmentFormValues = z.infer<typeof formSchema>;
 
+// Get the "work day" date - if time is between 00:00-01:59, it's still the previous day's schedule
+function getWorkDayDate(): Date {
+  const now = new Date();
+  const hour = now.getHours();
+  // If between midnight and 2 AM, consider it still the previous work day
+  if (hour < 2) {
+    return subDays(startOfToday(), 1);
+  }
+  return startOfToday();
+}
+
 export default function Planning() {
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === "ar";
-  const [date, setDate] = useState<Date>(startOfToday());
+  const [date, setDate] = useState<Date>(getWorkDayDate());
   const [serviceSearch, setServiceSearch] = useState("");
   const [currentTime, setCurrentTime] = useState(new Date());
   const boardRef = useRef<HTMLDivElement>(null);
@@ -78,7 +89,13 @@ export default function Planning() {
     return position;
   };
 
-  const isToday = format(date, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
+  // Check if we're viewing the current "work day" (accounting for 2 AM start)
+  const isToday = useMemo(() => {
+    const now = new Date();
+    const hour = now.getHours();
+    const workDayDate = hour < 2 ? subDays(now, 1) : now;
+    return format(date, "yyyy-MM-dd") === format(workDayDate, "yyyy-MM-dd");
+  }, [date, currentTime]);
 
   // Custom smooth scroll function for better performance
   const smoothScrollTo = (element: HTMLElement, container: HTMLElement) => {
