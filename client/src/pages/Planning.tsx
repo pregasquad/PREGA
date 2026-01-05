@@ -510,7 +510,7 @@ export default function Planning() {
       </div>
 
       {/* Board */}
-      <div ref={boardRef} className="flex-1 overflow-auto bg-background rounded-xl border shadow-sm relative">
+      <div ref={boardRef} className="flex-1 overflow-auto bg-background rounded-xl border shadow-sm relative free-scroll">
         <div 
           className="grid relative"
           style={{ 

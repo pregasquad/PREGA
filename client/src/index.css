@@ -4,13 +4,21 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Smooth scrolling for the entire app */
+/* Smooth scrolling for programmatic scrolls only - not user scrolling */
 html {
   scroll-behavior: smooth;
 }
 
-* {
+/* Custom scroll class for elements that need smooth programmatic scrolling */
+.smooth-scroll {
   scroll-behavior: smooth;
+}
+
+/* Free scrolling for interactive areas like the planning board */
+.free-scroll {
+  scroll-behavior: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 :root {
