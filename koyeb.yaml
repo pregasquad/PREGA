@@ -1,0 +1,30 @@
+name: pregasquad-manager
+type: web
+deploy:
+  docker:
+    dockerfile: Dockerfile
+  regions:
+    - fra
+  ports:
+    - port: 8000
+      protocol: http
+  env:
+    - key: NODE_ENV
+      value: production
+    - key: PORT
+      value: "8000"
+    - key: DATABASE_URL
+      secret: database-url
+    - key: SENDZEN_API_KEY
+      secret: sendzen-api-key
+    - key: SENDZEN_FROM_NUMBER
+      secret: sendzen-from-number
+  scaling:
+    min: 1
+    max: 2
+  health_checks:
+    - path: /api/health
+      port: 8000
+      grace_period: 30
+      interval: 30
+      timeout: 10

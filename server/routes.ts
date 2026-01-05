@@ -37,6 +37,11 @@ export async function registerRoutes(
 
   // === API ROUTES ===
 
+  // Health check for Koyeb
+  app.get("/api/health", (_req, res) => {
+    res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
   // Appointments
   app.get(api.appointments.list.path, async (req, res) => {
     const { date } = z.object({ date: z.string().optional() }).parse(req.query);
