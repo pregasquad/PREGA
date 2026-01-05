@@ -12,5 +12,27 @@ export const pool = mysql.createPool({
   ssl: {
     rejectUnauthorized: true,
   },
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
 });
+
 export const db = drizzle(pool, { schema, mode: "default" });
+
+export async function warmupDatabase(): Promise<void> {
+  try {
+    const warmupPromises = [];
+    for (let i = 0; i < 5; i++) {
+      warmupPromises.push(
+        pool.getConnection().then(async (connection) => {
+          await connection.query("SELECT 1");
+          connection.release();
+        })
+      );
+    }
+    await Promise.all(warmupPromises);
+    console.log("Database connections warmed up successfully (5 connections ready)");
+  } catch (error) {
+    console.error("Database warmup failed:", error);
+  }
+}
