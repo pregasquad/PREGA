@@ -69,11 +69,13 @@ export async function registerRoutes(
         io.emit("booking:created", item);
       }
       
-      // Send push notification for new booking
+      // Send push notification for new appointment
+      const clientName = item.client || "Client";
+      const serviceName = item.service || "RDV";
       sendPushNotification(
-        "New Booking",
-        `${item.client} - ${item.service} at ${item.startTime}`,
-        "/planning"
+        "Nouveau RDV",
+        `${clientName} - ${serviceName} (${item.startTime}) - ${item.staff}`,
+        `/planning?date=${item.date}`
       ).catch(console.error);
       
       res.status(201).json(item);
