@@ -2,10 +2,15 @@ import { Sidebar } from "./Sidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { useLocation } from "wouter";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { i18n } = useTranslation();
   const isRtl = i18n.language === "ar";
+  const [location] = useLocation();
+  
+  // Planning page needs locked scrolling for its board
+  const isLockedScroll = location === "/planning";
 
   const style = {
     "--sidebar-width": "16rem",
@@ -23,8 +28,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <LanguageSwitcher />
             </div>
           </header>
-          <main className="flex-1 overflow-hidden p-2 md:p-4">
-            <div className="h-full flex flex-col">
+          <main className={`flex-1 p-2 md:p-4 ${isLockedScroll ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+            <div className={isLockedScroll ? 'h-full flex flex-col' : 'min-h-full'}>
               {children}
             </div>
           </main>
