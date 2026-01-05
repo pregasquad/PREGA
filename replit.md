@@ -117,3 +117,10 @@ Preferred communication style: Simple, everyday language.
   - Shows client's frequent/past services for quick selection
   - Pre-fills client info (name, phone) automatically
   - Available from both client list and client detail dialog
+- **Comprehensive Responsive Design Overhaul**:
+  - Progressive padding using Tailwind breakpoints (p-2 → md:p-4 → lg:p-6)
+  - Tiered typography scaling (text-xl → md:text-2xl → lg:text-3xl)
+  - Breakpoint-aware grid layouts for mobile/tablet/desktop
+  - Updated pages: Services, Clients, Inventory, Charges, Salaries, Reports, StaffPerformance
+  - Smart scrolling in AppLayout: locked for Planning page, native scroll for other pages
+  - Live time indicator updates every 30 seconds with smooth scrolling animation
