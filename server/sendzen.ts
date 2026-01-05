@@ -10,28 +10,34 @@ export async function sendWhatsAppMessage(to: string, message: string): Promise<
   try {
     const phoneNumber = to.replace(/[^0-9]/g, '');
     
+    const requestBody = {
+      messaging_product: 'whatsapp',
+      to: phoneNumber,
+      type: 'text',
+      text: {
+        body: message
+      }
+    };
+    
+    console.log('SendZen request:', JSON.stringify(requestBody));
+    
     const response = await fetch(SENDZEN_API_URL, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        to: phoneNumber,
-        type: 'text',
-        text: {
-          body: message
-        }
-      })
+      body: JSON.stringify(requestBody)
     });
 
     const data = await response.json();
+    console.log('SendZen response:', JSON.stringify(data));
     
-    if (response.ok) {
+    if (response.ok && data.messages) {
       return { success: true, messageId: data.messages?.[0]?.id };
     } else {
-      return { success: false, error: data.error?.message || 'Failed to send message' };
+      const errorMsg = data.error?.message || data.message || data.detail || JSON.stringify(data);
+      return { success: false, error: errorMsg };
     }
   } catch (error: any) {
     console.error('SendZen WhatsApp error:', error.message);
