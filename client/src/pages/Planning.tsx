@@ -76,12 +76,45 @@ export default function Planning() {
 
   const isToday = format(date, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
 
+  // Custom smooth scroll function for better performance
+  const smoothScrollTo = (element: HTMLElement, container: HTMLElement) => {
+    const elementRect = element.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+    const targetScroll = container.scrollTop + elementRect.top - containerRect.top - (containerRect.height / 2) + (elementRect.height / 2);
+    
+    const startScroll = container.scrollTop;
+    const distance = targetScroll - startScroll;
+    const duration = 800;
+    let startTime: number | null = null;
+
+    const easeInOutCubic = (t: number) => {
+      return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    };
+
+    const animateScroll = (currentTime: number) => {
+      if (!startTime) startTime = currentTime;
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const easeProgress = easeInOutCubic(progress);
+      
+      container.scrollTop = startScroll + (distance * easeProgress);
+      
+      if (progress < 1) {
+        requestAnimationFrame(animateScroll);
+      }
+    };
+
+    requestAnimationFrame(animateScroll);
+  };
+
   // Smooth auto-scroll to live line when page loads or date changes
   useEffect(() => {
-    if (isToday && liveLineRef.current) {
+    if (isToday && liveLineRef.current && boardRef.current) {
       setTimeout(() => {
-        liveLineRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 100);
+        if (liveLineRef.current && boardRef.current) {
+          smoothScrollTo(liveLineRef.current, boardRef.current);
+        }
+      }, 200);
     }
   }, [date, isToday]);
   const [isEditFavoritesOpen, setIsEditFavoritesOpen] = useState(false);
