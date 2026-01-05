@@ -83,13 +83,14 @@ Preferred communication style: Simple, everyday language.
 - **Recharts**: Charting library for reports
 - **date-fns**: Date manipulation utilities
 
-### Notifications (Twilio)
-- **WhatsApp/SMS**: Appointment reminders and booking confirmations via Twilio
+### Notifications (SendZen)
+- **WhatsApp**: Appointment reminders and booking confirmations via SendZen API
 - **Endpoints**:
-  - `POST /api/notifications/send` - Send custom WhatsApp/SMS message
+  - `POST /api/notifications/send` - Send custom WhatsApp message
   - `POST /api/notifications/appointment-reminder` - Send appointment reminder
   - `POST /api/notifications/booking-confirmation` - Send booking confirmation
-- **Implementation**: `server/twilio.ts` with Replit Twilio integration
+- **Implementation**: `server/sendzen.ts`
+- **Required Secrets**: `SENDZEN_API_KEY`, `SENDZEN_FROM_NUMBER`
 
 ### Development Tools
 - **Vite**: Frontend dev server and bundler

@@ -2,16 +2,23 @@ const SENDZEN_API_URL = 'https://api.sendzen.io/v1/messages';
 
 export async function sendWhatsAppMessage(to: string, message: string): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const apiKey = process.env.SENDZEN_API_KEY;
+  const fromNumber = process.env.SENDZEN_FROM_NUMBER;
   
   if (!apiKey) {
     return { success: false, error: 'SendZen API key not configured' };
   }
+  
+  if (!fromNumber) {
+    return { success: false, error: 'SendZen from number not configured' };
+  }
 
   try {
     const phoneNumber = to.replace(/[^0-9]/g, '');
+    const senderNumber = fromNumber.replace(/[^0-9]/g, '');
     
     const requestBody = {
       messaging_product: 'whatsapp',
+      from: senderNumber,
       to: phoneNumber,
       type: 'text',
       text: {
@@ -33,10 +40,11 @@ export async function sendWhatsAppMessage(to: string, message: string): Promise<
     const data = await response.json();
     console.log('SendZen response:', JSON.stringify(data));
     
-    if (response.ok && data.messages) {
-      return { success: true, messageId: data.messages?.[0]?.id };
+    if (response.ok && (data.message?.includes('queued') || data.message?.includes('success') || data.data?.[0]?.message_id)) {
+      const messageId = data.data?.[0]?.message_id || data.messages?.[0]?.id;
+      return { success: true, messageId };
     } else {
-      const errorMsg = data.error?.message || data.message || data.detail || JSON.stringify(data);
+      const errorMsg = data.error?.message || data.data?.[0]?.error_detail || data.message || JSON.stringify(data);
       return { success: false, error: errorMsg };
     }
   } catch (error: any) {
