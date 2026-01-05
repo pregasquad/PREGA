@@ -1,4 +1,4 @@
-import { mysqlTable, text, int, boolean, timestamp, varchar, serial } from "drizzle-orm/mysql-core";
+import { mysqlTable, text, int, boolean, timestamp, varchar, serial, double } from "drizzle-orm/mysql-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 export * from "./models/auth";
@@ -12,7 +12,7 @@ export const clients = mysqlTable("clients", {
   notes: text("notes"),
   loyaltyPoints: int("loyalty_points").notNull().default(0),
   totalVisits: int("total_visits").notNull().default(0),
-  totalSpent: int("total_spent").notNull().default(0),
+  totalSpent: double("total_spent").notNull().default(0),
   referredBy: int("referred_by"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -53,8 +53,8 @@ export const appointments = mysqlTable("appointments", {
   clientId: int("client_id"),
   service: text("service").notNull(),
   staff: text("staff").notNull(),
-  price: int("price").notNull(),
-  total: int("total").notNull(),
+  price: double("price").notNull(),
+  total: double("total").notNull(),
   paid: boolean("paid").default(false).notNull(),
   loyaltyPointsEarned: int("loyalty_points_earned").default(0),
 });
@@ -62,11 +62,11 @@ export const appointments = mysqlTable("appointments", {
 export const services = mysqlTable("services", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  price: int("price").notNull(),
+  price: double("price").notNull(),
   duration: int("duration").notNull(),
   category: text("category").notNull(),
   linkedProductId: int("linked_product_id"),
-  commissionPercent: int("commission_percent").notNull().default(50),
+  commissionPercent: double("commission_percent").notNull().default(50),
   loyaltyPointsMultiplier: int("loyalty_points_multiplier").notNull().default(1),
 });
 
@@ -81,7 +81,7 @@ export const staff = mysqlTable("staff", {
   color: text("color").notNull(),
   phone: text("phone"),
   email: text("email"),
-  baseSalary: int("base_salary").notNull().default(0),
+  baseSalary: double("base_salary").notNull().default(0),
 });
 
 export const expenseCategories = mysqlTable("expense_categories", {
@@ -94,7 +94,7 @@ export const charges = mysqlTable("charges", {
   id: serial("id").primaryKey(),
   type: text("type").notNull(),
   name: text("name").notNull(),
-  amount: int("amount").notNull(),
+  amount: double("amount").notNull(),
   date: text("date").notNull(),
   categoryId: int("category_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -103,7 +103,7 @@ export const charges = mysqlTable("charges", {
 export const insertChargeSchema = createInsertSchema(charges).omit({ id: true, createdAt: true }).extend({
   type: z.string().min(1, "Type is required"),
   name: z.string().min(1, "Name is required"),
-  amount: z.number().int().min(0, "Amount must be non-negative"),
+  amount: z.number().min(0, "Amount must be non-negative"),
   date: z.string().min(1, "Date is required"),
   categoryId: z.number().int().optional(),
 });
@@ -115,7 +115,7 @@ export const staffDeductions = mysqlTable("staff_deductions", {
   staffName: text("staff_name").notNull(),
   type: text("type").notNull(),
   description: text("description").notNull(),
-  amount: int("amount").notNull(),
+  amount: double("amount").notNull(),
   date: text("date").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -124,7 +124,7 @@ export const insertStaffDeductionSchema = createInsertSchema(staffDeductions).om
   staffName: z.string().min(1, "Staff name is required"),
   type: z.enum(["advance", "loan", "penalty", "other"]),
   description: z.string().min(1, "Description is required"),
-  amount: z.number().int().min(0, "Amount must be non-negative"),
+  amount: z.number().min(0, "Amount must be non-negative"),
   date: z.string().min(1, "Date is required"),
 });
 export type StaffDeduction = typeof staffDeductions.$inferSelect;
@@ -157,7 +157,7 @@ export const insertStaffSchema = createInsertSchema(staff).omit({ id: true }).ex
   color: z.string().regex(/^#[0-9a-f]{6}$/i, "Must be valid hex color"),
   phone: z.string().optional(),
   email: z.string().email().optional().or(z.literal("")),
-  baseSalary: z.number().int().min(0).optional(),
+  baseSalary: z.number().min(0).optional(),
 });
 
 export type Appointment = typeof appointments.$inferSelect;
