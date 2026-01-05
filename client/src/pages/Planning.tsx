@@ -67,10 +67,12 @@ export default function Planning() {
     const now = currentTime;
     const currentHour = now.getHours();
     const currentMinutes = now.getMinutes();
-    const totalMinutes = currentHour * 60 + currentMinutes;
-    const startMinutes = 0;
+    // Schedule starts at 2 AM, so adjust the calculation
+    // Hours 02-23 map to slots 0-43, Hours 00-01 map to slots 44-47
+    let adjustedHour = currentHour >= 2 ? currentHour - 2 : currentHour + 22;
+    const totalMinutes = adjustedHour * 60 + currentMinutes;
     const slotHeight = 48;
-    const position = ((totalMinutes - startMinutes) / 30) * slotHeight;
+    const position = (totalMinutes / 30) * slotHeight;
     return position;
   };
 
