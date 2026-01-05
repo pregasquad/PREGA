@@ -2,7 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
-import { warmupDatabase } from "./db";
+import { warmupDatabase, ensurePushSubscriptionsTable } from "./db";
 
 const app = express();
 const httpServer = createServer(app);
@@ -62,6 +62,7 @@ app.use((req, res, next) => {
 
 const startServer = async () => {
   await warmupDatabase();
+  await ensurePushSubscriptionsTable();
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

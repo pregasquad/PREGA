@@ -36,3 +36,22 @@ export async function warmupDatabase(): Promise<void> {
     console.error("Database warmup failed:", error);
   }
 }
+
+export async function ensurePushSubscriptionsTable(): Promise<void> {
+  try {
+    const connection = await pool.getConnection();
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS push_subscriptions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        endpoint TEXT NOT NULL,
+        p256dh TEXT NOT NULL,
+        auth TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+      )
+    `);
+    connection.release();
+    console.log("Push subscriptions table ready");
+  } catch (error) {
+    console.error("Failed to create push_subscriptions table:", error);
+  }
+}

@@ -5,6 +5,10 @@ import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
+import { vapidPublicKey, sendPushNotification } from "./push";
+import { db } from "./db";
+import { pushSubscriptions } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
 let io: SocketIOServer;
 
@@ -64,6 +68,13 @@ export async function registerRoutes(
       if (!item.paid) {
         io.emit("booking:created", item);
       }
+      
+      // Send push notification for new booking
+      sendPushNotification(
+        "New Booking",
+        `${item.client} - ${item.service} at ${item.startTime}`,
+        "/planning"
+      ).catch(console.error);
       
       res.status(201).json(item);
     } catch (err) {
@@ -443,6 +454,65 @@ export async function registerRoutes(
       }
     } catch (err: any) {
       res.status(400).json({ success: false, error: err.message });
+    }
+  });
+
+  // === Push Notifications ===
+  
+  app.get("/api/push/vapid-public-key", (_req, res) => {
+    res.json({ publicKey: vapidPublicKey });
+  });
+
+  app.post("/api/push/subscribe", async (req, res) => {
+    try {
+      const { endpoint, keys } = req.body;
+      
+      if (!endpoint || !keys?.p256dh || !keys?.auth) {
+        return res.status(400).json({ error: "Invalid subscription" });
+      }
+
+      const existing = await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.endpoint, endpoint));
+      
+      if (existing.length === 0) {
+        await db.insert(pushSubscriptions).values({
+          endpoint,
+          p256dh: keys.p256dh,
+          auth: keys.auth,
+        });
+      }
+      
+      res.json({ success: true });
+    } catch (err: any) {
+      console.error("Push subscription error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/push/unsubscribe", async (req, res) => {
+    try {
+      const { endpoint } = req.body;
+      
+      if (!endpoint) {
+        return res.status(400).json({ error: "Invalid endpoint" });
+      }
+      
+      await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, endpoint));
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/push/test", async (_req, res) => {
+    try {
+      const results = await sendPushNotification(
+        "PREGA SQUAD",
+        "Test notification - Push is working!",
+        "/planning"
+      );
+      res.json({ success: true, results });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
     }
   });
 

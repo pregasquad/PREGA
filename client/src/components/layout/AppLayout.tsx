@@ -2,6 +2,7 @@ import { Sidebar } from "./Sidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { PushNotifications } from "@/components/PushNotifications";
 import { useLocation } from "wouter";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
@@ -23,6 +24,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <header className="flex h-12 items-center justify-between px-4 border-b bg-background shrink-0 z-20">
             <SidebarTrigger />
             <div className="flex items-center gap-2">
+              <PushNotifications />
               <LanguageSwitcher />
             </div>
           </header>
