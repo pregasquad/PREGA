@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
-import { Users, DollarSign, Calendar, TrendingUp, Award } from "lucide-react";
+import { Users, DollarSign, Calendar, TrendingUp, Award, Loader2 } from "lucide-react";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import type { Staff, Appointment, Service } from "@shared/schema";
 
@@ -16,37 +16,38 @@ export default function StaffPerformance() {
   const [selectedMonth, setSelectedMonth] = useState(() => format(new Date(), "yyyy-MM"));
   const [selectedStaff, setSelectedStaff] = useState<string>("all");
 
-  const { data: staffList = [] } = useQuery<Staff[]>({
+  const { data: staffList = [], isLoading: loadingStaff } = useQuery<Staff[]>({
     queryKey: ["/api/staff"],
   });
 
-  const { data: services = [] } = useQuery<Service[]>({
+  const { data: services = [], isLoading: loadingServices } = useQuery<Service[]>({
     queryKey: ["/api/services"],
   });
 
-  const { data: appointments = [] } = useQuery<Appointment[]>({
+  const { data: appointments = [], isLoading: loadingAppointments } = useQuery<Appointment[]>({
     queryKey: ["/api/appointments/all"],
   });
 
-  const serviceMap = new Map(services.map((s) => [s.name, s]));
+  const isLoading = loadingStaff || loadingServices || loadingAppointments;
 
-  const getMonthRange = (monthStr: string) => {
-    const [year, month] = monthStr.split("-").map(Number);
+  const serviceMap = useMemo(() => new Map(services.map((s) => [s.name, s])), [services]);
+
+  const { startDate, endDate } = useMemo(() => {
+    const [year, month] = selectedMonth.split("-").map(Number);
     const start = startOfMonth(new Date(year, month - 1));
     const end = endOfMonth(start);
     return {
       startDate: format(start, "yyyy-MM-dd"),
       endDate: format(end, "yyyy-MM-dd"),
     };
-  };
+  }, [selectedMonth]);
 
-  const { startDate, endDate } = getMonthRange(selectedMonth);
-
-  const monthAppointments = appointments.filter(
-    (a) => a.date >= startDate && a.date <= endDate
+  const monthAppointments = useMemo(() => 
+    appointments.filter((a) => a.date >= startDate && a.date <= endDate),
+    [appointments, startDate, endDate]
   );
 
-  const calculateStaffStats = (staffName: string) => {
+  const calculateStaffStats = useCallback((staffName: string) => {
     const staffAppts = monthAppointments.filter((a) => a.staff === staffName);
     let totalRevenue = 0;
     let totalCommission = 0;
@@ -72,42 +73,53 @@ export default function StaffPerformance() {
       totalCommission,
       serviceBreakdown,
     };
-  };
+  }, [monthAppointments, serviceMap]);
 
-  const allStaffStats = staffList.map((s) => calculateStaffStats(s.name));
-  const totalRevenue = allStaffStats.reduce((sum, s) => sum + s.totalRevenue, 0);
-  const totalAppointments = allStaffStats.reduce((sum, s) => sum + s.totalAppointments, 0);
-  const totalCommissions = allStaffStats.reduce((sum, s) => sum + s.totalCommission, 0);
+  const allStaffStats = useMemo(() => 
+    staffList.map((s) => calculateStaffStats(s.name)),
+    [staffList, calculateStaffStats]
+  );
 
-  const selectedStaffStats = selectedStaff === "all" ? null : calculateStaffStats(selectedStaff);
+  const { totalRevenue, totalAppointments, totalCommissions, topPerformer } = useMemo(() => ({
+    totalRevenue: allStaffStats.reduce((sum, s) => sum + s.totalRevenue, 0),
+    totalAppointments: allStaffStats.reduce((sum, s) => sum + s.totalAppointments, 0),
+    totalCommissions: allStaffStats.reduce((sum, s) => sum + s.totalCommission, 0),
+    topPerformer: allStaffStats.reduce(
+      (top, s) => (s.totalRevenue > (top?.totalRevenue || 0) ? s : top),
+      allStaffStats[0]
+    ),
+  }), [allStaffStats]);
 
-  const chartData = allStaffStats.map((s) => ({
+  const COLORS = ["#d63384", "#20c997", "#0d6efd", "#ffc107", "#6610f2"];
+
+  const chartData = useMemo(() => allStaffStats.map((s) => ({
     name: s.staffName,
     appointments: s.totalAppointments,
     revenue: s.totalRevenue,
     commission: s.totalCommission,
-  }));
+  })), [allStaffStats]);
 
-  const COLORS = ["#d63384", "#20c997", "#0d6efd", "#ffc107", "#6610f2"];
-
-  const pieData = allStaffStats.map((s, i) => ({
+  const pieData = useMemo(() => allStaffStats.map((s, i) => ({
     name: s.staffName,
     value: s.totalRevenue,
     color: COLORS[i % COLORS.length],
-  }));
+  })), [allStaffStats]);
 
-  const months = Array.from({ length: 12 }, (_, i) => {
+  const months = useMemo(() => Array.from({ length: 12 }, (_, i) => {
     const date = subMonths(new Date(), i);
     return {
       value: format(date, "yyyy-MM"),
       label: format(date, "MMMM yyyy"),
     };
-  });
+  }), []);
 
-  const topPerformer = allStaffStats.reduce(
-    (top, s) => (s.totalRevenue > (top?.totalRevenue || 0) ? s : top),
-    allStaffStats[0]
-  );
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
