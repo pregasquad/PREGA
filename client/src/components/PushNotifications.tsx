@@ -29,10 +29,12 @@ export function PushNotifications() {
       if ('serviceWorker' in navigator && 'PushManager' in window) {
         setIsSupported(true);
         
-        const registration = await navigator.serviceWorker.getRegistration();
-        if (registration) {
+        try {
+          const registration = await navigator.serviceWorker.ready;
           const subscription = await registration.pushManager.getSubscription();
           setIsSubscribed(!!subscription);
+        } catch (e) {
+          console.log('Service worker not ready yet');
         }
       }
     };
@@ -42,8 +44,7 @@ export function PushNotifications() {
   const subscribe = async () => {
     setIsLoading(true);
     try {
-      const registration = await navigator.serviceWorker.register('/sw.js');
-      await navigator.serviceWorker.ready;
+      const registration = await navigator.serviceWorker.ready;
       
       const permission = await Notification.requestPermission();
       if (permission !== 'granted') {
@@ -55,7 +56,7 @@ export function PushNotifications() {
         return;
       }
 
-      const response = await fetch('/api/push/vapid-public-key');
+      const response = await fetch('/api/push/vapid-public-key', { credentials: 'include' });
       const { publicKey } = await response.json();
 
       const subscription = await registration.pushManager.subscribe({
@@ -66,7 +67,8 @@ export function PushNotifications() {
       await fetch('/api/push/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(subscription.toJSON())
+        body: JSON.stringify(subscription.toJSON()),
+        credentials: 'include'
       });
 
       setIsSubscribed(true);
@@ -90,17 +92,16 @@ export function PushNotifications() {
   const unsubscribe = async () => {
     setIsLoading(true);
     try {
-      const registration = await navigator.serviceWorker.getRegistration();
-      if (registration) {
-        const subscription = await registration.pushManager.getSubscription();
-        if (subscription) {
-          await fetch('/api/push/unsubscribe', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ endpoint: subscription.endpoint })
-          });
-          await subscription.unsubscribe();
-        }
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+      if (subscription) {
+        await fetch('/api/push/unsubscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ endpoint: subscription.endpoint }),
+          credentials: 'include'
+        });
+        await subscription.unsubscribe();
       }
       setIsSubscribed(false);
       toast({ 
@@ -121,7 +122,7 @@ export function PushNotifications() {
 
   const testNotification = async () => {
     try {
-      await fetch('/api/push/test', { method: 'POST' });
+      await fetch('/api/push/test', { method: 'POST', credentials: 'include' });
       toast({ 
         title: t("common.success"), 
         description: "Test notification sent!",

@@ -3,6 +3,7 @@ import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { format, addDays, startOfToday, parseISO, subDays } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { useAppointments, useStaff, useServices, useCreateAppointment, useUpdateAppointment, useDeleteAppointment } from "@/hooks/use-salon-data";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useSearch, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -55,26 +56,29 @@ function getWorkDayDate(): Date {
 export default function Planning() {
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === "ar";
+  const isMobile = useIsMobile();
   const [date, setDate] = useState<Date>(getWorkDayDate());
   const [serviceSearch, setServiceSearch] = useState("");
   const [currentTime, setCurrentTime] = useState(new Date());
   const boardRef = useRef<HTMLDivElement>(null);
   const liveLineRef = useRef<HTMLDivElement>(null);
 
-
   useEffect(() => {
-    // Update immediately then every 30 seconds
     setCurrentTime(new Date());
-    const timer = setInterval(() => setCurrentTime(new Date()), 30000);
+    // Update time less frequently on mobile for better performance
+    const interval = isMobile ? 60000 : 30000;
+    const timer = setInterval(() => setCurrentTime(new Date()), interval);
     return () => clearInterval(timer);
-  }, []);
+  }, [isMobile]);
 
   useEffect(() => {
+    // Refresh data less frequently on mobile for better performance
+    const interval = isMobile ? 120000 : 30000;
     const refreshTimer = setInterval(() => {
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
-    }, 30000);
+    }, interval);
     return () => clearInterval(refreshTimer);
-  }, []);
+  }, [isMobile]);
 
   const getCurrentTimePosition = () => {
     const now = currentTime;
