@@ -137,6 +137,7 @@ export default function Planning() {
   const formattedDate = format(date, "yyyy-MM-dd");
   
   const { data: appointments = [], isLoading: loadingApps } = useAppointments(formattedDate);
+  const { data: allAppointments = [] } = useAppointments();
   const { data: staffList = [] } = useStaff();
   const { data: services = [] } = useServices();
   const isAdmin = sessionStorage.getItem("admin_authenticated") === "true";
@@ -232,14 +233,18 @@ export default function Planning() {
   const searchResults = useMemo(() => {
     if (!appointmentSearch.trim()) return { matches: [], total: 0, count: 0 };
     const searchLower = appointmentSearch.toLowerCase();
-    const matches = appointments.filter(app => 
+    const matches = allAppointments.filter(app => 
       app.client?.toLowerCase().includes(searchLower) ||
       app.service?.toLowerCase().includes(searchLower) ||
       app.staff?.toLowerCase().includes(searchLower)
-    );
+    ).sort((a, b) => {
+      const dateCompare = b.date.localeCompare(a.date);
+      if (dateCompare !== 0) return dateCompare;
+      return a.startTime.localeCompare(b.startTime);
+    });
     const total = matches.reduce((sum, app) => sum + (app.total || 0), 0);
     return { matches, total, count: matches.length };
-  }, [appointments, appointmentSearch]);
+  }, [allAppointments, appointmentSearch]);
 
   const handleSlotClick = (staffName: string, time: string) => {
     form.reset({
@@ -520,6 +525,7 @@ export default function Planning() {
                       key={app.id} 
                       className="p-2 border-b last:border-b-0 hover:bg-muted/50 cursor-pointer"
                       onClick={() => {
+                        setDate(parseISO(app.date));
                         setEditingAppointment(app);
                         form.reset({
                           date: app.date,
@@ -548,7 +554,9 @@ export default function Planning() {
                         </div>
                         <div className="text-right shrink-0">
                           <p className="text-sm font-bold">{app.total} DH</p>
-                          <p className="text-xs text-muted-foreground">{app.startTime} • {app.staff}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {format(parseISO(app.date), "dd/MM")} • {app.startTime} • {app.staff}
+                          </p>
                         </div>
                       </div>
                     </div>
