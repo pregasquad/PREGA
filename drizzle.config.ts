@@ -1,14 +1,15 @@
 import { defineConfig } from "drizzle-kit";
 
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL must be set. Did you forget to provision a database?");
-}
-
 export default defineConfig({
   out: "./migrations",
   schema: "./shared/schema.ts",
-  dialect: "postgresql",
+  dialect: "mysql",
   dbCredentials: {
-    url: process.env.DATABASE_URL,
+    host: "gateway01.eu-central-1.prod.aws.tidbcloud.com",
+    port: 4000,
+    user: "Y2ErVcqWMZncviT.root",
+    password: process.env.TIDB_PASSWORD || "jMAV2wFmvPoFKOe7",
+    database: "test",
+    ssl: {},
   },
 });

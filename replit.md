@@ -27,10 +27,10 @@ Preferred communication style: Simple, everyday language.
 - **API Design**: RESTful endpoints defined in `shared/routes.ts` with Zod schemas for type-safe request/response validation
 
 ### Data Storage
-- **Database**: PostgreSQL via Neon serverless with Drizzle ORM
-- **Schema Location**: `shared/schema.ts` contains all table definitions
+- **Database**: TiDB Cloud (MySQL-compatible) with Drizzle ORM
+- **Schema Location**: `shared/schema.ts` contains all table definitions using mysql-core
 - **Migrations**: Drizzle Kit for schema management (`db:push` command)
-- **Environment Variables**: DATABASE_URL (PostgreSQL connection string)
+- **Environment Variables**: TIDB_DATABASE_URL (TiDB MySQL connection string with SSL)
 
 ### Authentication
 - **Provider**: Replit Auth (OpenID Connect)
@@ -70,8 +70,8 @@ Preferred communication style: Simple, everyday language.
 ## External Dependencies
 
 ### Database
-- **PostgreSQL**: Neon serverless PostgreSQL (requires DATABASE_URL)
-- **Drizzle ORM**: Type-safe database queries and schema management with pg driver
+- **TiDB Cloud**: MySQL-compatible serverless database (requires TIDB_DATABASE_URL)
+- **Drizzle ORM**: Type-safe database queries and schema management with mysql2 driver
 
 ### Authentication
 - **Replit Auth**: OpenID Connect provider (requires `REPL_ID`, `SESSION_SECRET`)
@@ -104,10 +104,10 @@ Preferred communication style: Simple, everyday language.
 - `npm run db:push` - Push schema changes to database
 
 ## Recent Changes (January 2026)
-- Configured for Replit environment with PostgreSQL database
-- Migrated database from TiDB/MySQL to PostgreSQL using Neon serverless
-- Updated Drizzle ORM configuration for PostgreSQL dialect
-- Updated schema from mysql-core to pg-core
+- Migrated database back to TiDB Cloud (MySQL-compatible)
+- Updated Drizzle ORM configuration for MySQL dialect with mysql2 driver
+- Updated schema from pg-core to mysql-core
+- Configured SSL for secure TiDB Cloud connections
 - Added multi-language support (French, English, Arabic) with RTL handling for Arabic
 - Created LanguageSwitcher component with flag icons and persistent language preference
 - Translations organized in client/src/i18n/locales/ with keys following {feature}.{key} pattern

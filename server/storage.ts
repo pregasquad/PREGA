@@ -95,12 +95,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createAppointment(appt: InsertAppointment): Promise<Appointment> {
-    const [created] = await db.insert(appointments).values(appt).returning();
+    const result = await db.insert(appointments).values(appt);
+    const insertId = result[0].insertId;
+    const [created] = await db.select().from(appointments).where(eq(appointments.id, insertId));
     return created;
   }
 
   async updateAppointment(id: number, appt: Partial<InsertAppointment>): Promise<Appointment> {
-    const [updated] = await db.update(appointments).set(appt).where(eq(appointments.id, id)).returning();
+    await db.update(appointments).set(appt).where(eq(appointments.id, id));
+    const [updated] = await db.select().from(appointments).where(eq(appointments.id, id));
     return updated;
   }
 
@@ -118,12 +121,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createService(service: InsertService): Promise<Service> {
-    const [created] = await db.insert(services).values(service).returning();
+    const result = await db.insert(services).values(service);
+    const insertId = result[0].insertId;
+    const [created] = await db.select().from(services).where(eq(services.id, insertId));
     return created;
   }
 
   async updateService(id: number, service: Partial<InsertService>): Promise<Service> {
-    const [updated] = await db.update(services).set(service).where(eq(services.id, id)).returning();
+    await db.update(services).set(service).where(eq(services.id, id));
+    const [updated] = await db.select().from(services).where(eq(services.id, id));
     return updated;
   }
 
@@ -136,12 +142,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createCategory(category: InsertCategory): Promise<Category> {
-    const [created] = await db.insert(categories).values(category).returning();
+    const result = await db.insert(categories).values(category);
+    const insertId = result[0].insertId;
+    const [created] = await db.select().from(categories).where(eq(categories.id, insertId));
     return created;
   }
 
   async updateCategory(id: number, category: Partial<InsertCategory>): Promise<Category> {
-    const [updated] = await db.update(categories).set(category).where(eq(categories.id, id)).returning();
+    await db.update(categories).set(category).where(eq(categories.id, id));
+    const [updated] = await db.select().from(categories).where(eq(categories.id, id));
     return updated;
   }
 
@@ -154,12 +163,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createStaff(st: InsertStaff): Promise<Staff> {
-    const [created] = await db.insert(staff).values(st).returning();
+    const result = await db.insert(staff).values(st);
+    const insertId = result[0].insertId;
+    const [created] = await db.select().from(staff).where(eq(staff.id, insertId));
     return created;
   }
 
   async updateStaff(id: number, st: Partial<InsertStaff>): Promise<Staff> {
-    const [updated] = await db.update(staff).set(st).where(eq(staff.id, id)).returning();
+    await db.update(staff).set(st).where(eq(staff.id, id));
+    const [updated] = await db.select().from(staff).where(eq(staff.id, id));
     return updated;
   }
 
@@ -187,7 +199,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateProductQuantity(id: number, quantity: number): Promise<Product> {
-    const [updated] = await db.update(products).set({ quantity }).where(eq(products.id, id)).returning();
+    await db.update(products).set({ quantity }).where(eq(products.id, id));
+    const [updated] = await db.select().from(products).where(eq(products.id, id));
     if (!updated) {
       throw new Error("Product not found");
     }
@@ -195,12 +208,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateProduct(id: number, product: Partial<InsertProduct>): Promise<Product> {
-    const [updated] = await db.update(products).set(product).where(eq(products.id, id)).returning();
+    await db.update(products).set(product).where(eq(products.id, id));
+    const [updated] = await db.select().from(products).where(eq(products.id, id));
     return updated;
   }
 
   async createProduct(product: InsertProduct): Promise<Product> {
-    const [created] = await db.insert(products).values(product).returning();
+    const result = await db.insert(products).values(product);
+    const insertId = result[0].insertId;
+    const [created] = await db.select().from(products).where(eq(products.id, insertId));
     return created;
   }
 
@@ -218,12 +234,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createClient(client: InsertClient): Promise<Client> {
-    const [created] = await db.insert(clients).values(client).returning();
+    const result = await db.insert(clients).values(client);
+    const insertId = result[0].insertId;
+    const [created] = await db.select().from(clients).where(eq(clients.id, insertId));
     return created;
   }
 
   async updateClient(id: number, client: Partial<InsertClient>): Promise<Client> {
-    const [updated] = await db.update(clients).set(client).where(eq(clients.id, id)).returning();
+    await db.update(clients).set(client).where(eq(clients.id, id));
+    const [updated] = await db.select().from(clients).where(eq(clients.id, id));
     return updated;
   }
 
@@ -235,12 +254,13 @@ export class DatabaseStorage implements IStorage {
     const [client] = await db.select().from(clients).where(eq(clients.id, id));
     if (!client) throw new Error("Client not found");
     
-    const [updated] = await db.update(clients).set({
+    await db.update(clients).set({
       loyaltyPoints: client.loyaltyPoints + points,
       totalSpent: client.totalSpent + spent,
       totalVisits: client.totalVisits + 1,
-    }).where(eq(clients.id, id)).returning();
+    }).where(eq(clients.id, id));
     
+    const [updated] = await db.select().from(clients).where(eq(clients.id, id));
     return updated;
   }
 
@@ -255,7 +275,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createCharge(charge: InsertCharge): Promise<Charge> {
-    const [created] = await db.insert(charges).values(charge).returning();
+    const result = await db.insert(charges).values(charge);
+    const insertId = result[0].insertId;
+    const [created] = await db.select().from(charges).where(eq(charges.id, insertId));
     return created;
   }
 
@@ -268,7 +290,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createStaffDeduction(deduction: InsertStaffDeduction): Promise<StaffDeduction> {
-    const [created] = await db.insert(staffDeductions).values(deduction).returning();
+    const result = await db.insert(staffDeductions).values(deduction);
+    const insertId = result[0].insertId;
+    const [created] = await db.select().from(staffDeductions).where(eq(staffDeductions.id, insertId));
     return created;
   }
 
@@ -281,7 +305,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createExpenseCategory(category: InsertExpenseCategory): Promise<ExpenseCategory> {
-    const [created] = await db.insert(expenseCategories).values(category).returning();
+    const result = await db.insert(expenseCategories).values(category);
+    const insertId = result[0].insertId;
+    const [created] = await db.select().from(expenseCategories).where(eq(expenseCategories.id, insertId));
     return created;
   }
 
@@ -299,7 +325,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createLoyaltyRedemption(redemption: InsertLoyaltyRedemption): Promise<LoyaltyRedemption> {
-    const [created] = await db.insert(loyaltyRedemptions).values(redemption).returning();
+    const result = await db.insert(loyaltyRedemptions).values(redemption);
+    const insertId = result[0].insertId;
+    const [created] = await db.select().from(loyaltyRedemptions).where(eq(loyaltyRedemptions.id, insertId));
     
     const [client] = await db.select().from(clients).where(eq(clients.id, redemption.clientId));
     if (client) {
