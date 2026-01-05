@@ -215,7 +215,7 @@ export function Sidebar() {
                   newBookingFlash && "bg-red-500/20 ring-2 ring-red-500 animate-bounce"
                 )}
               >
-                <Bell className={cn("w-5 h-5", newBookingFlash && "text-red-500")} />
+                <Bell className={cn("w-5 h-5 text-black fill-black", newBookingFlash && "text-red-500 fill-red-500")} />
                 {notifications.length > 0 && (
                   <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
                     {notifications.length > 9 ? "9+" : notifications.length}
@@ -227,7 +227,7 @@ export function Sidebar() {
               <div className="p-3 border-b bg-muted/30 flex items-center justify-between">
                 <div>
                   <h3 className="font-bold text-sm flex items-center gap-2">
-                    <Bell className="w-4 h-4" />
+                    <Bell className="w-4 h-4 text-black fill-black" />
                     {t("sidebar.notifications")}
                   </h3>
                   <p className="text-xs text-muted-foreground mt-1">

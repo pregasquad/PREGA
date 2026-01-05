@@ -507,7 +507,7 @@ export async function registerRoutes(
     try {
       const results = await sendPushNotification(
         "PREGA SQUAD",
-        "Test notification - Push is working!",
+        "Les notifications fonctionnent correctement!",
         "/planning"
       );
       res.json({ success: true, results });

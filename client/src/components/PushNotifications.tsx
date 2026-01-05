@@ -151,11 +151,11 @@ export function PushNotifications() {
         className="gap-2"
       >
         {isLoading ? (
-          <BellRing className="w-4 h-4 animate-pulse" />
+          <BellRing className="w-4 h-4 animate-pulse text-black fill-black" />
         ) : isSubscribed ? (
-          <Bell className="w-4 h-4" />
+          <Bell className="w-4 h-4 text-black fill-black" />
         ) : (
-          <BellOff className="w-4 h-4" />
+          <BellOff className="w-4 h-4 text-black" />
         )}
         {isSubscribed ? "On" : "Off"}
       </Button>
