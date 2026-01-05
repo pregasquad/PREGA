@@ -96,7 +96,14 @@ Preferred communication style: Simple, everyday language.
 - **esbuild**: Server bundling for production
 - **TypeScript**: Type checking across the stack
 
+## Development Commands
+- `npm run dev` - Start development server on port 5000
+- `npm run build` - Build for production
+- `npm run start` - Start production server
+- `npm run db:push` - Push schema changes to database
+
 ## Recent Changes (January 2026)
+- Configured for Replit environment with PostgreSQL database
 - Migrated database from TiDB/MySQL to PostgreSQL using Neon serverless
 - Updated Drizzle ORM configuration for PostgreSQL dialect
 - Updated schema from mysql-core to pg-core

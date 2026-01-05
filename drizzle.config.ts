@@ -1,17 +1,14 @@
 import { defineConfig } from "drizzle-kit";
 
-if (!process.env.TIDB_DATABASE_URL) {
-  throw new Error("TIDB_DATABASE_URL must be set");
+if (!process.env.DATABASE_URL) {
+  throw new Error("DATABASE_URL must be set. Did you forget to provision a database?");
 }
-
-const url = new URL(process.env.TIDB_DATABASE_URL);
-url.searchParams.set("ssl", JSON.stringify({ rejectUnauthorized: true }));
 
 export default defineConfig({
   out: "./migrations",
   schema: "./shared/schema.ts",
-  dialect: "mysql",
+  dialect: "postgresql",
   dbCredentials: {
-    url: url.toString(),
+    url: process.env.DATABASE_URL,
   },
 });

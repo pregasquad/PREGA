@@ -2,8 +2,6 @@ import { users, type User, type UpsertUser } from "@shared/models/auth";
 import { db } from "../../db";
 import { eq } from "drizzle-orm";
 
-// Interface for auth storage operations
-// (IMPORTANT) These user operations are mandatory for Replit Auth.
 export interface IAuthStorage {
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
@@ -16,11 +14,11 @@ class AuthStorage implements IAuthStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
-    // MySQL uses onDuplicateKeyUpdate
     const [user] = await db
       .insert(users)
       .values(userData)
-      .onDuplicateKeyUpdate({
+      .onConflictDoUpdate({
+        target: users.id,
         set: {
           ...userData,
           updatedAt: new Date(),
