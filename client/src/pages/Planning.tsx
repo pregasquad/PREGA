@@ -436,7 +436,7 @@ export default function Planning() {
   return (
     <div 
       ref={pageRef}
-      className="h-full bg-background p-2 md:p-4 flex flex-col overflow-hidden"
+      className="h-full bg-background p-2 md:p-4 flex flex-col"
       dir={isRtl ? "rtl" : "ltr"}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
@@ -458,8 +458,8 @@ export default function Planning() {
         </div>
       )}
       {/* Header */}
-      <div className="mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-        <h1 className="text-xl md:text-2xl font-bold">{t("planning.title")}</h1>
+      <div className="mb-2 flex flex-col md:flex-row justify-between items-start md:items-center gap-2 shrink-0">
+        <h1 className="text-lg md:text-xl font-bold">{t("planning.title")}</h1>
         
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
           {/* Staff Revenue */}
@@ -538,7 +538,7 @@ export default function Planning() {
       </div>
 
       {/* Board */}
-      <div ref={boardRef} className="flex-1 overflow-auto bg-card rounded-xl border shadow-sm relative min-h-0">
+      <div ref={boardRef} className="flex-1 overflow-auto bg-card rounded-xl border shadow-sm relative">
         <div 
           className="grid relative" 
           style={{ 
