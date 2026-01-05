@@ -88,9 +88,6 @@ export default function Planning() {
   const [servicePopoverOpen, setServicePopoverOpen] = useState(false);
   const [draggedAppointment, setDraggedAppointment] = useState<any>(null);
   const [dragOverSlot, setDragOverSlot] = useState<{staff: string, time: string} | null>(null);
-  const [pullDistance, setPullDistance] = useState(0);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const pullStartY = useRef<number | null>(null);
   const pageRef = useRef<HTMLDivElement>(null);
   const [favoriteIds, setFavoriteIds] = useState<number[]>(() => {
     try {
@@ -338,46 +335,6 @@ export default function Planning() {
     setDraggedAppointment(null);
   };
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (pageRef.current && pageRef.current.scrollTop === 0) {
-      pullStartY.current = e.touches[0].clientY;
-    }
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (pullStartY.current === null || isRefreshing) return;
-    
-    const currentY = e.touches[0].clientY;
-    const diff = currentY - pullStartY.current;
-    
-    if (diff > 0 && pageRef.current && pageRef.current.scrollTop === 0) {
-      setPullDistance(Math.min(diff * 0.5, 100));
-    }
-  };
-
-  const handleTouchEnd = async () => {
-    if (pullDistance > 60 && !isRefreshing) {
-      setIsRefreshing(true);
-      setPullDistance(60);
-      
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["/api/appointments"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/staff"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/services"] }),
-      ]);
-      
-      toast({ title: t("common.refreshed"), description: t("common.dataUpdated") });
-      
-      setTimeout(() => {
-        setIsRefreshing(false);
-        setPullDistance(0);
-      }, 500);
-    } else {
-      setPullDistance(0);
-    }
-    pullStartY.current = null;
-  };
-
   const favoriteServices = useMemo(() => {
     return favoriteIds.map(id => services.find(s => s.id === id)).filter(Boolean);
   }, [services, favoriteIds]);
@@ -438,25 +395,7 @@ export default function Planning() {
       ref={pageRef}
       className="h-full bg-background p-2 md:p-4 flex flex-col"
       dir={isRtl ? "rtl" : "ltr"}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
     >
-      {/* Pull to Refresh Indicator */}
-      {(pullDistance > 0 || isRefreshing) && (
-        <div 
-          className="flex justify-center items-center transition-all duration-200"
-          style={{ height: pullDistance, marginBottom: pullDistance > 0 ? 8 : 0 }}
-        >
-          <div className={cn(
-            "flex items-center gap-2 text-sm text-muted-foreground",
-            pullDistance > 60 && "text-orange-500"
-          )}>
-            <RefreshCw className={cn("w-5 h-5", isRefreshing && "animate-spin")} />
-            <span>{isRefreshing ? t("common.loading") : (pullDistance > 60 ? t("common.refresh") : "↓")}</span>
-          </div>
-        </div>
-      )}
       {/* Header */}
       <div className="mb-2 flex flex-col md:flex-row justify-between items-start md:items-center gap-2 shrink-0">
         <h1 className="text-lg md:text-xl font-bold">{t("planning.title")}</h1>
