@@ -465,43 +465,102 @@ export default function Planning() {
           </div>
 
           {/* Search with Price */}
-          <div className="flex items-center gap-1 bg-card rounded-lg border p-1">
-            {showSearchInput ? (
-              <>
-                <Input
-                  type="text"
-                  placeholder={t("common.search") + "..."}
-                  value={appointmentSearch}
-                  onChange={(e) => setAppointmentSearch(e.target.value)}
-                  className="h-7 w-32 md:w-40 text-xs border-0 focus-visible:ring-0"
-                  autoFocus
-                />
-                {appointmentSearch && searchResults.count > 0 && (
-                  <div className="bg-green-500 text-white px-2 py-0.5 rounded text-xs font-bold whitespace-nowrap">
-                    {searchResults.count} = {searchResults.total} DH
-                  </div>
-                )}
+          <div className="relative">
+            <div className="flex items-center gap-1 bg-card rounded-lg border p-1">
+              {showSearchInput ? (
+                <>
+                  <Input
+                    type="text"
+                    placeholder={t("common.search") + "..."}
+                    value={appointmentSearch}
+                    onChange={(e) => setAppointmentSearch(e.target.value)}
+                    className="h-7 w-32 md:w-40 text-xs border-0 focus-visible:ring-0"
+                    autoFocus
+                  />
+                  {appointmentSearch && searchResults.count > 0 && (
+                    <div className="bg-green-500 text-white px-2 py-0.5 rounded text-xs font-bold whitespace-nowrap">
+                      {searchResults.count} = {searchResults.total} DH
+                    </div>
+                  )}
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-7 w-7"
+                    onClick={() => {
+                      setShowSearchInput(false);
+                      setAppointmentSearch("");
+                    }}
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                </>
+              ) : (
                 <Button 
                   variant="ghost" 
                   size="icon" 
                   className="h-7 w-7"
-                  onClick={() => {
-                    setShowSearchInput(false);
-                    setAppointmentSearch("");
-                  }}
+                  onClick={() => setShowSearchInput(true)}
                 >
-                  <X className="w-3 h-3" />
+                  <Search className="w-4 h-4" />
                 </Button>
-              </>
-            ) : (
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-7 w-7"
-                onClick={() => setShowSearchInput(true)}
-              >
-                <Search className="w-4 h-4" />
-              </Button>
+              )}
+            </div>
+            {/* Search Results Dropdown */}
+            {showSearchInput && appointmentSearch && searchResults.count > 0 && (
+              <div className="absolute top-full mt-1 ltr:right-0 rtl:left-0 z-50 w-72 md:w-80 bg-card border rounded-lg shadow-lg max-h-64 overflow-auto">
+                <div className="p-2 border-b bg-muted/50 sticky top-0">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {searchResults.count} {t("common.results")}
+                  </span>
+                </div>
+                {searchResults.matches.map((app) => {
+                  const staffMember = staffList.find(s => s.name === app.staff);
+                  return (
+                    <div 
+                      key={app.id} 
+                      className="p-2 border-b last:border-b-0 hover:bg-muted/50 cursor-pointer"
+                      onClick={() => {
+                        setEditingAppointment(app);
+                        form.reset({
+                          date: app.date,
+                          startTime: app.startTime,
+                          duration: app.duration,
+                          client: app.client,
+                          service: app.service,
+                          staff: app.staff,
+                          price: app.price,
+                          total: app.total,
+                          paid: app.paid,
+                        });
+                        setIsDialogOpen(true);
+                      }}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div 
+                            className="w-2 h-2 rounded-full shrink-0" 
+                            style={{ backgroundColor: staffMember?.color || '#666' }} 
+                          />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">{app.client || "-"}</p>
+                            <p className="text-xs text-muted-foreground truncate">{app.service}</p>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-sm font-bold">{app.total} DH</p>
+                          <p className="text-xs text-muted-foreground">{app.startTime} • {app.staff}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                <div className="p-2 bg-green-500 text-white sticky bottom-0">
+                  <div className="flex justify-between items-center text-sm font-bold">
+                    <span>Total</span>
+                    <span>{searchResults.total} DH</span>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
 
