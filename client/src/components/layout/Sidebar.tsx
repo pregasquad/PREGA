@@ -223,7 +223,13 @@ export function Sidebar() {
                 )}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-80 p-0" align={isRtl ? "end" : "start"} side={isRtl ? "left" : "right"} dir={isRtl ? "rtl" : "ltr"}>
+            <PopoverContent 
+              className="w-80 p-0 max-w-[calc(100vw-2rem)]" 
+              align="center" 
+              side="bottom"
+              sideOffset={8}
+              dir={isRtl ? "rtl" : "ltr"}
+            >
               <div className="p-3 border-b bg-muted/30 flex items-center justify-between">
                 <div>
                   <h3 className="font-bold text-sm flex items-center gap-2">
