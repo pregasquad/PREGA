@@ -619,9 +619,10 @@ export default function Planning() {
                             ) : (
                               <button
                                 onClick={(e) => handleMarkAsPaid(e, booking)}
-                                className="bg-white/20 hover:bg-white/30 rounded-full p-0.5"
+                                className="bg-white/20 hover:bg-white/30 rounded-full p-1 flex items-center gap-0.5"
                               >
-                                <X className="w-3 h-3" />
+                                <CreditCard className="w-3 h-3" />
+                                <Check className="w-2 h-2" />
                               </button>
                             )}
                           </div>
