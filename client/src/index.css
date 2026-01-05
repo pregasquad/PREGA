@@ -16,9 +16,10 @@ html {
 
 /* Free scrolling for interactive areas like the planning board */
 .free-scroll {
-  scroll-behavior: auto;
+  scroll-behavior: auto !important;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
+  touch-action: pan-x pan-y;
 }
 
 :root {

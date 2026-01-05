@@ -8,9 +8,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const { i18n } = useTranslation();
   const isRtl = i18n.language === "ar";
   const [location] = useLocation();
-  
-  // Planning page needs locked scrolling for its board
-  const isLockedScroll = location === "/planning";
+  const isPlanning = location === "/planning";
 
   const style = {
     "--sidebar-width": "16rem",
@@ -28,8 +26,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <LanguageSwitcher />
             </div>
           </header>
-          <main className={`flex-1 p-2 md:p-4 ${isLockedScroll ? 'overflow-hidden' : 'overflow-y-auto'}`}>
-            <div className={isLockedScroll ? 'h-full flex flex-col' : 'min-h-full'}>
+          <main className={`flex-1 p-2 md:p-4 overflow-auto ${isPlanning ? 'h-0' : ''}`}>
+            <div className={isPlanning ? 'h-full flex flex-col' : 'min-h-full'}>
               {children}
             </div>
           </main>
