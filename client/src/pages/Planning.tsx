@@ -52,6 +52,8 @@ export default function Planning() {
 
 
   useEffect(() => {
+    // Update immediately then every 30 seconds
+    setCurrentTime(new Date());
     const timer = setInterval(() => setCurrentTime(new Date()), 30000);
     return () => clearInterval(timer);
   }, []);
