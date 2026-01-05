@@ -4,6 +4,15 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Smooth scrolling for the entire app */
+html {
+  scroll-behavior: smooth;
+}
+
+* {
+  scroll-behavior: smooth;
+}
+
 :root {
   --font-sans: 'DM Sans', sans-serif;
   --font-display: 'Playfair Display', serif;
