@@ -657,7 +657,7 @@ export default function Planning() {
       </div>
 
       {/* Board */}
-      <div ref={boardRef} className="flex-1 overflow-auto bg-background rounded-xl border shadow-sm relative free-scroll">
+      <div ref={boardRef} className="flex-1 overflow-auto bg-background rounded-xl border shadow-sm relative free-scroll" dir={isRtl ? "rtl" : "ltr"}>
         <div 
           className="grid relative"
           style={{ 
@@ -690,11 +690,11 @@ export default function Planning() {
             </div>
           )}
           {/* Top row - Staff headers (sticky) */}
-          <div className="bg-card border-b border-r border-gray-300 dark:border-gray-600 p-1 sticky top-0 z-40" style={{ gridColumn: 1, gridRow: 1 }}></div>
+          <div className={cn("bg-card border-b border-gray-300 dark:border-gray-600 p-1 sticky top-0 z-40", isRtl ? "border-l" : "border-r")} style={{ gridColumn: 1, gridRow: 1 }}></div>
           {staffList.map((s, staffIndex) => (
             <div 
               key={s.id} 
-              className="bg-muted border-b border-r border-gray-300 dark:border-gray-600 p-2 md:p-3 font-bold text-center text-xs md:text-sm sticky top-0 z-40"
+              className={cn("bg-muted border-b border-gray-300 dark:border-gray-600 p-2 md:p-3 font-bold text-center text-xs md:text-sm sticky top-0 z-40", isRtl ? "border-l" : "border-r")}
               style={{ gridColumn: staffIndex + 2, gridRow: 1 }}
             >
               <div className="flex items-center justify-center gap-1">
@@ -710,7 +710,10 @@ export default function Planning() {
             return (
             <React.Fragment key={hour}>
               <div 
-                className="bg-card border-b border-r border-gray-300 dark:border-gray-600 p-1 text-xs text-muted-foreground font-medium sticky left-0 z-30"
+                className={cn(
+                  "bg-card border-b border-gray-300 dark:border-gray-600 p-1 text-xs text-muted-foreground font-medium sticky z-30",
+                  isRtl ? "right-0 border-l" : "left-0 border-r"
+                )}
                 style={{ gridColumn: 1, gridRow: rowNum }}
               >
                 {hour}
@@ -726,7 +729,7 @@ export default function Planning() {
                   return (
                     <div
                       key={`${s.id}-${hour}-covered`}
-                      className="border-b border-r border-gray-300 dark:border-gray-600 min-h-[48px]"
+                      className={cn("border-b border-gray-300 dark:border-gray-600 min-h-[48px]", isRtl ? "border-l" : "border-r")}
                       style={{ gridColumn: colNum, gridRow: rowNum }}
                     />
                   );
@@ -789,7 +792,8 @@ export default function Planning() {
                   <div
                     key={`${s.id}-${hour}`}
                     className={cn(
-                      "border-b border-r border-gray-300 dark:border-gray-600 min-h-[48px] transition-all duration-200",
+                      "border-b border-gray-300 dark:border-gray-600 min-h-[48px] transition-all duration-200",
+                      isRtl ? "border-l" : "border-r",
                       "hover:bg-muted/30 cursor-pointer",
                       isDragOver && "bg-orange-100 dark:bg-orange-900/30 ring-2 ring-orange-500 ring-inset"
                     )}
