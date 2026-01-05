@@ -512,10 +512,16 @@ export default function Planning() {
       {/* Board */}
       <div ref={boardRef} className="flex-1 overflow-auto bg-card rounded-xl border shadow-sm relative">
         <div 
-          className="grid relative" 
+          className="grid relative"
           style={{ 
             gridTemplateColumns: `55px repeat(${staffList.length}, minmax(120px, 1fr))`,
-            gridAutoRows: '48px'
+            gridAutoRows: '48px',
+            backgroundImage: `
+              linear-gradient(to right, rgb(209 213 219) 1px, transparent 1px),
+              linear-gradient(to bottom, rgb(209 213 219) 1px, transparent 1px)
+            `,
+            backgroundSize: `calc((100% - 55px) / ${staffList.length}) 48px`,
+            backgroundPosition: '55px 48px'
           }}
         >
           {/* Current Time Line - inside grid to match full width (z-[5] so cards appear on top) */}
@@ -542,7 +548,7 @@ export default function Planning() {
           {staffList.map((s, staffIndex) => (
             <div 
               key={s.id} 
-              className="bg-muted/50 border-b border-r border-gray-300 dark:border-gray-600 p-2 md:p-3 font-bold text-center text-xs md:text-sm sticky top-0 z-10"
+              className="bg-muted/50 border-b border-gray-300 dark:border-gray-600 p-2 md:p-3 font-bold text-center text-xs md:text-sm sticky top-0 z-10"
               style={{ gridColumn: staffIndex + 2, gridRow: 1 }}
             >
               <div className="flex items-center justify-center gap-1">
@@ -558,7 +564,7 @@ export default function Planning() {
             return (
             <React.Fragment key={hour}>
               <div 
-                className="bg-card border-b border-r border-gray-300 dark:border-gray-600 p-1 text-xs text-muted-foreground font-medium sticky left-0 z-30"
+                className="bg-card border-r border-gray-300 dark:border-gray-600 p-1 text-xs text-muted-foreground font-medium sticky left-0 z-30"
                 style={{ gridColumn: 1, gridRow: rowNum }}
               >
                 {hour}
@@ -569,15 +575,9 @@ export default function Planning() {
                 const booking = getBooking(s.name, hour);
                 const isCovered = isSlotCovered(s.name, hour);
 
-                // For covered slots, render an empty cell to maintain grid lines
+                // For covered slots, don't render anything - the booking card spans over them
                 if (isCovered) {
-                  return (
-                    <div
-                      key={`${s.id}-${hour}`}
-                      className="border-b border-r border-gray-300 dark:border-gray-600 min-h-[48px] bg-background"
-                      style={{ gridColumn: colNum, gridRow: rowNum }}
-                    />
-                  );
+                  return null;
                 }
 
                 const span = booking ? getBookingSpan(booking) : 1;
@@ -589,8 +589,8 @@ export default function Planning() {
                   <div
                     key={`${s.id}-${hour}`}
                     className={cn(
-                      "border-b border-r border-gray-300 dark:border-gray-600 min-h-[48px] transition-all duration-200 bg-background",
-                      !booking && "hover:bg-muted/50 cursor-pointer",
+                      "min-h-[48px] transition-all duration-200",
+                      !booking && "hover:bg-muted/30 cursor-pointer",
                       isDragOver && !booking && "bg-orange-100 dark:bg-orange-900/30 ring-2 ring-orange-500 ring-inset"
                     )}
                     style={{ 
@@ -605,7 +605,7 @@ export default function Planning() {
                     {booking && (
                       <div 
                         className={cn(
-                          "h-full m-1 p-2 rounded-lg text-white cursor-grab active:cursor-grabbing shadow-md",
+                          "h-full m-0.5 p-2 rounded-lg text-white cursor-grab active:cursor-grabbing shadow-md flex flex-col justify-between",
                           isDragging && "opacity-50 scale-95"
                         )}
                         style={{ backgroundColor: s.color }}
@@ -614,28 +614,26 @@ export default function Planning() {
                         onDragEnd={handleDragEnd}
                         onClick={(e) => handleAppointmentClick(e, booking)}
                       >
-                        <div className="h-full flex flex-col justify-between">
-                          <div>
-                            <div className="font-bold text-xs md:text-sm truncate">{booking.client || "—"}</div>
-                            <div className="text-[10px] md:text-xs opacity-90 truncate">{booking.service}</div>
-                            <div className="text-[9px] opacity-70">{booking.startTime}</div>
-                          </div>
-                          <div className="flex items-center justify-between mt-1">
-                            <span className="text-[10px] opacity-80">{booking.duration}د</span>
-                            <div className="flex items-center gap-1">
-                              <span className="font-bold text-xs">{booking.total} DH</span>
-                              {booking.paid ? (
-                                <CreditCard className="w-3 h-3 text-white" />
-                              ) : (
-                                <button
-                                  onClick={(e) => handleMarkAsPaid(e, booking)}
-                                  className="bg-white/20 hover:bg-white/30 rounded-full p-1 flex items-center gap-0.5"
-                                >
-                                  <CreditCard className="w-3 h-3" />
-                                  <Check className="w-2 h-2" />
-                                </button>
-                              )}
-                            </div>
+                        <div>
+                          <div className="font-bold text-xs md:text-sm truncate">{booking.client || "—"}</div>
+                          <div className="text-[10px] md:text-xs opacity-90 truncate">{booking.service}</div>
+                          <div className="text-[9px] opacity-70">{booking.startTime}</div>
+                        </div>
+                        <div className="flex items-center justify-between mt-auto">
+                          <span className="text-[10px] opacity-80">{booking.duration}د</span>
+                          <div className="flex items-center gap-1">
+                            <span className="font-bold text-xs">{booking.total} DH</span>
+                            {booking.paid ? (
+                              <CreditCard className="w-3 h-3 text-white" />
+                            ) : (
+                              <button
+                                onClick={(e) => handleMarkAsPaid(e, booking)}
+                                className="bg-white/20 hover:bg-white/30 rounded-full p-1 flex items-center gap-0.5"
+                              >
+                                <CreditCard className="w-3 h-3" />
+                                <Check className="w-2 h-2" />
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
