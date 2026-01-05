@@ -52,7 +52,7 @@ export default function Planning() {
 
 
   useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
+    const timer = setInterval(() => setCurrentTime(new Date()), 30000);
     return () => clearInterval(timer);
   }, []);
 
@@ -76,12 +76,12 @@ export default function Planning() {
 
   const isToday = format(date, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
 
-  // Fast auto-scroll to live line when page loads or date changes
+  // Smooth auto-scroll to live line when page loads or date changes
   useEffect(() => {
     if (isToday && liveLineRef.current) {
       setTimeout(() => {
-        liveLineRef.current?.scrollIntoView({ behavior: 'instant', block: 'center' });
-      }, 50);
+        liveLineRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
     }
   }, [date, isToday]);
   const [isEditFavoritesOpen, setIsEditFavoritesOpen] = useState(false);
@@ -489,15 +489,18 @@ export default function Planning() {
           {isToday && (
             <div 
               ref={liveLineRef}
-              className="absolute left-0 right-0 z-[5] pointer-events-none"
+              className="absolute left-0 right-0 z-[5] pointer-events-none transition-all duration-1000 ease-in-out"
               style={{ 
                 top: `${getCurrentTimePosition() + 48}px`,
                 gridColumn: `1 / -1`
               }}
             >
               <div className="flex items-center w-full">
-                <div className="w-3 h-3 md:w-2 md:h-2 rounded-full bg-orange-500 shadow-lg animate-pulse shrink-0" />
-                <div className="flex-1 h-1 md:h-0.5 bg-orange-500 shadow-sm" />
+                <div className="relative">
+                  <div className="w-3 h-3 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 shadow-lg shrink-0 z-10" />
+                  <div className="absolute inset-0 w-3 h-3 rounded-full bg-orange-500 animate-ping opacity-75" />
+                </div>
+                <div className="flex-1 h-0.5 bg-gradient-to-r from-orange-500 via-orange-400 to-transparent shadow-sm" />
               </div>
             </div>
           )}
