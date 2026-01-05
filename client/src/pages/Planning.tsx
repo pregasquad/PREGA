@@ -569,9 +569,15 @@ export default function Planning() {
                 const booking = getBooking(s.name, hour);
                 const isCovered = isSlotCovered(s.name, hour);
 
-                // For covered slots, don't render anything (the parent appointment spans this cell)
+                // For covered slots, render an empty cell to maintain grid lines
                 if (isCovered) {
-                  return null;
+                  return (
+                    <div
+                      key={`${s.id}-${hour}`}
+                      className="border-b border-l border-gray-300 dark:border-gray-600 min-h-[48px]"
+                      style={{ gridColumn: colNum, gridRow: rowNum }}
+                    />
+                  );
                 }
 
                 const span = booking ? getBookingSpan(booking) : 1;
