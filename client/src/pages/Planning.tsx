@@ -436,7 +436,7 @@ export default function Planning() {
   return (
     <div 
       ref={pageRef}
-      className="min-h-screen bg-background p-2 md:p-4 overflow-auto"
+      className="h-full bg-background p-2 md:p-4 flex flex-col overflow-hidden"
       dir={isRtl ? "rtl" : "ltr"}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
@@ -538,7 +538,7 @@ export default function Planning() {
       </div>
 
       {/* Board */}
-      <div ref={boardRef} className="overflow-auto max-h-[calc(100vh-200px)] bg-card rounded-xl border shadow-sm relative">
+      <div ref={boardRef} className="flex-1 overflow-auto bg-card rounded-xl border shadow-sm relative min-h-0">
         <div 
           className="grid relative" 
           style={{ 
