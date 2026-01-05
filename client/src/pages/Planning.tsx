@@ -13,7 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CalendarIcon, ChevronLeft, ChevronRight, Plus, Trash2, Check, X, Search, Star, RefreshCw, Sparkles, CreditCard, Settings2 } from "lucide-react";
+import { CalendarIcon, ChevronLeft, ChevronRight, Plus, Trash2, Check, X, Search, Star, RefreshCw, Sparkles, CreditCard, Settings2, Paintbrush } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -518,23 +518,28 @@ export default function Planning() {
             gridAutoRows: '48px'
           }}
         >
-          {/* Current Time Line - inside grid to match full width (z-[5] so cards appear on top) */}
+          {/* Current Time Line - flex layout with sticky icon and spanning line */}
           {isToday && (
             <div 
               ref={liveLineRef}
-              className="absolute left-0 right-0 z-[5] pointer-events-none transition-all duration-1000 ease-in-out"
+              className="absolute z-[35] pointer-events-none transition-all duration-1000 ease-in-out flex items-center"
               style={{ 
                 top: `${getCurrentTimePosition() + 48}px`,
-                gridColumn: `1 / -1`
+                left: 0,
+                right: 0,
               }}
             >
-              <div className="flex items-center w-full">
-                <div className="relative">
-                  <div className="w-3 h-3 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 shadow-lg shrink-0 z-10" />
-                  <div className="absolute inset-0 w-3 h-3 rounded-full bg-orange-500 animate-ping opacity-75" />
+              {/* Brush icon - sticky to time column */}
+              <div className="w-[55px] shrink-0 sticky ltr:left-0 rtl:right-0 z-[50] flex items-center justify-center">
+                <div className="relative flex items-center justify-center">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 shadow-xl flex items-center justify-center border-2 border-white dark:border-gray-800">
+                    <Paintbrush className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="absolute inset-0 w-9 h-9 rounded-full bg-orange-500 animate-ping opacity-30" />
                 </div>
-                <div className="flex-1 h-0.5 bg-gradient-to-r from-orange-500 via-orange-400 to-transparent shadow-sm" />
               </div>
+              {/* Line spanning staff columns */}
+              <div className="flex-1 h-0.5 ltr:bg-gradient-to-r rtl:bg-gradient-to-l from-orange-500 via-orange-400 to-transparent shadow-sm ltr:-ml-3 rtl:-mr-3" />
             </div>
           )}
           {/* Top row - Staff headers (sticky) */}

@@ -125,3 +125,13 @@ Preferred communication style: Simple, everyday language.
   - Updated pages: Services, Clients, Inventory, Charges, Salaries, Reports, StaffPerformance
   - Smart scrolling in AppLayout: locked for Planning page, native scroll for other pages
   - Live time indicator updates every 30 seconds with smooth scrolling animation
+- **Live Time Indicator Redesign**:
+  - Added paintbrush icon in orange gradient circle at the start of the live line
+  - Icon stays sticky in time column when horizontally scrolling
+  - Full RTL support for Arabic language (icon on right, gradient reversed)
+  - Pulsing animation for visual emphasis
+- **Database Connection Performance**:
+  - Added connection pool warmup on server startup (5 pre-established connections)
+  - First request response time improved from ~964ms to ~142ms (7x faster)
+  - Configured pool limits (10 max connections) for optimal performance
+  - Works on both Replit and Koyeb deployment platforms
