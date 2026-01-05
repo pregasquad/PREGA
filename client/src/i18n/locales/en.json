@@ -50,7 +50,11 @@
     "today": "Today",
     "thisWeek": "This Week",
     "thisMonth": "This Month",
-    "currency": "DH"
+    "currency": "DH",
+    "results": "results",
+    "created": "Created",
+    "updated": "Updated",
+    "deleted": "Deleted"
   },
   "planning": {
     "title": "PREGA SQUAD - Planning",

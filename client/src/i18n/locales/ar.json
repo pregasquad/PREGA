@@ -50,7 +50,11 @@
     "today": "اليوم",
     "thisWeek": "هذا الأسبوع",
     "thisMonth": "هذا الشهر",
-    "currency": "درهم"
+    "currency": "درهم",
+    "results": "نتائج",
+    "created": "تم الإنشاء",
+    "updated": "تم التحديث",
+    "deleted": "تم الحذف"
   },
   "planning": {
     "title": "PREGA SQUAD - التخطيط",
