@@ -619,11 +619,11 @@ export default function Planning() {
   return (
     <div 
       ref={pageRef}
-      className="h-full bg-background p-1.5 md:p-3 flex flex-col"
+      className="h-full bg-background px-1.5 pt-0.5 pb-1 md:px-3 md:pt-1 md:pb-2 flex flex-col"
       dir={isRtl ? "rtl" : "ltr"}
     >
       {/* Header */}
-      <div className="mb-1 flex flex-col md:flex-row justify-between items-start md:items-center gap-1 shrink-0">
+      <div className="mb-0.5 flex flex-col md:flex-row justify-between items-start md:items-center gap-0.5 shrink-0">
         <h1 className="text-lg md:text-xl font-bold">{t("planning.title")}</h1>
         
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
