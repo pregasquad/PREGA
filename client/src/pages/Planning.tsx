@@ -59,6 +59,7 @@ export default function Planning() {
   const [serviceSearch, setServiceSearch] = useState("");
   const [currentTime, setCurrentTime] = useState(new Date());
   const boardRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
   const liveLineRef = useRef<HTMLDivElement>(null);
 
   // Use requestAnimationFrame + visibility API for PWA-compatible time updates
@@ -259,6 +260,21 @@ export default function Planning() {
       window.removeEventListener('pageshow', handleVisibility);
     };
   }, [isToday, scrollToLiveLine]);
+
+  // Sync horizontal scroll between header and board
+  useEffect(() => {
+    const board = boardRef.current;
+    if (!board) return;
+
+    const handleScroll = () => {
+      if (headerRef.current) {
+        headerRef.current.scrollLeft = board.scrollLeft;
+      }
+    };
+
+    board.addEventListener('scroll', handleScroll, { passive: true });
+    return () => board.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Track data loaded state
   const dataLoadedRef = useRef(false);
@@ -795,9 +811,10 @@ export default function Planning() {
 
       {/* Board with sticky header */}
       <div className="flex-1 flex flex-col bg-background rounded-xl border shadow-sm overflow-hidden" dir={isRtl ? "rtl" : "ltr"}>
-        {/* Sticky Staff Headers - outside scroll container */}
+        {/* Sticky Staff Headers - outside scroll container, synced with board scroll */}
         <div 
-          className="grid bg-muted border-b border-gray-300 dark:border-gray-600 z-50 shrink-0"
+          ref={headerRef}
+          className="grid bg-muted border-b border-gray-300 dark:border-gray-600 z-50 shrink-0 overflow-x-hidden"
           style={{ 
             gridTemplateColumns: `55px repeat(${staffList.length}, minmax(120px, 1fr))`,
           }}
