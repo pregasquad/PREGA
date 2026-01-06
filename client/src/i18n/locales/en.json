@@ -362,7 +362,13 @@
     "password": "Password",
     "wrongPassword": "Wrong password",
     "protectedArea": "Protected Area",
-    "enterPasswordPrompt": "Please enter the password to access this page"
+    "enterPasswordPrompt": "Please enter the password to access this page",
+    "welcome": "Welcome",
+    "loginToAccess": "Please login to access the application",
+    "selectUser": "Select User",
+    "enterPin": "Enter PIN",
+    "noUsersConfigured": "No users configured. Please contact administrator.",
+    "setupFirstUser": "Setup First User"
   },
   "language": {
     "select": "Language",

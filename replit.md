@@ -114,6 +114,13 @@ Preferred communication style: Simple, everyday language.
 - `npm run db:push` - Push schema changes to database
 
 ## Recent Changes (January 2026)
+- **First Login Interface**: Users must login before accessing the application
+  - Welcome screen with PREGA SQUAD branding
+  - User selection dropdown with all configured admin users
+  - PIN authentication using bcrypt-secured PINs from admin_roles table
+  - "Setup First User" button when no users exist (for initial setup)
+  - Public booking page (/booking) accessible without login
+  - Session stored in sessionStorage for persistence during browser session
 - **Business Settings Feature**: Configurable salon settings (business name, address, contact, currency, working hours/days)
   - Admin Settings page now has Business tab as the first tab
   - API endpoints: GET/PATCH /api/business-settings

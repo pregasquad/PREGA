@@ -362,7 +362,13 @@
     "password": "كلمة المرور",
     "wrongPassword": "كلمة المرور خاطئة",
     "protectedArea": "منطقة محمية",
-    "enterPasswordPrompt": "يرجى إدخال كلمة المرور للوصول إلى هذه الصفحة"
+    "enterPasswordPrompt": "يرجى إدخال كلمة المرور للوصول إلى هذه الصفحة",
+    "welcome": "مرحباً",
+    "loginToAccess": "يرجى تسجيل الدخول للوصول إلى التطبيق",
+    "selectUser": "اختر المستخدم",
+    "enterPin": "أدخل رمز PIN",
+    "noUsersConfigured": "لم يتم تكوين مستخدمين. يرجى الاتصال بالمسؤول.",
+    "setupFirstUser": "إعداد المستخدم الأول"
   },
   "language": {
     "select": "اللغة",

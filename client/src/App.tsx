@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { AdminLock } from "@/components/layout/AdminLock";
+import { FirstLogin } from "@/components/layout/FirstLogin";
 
 import Home from "@/pages/Home";
 import Planning from "@/pages/Planning";
@@ -93,7 +94,9 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
-        <Router />
+        <FirstLogin>
+          <Router />
+        </FirstLogin>
       </TooltipProvider>
     </QueryClientProvider>
   );

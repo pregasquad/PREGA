@@ -362,7 +362,13 @@
     "password": "Mot de passe",
     "wrongPassword": "Mot de passe incorrect",
     "protectedArea": "Zone Protégée",
-    "enterPasswordPrompt": "Veuillez entrer le mot de passe pour accéder à cette page"
+    "enterPasswordPrompt": "Veuillez entrer le mot de passe pour accéder à cette page",
+    "welcome": "Bienvenue",
+    "loginToAccess": "Veuillez vous connecter pour accéder à l'application",
+    "selectUser": "Sélectionner l'utilisateur",
+    "enterPin": "Entrer le code PIN",
+    "noUsersConfigured": "Aucun utilisateur configuré. Veuillez contacter l'administrateur.",
+    "setupFirstUser": "Créer le premier utilisateur"
   },
   "language": {
     "select": "Langue",
