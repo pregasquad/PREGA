@@ -449,7 +449,30 @@
     "currency": "Currency",
     "currencyCode": "Currency Code",
     "currencySymbol": "Currency Symbol",
-    "settingsSaved": "Settings saved successfully"
+    "settingsSaved": "Settings saved successfully",
+    "permissions": "Permissions",
+    "permissionsDesc": "Select which pages and features this user can access",
+    "selectAll": "Select All",
+    "clearAll": "Clear All"
+  },
+  "permissions": {
+    "viewHome": "View Home",
+    "viewPlanning": "View Planning",
+    "manageAppointments": "Manage Appointments",
+    "viewServices": "View Services",
+    "manageServices": "Manage Services",
+    "viewClients": "View Clients",
+    "manageClients": "Manage Clients",
+    "viewInventory": "View Inventory",
+    "manageInventory": "Manage Inventory",
+    "viewExpenses": "View Expenses",
+    "manageExpenses": "Manage Expenses",
+    "viewSalaries": "View Salaries",
+    "manageSalaries": "Manage Salaries",
+    "viewStaffPerformance": "View Staff Performance",
+    "viewReports": "View Reports",
+    "adminSettings": "Admin Settings",
+    "exportData": "Export Data"
   },
   "days": {
     "sunday": "Sunday",

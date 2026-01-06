@@ -48,6 +48,26 @@ const ROLE_LABELS: Record<string, { label: string, color: string }> = {
   receptionist: { label: "Receptionist", color: "bg-green-500" }
 };
 
+const ALL_PERMISSIONS = [
+  { key: "view_home", labelKey: "permissions.viewHome", icon: "Home" },
+  { key: "view_planning", labelKey: "permissions.viewPlanning", icon: "Calendar" },
+  { key: "manage_appointments", labelKey: "permissions.manageAppointments", icon: "Calendar" },
+  { key: "view_services", labelKey: "permissions.viewServices", icon: "Scissors" },
+  { key: "manage_services", labelKey: "permissions.manageServices", icon: "Scissors" },
+  { key: "view_clients", labelKey: "permissions.viewClients", icon: "Users" },
+  { key: "manage_clients", labelKey: "permissions.manageClients", icon: "Users" },
+  { key: "view_inventory", labelKey: "permissions.viewInventory", icon: "Package" },
+  { key: "manage_inventory", labelKey: "permissions.manageInventory", icon: "Package" },
+  { key: "view_expenses", labelKey: "permissions.viewExpenses", icon: "Wallet" },
+  { key: "manage_expenses", labelKey: "permissions.manageExpenses", icon: "Wallet" },
+  { key: "view_salaries", labelKey: "permissions.viewSalaries", icon: "DollarSign" },
+  { key: "manage_salaries", labelKey: "permissions.manageSalaries", icon: "DollarSign" },
+  { key: "view_staff_performance", labelKey: "permissions.viewStaffPerformance", icon: "TrendingUp" },
+  { key: "view_reports", labelKey: "permissions.viewReports", icon: "BarChart" },
+  { key: "admin_settings", labelKey: "permissions.adminSettings", icon: "Settings" },
+  { key: "export_data", labelKey: "permissions.exportData", icon: "Download" },
+];
+
 const DAYS_OF_WEEK = [
   { value: 0, label: "sunday" },
   { value: 1, label: "monday" },
@@ -66,7 +86,8 @@ export default function AdminSettings() {
   const [formData, setFormData] = useState({
     name: "",
     role: "receptionist",
-    pin: ""
+    pin: "",
+    permissions: [] as string[]
   });
   const [businessForm, setBusinessForm] = useState<BusinessSettings>({
     businessName: "PREGA SQUAD",
@@ -172,7 +193,30 @@ export default function AdminSettings() {
   };
 
   const resetForm = () => {
-    setFormData({ name: "", role: "receptionist", pin: "" });
+    setFormData({ name: "", role: "receptionist", pin: "", permissions: [] });
+  };
+
+  const togglePermission = (permission: string) => {
+    setFormData(prev => ({
+      ...prev,
+      permissions: prev.permissions.includes(permission)
+        ? prev.permissions.filter(p => p !== permission)
+        : [...prev.permissions, permission]
+    }));
+  };
+
+  const selectAllPermissions = () => {
+    setFormData(prev => ({
+      ...prev,
+      permissions: ALL_PERMISSIONS.map(p => p.key)
+    }));
+  };
+
+  const clearAllPermissions = () => {
+    setFormData(prev => ({
+      ...prev,
+      permissions: []
+    }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -189,7 +233,8 @@ export default function AdminSettings() {
     setFormData({
       name: role.name,
       role: role.role,
-      pin: role.pin || ""
+      pin: role.pin || "",
+      permissions: role.permissions || []
     });
     setIsDialogOpen(true);
   };
@@ -399,37 +444,39 @@ export default function AdminSettings() {
                     {t("admin.addUser")}
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>
                       {editingRole ? t("admin.editUser") : t("admin.addUser")}
                     </DialogTitle>
                   </DialogHeader>
                   <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>{t("common.name")}</Label>
-                      <Input
-                        value={formData.name}
-                        onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                        placeholder={t("admin.namePlaceholder")}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>{t("admin.role")}</Label>
-                      <Select
-                        value={formData.role}
-                        onValueChange={(value) => setFormData(prev => ({ ...prev, role: value }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="owner">{t("admin.owner")}</SelectItem>
-                          <SelectItem value="manager">{t("admin.manager")}</SelectItem>
-                          <SelectItem value="receptionist">{t("admin.receptionist")}</SelectItem>
-                        </SelectContent>
-                      </Select>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label>{t("common.name")}</Label>
+                        <Input
+                          value={formData.name}
+                          onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                          placeholder={t("admin.namePlaceholder")}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>{t("admin.role")}</Label>
+                        <Select
+                          value={formData.role}
+                          onValueChange={(value) => setFormData(prev => ({ ...prev, role: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="owner">{t("admin.owner")}</SelectItem>
+                            <SelectItem value="manager">{t("admin.manager")}</SelectItem>
+                            <SelectItem value="receptionist">{t("admin.receptionist")}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <Label>{t("admin.pin")} ({t("services.optional")})</Label>
@@ -442,6 +489,43 @@ export default function AdminSettings() {
                       />
                       <p className="text-xs text-muted-foreground">{t("admin.pinDesc")}</p>
                     </div>
+                    
+                    <div className="space-y-3 border-t pt-4">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-base font-semibold">{t("admin.permissions")}</Label>
+                        <div className="flex gap-2">
+                          <Button type="button" variant="outline" size="sm" onClick={selectAllPermissions}>
+                            {t("admin.selectAll")}
+                          </Button>
+                          <Button type="button" variant="outline" size="sm" onClick={clearAllPermissions}>
+                            {t("admin.clearAll")}
+                          </Button>
+                        </div>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{t("admin.permissionsDesc")}</p>
+                      <div className="grid gap-2 md:grid-cols-2">
+                        {ALL_PERMISSIONS.map((perm) => (
+                          <div
+                            key={perm.key}
+                            className="flex items-center space-x-2 p-2 border rounded-lg hover:bg-muted/50 cursor-pointer"
+                            onClick={() => togglePermission(perm.key)}
+                          >
+                            <Checkbox
+                              id={`perm-${perm.key}`}
+                              checked={formData.permissions.includes(perm.key)}
+                              onCheckedChange={() => togglePermission(perm.key)}
+                            />
+                            <label
+                              htmlFor={`perm-${perm.key}`}
+                              className="text-sm cursor-pointer flex-1"
+                            >
+                              {t(perm.labelKey, perm.key.replace(/_/g, ' '))}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
                     <Button type="submit" className="w-full" disabled={createMutation.isPending || updateMutation.isPending}>
                       {editingRole ? t("common.save") : t("common.add")}
                     </Button>
@@ -460,6 +544,7 @@ export default function AdminSettings() {
                     <TableRow>
                       <TableHead>{t("common.name")}</TableHead>
                       <TableHead>{t("admin.role")}</TableHead>
+                      <TableHead>{t("admin.permissions")}</TableHead>
                       <TableHead>{t("admin.pin")}</TableHead>
                       <TableHead className="text-right">{t("common.actions")}</TableHead>
                     </TableRow>
@@ -471,6 +556,11 @@ export default function AdminSettings() {
                         <TableCell>
                           <Badge className={`${ROLE_LABELS[role.role]?.color || "bg-gray-500"} text-white`}>
                             {t(`admin.${role.role}`)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="font-normal">
+                            {role.permissions?.length || 0} / {ALL_PERMISSIONS.length}
                           </Badge>
                         </TableCell>
                         <TableCell>

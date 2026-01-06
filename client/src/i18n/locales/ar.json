@@ -449,7 +449,30 @@
     "currency": "العملة",
     "currencyCode": "رمز العملة",
     "currencySymbol": "رمز العملة",
-    "settingsSaved": "تم حفظ الإعدادات بنجاح"
+    "settingsSaved": "تم حفظ الإعدادات بنجاح",
+    "permissions": "الصلاحيات",
+    "permissionsDesc": "اختر الصفحات والميزات التي يمكن لهذا المستخدم الوصول إليها",
+    "selectAll": "تحديد الكل",
+    "clearAll": "إلغاء الكل"
+  },
+  "permissions": {
+    "viewHome": "عرض الرئيسية",
+    "viewPlanning": "عرض التخطيط",
+    "manageAppointments": "إدارة المواعيد",
+    "viewServices": "عرض الخدمات",
+    "manageServices": "إدارة الخدمات",
+    "viewClients": "عرض العملاء",
+    "manageClients": "إدارة العملاء",
+    "viewInventory": "عرض المخزون",
+    "manageInventory": "إدارة المخزون",
+    "viewExpenses": "عرض المصاريف",
+    "manageExpenses": "إدارة المصاريف",
+    "viewSalaries": "عرض الرواتب",
+    "manageSalaries": "إدارة الرواتب",
+    "viewStaffPerformance": "عرض أداء الموظفين",
+    "viewReports": "عرض التقارير",
+    "adminSettings": "إعدادات المدير",
+    "exportData": "تصدير البيانات"
   },
   "days": {
     "sunday": "الأحد",

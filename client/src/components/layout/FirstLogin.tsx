@@ -69,6 +69,7 @@ export function FirstLogin({ children }: FirstLoginProps) {
         sessionStorage.setItem("user_authenticated", "true");
         sessionStorage.setItem("current_user", selectedUser);
         sessionStorage.setItem("current_user_role", data.role || "");
+        sessionStorage.setItem("current_user_permissions", JSON.stringify(data.permissions || []));
         setIsAuthenticated(true);
       } else {
         setError(t("auth.wrongPassword"));

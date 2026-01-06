@@ -44,17 +44,17 @@ import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 
 const NAV_ITEMS = [
-  { labelKey: "nav.home", href: "/home", icon: Home },
-  { labelKey: "nav.planning", href: "/planning", icon: CalendarDays },
-  { labelKey: "nav.services", href: "/services", icon: Scissors },
-  { labelKey: "nav.clients", href: "/clients", icon: Users },
-  { labelKey: "nav.inventory", href: "/inventory", icon: Package },
-  { labelKey: "nav.expenses", href: "/charges", icon: Wallet },
-  { labelKey: "nav.salaries", href: "/salaries", icon: DollarSign },
-  { labelKey: "nav.staffPerformance", href: "/staff-performance", icon: TrendingUp },
-  { labelKey: "nav.reports", href: "/reports", icon: BarChart3 },
-  { labelKey: "nav.adminSettings", href: "/admin-settings", icon: Settings },
-  { labelKey: "nav.booking", href: "/booking", icon: ExternalLink, external: true },
+  { labelKey: "nav.home", href: "/home", icon: Home, permission: "view_home" },
+  { labelKey: "nav.planning", href: "/planning", icon: CalendarDays, permission: "view_planning" },
+  { labelKey: "nav.services", href: "/services", icon: Scissors, permission: "view_services" },
+  { labelKey: "nav.clients", href: "/clients", icon: Users, permission: "view_clients" },
+  { labelKey: "nav.inventory", href: "/inventory", icon: Package, permission: "view_inventory" },
+  { labelKey: "nav.expenses", href: "/charges", icon: Wallet, permission: "view_expenses" },
+  { labelKey: "nav.salaries", href: "/salaries", icon: DollarSign, permission: "view_salaries" },
+  { labelKey: "nav.staffPerformance", href: "/staff-performance", icon: TrendingUp, permission: "view_staff_performance" },
+  { labelKey: "nav.reports", href: "/reports", icon: BarChart3, permission: "view_reports" },
+  { labelKey: "nav.adminSettings", href: "/admin-settings", icon: Settings, permission: "admin_settings" },
+  { labelKey: "nav.booking", href: "/booking", icon: ExternalLink, external: true, permission: null },
 ];
 
 interface StoredNotification {
@@ -65,6 +65,13 @@ interface StoredNotification {
   startTime: string;
   total: number;
   receivedAt: string;
+}
+
+interface AdminRole {
+  id: number;
+  name: string;
+  role: string;
+  permissions: string[];
 }
 
 export function Sidebar() {
@@ -85,6 +92,30 @@ export function Sidebar() {
     const stored = localStorage.getItem("booking_notifications");
     return stored ? JSON.parse(stored) : [];
   });
+
+  const currentUserName = typeof window !== 'undefined' ? sessionStorage.getItem("current_user") : null;
+  
+  const { data: adminRoles = [] } = useQuery<AdminRole[]>({
+    queryKey: ["/api/admin-roles"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin-roles");
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  const currentUser = adminRoles.find(role => role.name === currentUserName);
+  const userPermissions = currentUser?.permissions || [];
+  
+  const hasPermission = (permission: string | null) => {
+    if (permission === null) return true;
+    if (!currentUserName || currentUserName === "Setup") return true;
+    if (!currentUser) return true;
+    if (currentUser.permissions.length === 0) return true;
+    return userPermissions.includes(permission);
+  };
+
+  const filteredNavItems = NAV_ITEMS.filter(item => hasPermission(item.permission));
 
   const { data: allAppointments = [] } = useQuery<any[]>({
     queryKey: ["/api/appointments/all"],
@@ -319,7 +350,7 @@ export function Sidebar() {
 
       <SidebarContent className="px-2">
         <SidebarMenu>
-          {NAV_ITEMS.map((item) => {
+          {filteredNavItems.map((item) => {
             const isActive = location === item.href;
             const label = t(item.labelKey);
             return (

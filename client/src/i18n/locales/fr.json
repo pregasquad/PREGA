@@ -449,7 +449,30 @@
     "currency": "Devise",
     "currencyCode": "Code de Devise",
     "currencySymbol": "Symbole de Devise",
-    "settingsSaved": "Paramètres enregistrés avec succès"
+    "settingsSaved": "Paramètres enregistrés avec succès",
+    "permissions": "Permissions",
+    "permissionsDesc": "Sélectionnez les pages et fonctionnalités accessibles à cet utilisateur",
+    "selectAll": "Tout Sélectionner",
+    "clearAll": "Tout Effacer"
+  },
+  "permissions": {
+    "viewHome": "Voir Accueil",
+    "viewPlanning": "Voir Planning",
+    "manageAppointments": "Gérer Rendez-vous",
+    "viewServices": "Voir Services",
+    "manageServices": "Gérer Services",
+    "viewClients": "Voir Clients",
+    "manageClients": "Gérer Clients",
+    "viewInventory": "Voir Stock",
+    "manageInventory": "Gérer Stock",
+    "viewExpenses": "Voir Dépenses",
+    "manageExpenses": "Gérer Dépenses",
+    "viewSalaries": "Voir Salaires",
+    "manageSalaries": "Gérer Salaires",
+    "viewStaffPerformance": "Voir Performance Staff",
+    "viewReports": "Voir Rapports",
+    "adminSettings": "Paramètres Admin",
+    "exportData": "Exporter Données"
   },
   "days": {
     "sunday": "Dimanche",
