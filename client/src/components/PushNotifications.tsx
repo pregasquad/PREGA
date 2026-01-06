@@ -74,15 +74,36 @@ export function PushNotifications() {
         return;
       }
 
-      const response = await fetch('/api/push/vapid-public-key', { credentials: 'include' });
-      const data = await response.json();
+      const response = await fetch('/api/push/vapid-public-key', { 
+        credentials: 'include',
+        cache: 'no-store'  // Prevent caching
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+      }
+      
+      const text = await response.text();
+      console.log('Raw response:', text);
+      
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        throw new Error(`Invalid JSON response: ${text.substring(0, 100)}`);
+      }
+      
       const publicKey = data.publicKey;
       
       console.log('VAPID public key received:', publicKey);
       console.log('Key length:', publicKey?.length);
       
-      if (!publicKey || publicKey.length < 80) {
-        throw new Error('Invalid VAPID public key from server');
+      if (!publicKey) {
+        throw new Error('No VAPID public key in response');
+      }
+      
+      if (publicKey.length < 80) {
+        throw new Error(`VAPID key too short: ${publicKey.length} chars`);
       }
 
       const applicationServerKey = urlBase64ToUint8Array(publicKey);
