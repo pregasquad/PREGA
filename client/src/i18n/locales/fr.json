@@ -429,7 +429,30 @@
     "exportExpenses": "Exporter Dépenses",
     "exportSuccess": "Données exportées avec succès",
     "backupInfo": "Informations de Sauvegarde",
-    "backupInfoDesc": "Les fichiers CSV peuvent être ouverts dans Excel ou Google Sheets. Exportez régulièrement pour garder une sauvegarde de vos données importantes."
+    "backupInfoDesc": "Les fichiers CSV peuvent être ouverts dans Excel ou Google Sheets. Exportez régulièrement pour garder une sauvegarde de vos données importantes.",
+    "business": "Commerce",
+    "businessSettings": "Paramètres du Commerce",
+    "businessSettingsDesc": "Configurez les informations de base et les horaires d'ouverture de votre salon",
+    "businessName": "Nom du Commerce",
+    "address": "Adresse",
+    "addressPlaceholder": "Entrez l'adresse de votre commerce",
+    "workingHours": "Horaires de Travail",
+    "openingTime": "Heure d'Ouverture",
+    "closingTime": "Heure de Fermeture",
+    "workingDays": "Jours de Travail",
+    "currency": "Devise",
+    "currencyCode": "Code de Devise",
+    "currencySymbol": "Symbole de Devise",
+    "settingsSaved": "Paramètres enregistrés avec succès"
+  },
+  "days": {
+    "sunday": "Dimanche",
+    "monday": "Lundi",
+    "tuesday": "Mardi",
+    "wednesday": "Mercredi",
+    "thursday": "Jeudi",
+    "friday": "Vendredi",
+    "saturday": "Samedi"
   },
   "home": {
     "dashboard": "Tableau de Bord",

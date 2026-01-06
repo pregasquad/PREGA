@@ -254,3 +254,22 @@ export const ROLE_PERMISSIONS = {
     "view_services"
   ]
 } as const;
+
+export const businessSettings = mysqlTable("business_settings", {
+  id: serial("id").primaryKey(),
+  businessName: varchar("business_name", { length: 255 }).notNull().default("PREGA SQUAD"),
+  logo: text("logo"),
+  address: text("address"),
+  phone: varchar("phone", { length: 50 }),
+  email: varchar("email", { length: 255 }),
+  currency: varchar("currency", { length: 10 }).notNull().default("MAD"),
+  currencySymbol: varchar("currency_symbol", { length: 10 }).notNull().default("DH"),
+  openingTime: varchar("opening_time", { length: 10 }).notNull().default("09:00"),
+  closingTime: varchar("closing_time", { length: 10 }).notNull().default("19:00"),
+  workingDays: json("working_days").$type<number[]>().notNull().default([1, 2, 3, 4, 5, 6]),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertBusinessSettingsSchema = createInsertSchema(businessSettings).omit({ id: true, updatedAt: true });
+export type BusinessSettings = typeof businessSettings.$inferSelect;
+export type InsertBusinessSettings = z.infer<typeof insertBusinessSettingsSchema>;

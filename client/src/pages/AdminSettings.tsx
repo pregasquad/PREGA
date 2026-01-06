@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -11,11 +11,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { 
   UserPlus, Users, Shield, Download, FileSpreadsheet, 
   Trash2, Edit, Calendar, User, Briefcase, Package, 
-  CreditCard, DollarSign
+  CreditCard, Building2, Clock, Save
 } from "lucide-react";
 
 interface AdminRole {
@@ -27,11 +28,35 @@ interface AdminRole {
   createdAt: string;
 }
 
+interface BusinessSettings {
+  id?: number;
+  businessName: string;
+  logo?: string | null;
+  address?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  currency: string;
+  currencySymbol: string;
+  openingTime: string;
+  closingTime: string;
+  workingDays: number[];
+}
+
 const ROLE_LABELS: Record<string, { label: string, color: string }> = {
   owner: { label: "Owner", color: "bg-red-500" },
   manager: { label: "Manager", color: "bg-blue-500" },
   receptionist: { label: "Receptionist", color: "bg-green-500" }
 };
+
+const DAYS_OF_WEEK = [
+  { value: 0, label: "sunday" },
+  { value: 1, label: "monday" },
+  { value: 2, label: "tuesday" },
+  { value: 3, label: "wednesday" },
+  { value: 4, label: "thursday" },
+  { value: 5, label: "friday" },
+  { value: 6, label: "saturday" }
+];
 
 export default function AdminSettings() {
   const { t } = useTranslation();
@@ -43,6 +68,14 @@ export default function AdminSettings() {
     role: "receptionist",
     pin: ""
   });
+  const [businessForm, setBusinessForm] = useState<BusinessSettings>({
+    businessName: "PREGA SQUAD",
+    currency: "MAD",
+    currencySymbol: "DH",
+    openingTime: "09:00",
+    closingTime: "19:00",
+    workingDays: [1, 2, 3, 4, 5, 6]
+  });
 
   const { data: adminRoles = [], isLoading } = useQuery<AdminRole[]>({
     queryKey: ["/api/admin-roles"],
@@ -51,6 +84,21 @@ export default function AdminSettings() {
       return res.json();
     }
   });
+
+  const { data: businessSettings, isLoading: isLoadingBusiness } = useQuery<BusinessSettings>({
+    queryKey: ["/api/business-settings"],
+    queryFn: async () => {
+      const res = await fetch("/api/business-settings");
+      return res.json();
+    }
+  });
+
+  // Update business form when data loads
+  useEffect(() => {
+    if (businessSettings) {
+      setBusinessForm(businessSettings);
+    }
+  }, [businessSettings]);
 
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -90,6 +138,34 @@ export default function AdminSettings() {
       toast({ title: t("admin.userDeleted") });
     }
   });
+
+  const businessMutation = useMutation({
+    mutationFn: async (data: Partial<BusinessSettings>) => {
+      const res = await apiRequest("PATCH", "/api/business-settings", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/business-settings"] });
+      toast({ title: t("admin.settingsSaved") });
+    },
+    onError: (err: any) => {
+      toast({ title: t("common.error"), description: err.message, variant: "destructive" });
+    }
+  });
+
+  const handleBusinessSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    businessMutation.mutate(businessForm);
+  };
+
+  const toggleWorkingDay = (day: number) => {
+    setBusinessForm(prev => ({
+      ...prev,
+      workingDays: prev.workingDays.includes(day)
+        ? prev.workingDays.filter(d => d !== day)
+        : [...prev.workingDays, day].sort((a, b) => a - b)
+    }));
+  };
 
   const resetForm = () => {
     setFormData({ name: "", role: "receptionist", pin: "" });
@@ -151,8 +227,12 @@ export default function AdminSettings() {
         <p className="text-muted-foreground">{t("admin.description")}</p>
       </div>
 
-      <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 max-w-md">
+      <Tabs defaultValue="business" className="w-full">
+        <TabsList className="grid w-full grid-cols-3 max-w-lg">
+          <TabsTrigger value="business" className="gap-2">
+            <Building2 className="w-4 h-4" />
+            {t("admin.business")}
+          </TabsTrigger>
           <TabsTrigger value="users" className="gap-2">
             <Users className="w-4 h-4" />
             {t("admin.users")}
@@ -162,6 +242,138 @@ export default function AdminSettings() {
             {t("admin.export")}
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="business" className="space-y-4 mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="w-5 h-5" />
+                {t("admin.businessSettings")}
+              </CardTitle>
+              <CardDescription>{t("admin.businessSettingsDesc")}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingBusiness ? (
+                <p className="text-center py-4 text-muted-foreground">{t("common.loading")}</p>
+              ) : (
+                <form onSubmit={handleBusinessSave} className="space-y-6">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>{t("admin.businessName")}</Label>
+                      <Input
+                        value={businessForm.businessName}
+                        onChange={(e) => setBusinessForm(prev => ({ ...prev, businessName: e.target.value }))}
+                        placeholder="PREGA SQUAD"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{t("common.email")}</Label>
+                      <Input
+                        type="email"
+                        value={businessForm.email || ""}
+                        onChange={(e) => setBusinessForm(prev => ({ ...prev, email: e.target.value }))}
+                        placeholder="contact@example.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{t("common.phone")}</Label>
+                      <Input
+                        value={businessForm.phone || ""}
+                        onChange={(e) => setBusinessForm(prev => ({ ...prev, phone: e.target.value }))}
+                        placeholder="+212 6XX XXX XXX"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{t("admin.address")}</Label>
+                      <Input
+                        value={businessForm.address || ""}
+                        onChange={(e) => setBusinessForm(prev => ({ ...prev, address: e.target.value }))}
+                        placeholder={t("admin.addressPlaceholder")}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-4">
+                    <h3 className="font-medium mb-4 flex items-center gap-2">
+                      <Clock className="w-4 h-4" />
+                      {t("admin.workingHours")}
+                    </h3>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label>{t("admin.openingTime")}</Label>
+                        <Input
+                          type="time"
+                          value={businessForm.openingTime}
+                          onChange={(e) => setBusinessForm(prev => ({ ...prev, openingTime: e.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>{t("admin.closingTime")}</Label>
+                        <Input
+                          type="time"
+                          value={businessForm.closingTime}
+                          onChange={(e) => setBusinessForm(prev => ({ ...prev, closingTime: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                    <div className="mt-4 space-y-2">
+                      <Label>{t("admin.workingDays")}</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {DAYS_OF_WEEK.map(day => (
+                          <div
+                            key={day.value}
+                            className="flex items-center space-x-2"
+                          >
+                            <Checkbox
+                              id={`day-${day.value}`}
+                              checked={businessForm.workingDays.includes(day.value)}
+                              onCheckedChange={() => toggleWorkingDay(day.value)}
+                            />
+                            <label
+                              htmlFor={`day-${day.value}`}
+                              className="text-sm cursor-pointer"
+                            >
+                              {t(`days.${day.label}`)}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-4">
+                    <h3 className="font-medium mb-4">{t("admin.currency")}</h3>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label>{t("admin.currencyCode")}</Label>
+                        <Input
+                          value={businessForm.currency}
+                          onChange={(e) => setBusinessForm(prev => ({ ...prev, currency: e.target.value }))}
+                          placeholder="MAD"
+                          maxLength={5}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>{t("admin.currencySymbol")}</Label>
+                        <Input
+                          value={businessForm.currencySymbol}
+                          onChange={(e) => setBusinessForm(prev => ({ ...prev, currencySymbol: e.target.value }))}
+                          placeholder="DH"
+                          maxLength={5}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button type="submit" className="gap-2" disabled={businessMutation.isPending}>
+                    <Save className="w-4 h-4" />
+                    {t("common.save")}
+                  </Button>
+                </form>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="users" className="space-y-4 mt-4">
           <Card>

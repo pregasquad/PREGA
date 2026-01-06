@@ -429,7 +429,30 @@
     "exportExpenses": "تصدير المصاريف",
     "exportSuccess": "تم تصدير البيانات بنجاح",
     "backupInfo": "معلومات النسخ الاحتياطي",
-    "backupInfoDesc": "يمكن فتح ملفات CSV في Excel أو Google Sheets. قم بالتصدير بانتظام للحفاظ على نسخة احتياطية من بياناتك المهمة."
+    "backupInfoDesc": "يمكن فتح ملفات CSV في Excel أو Google Sheets. قم بالتصدير بانتظام للحفاظ على نسخة احتياطية من بياناتك المهمة.",
+    "business": "الأعمال",
+    "businessSettings": "إعدادات العمل",
+    "businessSettingsDesc": "قم بتكوين المعلومات الأساسية وساعات العمل للصالون",
+    "businessName": "اسم العمل",
+    "address": "العنوان",
+    "addressPlaceholder": "أدخل عنوان العمل",
+    "workingHours": "ساعات العمل",
+    "openingTime": "وقت الافتتاح",
+    "closingTime": "وقت الإغلاق",
+    "workingDays": "أيام العمل",
+    "currency": "العملة",
+    "currencyCode": "رمز العملة",
+    "currencySymbol": "رمز العملة",
+    "settingsSaved": "تم حفظ الإعدادات بنجاح"
+  },
+  "days": {
+    "sunday": "الأحد",
+    "monday": "الإثنين",
+    "tuesday": "الثلاثاء",
+    "wednesday": "الأربعاء",
+    "thursday": "الخميس",
+    "friday": "الجمعة",
+    "saturday": "السبت"
   },
   "home": {
     "dashboard": "لوحة التحكم",

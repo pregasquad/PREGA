@@ -429,7 +429,30 @@
     "exportExpenses": "Export Expenses",
     "exportSuccess": "Data exported successfully",
     "backupInfo": "Backup Information",
-    "backupInfoDesc": "CSV files can be opened in Excel or Google Sheets. Export regularly to keep a backup of your important data."
+    "backupInfoDesc": "CSV files can be opened in Excel or Google Sheets. Export regularly to keep a backup of your important data.",
+    "business": "Business",
+    "businessSettings": "Business Settings",
+    "businessSettingsDesc": "Configure your salon's basic information and operating hours",
+    "businessName": "Business Name",
+    "address": "Address",
+    "addressPlaceholder": "Enter your business address",
+    "workingHours": "Working Hours",
+    "openingTime": "Opening Time",
+    "closingTime": "Closing Time",
+    "workingDays": "Working Days",
+    "currency": "Currency",
+    "currencyCode": "Currency Code",
+    "currencySymbol": "Currency Symbol",
+    "settingsSaved": "Settings saved successfully"
+  },
+  "days": {
+    "sunday": "Sunday",
+    "monday": "Monday",
+    "tuesday": "Tuesday",
+    "wednesday": "Wednesday",
+    "thursday": "Thursday",
+    "friday": "Friday",
+    "saturday": "Saturday"
   },
   "home": {
     "dashboard": "Dashboard",

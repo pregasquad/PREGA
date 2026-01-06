@@ -617,6 +617,35 @@ export async function registerRoutes(
     }
   });
 
+  // === Business Settings ===
+  app.get("/api/business-settings", async (_req, res) => {
+    try {
+      const settings = await storage.getBusinessSettings();
+      if (!settings) {
+        return res.json({
+          businessName: "PREGA SQUAD",
+          currency: "MAD",
+          currencySymbol: "DH",
+          openingTime: "09:00",
+          closingTime: "19:00",
+          workingDays: [1, 2, 3, 4, 5, 6]
+        });
+      }
+      res.json(settings);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/business-settings", async (req, res) => {
+    try {
+      const settings = await storage.updateBusinessSettings(req.body);
+      res.json(settings);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
   // === Data Export ===
   app.get("/api/export/appointments", async (req, res) => {
     try {
