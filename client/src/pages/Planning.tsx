@@ -816,7 +816,7 @@ export default function Planning() {
           ref={headerRef}
           className="grid bg-gradient-to-b from-orange-50 to-orange-100 dark:from-orange-950/30 dark:to-orange-900/20 border-b-2 border-orange-200 dark:border-orange-800 z-50 shrink-0 overflow-x-hidden"
           style={{ 
-            gridTemplateColumns: `60px repeat(${staffList.length}, minmax(140px, 1fr))`,
+            gridTemplateColumns: `60px repeat(${staffList.length}, minmax(100px, 1fr))`,
           }}
         >
           <div className={cn("bg-white/50 dark:bg-gray-900/50 py-2 px-1", isRtl ? "border-l-2 border-orange-200 dark:border-orange-800" : "border-r-2 border-orange-200 dark:border-orange-800")}></div>
@@ -838,7 +838,7 @@ export default function Planning() {
           <div 
             className="grid relative"
             style={{ 
-              gridTemplateColumns: `60px repeat(${staffList.length}, minmax(140px, 1fr))`,
+              gridTemplateColumns: `60px repeat(${staffList.length}, minmax(100px, 1fr))`,
               gridAutoRows: '52px'
             }}
           >
