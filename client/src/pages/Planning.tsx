@@ -159,10 +159,14 @@ export default function Planning() {
   }, [date, currentTime]);
 
   // BULLETPROOF SCROLL TO LIVE LINE - uses scrollIntoView on the actual element
-  const scrollToLiveLine = useCallback(() => {
+  const scrollToLiveLine = useCallback((smooth = false) => {
     // Method 1: Use the actual live line element
     if (liveLineRef.current) {
-      liveLineRef.current.scrollIntoView({ block: 'center', inline: 'nearest' });
+      liveLineRef.current.scrollIntoView({ 
+        block: 'center', 
+        inline: 'nearest',
+        behavior: smooth ? 'smooth' : 'auto'
+      });
       return true;
     }
     
@@ -186,7 +190,13 @@ export default function Planning() {
     const totalMinutes = adjustedHour * 60 + currentMinutes;
     const slotHeight = 48;
     const targetTop = (totalMinutes / 30) * slotHeight + 48;
-    board.scrollTop = Math.max(0, targetTop - board.clientHeight / 2);
+    const scrollTarget = Math.max(0, targetTop - board.clientHeight / 2);
+    
+    if (smooth) {
+      board.scrollTo({ top: scrollTarget, behavior: 'smooth' });
+    } else {
+      board.scrollTop = scrollTarget;
+    }
     return true;
   }, []);
 
@@ -1269,7 +1279,7 @@ export default function Planning() {
       {/* Floating "Go to Now" button for PWA - always visible when viewing today */}
       {isToday && getCurrentTimePosition() >= 0 && (
         <button
-          onClick={() => scrollToLiveLine()}
+          onClick={() => scrollToLiveLine(true)}
           className="fixed bottom-20 right-4 z-50 w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 shadow-lg flex items-center justify-center text-white hover:from-orange-600 hover:to-amber-600 transition-all active:scale-95"
           aria-label="Go to current time"
         >
