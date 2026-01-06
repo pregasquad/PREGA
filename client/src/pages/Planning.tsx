@@ -158,14 +158,17 @@ export default function Planning() {
     return format(date, "yyyy-MM-dd") === format(workDayDate, "yyyy-MM-dd");
   }, [date, currentTime]);
 
-  // BULLETPROOF SCROLL TO LIVE LINE
-  // This scrolls to the current time position and follows it every 30 seconds
+  // BULLETPROOF SCROLL TO LIVE LINE - uses scrollIntoView on the actual element
   const scrollToLiveLine = useCallback(() => {
-    const board = boardRef.current;
-    if (!board) return false;
+    // Method 1: Use the actual live line element
+    if (liveLineRef.current) {
+      liveLineRef.current.scrollIntoView({ block: 'center', inline: 'nearest' });
+      return true;
+    }
     
-    // Board must have scrollable content
-    if (board.scrollHeight <= board.clientHeight) return false;
+    // Method 2: Fallback to manual scrollTop calculation
+    const board = boardRef.current;
+    if (!board || board.scrollHeight <= board.clientHeight) return false;
     
     const now = new Date();
     const currentHour = now.getHours();
@@ -177,50 +180,43 @@ export default function Planning() {
     } else if (currentHour < 2) {
       adjustedHour = currentHour + 14;
     } else {
-      return false; // Outside work hours 2am-10am
+      return false;
     }
     
     const totalMinutes = adjustedHour * 60 + currentMinutes;
     const slotHeight = 48;
-    const targetTop = (totalMinutes / 30) * slotHeight + 48; // +48 for header
-    const scrollTarget = Math.max(0, targetTop - board.clientHeight / 2);
-    
-    // Direct scrollTop assignment - works in PWA
-    board.scrollTop = scrollTarget;
+    const targetTop = (totalMinutes / 30) * slotHeight + 48;
+    board.scrollTop = Math.max(0, targetTop - board.clientHeight / 2);
     return true;
   }, []);
 
-  // Use ResizeObserver to scroll when board content changes size (data loads)
+  // AGGRESSIVE AUTO-SCROLL: Try many times with different delays
   useLayoutEffect(() => {
+    if (!isToday) return;
+    
+    // Try scrolling multiple times
+    const attempts = [0, 50, 100, 200, 300, 500, 800, 1000, 1500, 2000, 3000];
+    const timers: NodeJS.Timeout[] = [];
+    
+    attempts.forEach(delay => {
+      const timer = setTimeout(() => {
+        scrollToLiveLine();
+      }, delay);
+      timers.push(timer);
+    });
+    
+    return () => timers.forEach(t => clearTimeout(t));
+  }, [isToday, scrollToLiveLine]);
+
+  // ResizeObserver: scroll when content loads
+  useEffect(() => {
     if (!isToday) return;
     
     const board = boardRef.current;
     if (!board) return;
     
-    let scrolled = false;
-    
-    // Try to scroll with rAF chains until successful
-    const tryScroll = () => {
-      if (scrolled) return;
-      requestAnimationFrame(() => {
-        if (scrollToLiveLine()) {
-          scrolled = true;
-        } else {
-          // Retry in next frame
-          requestAnimationFrame(tryScroll);
-        }
-      });
-    };
-    
-    // Start trying immediately
-    tryScroll();
-    
-    // ResizeObserver: scroll when board size changes (data loads)
     const observer = new ResizeObserver(() => {
-      if (!scrolled) {
-        scrollToLiveLine();
-        scrolled = true;
-      }
+      scrollToLiveLine();
     });
     observer.observe(board);
     
@@ -237,21 +233,20 @@ export default function Planning() {
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === 'visible' && isToday) {
-        // Use rAF to ensure DOM is ready
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            scrollToLiveLine();
-          });
-        });
+        setTimeout(scrollToLiveLine, 100);
+        setTimeout(scrollToLiveLine, 300);
+        setTimeout(scrollToLiveLine, 500);
       }
     };
     
     document.addEventListener('visibilitychange', handleVisibility);
     window.addEventListener('focus', handleVisibility);
+    window.addEventListener('pageshow', handleVisibility);
     
     return () => {
       document.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('focus', handleVisibility);
+      window.removeEventListener('pageshow', handleVisibility);
     };
   }, [isToday, scrollToLiveLine]);
 
