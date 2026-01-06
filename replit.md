@@ -152,3 +152,17 @@ Preferred communication style: Simple, everyday language.
   - All monetary values display with up to 2 decimal places
   - Removed Math.round() from commission calculations to preserve precision
   - Updated Salaries, Reports, and StaffPerformance pages
+- **Admin Roles & Permissions System**:
+  - Three-tier role system: Owner (full access), Manager (most features), Receptionist (appointments/clients only)
+  - `admin_roles` table with bcrypt-hashed PINs for secure authentication
+  - Predefined permission sets per role with customization support
+  - AdminLock component protects sensitive pages requiring PIN authentication
+  - PINs never exposed in API responses (masked as "****")
+- **Admin Settings Page** (`/admin-settings`):
+  - User management: Create, edit, delete admin users with role assignments
+  - Data export functionality: CSV export for appointments, clients, services, staff, inventory, expenses
+  - Export files compatible with Excel/Google Sheets for backup and analysis
+- **Security Enhancements**:
+  - bcryptjs for secure PIN hashing and comparison
+  - All admin API endpoints validate and sanitize input
+  - Role-based navigation: sidebar only shows permitted sections
