@@ -11,6 +11,10 @@ import { Users, DollarSign, Calendar, TrendingUp, Award, Loader2 } from "lucide-
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import type { Staff, Appointment, Service } from "@shared/schema";
 
+const formatCurrency = (value: number): string => {
+  return value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+};
+
 export default function StaffPerformance() {
   const { t, i18n } = useTranslation();
   const [selectedMonth, setSelectedMonth] = useState(() => format(new Date(), "yyyy-MM"));
@@ -57,7 +61,7 @@ export default function StaffPerformance() {
       totalRevenue += appt.total;
       const service = serviceMap.get(appt.service);
       const commissionRate = service?.commissionPercent || 50;
-      totalCommission += Math.round((appt.total * commissionRate) / 100);
+      totalCommission += (appt.total * commissionRate) / 100;
 
       if (!serviceBreakdown[appt.service]) {
         serviceBreakdown[appt.service] = { count: 0, revenue: 0 };
@@ -291,17 +295,17 @@ export default function StaffPerformance() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">{t("staffPerformance.revenue")}</span>
-                      <span className="font-bold text-green-600">{stats.totalRevenue} {t("common.currency")}</span>
+                      <span className="font-bold text-green-600">{formatCurrency(stats.totalRevenue)} {t("common.currency")}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">{t("staffPerformance.commission")}</span>
-                      <span className="font-bold text-blue-600">{stats.totalCommission} {t("common.currency")}</span>
+                      <span className="font-bold text-blue-600">{formatCurrency(stats.totalCommission)} {t("common.currency")}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">{t("staffPerformance.avgPerAppointment")}</span>
                       <span className="font-bold">
                         {stats.totalAppointments > 0
-                          ? Math.round(stats.totalRevenue / stats.totalAppointments)
+                          ? (stats.totalRevenue / stats.totalAppointments).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})
                           : 0}{" "}
                         {t("common.currency")}
                       </span>

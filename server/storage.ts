@@ -361,7 +361,7 @@ export class DatabaseStorage implements IStorage {
       totalRevenue += appt.total;
       const service = serviceMap.get(appt.service);
       const commissionRate = service?.commissionPercent || 50;
-      totalCommission += Math.round(appt.total * commissionRate / 100);
+      totalCommission += (appt.total * commissionRate) / 100;
     }
     
     return {

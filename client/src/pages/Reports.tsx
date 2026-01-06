@@ -14,6 +14,10 @@ import type { DateRange } from "react-day-picker";
 
 const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#a4de6c', '#d0ed57'];
 
+const formatCurrency = (value: number): string => {
+  return value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+};
+
 type ViewMode = "weekly" | "monthly" | "custom";
 
 export default function Reports() {
@@ -224,9 +228,9 @@ export default function Reports() {
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-indigo-100 font-medium text-sm">{t("reports.totalRevenue")}</p>
-                <h3 className="text-4xl font-bold mt-2">{stats.totalRevenue.toLocaleString()} DH</h3>
+                <h3 className="text-4xl font-bold mt-2">{formatCurrency(stats.totalRevenue)} DH</h3>
                 <div className="mt-4 flex items-center text-indigo-100 text-sm">
-                  <span>{t("reports.collected")} {stats.paidRevenue.toLocaleString()} DH</span>
+                  <span>{t("reports.collected")} {formatCurrency(stats.paidRevenue)} DH</span>
                 </div>
               </div>
               <div className="p-3 bg-white/20 rounded-xl">
@@ -298,7 +302,7 @@ export default function Reports() {
                         {staff.appointmentCount} {t("reports.appointment")}
                       </span>
                       <span className="bg-emerald-100 text-emerald-600 px-3 py-1 rounded-full font-bold">
-                        {staff.totalEarnings.toLocaleString()} DH
+                        {formatCurrency(staff.totalEarnings)} DH
                       </span>
                     </div>
                   </div>
@@ -306,11 +310,11 @@ export default function Reports() {
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     <div className="bg-background rounded-lg p-3 border">
                       <p className="text-xs text-muted-foreground">{t("reports.collectedAmount")}</p>
-                      <p className="text-lg font-bold text-emerald-600">{staff.paidEarnings.toLocaleString()} DH</p>
+                      <p className="text-lg font-bold text-emerald-600">{formatCurrency(staff.paidEarnings)} DH</p>
                     </div>
                     <div className="bg-background rounded-lg p-3 border">
                       <p className="text-xs text-muted-foreground">{t("reports.uncollected")}</p>
-                      <p className="text-lg font-bold text-orange-500">{staff.unpaidEarnings.toLocaleString()} DH</p>
+                      <p className="text-lg font-bold text-orange-500">{formatCurrency(staff.unpaidEarnings)} DH</p>
                     </div>
                   </div>
 
@@ -323,7 +327,7 @@ export default function Reports() {
                             <span className="truncate flex-1">{svc.service}</span>
                             <div className="flex items-center gap-2 mr-2">
                               <span className="text-muted-foreground">×{svc.count}</span>
-                              <span className="font-medium text-primary">{svc.revenue} DH</span>
+                              <span className="font-medium text-primary">{formatCurrency(svc.revenue)} DH</span>
                             </div>
                           </div>
                         ))}
@@ -357,7 +361,7 @@ export default function Reports() {
                   <Tooltip 
                     cursor={{ fill: 'transparent' }}
                     contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                    formatter={(value: number) => [`${value.toLocaleString()} DH`, t("reports.revenue")]}
+                    formatter={(value: number) => [`${formatCurrency(value)} DH`, t("reports.revenue")]}
                   />
                   <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={30}>
                     {stats.staffRevenue.map((entry, index) => (

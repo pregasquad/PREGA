@@ -562,7 +562,7 @@ export default function Salaries() {
                 <TableBody>
                   {services.map((service) => {
                     const commissionPercent = service.commissionPercent ?? 50;
-                    const staffAmount = Math.round((service.price * commissionPercent) / 100);
+                    const staffAmount = (service.price * commissionPercent) / 100;
                     const salonAmount = service.price - staffAmount;
                     const isEditing = editingServiceId === service.id;
 
@@ -588,10 +588,10 @@ export default function Salaries() {
                           )}
                         </TableCell>
                         <TableCell className="text-green-600">
-                          {staffAmount} {t("common.currency")}
+                          {formatCurrency(staffAmount)} {t("common.currency")}
                         </TableCell>
                         <TableCell className="text-primary">
-                          {salonAmount} {t("common.currency")}
+                          {formatCurrency(salonAmount)} {t("common.currency")}
                         </TableCell>
                         <TableCell>
                           {isEditing ? (
@@ -682,7 +682,7 @@ export default function Salaries() {
                   <Input
                     type="number"
                     value={newCharge.amount || ""}
-                    onChange={(e) => setNewCharge({ ...newCharge, amount: parseInt(e.target.value) || 0 })}
+                    onChange={(e) => setNewCharge({ ...newCharge, amount: parseFloat(e.target.value) || 0 })}
                     placeholder="0"
                   />
                 </div>
@@ -721,7 +721,7 @@ export default function Salaries() {
                 <TableRow key={charge.id}>
                   <TableCell>{getChargeTypeLabel(charge.type)}</TableCell>
                   <TableCell>{charge.name}</TableCell>
-                  <TableCell className="text-red-600 font-semibold">{charge.amount.toLocaleString()} {t("common.currency")}</TableCell>
+                  <TableCell className="text-red-600 font-semibold">{formatCurrency(charge.amount)} {t("common.currency")}</TableCell>
                   <TableCell>{format(parseISO(charge.date), "d MMM yyyy", { locale: getDateLocale() })}</TableCell>
                   <TableCell>
                     <Button
@@ -805,7 +805,7 @@ export default function Salaries() {
                   <Input
                     type="number"
                     value={newDeduction.amount || ""}
-                    onChange={(e) => setNewDeduction({ ...newDeduction, amount: parseInt(e.target.value) || 0 })}
+                    onChange={(e) => setNewDeduction({ ...newDeduction, amount: parseFloat(e.target.value) || 0 })}
                     placeholder="0"
                   />
                 </div>
@@ -846,7 +846,7 @@ export default function Salaries() {
                   <TableCell className="font-medium">{deduction.staffName}</TableCell>
                   <TableCell>{getDeductionTypeLabel(deduction.type)}</TableCell>
                   <TableCell>{deduction.description}</TableCell>
-                  <TableCell className="text-orange-600 font-semibold">{deduction.amount.toLocaleString()} {t("common.currency")}</TableCell>
+                  <TableCell className="text-orange-600 font-semibold">{formatCurrency(deduction.amount)} {t("common.currency")}</TableCell>
                   <TableCell>{format(parseISO(deduction.date), "d MMM yyyy", { locale: getDateLocale() })}</TableCell>
                   <TableCell>
                     <Button
