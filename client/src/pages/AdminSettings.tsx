@@ -505,23 +505,20 @@ export default function AdminSettings() {
                       <p className="text-sm text-muted-foreground">{t("admin.permissionsDesc")}</p>
                       <div className="grid gap-2 md:grid-cols-2">
                         {ALL_PERMISSIONS.map((perm) => (
-                          <div
+                          <label
                             key={perm.key}
+                            htmlFor={`perm-${perm.key}`}
                             className="flex items-center space-x-2 p-2 border rounded-lg hover:bg-muted/50 cursor-pointer"
-                            onClick={() => togglePermission(perm.key)}
                           >
                             <Checkbox
                               id={`perm-${perm.key}`}
                               checked={formData.permissions.includes(perm.key)}
                               onCheckedChange={() => togglePermission(perm.key)}
                             />
-                            <label
-                              htmlFor={`perm-${perm.key}`}
-                              className="text-sm cursor-pointer flex-1"
-                            >
+                            <span className="text-sm flex-1">
                               {t(perm.labelKey, perm.key.replace(/_/g, ' '))}
-                            </label>
-                          </div>
+                            </span>
+                          </label>
                         ))}
                       </div>
                     </div>
