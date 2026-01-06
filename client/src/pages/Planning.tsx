@@ -692,17 +692,11 @@ export default function Planning() {
                 top: `${getCurrentTimePosition() + 48}px`,
                 left: isRtl ? 0 : '55px',
                 right: isRtl ? '55px' : 0,
-                flexDirection: isRtl ? 'row' : 'row',
+                flexDirection: isRtl ? 'row-reverse' : 'row',
               }}
             >
-              {/* Scissors icon - positioned at the time column edge */}
-              <div 
-                className="shrink-0 z-[50] flex items-center absolute"
-                style={{
-                  left: isRtl ? 'auto' : 0,
-                  right: isRtl ? 0 : 'auto',
-                }}
-              >
+              {/* Scissors icon - at the start of the line (next to time column) */}
+              <div className="shrink-0 z-[50] flex items-center">
                 <div className="relative flex items-center justify-center">
                   <div className="w-7 h-7 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 shadow-lg flex items-center justify-center border-2 border-white dark:border-gray-800">
                     <Scissors className="w-3 h-3 text-white" />
@@ -712,11 +706,13 @@ export default function Planning() {
               </div>
               {/* Line spanning staff columns */}
               <div 
-                className="w-full h-0.5 shadow-sm"
+                className="flex-1 h-0.5 shadow-sm"
                 style={{
                   background: isRtl 
-                    ? 'linear-gradient(to left, #f97316, #fb923c, transparent)'
+                    ? 'linear-gradient(to right, #f97316, #fb923c, transparent)'
                     : 'linear-gradient(to right, #f97316, #fb923c, transparent)',
+                  marginLeft: isRtl ? 0 : '-4px',
+                  marginRight: isRtl ? '-4px' : 0,
                 }}
               />
             </div>
