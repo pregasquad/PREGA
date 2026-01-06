@@ -137,26 +137,28 @@ export default function Planning() {
     requestAnimationFrame(animateScroll);
   };
 
-  // Track if initial scroll has been done
-  const hasScrolledRef = useRef(false);
-
-  // Smooth auto-scroll to live line ONLY on initial page load
+  // Auto-scroll to live line on initial load and every 30 seconds
   useEffect(() => {
-    if (isToday && liveLineRef.current && boardRef.current && !hasScrolledRef.current) {
-      hasScrolledRef.current = true;
-      setTimeout(() => {
-        if (liveLineRef.current && boardRef.current) {
-          smoothScrollTo(liveLineRef.current, boardRef.current);
-        }
-      }, 300);
-    }
-  }, [isToday]);
-  
-  // Reset scroll flag when date changes away from today
-  useEffect(() => {
-    if (!isToday) {
-      hasScrolledRef.current = false;
-    }
+    if (!isToday) return;
+    
+    // Initial scroll after page loads
+    const initialTimeout = setTimeout(() => {
+      if (liveLineRef.current && boardRef.current) {
+        smoothScrollTo(liveLineRef.current, boardRef.current);
+      }
+    }, 300);
+    
+    // Periodic scroll every 30 seconds
+    const scrollInterval = setInterval(() => {
+      if (liveLineRef.current && boardRef.current) {
+        smoothScrollTo(liveLineRef.current, boardRef.current);
+      }
+    }, 30000);
+    
+    return () => {
+      clearTimeout(initialTimeout);
+      clearInterval(scrollInterval);
+    };
   }, [isToday]);
   const [isEditFavoritesOpen, setIsEditFavoritesOpen] = useState(false);
   const [servicePopoverOpen, setServicePopoverOpen] = useState(false);
