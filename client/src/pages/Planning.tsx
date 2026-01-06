@@ -137,16 +137,27 @@ export default function Planning() {
     requestAnimationFrame(animateScroll);
   };
 
-  // Smooth auto-scroll to live line when page loads or date changes
+  // Track if initial scroll has been done
+  const hasScrolledRef = useRef(false);
+
+  // Smooth auto-scroll to live line ONLY on initial page load
   useEffect(() => {
-    if (isToday && liveLineRef.current && boardRef.current) {
+    if (isToday && liveLineRef.current && boardRef.current && !hasScrolledRef.current) {
+      hasScrolledRef.current = true;
       setTimeout(() => {
         if (liveLineRef.current && boardRef.current) {
           smoothScrollTo(liveLineRef.current, boardRef.current);
         }
-      }, 200);
+      }, 300);
     }
-  }, [date, isToday]);
+  }, [isToday]);
+  
+  // Reset scroll flag when date changes away from today
+  useEffect(() => {
+    if (!isToday) {
+      hasScrolledRef.current = false;
+    }
+  }, [isToday]);
   const [isEditFavoritesOpen, setIsEditFavoritesOpen] = useState(false);
   const [servicePopoverOpen, setServicePopoverOpen] = useState(false);
   const [appointmentSearch, setAppointmentSearch] = useState("");
@@ -674,11 +685,13 @@ export default function Planning() {
           {isToday && getCurrentTimePosition() >= 0 && (
             <div 
               ref={liveLineRef}
-              className={cn("absolute z-[35] pointer-events-none transition-all duration-1000 ease-in-out flex items-center", isRtl ? "flex-row-reverse" : "flex-row")}
+              className="absolute z-[35] pointer-events-none transition-all duration-1000 ease-in-out flex items-center"
               style={{ 
                 top: `${getCurrentTimePosition() + 48}px`,
-                left: isRtl ? 0 : '55px',
-                right: isRtl ? '55px' : 0,
+                left: isRtl ? 'auto' : '55px',
+                right: isRtl ? '55px' : 'auto',
+                width: `calc(100% - 55px)`,
+                flexDirection: isRtl ? 'row-reverse' : 'row',
               }}
             >
               {/* Scissors icon - at the start of the line (next to time column) */}
@@ -691,7 +704,16 @@ export default function Planning() {
                 </div>
               </div>
               {/* Line spanning staff columns */}
-              <div className={cn("flex-1 h-0.5 shadow-sm", isRtl ? "bg-gradient-to-l mr-[-4px]" : "bg-gradient-to-r ml-[-4px]", "from-orange-500 via-orange-400 to-transparent")} />
+              <div 
+                className="flex-1 h-0.5 shadow-sm"
+                style={{
+                  background: isRtl 
+                    ? 'linear-gradient(to left, #f97316, #fb923c, transparent)'
+                    : 'linear-gradient(to right, #f97316, #fb923c, transparent)',
+                  marginLeft: isRtl ? 0 : '-4px',
+                  marginRight: isRtl ? '-4px' : 0,
+                }}
+              />
             </div>
           )}
           {/* Top row - Staff headers (sticky) */}
