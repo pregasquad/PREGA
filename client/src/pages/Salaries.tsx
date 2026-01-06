@@ -20,6 +20,10 @@ import type { Staff, Service, Appointment, Charge, StaffDeduction } from "@share
 
 type PeriodType = "day" | "week" | "month" | "custom";
 
+const formatCurrency = (value: number): string => {
+  return value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+};
+
 export default function Salaries() {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
@@ -224,7 +228,7 @@ export default function Salaries() {
       }
       
       const commissionPercent = getServiceCommission(apt.service);
-      const commission = Math.round((apt.total * commissionPercent) / 100);
+      const commission = (apt.total * commissionPercent) / 100;
       
       earnings[apt.staff].totalRevenue += apt.total;
       earnings[apt.staff].totalCommission += commission;
@@ -362,7 +366,7 @@ export default function Salaries() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalRevenue.toLocaleString()} {t("common.currency")}</div>
+            <div className="text-2xl font-bold">{formatCurrency(totalRevenue)} {t("common.currency")}</div>
             <p className="text-xs text-muted-foreground">
               {format(start, "d MMM", { locale: getDateLocale() })} - {format(end, "d MMM yyyy", { locale: getDateLocale() })}
             </p>
@@ -375,7 +379,7 @@ export default function Salaries() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{totalCommissions.toLocaleString()} {t("common.currency")}</div>
+            <div className="text-2xl font-bold text-green-600">{formatCurrency(totalCommissions)} {t("common.currency")}</div>
             <p className="text-xs text-muted-foreground">{t("salaries.amountDueToStaff")}</p>
           </CardContent>
         </Card>
@@ -386,7 +390,7 @@ export default function Salaries() {
             <Building2 className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-primary">{salonPortion.toLocaleString()} {t("common.currency")}</div>
+            <div className="text-2xl font-bold text-primary">{formatCurrency(salonPortion)} {t("common.currency")}</div>
             <p className="text-xs text-muted-foreground">{t("salaries.remainingForSalon")}</p>
           </CardContent>
         </Card>
@@ -413,16 +417,16 @@ export default function Salaries() {
               <h3 className="font-bold text-lg border-b pb-2">{t("salaries.salonAccount")}</h3>
               <div className="flex justify-between">
                 <span>{t("salaries.salonRevenueShare")}:</span>
-                <span className="font-semibold text-primary">{salonPortion.toLocaleString()} {t("common.currency")}</span>
+                <span className="font-semibold text-primary">{formatCurrency(salonPortion)} {t("common.currency")}</span>
               </div>
               <div className="flex justify-between text-red-600">
                 <span>{t("salaries.totalExpenses")}:</span>
-                <span className="font-semibold">- {totalExpenses.toLocaleString()} {t("common.currency")}</span>
+                <span className="font-semibold">- {formatCurrency(totalExpenses)} {t("common.currency")}</span>
               </div>
               <div className="flex justify-between pt-2 border-t-2 text-lg">
                 <span className="font-bold">{t("salaries.salonNetProfit")}:</span>
                 <span className={`font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {netProfit.toLocaleString()} {t("common.currency")}
+                  {formatCurrency(netProfit)} {t("common.currency")}
                 </span>
               </div>
             </div>
@@ -431,16 +435,16 @@ export default function Salaries() {
               <h3 className="font-bold text-lg border-b pb-2">{t("salaries.staffAccount")}</h3>
               <div className="flex justify-between">
                 <span>{t("salaries.totalCommissionsDue")}:</span>
-                <span className="font-semibold text-green-600">{totalCommissions.toLocaleString()} {t("common.currency")}</span>
+                <span className="font-semibold text-green-600">{formatCurrency(totalCommissions)} {t("common.currency")}</span>
               </div>
               <div className="flex justify-between text-orange-600">
                 <span>{t("salaries.totalDeductions")}:</span>
-                <span className="font-semibold">- {totalDeductions.toLocaleString()} {t("common.currency")}</span>
+                <span className="font-semibold">- {formatCurrency(totalDeductions)} {t("common.currency")}</span>
               </div>
               <div className="flex justify-between pt-2 border-t-2 text-lg">
                 <span className="font-bold">{t("salaries.netDueToStaff")}:</span>
                 <span className={`font-bold ${netStaffPayable >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {netStaffPayable.toLocaleString()} {t("common.currency")}
+                  {formatCurrency(netStaffPayable)} {t("common.currency")}
                 </span>
               </div>
             </div>
@@ -468,12 +472,12 @@ export default function Salaries() {
                 <TableRow key={earning.name}>
                   <TableCell className="font-medium">{earning.name}</TableCell>
                   <TableCell>{earning.appointmentsCount}</TableCell>
-                  <TableCell>{earning.totalRevenue.toLocaleString()} {t("common.currency")}</TableCell>
+                  <TableCell>{formatCurrency(earning.totalRevenue)} {t("common.currency")}</TableCell>
                   <TableCell className="text-green-600 font-semibold">
-                    {earning.totalCommission.toLocaleString()} {t("common.currency")}
+                    {formatCurrency(earning.totalCommission)} {t("common.currency")}
                   </TableCell>
                   <TableCell className="text-primary font-semibold">
-                    {(earning.totalRevenue - earning.totalCommission).toLocaleString()} {t("common.currency")}
+                    {formatCurrency(earning.totalRevenue - earning.totalCommission)} {t("common.currency")}
                   </TableCell>
                 </TableRow>
               ))}
@@ -517,12 +521,12 @@ export default function Salaries() {
                       <TableCell className="font-medium">{serviceName}</TableCell>
                       <TableCell>{getServiceCommission(serviceName)}%</TableCell>
                       <TableCell>{data.count}</TableCell>
-                      <TableCell>{data.revenue.toLocaleString()} {t("common.currency")}</TableCell>
+                      <TableCell>{formatCurrency(data.revenue)} {t("common.currency")}</TableCell>
                       <TableCell className="text-green-600">
-                        {data.commission.toLocaleString()} {t("common.currency")}
+                        {formatCurrency(data.commission)} {t("common.currency")}
                       </TableCell>
                       <TableCell className="text-primary">
-                        {(data.revenue - data.commission).toLocaleString()} {t("common.currency")}
+                        {formatCurrency(data.revenue - data.commission)} {t("common.currency")}
                       </TableCell>
                     </TableRow>
                   ))}
