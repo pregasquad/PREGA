@@ -4,16 +4,27 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 
-function urlBase64ToUint8Array(base64String: string) {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding)
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  // Remove any whitespace
+  const cleanedBase64 = base64String.trim();
+  
+  // Add padding if needed
+  const padding = '='.repeat((4 - cleanedBase64.length % 4) % 4);
+  const base64 = (cleanedBase64 + padding)
     .replace(/-/g, '+')
     .replace(/_/g, '/');
+  
   const rawData = window.atob(base64);
   const outputArray = new Uint8Array(rawData.length);
   for (let i = 0; i < rawData.length; ++i) {
     outputArray[i] = rawData.charCodeAt(i);
   }
+  
+  // VAPID public key should be 65 bytes
+  if (outputArray.length !== 65) {
+    console.error('Invalid VAPID key length:', outputArray.length, 'expected 65');
+  }
+  
   return outputArray;
 }
 
@@ -46,6 +57,13 @@ export function PushNotifications() {
     try {
       const registration = await navigator.serviceWorker.ready;
       
+      // Clear any existing subscription first (important for key changes)
+      const existingSubscription = await registration.pushManager.getSubscription();
+      if (existingSubscription) {
+        console.log('Clearing old subscription...');
+        await existingSubscription.unsubscribe();
+      }
+      
       const permission = await Notification.requestPermission();
       if (permission !== 'granted') {
         toast({ 
@@ -57,12 +75,25 @@ export function PushNotifications() {
       }
 
       const response = await fetch('/api/push/vapid-public-key', { credentials: 'include' });
-      const { publicKey } = await response.json();
+      const data = await response.json();
+      const publicKey = data.publicKey;
+      
+      console.log('VAPID public key received:', publicKey);
+      console.log('Key length:', publicKey?.length);
+      
+      if (!publicKey || publicKey.length < 80) {
+        throw new Error('Invalid VAPID public key from server');
+      }
+
+      const applicationServerKey = urlBase64ToUint8Array(publicKey);
+      console.log('Converted key bytes:', applicationServerKey.length);
 
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(publicKey)
+        applicationServerKey: applicationServerKey
       });
+
+      console.log('Subscription created:', subscription.endpoint);
 
       await fetch('/api/push/subscribe', {
         method: 'POST',

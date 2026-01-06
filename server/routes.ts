@@ -462,6 +462,7 @@ export async function registerRoutes(
   // === Push Notifications ===
   
   app.get("/api/push/vapid-public-key", (_req, res) => {
+    console.log("Returning VAPID public key, length:", vapidPublicKey?.length || 0);
     res.json({ publicKey: vapidPublicKey });
   });
 
