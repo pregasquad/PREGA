@@ -146,7 +146,7 @@ export default function Planning() {
       return -1; // Outside work hours (2am-10am)
     }
     const totalMinutes = adjustedHour * 60 + currentMinutes;
-    const slotHeight = 48;
+    const slotHeight = 52;
     const position = (totalMinutes / 30) * slotHeight;
     return position;
   };
@@ -189,8 +189,8 @@ export default function Planning() {
     }
     
     const totalMinutes = adjustedHour * 60 + currentMinutes;
-    const slotHeight = 48;
-    const targetTop = (totalMinutes / 30) * slotHeight + 48;
+    const slotHeight = 52;
+    const targetTop = (totalMinutes / 30) * slotHeight + 52;
     const scrollTarget = Math.max(0, targetTop - board.clientHeight / 2);
     
     if (smooth) {
@@ -810,36 +810,36 @@ export default function Planning() {
       </div>
 
       {/* Board with sticky header */}
-      <div className="flex-1 flex flex-col bg-background rounded-xl border shadow-sm overflow-hidden" dir={isRtl ? "rtl" : "ltr"}>
+      <div className="flex-1 flex flex-col bg-background rounded-2xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden" dir={isRtl ? "rtl" : "ltr"}>
         {/* Sticky Staff Headers - outside scroll container, synced with board scroll */}
         <div 
           ref={headerRef}
-          className="grid bg-muted border-b border-gray-300 dark:border-gray-600 z-50 shrink-0 overflow-x-hidden"
+          className="grid bg-gradient-to-b from-orange-50 to-orange-100 dark:from-orange-950/30 dark:to-orange-900/20 border-b-2 border-orange-200 dark:border-orange-800 z-50 shrink-0 overflow-x-hidden"
           style={{ 
-            gridTemplateColumns: `55px repeat(${staffList.length}, minmax(120px, 1fr))`,
+            gridTemplateColumns: `60px repeat(${staffList.length}, minmax(140px, 1fr))`,
           }}
         >
-          <div className={cn("bg-card p-1", isRtl ? "border-l" : "border-r")}></div>
+          <div className={cn("bg-white/50 dark:bg-gray-900/50 p-2", isRtl ? "border-l-2 border-orange-200 dark:border-orange-800" : "border-r-2 border-orange-200 dark:border-orange-800")}></div>
           {staffList.map((s, staffIndex) => (
             <div 
               key={s.id} 
-              className={cn("bg-muted p-2 md:p-3 font-bold text-center text-xs md:text-sm", isRtl ? "border-l border-gray-300 dark:border-gray-600" : "border-r border-gray-300 dark:border-gray-600")}
+              className={cn("p-3 md:p-4 font-bold text-center text-sm md:text-base", isRtl ? "border-l border-orange-200/50 dark:border-orange-800/50" : "border-r border-orange-200/50 dark:border-orange-800/50")}
             >
-              <div className="flex items-center justify-center gap-1">
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
-                <span>{s.name}</span>
+              <div className="flex items-center justify-center gap-2">
+                <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: s.color }} />
+                <span className="text-gray-800 dark:text-gray-100">{s.name}</span>
               </div>
             </div>
           ))}
         </div>
 
         {/* Scrollable content */}
-        <div ref={boardRef} className="flex-1 overflow-auto relative free-scroll">
+        <div ref={boardRef} className="flex-1 overflow-auto relative free-scroll bg-white dark:bg-gray-950">
           <div 
             className="grid relative"
             style={{ 
-              gridTemplateColumns: `55px repeat(${staffList.length}, minmax(120px, 1fr))`,
-              gridAutoRows: '48px'
+              gridTemplateColumns: `60px repeat(${staffList.length}, minmax(140px, 1fr))`,
+              gridAutoRows: '52px'
             }}
           >
             {/* Current Time Line - BIG and VISIBLE */}
@@ -858,7 +858,7 @@ export default function Planning() {
                   {/* Time indicator badge on left */}
                   <div 
                     className="shrink-0 z-[50] flex items-center justify-center"
-                    style={{ width: '55px' }}
+                    style={{ width: '60px' }}
                   >
                     <div className="relative">
                       <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-500 via-orange-500 to-amber-500 shadow-xl flex items-center justify-center border-3 border-white dark:border-gray-900 animate-pulse">
@@ -894,8 +894,8 @@ export default function Planning() {
             <React.Fragment key={hour}>
               <div 
                 className={cn(
-                  "bg-card border-b border-gray-300 dark:border-gray-600 p-1 text-xs text-muted-foreground font-medium sticky z-30",
-                  isRtl ? "right-0 border-l" : "left-0 border-r"
+                  "bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-2 py-1 text-sm font-semibold text-gray-600 dark:text-gray-300 sticky z-30 flex items-center justify-center",
+                  isRtl ? "right-0 border-l-2 border-orange-200 dark:border-orange-800" : "left-0 border-r-2 border-orange-200 dark:border-orange-800"
                 )}
                 style={{ gridColumn: 1, gridRow: rowNum }}
               >
@@ -912,7 +912,7 @@ export default function Planning() {
                   return (
                     <div
                       key={`${s.id}-${hour}-covered`}
-                      className={cn("border-b border-gray-300 dark:border-gray-600 min-h-[48px]", isRtl ? "border-l" : "border-r")}
+                      className={cn("border-b border-gray-100 dark:border-gray-800 min-h-[52px] bg-white dark:bg-gray-950", isRtl ? "border-l border-gray-100 dark:border-gray-800" : "border-r border-gray-100 dark:border-gray-800")}
                       style={{ gridColumn: colNum, gridRow: rowNum }}
                     />
                   );
@@ -975,9 +975,9 @@ export default function Planning() {
                   <div
                     key={`${s.id}-${hour}`}
                     className={cn(
-                      "border-b border-gray-300 dark:border-gray-600 min-h-[48px] transition-all duration-200",
-                      isRtl ? "border-l" : "border-r",
-                      "hover:bg-muted/30 cursor-pointer",
+                      "border-b border-gray-100 dark:border-gray-800 min-h-[52px] transition-all duration-200 bg-white dark:bg-gray-950",
+                      isRtl ? "border-l border-gray-100 dark:border-gray-800" : "border-r border-gray-100 dark:border-gray-800",
+                      "hover:bg-orange-50 dark:hover:bg-orange-950/20 cursor-pointer",
                       isDragOver && "bg-orange-100 dark:bg-orange-900/30 ring-2 ring-orange-500 ring-inset"
                     )}
                     style={{ 
