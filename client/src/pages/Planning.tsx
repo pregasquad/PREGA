@@ -670,28 +670,28 @@ export default function Planning() {
             gridAutoRows: '48px'
           }}
         >
-          {/* Current Time Line - flex layout with sticky icon and spanning line */}
+          {/* Current Time Line - positioned after time column */}
           {isToday && getCurrentTimePosition() >= 0 && (
             <div 
               ref={liveLineRef}
               className="absolute z-[35] pointer-events-none transition-all duration-1000 ease-in-out flex items-center"
               style={{ 
                 top: `${getCurrentTimePosition() + 48}px`,
-                left: 0,
-                right: 0,
+                left: isRtl ? 0 : '55px',
+                right: isRtl ? '55px' : 0,
               }}
             >
-              {/* Makeup brush icon - sticky to time column, shifted right */}
-              <div className="w-[70px] shrink-0 sticky ltr:left-0 rtl:right-0 z-[50] flex items-center ltr:justify-end rtl:justify-start ltr:pr-1 rtl:pl-1">
+              {/* Scissors icon - at the start of the line */}
+              <div className={cn("shrink-0 z-[50] flex items-center", isRtl ? "order-last" : "order-first")}>
                 <div className="relative flex items-center justify-center">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 shadow-xl flex items-center justify-center border-2 border-white dark:border-gray-800">
-                    <Scissors className="w-4 h-4 text-white" />
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 shadow-lg flex items-center justify-center border-2 border-white dark:border-gray-800">
+                    <Scissors className="w-3 h-3 text-white" />
                   </div>
-                  <div className="absolute inset-0 w-9 h-9 rounded-full bg-orange-500 animate-ping opacity-30" />
+                  <div className="absolute inset-0 w-7 h-7 rounded-full bg-orange-500 animate-ping opacity-30" />
                 </div>
               </div>
               {/* Line spanning staff columns */}
-              <div className="flex-1 h-0.5 ltr:bg-gradient-to-r rtl:bg-gradient-to-l from-orange-500 via-orange-400 to-transparent shadow-sm ltr:-ml-3 rtl:-mr-3" />
+              <div className={cn("flex-1 h-0.5 shadow-sm", isRtl ? "bg-gradient-to-l mr-[-4px]" : "bg-gradient-to-r ml-[-4px]", "from-orange-500 via-orange-400 to-transparent")} />
             </div>
           )}
           {/* Top row - Staff headers (sticky) */}
