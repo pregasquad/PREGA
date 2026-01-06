@@ -71,6 +71,7 @@ Preferred communication style: Simple, everyday language.
 - **Clients**: Name, phone, email, birthday, loyalty points
 - **Charges**: Expenses and charges tracking
 - **Users/Sessions**: Replit Auth user profiles and session data
+- **BusinessSettings**: Business name, logo, address, contact info, currency, working hours/days
 
 ## External Dependencies
 
@@ -113,6 +114,11 @@ Preferred communication style: Simple, everyday language.
 - `npm run db:push` - Push schema changes to database
 
 ## Recent Changes (January 2026)
+- **Business Settings Feature**: Configurable salon settings (business name, address, contact, currency, working hours/days)
+  - Admin Settings page now has Business tab as the first tab
+  - API endpoints: GET/PATCH /api/business-settings
+  - Default values: "PREGA SQUAD", MAD currency (DH symbol), 09:00-19:00 hours, Mon-Sat working days
+  - Working days stored as JSON array of day numbers (0=Sunday through 6=Saturday)
 - **Dual-dialect Database Architecture**: Supports both PostgreSQL (Replit) and MySQL (TiDB/Koyeb)
 - **MySQL Compatibility Fix**: All storage.ts methods correctly extract insertId from drizzle-orm ResultSetHeader
 - **Error Handling**: All create/update operations validate results and throw descriptive errors
