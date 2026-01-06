@@ -1,11 +1,11 @@
 import { defineConfig } from "drizzle-kit";
 
-const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) {
-  throw new Error("DATABASE_URL must be set.");
-}
-
 const dbDialect = process.env.DB_DIALECT || 'postgres';
+const databaseUrl = dbDialect === 'mysql' ? process.env.MYSQL_URL : process.env.DATABASE_URL;
+
+if (!databaseUrl) {
+  throw new Error(dbDialect === 'mysql' ? "MYSQL_URL must be set." : "DATABASE_URL must be set.");
+}
 
 export default defineConfig({
   out: "./migrations",
