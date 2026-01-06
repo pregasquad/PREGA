@@ -1,4 +1,4 @@
-import { index, json, pgTable, timestamp, varchar } from "drizzle-orm/pg-core";
+import { pgTable, timestamp, varchar, index, json } from "drizzle-orm/pg-core";
 
 export const sessions = pgTable(
   "sessions",

@@ -18,5 +18,6 @@ EXPOSE 8000
 
 ENV NODE_ENV=production
 ENV PORT=8000
+ENV DB_DIALECT=mysql
 
 CMD ["npm", "run", "start"]

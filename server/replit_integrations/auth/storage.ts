@@ -1,5 +1,5 @@
-import { users, type User, type UpsertUser } from "@shared/models/auth";
-import { db } from "../../db";
+import { type User, type UpsertUser } from "@shared/models/auth";
+import { db, schema } from "../../db";
 import { eq } from "drizzle-orm";
 
 export interface IAuthStorage {
@@ -9,26 +9,28 @@ export interface IAuthStorage {
 
 class AuthStorage implements IAuthStorage {
   async getUser(id: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
+    const s = schema();
+    const [user] = await db().select().from(s.users).where(eq(s.users.id, id));
     return user;
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
+    const s = schema();
     const existingUser = await this.getUser(userData.id);
     
     if (existingUser) {
-      await db
-        .update(users)
+      await db()
+        .update(s.users)
         .set({
           ...userData,
           updatedAt: new Date(),
         })
-        .where(eq(users.id, userData.id));
+        .where(eq(s.users.id, userData.id));
     } else {
-      await db.insert(users).values(userData);
+      await db().insert(s.users).values(userData);
     }
     
-    const [user] = await db.select().from(users).where(eq(users.id, userData.id));
+    const [user] = await db().select().from(s.users).where(eq(s.users.id, userData.id));
     return user;
   }
 }

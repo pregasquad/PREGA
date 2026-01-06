@@ -6,8 +6,7 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
 import { vapidPublicKey, sendPushNotification } from "./push";
-import { db } from "./db";
-import { pushSubscriptions } from "@shared/schema";
+import { db, schema } from "./db";
 import { eq } from "drizzle-orm";
 
 let io: SocketIOServer;
@@ -480,10 +479,11 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Invalid subscription" });
       }
 
-      const existing = await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.endpoint, endpoint));
+      const s = schema();
+      const existing = await db().select().from(s.pushSubscriptions).where(eq(s.pushSubscriptions.endpoint, endpoint));
       
       if (existing.length === 0) {
-        await db.insert(pushSubscriptions).values({
+        await db().insert(s.pushSubscriptions).values({
           endpoint,
           p256dh: keys.p256dh,
           auth: keys.auth,
@@ -505,7 +505,8 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Invalid endpoint" });
       }
       
-      await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, endpoint));
+      const s = schema();
+      await db().delete(s.pushSubscriptions).where(eq(s.pushSubscriptions.endpoint, endpoint));
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ error: err.message });

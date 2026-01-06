@@ -1,6 +1,5 @@
-import { db } from "./db";
+import { db, schema } from "./db";
 import {
-  appointments, services, categories, staff, products, clients, charges, staffDeductions, expenseCategories, loyaltyRedemptions,
   type Appointment, type InsertAppointment,
   type Service, type InsertService,
   type Category, type InsertCategory,
@@ -82,112 +81,137 @@ export class DatabaseStorage implements IStorage {
   upsertUser = authStorage.upsertUser;
 
   async getAppointments(date?: string): Promise<Appointment[]> {
+    const s = schema();
     if (date) {
-      return await db.select().from(appointments).where(eq(appointments.date, date)).orderBy(appointments.startTime);
+      return await db().select().from(s.appointments).where(eq(s.appointments.date, date));
     }
-    return await db.select().from(appointments).orderBy(appointments.date, appointments.startTime);
+    return await db().select().from(s.appointments);
   }
 
   async getAppointmentsByDateRange(startDate: string, endDate: string): Promise<Appointment[]> {
-    return await db.select().from(appointments)
-      .where(and(gte(appointments.date, startDate), lte(appointments.date, endDate)))
-      .orderBy(appointments.date, appointments.startTime);
+    const s = schema();
+    return await db().select().from(s.appointments)
+      .where(and(
+        gte(s.appointments.date, startDate),
+        lte(s.appointments.date, endDate)
+      ));
   }
 
-  async createAppointment(appt: InsertAppointment): Promise<Appointment> {
-    const [created] = await db.insert(appointments).values(appt).returning();
+  async getAppointment(id: number): Promise<Appointment | undefined> {
+    const s = schema();
+    const [appointment] = await db().select().from(s.appointments).where(eq(s.appointments.id, id));
+    return appointment;
+  }
+
+  async createAppointment(appointment: InsertAppointment): Promise<Appointment> {
+    const s = schema();
+    const [created] = await db().insert(s.appointments).values(appointment).returning();
     return created;
   }
 
-  async updateAppointment(id: number, appt: Partial<InsertAppointment>): Promise<Appointment> {
-    const [updated] = await db.update(appointments).set(appt).where(eq(appointments.id, id)).returning();
+  async updateAppointment(id: number, appointment: Partial<InsertAppointment>): Promise<Appointment> {
+    const s = schema();
+    const [updated] = await db().update(s.appointments).set(appointment).where(eq(s.appointments.id, id)).returning();
     return updated;
   }
 
   async deleteAppointment(id: number): Promise<void> {
-    await db.delete(appointments).where(eq(appointments.id, id));
-  }
-
-  async getAppointment(id: number): Promise<Appointment | undefined> {
-    const [appt] = await db.select().from(appointments).where(eq(appointments.id, id));
-    return appt;
+    const s = schema();
+    await db().delete(s.appointments).where(eq(s.appointments.id, id));
   }
 
   async getServices(): Promise<Service[]> {
-    return await db.select().from(services);
+    const s = schema();
+    return await db().select().from(s.services);
   }
 
   async createService(service: InsertService): Promise<Service> {
-    const [created] = await db.insert(services).values(service).returning();
+    const s = schema();
+    const [created] = await db().insert(s.services).values(service).returning();
     return created;
   }
 
   async updateService(id: number, service: Partial<InsertService>): Promise<Service> {
-    const [updated] = await db.update(services).set(service).where(eq(services.id, id)).returning();
+    const s = schema();
+    const [updated] = await db().update(s.services).set(service).where(eq(s.services.id, id)).returning();
     return updated;
   }
 
   async deleteService(id: number): Promise<void> {
-    await db.delete(services).where(eq(services.id, id));
+    const s = schema();
+    await db().delete(s.services).where(eq(s.services.id, id));
   }
 
   async getCategories(): Promise<Category[]> {
-    return await db.select().from(categories);
+    const s = schema();
+    return await db().select().from(s.categories);
   }
 
   async createCategory(category: InsertCategory): Promise<Category> {
-    const [created] = await db.insert(categories).values(category).returning();
+    const s = schema();
+    const [created] = await db().insert(s.categories).values(category).returning();
     return created;
   }
 
   async updateCategory(id: number, category: Partial<InsertCategory>): Promise<Category> {
-    const [updated] = await db.update(categories).set(category).where(eq(categories.id, id)).returning();
+    const s = schema();
+    const [updated] = await db().update(s.categories).set(category).where(eq(s.categories.id, id)).returning();
     return updated;
   }
 
   async deleteCategory(id: number): Promise<void> {
-    await db.delete(categories).where(eq(categories.id, id));
+    const s = schema();
+    await db().delete(s.categories).where(eq(s.categories.id, id));
   }
 
   async getStaff(): Promise<Staff[]> {
-    return await db.select().from(staff);
+    const s = schema();
+    return await db().select().from(s.staff);
   }
 
   async createStaff(st: InsertStaff): Promise<Staff> {
-    const [created] = await db.insert(staff).values(st).returning();
+    const s = schema();
+    const [created] = await db().insert(s.staff).values(st).returning();
     return created;
   }
 
   async updateStaff(id: number, st: Partial<InsertStaff>): Promise<Staff> {
-    const [updated] = await db.update(staff).set(st).where(eq(staff.id, id)).returning();
+    const s = schema();
+    const [updated] = await db().update(s.staff).set(st).where(eq(s.staff.id, id)).returning();
     return updated;
   }
 
   async deleteStaff(id: number): Promise<void> {
-    await db.delete(staff).where(eq(staff.id, id));
+    const s = schema();
+    await db().delete(s.staff).where(eq(s.staff.id, id));
   }
 
   async getProducts(): Promise<Product[]> {
-    return await db.select().from(products);
+    const s = schema();
+    return await db().select().from(s.products);
   }
 
   async getProduct(id: number): Promise<Product | undefined> {
-    const [product] = await db.select().from(products).where(eq(products.id, id));
+    const s = schema();
+    const [product] = await db().select().from(s.products).where(eq(s.products.id, id));
     return product;
   }
 
   async getProductByName(name: string): Promise<Product | undefined> {
-    const [product] = await db.select().from(products).where(eq(products.name, name));
+    const s = schema();
+    const [product] = await db().select().from(s.products).where(eq(s.products.name, name));
     return product;
   }
 
   async getLowStockProducts(): Promise<Product[]> {
-    const allProducts = await db.select().from(products);
-    return allProducts.filter(p => p.quantity <= p.lowStockThreshold);
+    const s = schema();
+    const allProducts = await db().select().from(s.products);
+    return allProducts.filter((p: any) => p.quantity <= p.lowStockThreshold);
   }
 
   async updateProductQuantity(id: number, quantity: number): Promise<Product> {
-    const [updated] = await db.update(products).set({ quantity }).where(eq(products.id, id)).returning();
+    const s = schema();
+    const [updated] = await db().update(s.products).set({ quantity }).where(eq(s.products.id, id)).returning();
     if (!updated) {
       throw new Error("Product not found");
     }
@@ -195,117 +219,137 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateProduct(id: number, product: Partial<InsertProduct>): Promise<Product> {
-    const [updated] = await db.update(products).set(product).where(eq(products.id, id)).returning();
+    const s = schema();
+    const [updated] = await db().update(s.products).set(product).where(eq(s.products.id, id)).returning();
     return updated;
   }
 
   async createProduct(product: InsertProduct): Promise<Product> {
-    const [created] = await db.insert(products).values(product).returning();
+    const s = schema();
+    const [created] = await db().insert(s.products).values(product).returning();
     return created;
   }
 
   async deleteProduct(id: number): Promise<void> {
-    await db.delete(products).where(eq(products.id, id));
+    const s = schema();
+    await db().delete(s.products).where(eq(s.products.id, id));
   }
 
   async getClients(): Promise<Client[]> {
-    return await db.select().from(clients).orderBy(desc(clients.createdAt));
+    const s = schema();
+    return await db().select().from(s.clients).orderBy(desc(s.clients.createdAt));
   }
 
   async getClient(id: number): Promise<Client | undefined> {
-    const [client] = await db.select().from(clients).where(eq(clients.id, id));
+    const s = schema();
+    const [client] = await db().select().from(s.clients).where(eq(s.clients.id, id));
     return client;
   }
 
   async createClient(client: InsertClient): Promise<Client> {
-    const [created] = await db.insert(clients).values(client).returning();
+    const s = schema();
+    const [created] = await db().insert(s.clients).values(client).returning();
     return created;
   }
 
   async updateClient(id: number, client: Partial<InsertClient>): Promise<Client> {
-    const [updated] = await db.update(clients).set(client).where(eq(clients.id, id)).returning();
+    const s = schema();
+    const [updated] = await db().update(s.clients).set(client).where(eq(s.clients.id, id)).returning();
     return updated;
   }
 
   async deleteClient(id: number): Promise<void> {
-    await db.delete(clients).where(eq(clients.id, id));
+    const s = schema();
+    await db().delete(s.clients).where(eq(s.clients.id, id));
   }
 
   async updateClientLoyalty(id: number, points: number, spent: number): Promise<Client> {
-    const [client] = await db.select().from(clients).where(eq(clients.id, id));
+    const s = schema();
+    const [client] = await db().select().from(s.clients).where(eq(s.clients.id, id));
     if (!client) throw new Error("Client not found");
     
-    const [updated] = await db.update(clients).set({
+    const [updated] = await db().update(s.clients).set({
       loyaltyPoints: client.loyaltyPoints + points,
-      totalSpent: client.totalSpent + spent,
       totalVisits: client.totalVisits + 1,
-    }).where(eq(clients.id, id)).returning();
-    
+      totalSpent: client.totalSpent + spent,
+    }).where(eq(s.clients.id, id)).returning();
     return updated;
   }
 
   async getClientAppointments(clientId: number): Promise<Appointment[]> {
-    return await db.select().from(appointments)
-      .where(eq(appointments.clientId, clientId))
-      .orderBy(desc(appointments.date));
+    const s = schema();
+    return await db().select().from(s.appointments)
+      .where(eq(s.appointments.clientId, clientId))
+      .orderBy(desc(s.appointments.date));
   }
 
   async getCharges(): Promise<Charge[]> {
-    return await db.select().from(charges).orderBy(desc(charges.createdAt));
+    const s = schema();
+    return await db().select().from(s.charges).orderBy(desc(s.charges.createdAt));
   }
 
   async createCharge(charge: InsertCharge): Promise<Charge> {
-    const [created] = await db.insert(charges).values(charge).returning();
+    const s = schema();
+    const [created] = await db().insert(s.charges).values(charge).returning();
     return created;
   }
 
   async deleteCharge(id: number): Promise<void> {
-    await db.delete(charges).where(eq(charges.id, id));
+    const s = schema();
+    await db().delete(s.charges).where(eq(s.charges.id, id));
   }
 
   async getStaffDeductions(): Promise<StaffDeduction[]> {
-    return await db.select().from(staffDeductions).orderBy(desc(staffDeductions.createdAt));
+    const s = schema();
+    return await db().select().from(s.staffDeductions).orderBy(desc(s.staffDeductions.createdAt));
   }
 
   async createStaffDeduction(deduction: InsertStaffDeduction): Promise<StaffDeduction> {
-    const [created] = await db.insert(staffDeductions).values(deduction).returning();
+    const s = schema();
+    const [created] = await db().insert(s.staffDeductions).values(deduction).returning();
     return created;
   }
 
   async deleteStaffDeduction(id: number): Promise<void> {
-    await db.delete(staffDeductions).where(eq(staffDeductions.id, id));
+    const s = schema();
+    await db().delete(s.staffDeductions).where(eq(s.staffDeductions.id, id));
   }
 
   async getExpenseCategories(): Promise<ExpenseCategory[]> {
-    return await db.select().from(expenseCategories);
+    const s = schema();
+    return await db().select().from(s.expenseCategories);
   }
 
   async createExpenseCategory(category: InsertExpenseCategory): Promise<ExpenseCategory> {
-    const [created] = await db.insert(expenseCategories).values(category).returning();
+    const s = schema();
+    const [created] = await db().insert(s.expenseCategories).values(category).returning();
     return created;
   }
 
   async deleteExpenseCategory(id: number): Promise<void> {
-    await db.delete(expenseCategories).where(eq(expenseCategories.id, id));
+    const s = schema();
+    await db().delete(s.expenseCategories).where(eq(s.expenseCategories.id, id));
   }
 
   async getLoyaltyRedemptions(clientId?: number): Promise<LoyaltyRedemption[]> {
+    const s = schema();
     if (clientId) {
-      return await db.select().from(loyaltyRedemptions)
-        .where(eq(loyaltyRedemptions.clientId, clientId))
-        .orderBy(desc(loyaltyRedemptions.createdAt));
+      return await db().select().from(s.loyaltyRedemptions)
+        .where(eq(s.loyaltyRedemptions.clientId, clientId))
+        .orderBy(desc(s.loyaltyRedemptions.createdAt));
     }
-    return await db.select().from(loyaltyRedemptions).orderBy(desc(loyaltyRedemptions.createdAt));
+    return await db().select().from(s.loyaltyRedemptions).orderBy(desc(s.loyaltyRedemptions.createdAt));
   }
 
   async createLoyaltyRedemption(redemption: InsertLoyaltyRedemption): Promise<LoyaltyRedemption> {
-    const [created] = await db.insert(loyaltyRedemptions).values(redemption).returning();
+    const s = schema();
+    const [created] = await db().insert(s.loyaltyRedemptions).values(redemption).returning();
     
-    const [client] = await db.select().from(clients).where(eq(clients.id, redemption.clientId));
+    const [client] = await db().select().from(s.clients).where(eq(s.clients.id, redemption.clientId));
     if (client) {
-      await db.update(clients).set({
+      await db().update(s.clients).set({
         loyaltyPoints: client.loyaltyPoints - redemption.pointsUsed,
-      }).where(eq(clients.id, redemption.clientId));
+      }).where(eq(s.clients.id, redemption.clientId));
     }
     
     return created;
@@ -316,15 +360,16 @@ export class DatabaseStorage implements IStorage {
     totalRevenue: number;
     totalCommission: number;
   }> {
-    const appts = await db.select().from(appointments)
+    const s = schema();
+    const appts = await db().select().from(s.appointments)
       .where(and(
-        eq(appointments.staff, staffName),
-        gte(appointments.date, startDate),
-        lte(appointments.date, endDate)
+        eq(s.appointments.staff, staffName),
+        gte(s.appointments.date, startDate),
+        lte(s.appointments.date, endDate)
       ));
     
-    const allServices = await db.select().from(services);
-    const serviceMap = new Map(allServices.map(s => [s.name, s]));
+    const allServices = await db().select().from(s.services);
+    const serviceMap = new Map(allServices.map((svc: any) => [svc.name, svc]));
     
     let totalRevenue = 0;
     let totalCommission = 0;
