@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { format, addDays, startOfToday, parseISO, subDays } from "date-fns";
 import { useTranslation } from "react-i18next";
@@ -158,11 +158,15 @@ export default function Planning() {
     return format(date, "yyyy-MM-dd") === format(workDayDate, "yyyy-MM-dd");
   }, [date, currentTime]);
 
-  // Track if we've already scrolled to prevent repeated scrolls
-  const hasScrolledRef = useRef(false);
-  
-  // Calculate target scroll position for current time
-  const getTargetScrollTop = useCallback(() => {
+  // BULLETPROOF SCROLL TO LIVE LINE
+  // This scrolls to the current time position and follows it every 30 seconds
+  const scrollToLiveLine = useCallback(() => {
+    const board = boardRef.current;
+    if (!board) return false;
+    
+    // Board must have scrollable content
+    if (board.scrollHeight <= board.clientHeight) return false;
+    
     const now = new Date();
     const currentHour = now.getHours();
     const currentMinutes = now.getMinutes();
@@ -173,81 +177,72 @@ export default function Planning() {
     } else if (currentHour < 2) {
       adjustedHour = currentHour + 14;
     } else {
-      return 0; // Outside work hours
+      return false; // Outside work hours 2am-10am
     }
     
     const totalMinutes = adjustedHour * 60 + currentMinutes;
     const slotHeight = 48;
-    const position = (totalMinutes / 30) * slotHeight;
-    const targetTop = position + 48; // Add header offset
+    const targetTop = (totalMinutes / 30) * slotHeight + 48; // +48 for header
+    const scrollTarget = Math.max(0, targetTop - board.clientHeight / 2);
     
-    return targetTop;
+    // Direct scrollTop assignment - works in PWA
+    board.scrollTop = scrollTarget;
+    return true;
   }, []);
-  
-  // Scroll to live line - DIRECT scrollTop assignment that works everywhere
-  const scrollToLiveLine = useCallback(() => {
+
+  // Use ResizeObserver to scroll when board content changes size (data loads)
+  useLayoutEffect(() => {
+    if (!isToday) return;
+    
     const board = boardRef.current;
     if (!board) return;
     
-    const targetTop = getTargetScrollTop();
-    if (targetTop <= 0) return;
+    let scrolled = false;
     
-    const containerHeight = board.clientHeight;
-    const scrollTarget = Math.max(0, targetTop - containerHeight / 2);
+    // Try to scroll with rAF chains until successful
+    const tryScroll = () => {
+      if (scrolled) return;
+      requestAnimationFrame(() => {
+        if (scrollToLiveLine()) {
+          scrolled = true;
+        } else {
+          // Retry in next frame
+          requestAnimationFrame(tryScroll);
+        }
+      });
+    };
     
-    // DIRECT assignment - no animation, no API calls, just set it
-    board.scrollTop = scrollTarget;
-    hasScrolledRef.current = true;
-  }, [getTargetScrollTop]);
-  
-  // Auto-scroll on mount and when staff loads - AGGRESSIVE retry
+    // Start trying immediately
+    tryScroll();
+    
+    // ResizeObserver: scroll when board size changes (data loads)
+    const observer = new ResizeObserver(() => {
+      if (!scrolled) {
+        scrollToLiveLine();
+        scrolled = true;
+      }
+    });
+    observer.observe(board);
+    
+    return () => observer.disconnect();
+  }, [isToday, scrollToLiveLine]);
+
+  // FOLLOW LIVE LINE every 30 seconds when currentTime updates
   useEffect(() => {
     if (!isToday) return;
-    
-    // Force scroll immediately and repeatedly until it works
-    const forceScroll = () => {
-      if (boardRef.current && boardRef.current.scrollHeight > 100) {
-        const targetTop = getTargetScrollTop();
-        const containerHeight = boardRef.current.clientHeight;
-        const scrollTarget = Math.max(0, targetTop - containerHeight / 2);
-        boardRef.current.scrollTop = scrollTarget;
-      }
-    };
-    
-    // Try immediately
-    forceScroll();
-    
-    // Keep trying aggressively
-    const t1 = setTimeout(forceScroll, 50);
-    const t2 = setTimeout(forceScroll, 100);
-    const t3 = setTimeout(forceScroll, 200);
-    const t4 = setTimeout(forceScroll, 300);
-    const t5 = setTimeout(forceScroll, 500);
-    const t6 = setTimeout(forceScroll, 750);
-    const t7 = setTimeout(forceScroll, 1000);
-    const t8 = setTimeout(forceScroll, 1500);
-    const t9 = setTimeout(forceScroll, 2000);
-    
-    return () => {
-      clearTimeout(t1); clearTimeout(t2); clearTimeout(t3);
-      clearTimeout(t4); clearTimeout(t5); clearTimeout(t6);
-      clearTimeout(t7); clearTimeout(t8); clearTimeout(t9);
-    };
-  }, [isToday, getTargetScrollTop]);
-  
-  // Reset scroll flag when date changes
-  useEffect(() => {
-    hasScrolledRef.current = false;
-  }, [date]);
-  
-  // Scroll when app becomes visible (returning from background)
+    scrollToLiveLine();
+  }, [isToday, currentTime, scrollToLiveLine]);
+
+  // Scroll when visibility changes (returning from background in PWA)
   useEffect(() => {
     const handleVisibility = () => {
-      if (document.visibilityState === 'visible' && isToday && boardRef.current) {
-        const targetTop = getTargetScrollTop();
-        const containerHeight = boardRef.current.clientHeight;
-        const scrollTarget = Math.max(0, targetTop - containerHeight / 2);
-        boardRef.current.scrollTop = scrollTarget;
+      if (document.visibilityState === 'visible' && isToday) {
+        // Use rAF to ensure DOM is ready
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            scrollToLiveLine();
+          });
+        });
       }
     };
     
@@ -258,7 +253,10 @@ export default function Planning() {
       document.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('focus', handleVisibility);
     };
-  }, [isToday, getTargetScrollTop]);
+  }, [isToday, scrollToLiveLine]);
+
+  // Track data loaded state
+  const dataLoadedRef = useRef(false);
   const [isEditFavoritesOpen, setIsEditFavoritesOpen] = useState(false);
   const [servicePopoverOpen, setServicePopoverOpen] = useState(false);
   const [appointmentSearch, setAppointmentSearch] = useState("");
@@ -283,6 +281,19 @@ export default function Planning() {
   const { data: staffList = [] } = useStaff();
   const { data: services = [] } = useServices();
   const isAdmin = sessionStorage.getItem("admin_authenticated") === "true";
+
+  // Scroll when data loads (staff or appointments)
+  useEffect(() => {
+    if (staffList.length > 0 && !dataLoadedRef.current && isToday) {
+      dataLoadedRef.current = true;
+      // Use double rAF to ensure layout is complete
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          scrollToLiveLine();
+        });
+      });
+    }
+  }, [staffList, isToday, scrollToLiveLine]);
 
   const createMutation = useCreateAppointment();
   const updateMutation = useUpdateAppointment();
@@ -1243,10 +1254,7 @@ export default function Planning() {
       {/* Floating "Go to Now" button for PWA - always visible when viewing today */}
       {isToday && getCurrentTimePosition() >= 0 && (
         <button
-          onClick={() => {
-            hasScrolledRef.current = false;
-            scrollToLiveLine();
-          }}
+          onClick={() => scrollToLiveLine()}
           className="fixed bottom-20 right-4 z-50 w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 shadow-lg flex items-center justify-center text-white hover:from-orange-600 hover:to-amber-600 transition-all active:scale-95"
           aria-label="Go to current time"
         >
