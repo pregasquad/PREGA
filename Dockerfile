@@ -1,4 +1,4 @@
-FROM node:20-alpine
+FROM --platform=linux/amd64 node:20-alpine
 
 WORKDIR /app
 
@@ -20,4 +20,4 @@ ENV NODE_ENV=production
 ENV PORT=8000
 ENV DB_DIALECT=mysql
 
-CMD ["npm", "run", "start"]
+CMD ["node", "dist/index.cjs"]
