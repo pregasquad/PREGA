@@ -14,7 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CalendarIcon, ChevronLeft, ChevronRight, Plus, Trash2, Check, X, Search, Star, RefreshCw, Sparkles, CreditCard, Settings2, Scissors } from "lucide-react";
+import { CalendarIcon, ChevronLeft, ChevronRight, Plus, Trash2, Check, X, Search, Star, RefreshCw, Sparkles, CreditCard, Settings2, Scissors, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -1195,6 +1195,20 @@ export default function Planning() {
           </Form>
         </DialogContent>
       </Dialog>
+      
+      {/* Floating "Go to Now" button for PWA - always visible when viewing today */}
+      {isToday && getCurrentTimePosition() >= 0 && (
+        <button
+          onClick={() => {
+            hasScrolledRef.current = false;
+            scrollToLiveLine();
+          }}
+          className="fixed bottom-20 right-4 z-50 w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 shadow-lg flex items-center justify-center text-white hover:from-orange-600 hover:to-amber-600 transition-all active:scale-95"
+          aria-label="Go to current time"
+        >
+          <Clock className="w-5 h-5" />
+        </button>
+      )}
     </div>
   );
 }
