@@ -819,15 +819,15 @@ export default function Planning() {
             gridTemplateColumns: `60px repeat(${staffList.length}, minmax(100px, 1fr))`,
           }}
         >
-          <div className={cn("bg-white/50 dark:bg-gray-900/50 py-2 px-1", isRtl ? "border-l-2 border-orange-200 dark:border-orange-800" : "border-r-2 border-orange-200 dark:border-orange-800")}></div>
+          <div className={cn("bg-white/50 dark:bg-gray-900/50 py-1 px-1", isRtl ? "border-l-2 border-orange-200 dark:border-orange-800" : "border-r-2 border-orange-200 dark:border-orange-800")}></div>
           {staffList.map((s, staffIndex) => (
             <div 
               key={s.id} 
-              className={cn("py-2 px-2 font-bold text-center text-sm", isRtl ? "border-l border-orange-200/50 dark:border-orange-800/50" : "border-r border-orange-200/50 dark:border-orange-800/50")}
+              className={cn("py-1 px-1 font-semibold text-center text-xs", isRtl ? "border-l border-orange-200/50 dark:border-orange-800/50" : "border-r border-orange-200/50 dark:border-orange-800/50")}
             >
-              <div className="flex items-center justify-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: s.color }} />
-                <span className="text-gray-800 dark:text-gray-100">{s.name}</span>
+              <div className="flex items-center justify-center gap-1">
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
+                <span className="text-gray-800 dark:text-gray-100 truncate">{s.name}</span>
               </div>
             </div>
           ))}
