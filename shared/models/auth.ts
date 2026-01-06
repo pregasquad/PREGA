@@ -1,6 +1,6 @@
-import { index, json, mysqlTable, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { index, json, pgTable, timestamp, varchar } from "drizzle-orm/pg-core";
 
-export const sessions = mysqlTable(
+export const sessions = pgTable(
   "sessions",
   {
     sid: varchar("sid", { length: 255 }).primaryKey(),
@@ -10,7 +10,7 @@ export const sessions = mysqlTable(
   (table) => [index("IDX_session_expire").on(table.expire)]
 );
 
-export const users = mysqlTable("users", {
+export const users = pgTable("users", {
   id: varchar("id", { length: 36 }).primaryKey(),
   email: varchar("email", { length: 255 }).unique(),
   firstName: varchar("first_name", { length: 255 }),

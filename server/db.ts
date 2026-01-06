@@ -1,37 +1,22 @@
-import { drizzle } from "drizzle-orm/mysql2";
-import mysql from "mysql2/promise";
+import { drizzle } from "drizzle-orm/neon-serverless";
+import { Pool, neonConfig } from "@neondatabase/serverless";
+import ws from "ws";
 import * as schema from "@shared/schema";
 
-const databaseUrl = process.env.TIDB_DATABASE_URL || process.env.DATABASE_URL;
+neonConfig.webSocketConstructor = ws;
+
+const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
-  throw new Error("TIDB_DATABASE_URL or DATABASE_URL must be set.");
+  throw new Error("DATABASE_URL must be set.");
 }
 
-export const pool = mysql.createPool({
-  uri: databaseUrl,
-  ssl: {
-    rejectUnauthorized: true,
-  },
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-});
-
-export const db = drizzle(pool, { schema, mode: "default" });
+export const pool = new Pool({ connectionString: databaseUrl });
+export const db = drizzle(pool, { schema });
 
 export async function warmupDatabase(): Promise<void> {
   try {
-    const warmupPromises = [];
-    for (let i = 0; i < 5; i++) {
-      warmupPromises.push(
-        pool.getConnection().then(async (connection) => {
-          await connection.query("SELECT 1");
-          connection.release();
-        })
-      );
-    }
-    await Promise.all(warmupPromises);
-    console.log("Database connections warmed up successfully (5 connections ready)");
+    await pool.query("SELECT 1");
+    console.log("Database connection ready");
   } catch (error) {
     console.error("Database warmup failed:", error);
   }
@@ -39,17 +24,15 @@ export async function warmupDatabase(): Promise<void> {
 
 export async function ensurePushSubscriptionsTable(): Promise<void> {
   try {
-    const connection = await pool.getConnection();
-    await connection.query(`
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS push_subscriptions (
-        id INT AUTO_INCREMENT PRIMARY KEY,
+        id SERIAL PRIMARY KEY,
         endpoint TEXT NOT NULL,
         p256dh TEXT NOT NULL,
         auth TEXT NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
       )
     `);
-    connection.release();
     console.log("Push subscriptions table ready");
   } catch (error) {
     console.error("Failed to create push_subscriptions table:", error);
