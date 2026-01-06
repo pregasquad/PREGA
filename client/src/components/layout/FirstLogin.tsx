@@ -5,9 +5,9 @@ import { useLocation } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Lock, User } from "lucide-react";
+import { Lock, User, Settings } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { cn } from "@/lib/utils";
 
 interface AdminRole {
   id: number;
@@ -20,6 +20,12 @@ interface FirstLoginProps {
   children: React.ReactNode;
 }
 
+const ROLE_COLORS: Record<string, string> = {
+  owner: "from-red-400 to-red-600",
+  manager: "from-blue-400 to-blue-600",
+  receptionist: "from-green-400 to-green-600"
+};
+
 export function FirstLogin({ children }: FirstLoginProps) {
   const { t } = useTranslation();
   const [location] = useLocation();
@@ -31,7 +37,7 @@ export function FirstLogin({ children }: FirstLoginProps) {
   });
 
   const isPublicRoute = location === "/booking";
-  const [selectedUser, setSelectedUser] = useState("");
+  const [selectedUser, setSelectedUser] = useState<AdminRole | null>(null);
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -59,7 +65,7 @@ export function FirstLogin({ children }: FirstLoginProps) {
 
     try {
       const response = await apiRequest("POST", "/api/admin-roles/verify-pin", {
-        name: selectedUser,
+        name: selectedUser.name,
         pin: pin
       });
 
@@ -67,7 +73,7 @@ export function FirstLogin({ children }: FirstLoginProps) {
 
       if (data.success) {
         sessionStorage.setItem("user_authenticated", "true");
-        sessionStorage.setItem("current_user", selectedUser);
+        sessionStorage.setItem("current_user", selectedUser.name);
         sessionStorage.setItem("current_user_role", data.role || "");
         sessionStorage.setItem("current_user_permissions", JSON.stringify(data.permissions || []));
         setIsAuthenticated(true);
@@ -88,82 +94,115 @@ export function FirstLogin({ children }: FirstLoginProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-orange-50 to-orange-100 dark:from-gray-900 dark:to-gray-800">
-      <Card className="w-full max-w-md p-8 shadow-2xl border-2 border-primary/20">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-orange-50 to-orange-100 dark:from-gray-900 dark:to-gray-800 p-4">
+      <Card className="w-full max-w-lg p-6 md:p-8 shadow-2xl border-2 border-primary/20">
         <div className="flex flex-col items-center gap-6 text-center">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center">
-              <span className="text-2xl font-bold text-white">P</span>
+            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center shadow-lg">
+              <span className="text-3xl font-bold text-white">P</span>
             </div>
-            <h1 className="text-2xl font-bold text-primary">PREGA SQUAD</h1>
-          </div>
-
-          <div className="p-4 rounded-full bg-primary/10">
-            <Lock className="w-10 h-10 text-primary" />
+            <h1 className="text-2xl md:text-3xl font-bold text-primary">PREGA SQUAD</h1>
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold font-display">{t("auth.welcome")}</h2>
-            <p className="text-muted-foreground mt-2">{t("auth.loginToAccess")}</p>
+            <h2 className="text-xl md:text-2xl font-bold font-display">{t("auth.welcome")}</h2>
+            <p className="text-muted-foreground mt-1 text-sm">{t("auth.selectUserToLogin")}</p>
           </div>
 
-          <form onSubmit={handleLogin} className="w-full space-y-4 mt-2">
-            <div className="space-y-2">
-              <Select value={selectedUser} onValueChange={setSelectedUser}>
-                <SelectTrigger className="w-full h-12">
-                  <User className="w-4 h-4 mr-2 text-muted-foreground" />
-                  <SelectValue placeholder={t("auth.selectUser")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {adminRoles.map((role) => (
-                    <SelectItem key={role.id} value={role.name}>
-                      {role.name} ({t(`adminSettings.${role.role}`)})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          {!selectedUser ? (
+            <div className="w-full">
+              <div className="flex flex-wrap justify-center gap-4 py-4">
+                {adminRoles.map((role) => (
+                  <button
+                    key={role.id}
+                    onClick={() => setSelectedUser(role)}
+                    className="group flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-muted/50 transition-all duration-200"
+                  >
+                    <div className={cn(
+                      "w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center text-white text-2xl md:text-3xl font-bold shadow-lg transition-transform group-hover:scale-110 bg-gradient-to-br",
+                      ROLE_COLORS[role.role] || "from-gray-400 to-gray-600"
+                    )}>
+                      {role.name.charAt(0).toUpperCase()}
+                    </div>
+                    <span className="text-sm font-medium text-foreground">{role.name}</span>
+                    <span className="text-xs text-muted-foreground capitalize">{role.role}</span>
+                  </button>
+                ))}
+              </div>
+
+              {adminRoles.length === 0 && (
+                <div className="space-y-4 py-6">
+                  <div className="w-20 h-20 mx-auto rounded-full bg-muted flex items-center justify-center">
+                    <User className="w-10 h-10 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {t("auth.noUsersConfigured")}
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => {
+                      sessionStorage.setItem("user_authenticated", "true");
+                      sessionStorage.setItem("current_user", "Setup");
+                      sessionStorage.setItem("current_user_role", "owner");
+                      sessionStorage.setItem("current_user_permissions", JSON.stringify([]));
+                      setIsAuthenticated(true);
+                      window.location.href = "/admin-settings";
+                    }}
+                  >
+                    <Settings className="w-4 h-4 mr-2" />
+                    {t("auth.setupFirstUser")}
+                  </Button>
+                </div>
+              )}
             </div>
-
-            <Input
-              type="password"
-              placeholder={t("auth.enterPin")}
-              value={pin}
-              onChange={(e) => setPin(e.target.value)}
-              className={`h-12 ${error ? "border-destructive focus-visible:ring-destructive" : ""}`}
-              autoComplete="current-password"
-            />
-
-            {error && <p className="text-sm text-destructive font-medium">{error}</p>}
-
-            <Button 
-              type="submit" 
-              className="w-full h-12 text-lg"
-              disabled={isLoading || !selectedUser}
-            >
-              {isLoading ? t("common.loading") : t("auth.login")}
-            </Button>
-          </form>
-
-          {adminRoles.length === 0 && (
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                {t("auth.noUsersConfigured")}
-              </p>
-              <Button 
-                variant="outline" 
-                className="w-full"
+          ) : (
+            <form onSubmit={handleLogin} className="w-full space-y-4">
+              <button
+                type="button"
                 onClick={() => {
-                  sessionStorage.setItem("user_authenticated", "true");
-                  sessionStorage.setItem("current_user", "Setup");
-                  sessionStorage.setItem("current_user_role", "owner");
-                  sessionStorage.setItem("admin_authenticated", "true");
-                  setIsAuthenticated(true);
-                  window.location.href = "/settings";
+                  setSelectedUser(null);
+                  setPin("");
+                  setError("");
                 }}
+                className="group flex flex-col items-center gap-2 mx-auto p-3"
               >
-                {t("auth.setupFirstUser")}
+                <div className={cn(
+                  "w-20 h-20 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-lg ring-4 ring-primary/30 bg-gradient-to-br",
+                  ROLE_COLORS[selectedUser.role] || "from-gray-400 to-gray-600"
+                )}>
+                  {selectedUser.name.charAt(0).toUpperCase()}
+                </div>
+                <span className="text-lg font-semibold text-foreground">{selectedUser.name}</span>
+                <span className="text-xs text-primary hover:underline">{t("auth.changeUser")}</span>
+              </button>
+
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input
+                  type="password"
+                  placeholder={t("auth.enterPin")}
+                  value={pin}
+                  onChange={(e) => setPin(e.target.value)}
+                  className={cn(
+                    "h-12 pl-10 text-center text-lg tracking-widest",
+                    error && "border-destructive focus-visible:ring-destructive"
+                  )}
+                  autoComplete="current-password"
+                  autoFocus
+                />
+              </div>
+
+              {error && <p className="text-sm text-destructive font-medium">{error}</p>}
+
+              <Button 
+                type="submit" 
+                className="w-full h-12 text-lg bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700"
+                disabled={isLoading}
+              >
+                {isLoading ? t("common.loading") : t("auth.login")}
               </Button>
-            </div>
+            </form>
           )}
         </div>
       </Card>

@@ -368,7 +368,9 @@
     "selectUser": "Sélectionner l'utilisateur",
     "enterPin": "Entrer le code PIN",
     "noUsersConfigured": "Aucun utilisateur configuré. Veuillez contacter l'administrateur.",
-    "setupFirstUser": "Créer le premier utilisateur"
+    "setupFirstUser": "Créer le premier utilisateur",
+    "selectUserToLogin": "Sélectionnez un utilisateur pour vous connecter",
+    "changeUser": "Changer d'utilisateur"
   },
   "language": {
     "select": "Langue",

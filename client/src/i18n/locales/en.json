@@ -368,7 +368,9 @@
     "selectUser": "Select User",
     "enterPin": "Enter PIN",
     "noUsersConfigured": "No users configured. Please contact administrator.",
-    "setupFirstUser": "Setup First User"
+    "setupFirstUser": "Setup First User",
+    "selectUserToLogin": "Select a user to login",
+    "changeUser": "Change user"
   },
   "language": {
     "select": "Language",

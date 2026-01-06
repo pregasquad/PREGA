@@ -368,7 +368,9 @@
     "selectUser": "اختر المستخدم",
     "enterPin": "أدخل رمز PIN",
     "noUsersConfigured": "لم يتم تكوين مستخدمين. يرجى الاتصال بالمسؤول.",
-    "setupFirstUser": "إعداد المستخدم الأول"
+    "setupFirstUser": "إعداد المستخدم الأول",
+    "selectUserToLogin": "اختر مستخدم لتسجيل الدخول",
+    "changeUser": "تغيير المستخدم"
   },
   "language": {
     "select": "اللغة",

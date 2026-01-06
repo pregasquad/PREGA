@@ -80,7 +80,7 @@ function Router() {
       </Route>
 
       <Route path="/home">
-        <PageRoute component={Home} requireAdmin permission="view_home" />
+        <PageRoute component={Home} permission="view_home" />
       </Route>
 
       <Route path="/planning">
