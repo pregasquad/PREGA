@@ -1,0 +1,106 @@
+Build ready to start ▶️
+>> Cloning github.com/pregasquad/PREGA.git commit sha b472f2d859270cd490df062c83154a32e32db8be into /builder/workspace
+Initialized empty Git repository in /builder/workspace/.git/
+From https://github.com/pregasquad/PREGA
+ * branch            b472f2d859270cd490df062c83154a32e32db8be -> FETCH_HEAD
+HEAD is now at b472f2d Update Dockerfile to ensure successful deployment on Koyeb
+Starting Docker daemon...
+Waiting for the Docker daemon to start...
+done
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 348B done
+#1 WARN: FromPlatformFlagConstDisallowed: FROM --platform flag should not use constant value "linux/amd64" (line 1)
+#1 DONE 0.0s
+#2 [internal] load metadata for docker.io/library/node:20-alpine
+#2 DONE 2.6s
+#3 [internal] load .dockerignore
+#3 transferring context: 222B done
+#3 DONE 0.0s
+#4 [internal] load build context
+#4 DONE 0.0s
+#5 [1/8] FROM docker.io/library/node:20-alpine@sha256:658d0f63e501824d6c23e06d4bb95c71e7d704537c9d9272f488ac03a370d448
+#5 resolve docker.io/library/node:20-alpine@sha256:658d0f63e501824d6c23e06d4bb95c71e7d704537c9d9272f488ac03a370d448 done
+#5 DONE 0.0s
+#6 [auth] k-ff88b3b5-c422-4cd6-a0ba-cfe187b28767/4ec4544c-9f34-41f8-afc0-4016544f3926-cache:pull token for registry01.prod.koyeb.com
+#6 DONE 0.0s
+#7 importing cache manifest from registry01.prod.koyeb.com/k-ff88b3b5-c422-4cd6-a0ba-cfe187b28767/4ec4544c-9f34-41f8-afc0-4016544f3926-cache:latest
+#7 inferred cache manifest type: application/vnd.oci.image.manifest.v1+json done
+#7 DONE 0.6s
+#4 [internal] load build context
+#4 transferring context: 6.70MB 0.1s done
+#4 DONE 0.2s
+#8 [2/8] WORKDIR /app
+#8 CACHED
+#9 [4/8] COPY package*.json ./
+#9 CACHED
+#10 [6/8] COPY . .
+#10 CACHED
+#11 [3/8] RUN apk add --no-cache python3 make g++
+#11 CACHED
+#12 [5/8] RUN npm ci --include=dev
+#12 CACHED
+#13 [7/8] RUN npm run build
+#13 CACHED
+#14 exporting to image
+#14 exporting layers
+#14 ...
+#15 [8/8] RUN npm prune --production
+#15 sha256:1074353eec0db2c1d81d5af2671e56e00cf5738486f5762609ea33d606f88612 3.86MB / 3.86MB 0.3s done
+#15 DONE 0.3s
+#14 exporting to image
+#14 exporting layers 0.4s done
+#14 ...
+#16 [auth] k-ff88b3b5-c422-4cd6-a0ba-cfe187b28767/4ec4544c-9f34-41f8-afc0-4016544f3926:pull,push token for registry01.prod.koyeb.com
+#16 DONE 0.0s
+#14 exporting to image
+#14 exporting manifest sha256:e83c78cf9fb7c6e340beb3d37fe5c437c65541afa18feeb32d327ca2ada7ffe5 done
+#14 exporting config sha256:b68b91e6c352541def78de23d3bb9a024ed82373d785c3fdc5709204fc0eacc0 done
+#14 pushing layers
+#14 pushing layers 1.7s done
+#14 pushing manifest for registry01.prod.koyeb.com/k-ff88b3b5-c422-4cd6-a0ba-cfe187b28767/4ec4544c-9f34-41f8-afc0-4016544f3926:latest@sha256:e83c78cf9fb7c6e340beb3d37fe5c437c65541afa18feeb32d327ca2ada7ffe5
+#14 pushing manifest for registry01.prod.koyeb.com/k-ff88b3b5-c422-4cd6-a0ba-cfe187b28767/4ec4544c-9f34-41f8-afc0-4016544f3926:latest@sha256:e83c78cf9fb7c6e340beb3d37fe5c437c65541afa18feeb32d327ca2ada7ffe5 1.1s done
+#14 pushing layers
+#14 pushing layers 0.7s done
+#14 pushing manifest for registry01.prod.koyeb.com/k-ff88b3b5-c422-4cd6-a0ba-cfe187b28767/4ec4544c-9f34-41f8-afc0-4016544f3926:aefe2eed-14c6-4792-8879-50bccd304a0a@sha256:e83c78cf9fb7c6e340beb3d37fe5c437c65541afa18feeb32d327ca2ada7ffe5
+#14 pushing manifest for registry01.prod.koyeb.com/k-ff88b3b5-c422-4cd6-a0ba-cfe187b28767/4ec4544c-9f34-41f8-afc0-4016544f3926:aefe2eed-14c6-4792-8879-50bccd304a0a@sha256:e83c78cf9fb7c6e340beb3d37fe5c437c65541afa18feeb32d327ca2ada7ffe5 1.0s done
+#14 DONE 11.3s
+#17 exporting cache to registry
+#17 preparing build cache for export
+#17 writing layer sha256:1074353eec0db2c1d81d5af2671e56e00cf5738486f5762609ea33d606f88612
+#17 ...
+#18 [auth] k-ff88b3b5-c422-4cd6-a0ba-cfe187b28767/4ec4544c-9f34-41f8-afc0-4016544f3926-cache:pull,push token for registry01.prod.koyeb.com
+#18 DONE 0.0s
+#17 exporting cache to registry
+#17 writing layer sha256:1074353eec0db2c1d81d5af2671e56e00cf5738486f5762609ea33d606f88612 0.5s done
+#17 writing layer sha256:192f6f32e63bcdfef0424c16c3d243e7cc1d7399046cdc8bb87455eee0c3dab2
+#17 writing layer sha256:192f6f32e63bcdfef0424c16c3d243e7cc1d7399046cdc8bb87455eee0c3dab2 done
+#17 writing layer sha256:1edee53236dd36ad7c5ca72741175c8dfbe62dceda5e4b937f7df08bb3dc1614
+#17 writing layer sha256:1edee53236dd36ad7c5ca72741175c8dfbe62dceda5e4b937f7df08bb3dc1614 done
+#17 writing layer sha256:23c0aed8742bc69953a053a933cbc8491ff3e777a3775a8e1e6413440720bc39
+#17 writing layer sha256:23c0aed8742bc69953a053a933cbc8491ff3e777a3775a8e1e6413440720bc39 done
+#17 writing layer sha256:2fdcc136ed1f428944fc8e82ae4a397bf4a9307aa3223d3c27b07aaefd7f21f0
+#17 writing layer sha256:2fdcc136ed1f428944fc8e82ae4a397bf4a9307aa3223d3c27b07aaefd7f21f0 done
+#17 writing layer sha256:36f3d7462e54a4ddb596c74d8d443b04431bd5631c5b445fb7f0b69ad439c974
+#17 writing layer sha256:36f3d7462e54a4ddb596c74d8d443b04431bd5631c5b445fb7f0b69ad439c974 done
+#17 writing layer sha256:51b0843fff65da73fd1eef1d302ce9bdaae36fe536cda65fde617291ed90e1cf
+#17 writing layer sha256:51b0843fff65da73fd1eef1d302ce9bdaae36fe536cda65fde617291ed90e1cf 0.2s done
+#17 writing layer sha256:55a03dd30a9bf10b07a9b59a65eea04b406a363e44947205cc83b5d8d38aca0a
+#17 writing layer sha256:55a03dd30a9bf10b07a9b59a65eea04b406a363e44947205cc83b5d8d38aca0a done
+#17 writing layer sha256:6459b2a468d598749ae712eea8b54209f0cff4d37f745a5289ad70e9142ecd8e
+#17 writing layer sha256:6459b2a468d598749ae712eea8b54209f0cff4d37f745a5289ad70e9142ecd8e 0.2s done
+#17 writing layer sha256:6910a2e14605f1117bfd03a048b631b0b964a80c85bd551ec5d35b95e53f8f18
+#17 writing layer sha256:6910a2e14605f1117bfd03a048b631b0b964a80c85bd551ec5d35b95e53f8f18 done
+#17 writing layer sha256:84b69c87cb17ca7295ba83e0bd10fc0a65c625b99a661f5dac52d21e39aa2ed7
+#17 writing layer sha256:84b69c87cb17ca7295ba83e0bd10fc0a65c625b99a661f5dac52d21e39aa2ed7 0.3s done
+#17 writing layer sha256:8d06ba6946d1f299d8f962e37906c77006df33d47050430a57f7893ec35af697
+#17 writing layer sha256:8d06ba6946d1f299d8f962e37906c77006df33d47050430a57f7893ec35af697 0.3s done
+#17 writing layer sha256:8d20c6cb8a43651a432dafd0e07d51ddafba8dbe4ec5b2045a306f2f9f6c96fc
+#17 writing layer sha256:8d20c6cb8a43651a432dafd0e07d51ddafba8dbe4ec5b2045a306f2f9f6c96fc done
+#17 writing layer sha256:cb3325e64457574e24f92246e3da3376946e473d636209e1390eac47b50b26a3
+#17 writing layer sha256:cb3325e64457574e24f92246e3da3376946e473d636209e1390eac47b50b26a3 1.8s done
+#17 writing config sha256:4464aab3c2dda284723f7b71b7a751685822b993d4c6f5f0e37474dbdaf5682c
+#17 writing config sha256:4464aab3c2dda284723f7b71b7a751685822b993d4c6f5f0e37474dbdaf5682c 0.2s done
+#17 writing cache image manifest sha256:e4c55c3f04f74afc967bb3383f1c0d6cd3f5f20be4ffb00fe07450730a3b108e
+#17 preparing build cache for export 7.6s done
+#17 writing cache image manifest sha256:e4c55c3f04f74afc967bb3383f1c0d6cd3f5f20be4ffb00fe07450730a3b108e 1.8s done
+#17 DONE 7.6s
