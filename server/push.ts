@@ -1,5 +1,5 @@
 import webpush from 'web-push';
-import { db } from './db';
+import { getDb } from './db';
 import { pushSubscriptions } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 
@@ -20,6 +20,7 @@ export async function sendPushNotification(
   url?: string
 ) {
   try {
+    const db = getDb();
     const subscriptions = await db.select().from(pushSubscriptions);
     
     const payload = JSON.stringify({
@@ -48,7 +49,7 @@ export async function sendPushNotification(
           return { success: true, id: sub.id };
         } catch (error: any) {
           if (error.statusCode === 410 || error.statusCode === 404) {
-            await db.delete(pushSubscriptions).where(eq(pushSubscriptions.id, sub.id));
+            await getDb().delete(pushSubscriptions).where(eq(pushSubscriptions.id, sub.id));
           }
           return { success: false, id: sub.id, error: error.message };
         }

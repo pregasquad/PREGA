@@ -27,7 +27,7 @@ export async function sendWhatsAppTemplate(
       type: 'template',
       template: {
         name: templateName,
-        lang_code: 'ar_SA',
+        lang_code: 'ar',
         components: [
           {
             type: 'body',
