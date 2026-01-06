@@ -463,6 +463,12 @@ export async function registerRoutes(
   
   app.get("/api/push/vapid-public-key", (_req, res) => {
     console.log("Returning VAPID public key, length:", vapidPublicKey?.length || 0);
+    // Prevent Safari caching
+    res.set({
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
     res.json({ publicKey: vapidPublicKey });
   });
 
