@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useLayoutEffect, useRef, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { format, addDays, startOfToday, parseISO, subDays } from "date-fns";
 import { useTranslation } from "react-i18next";
@@ -134,56 +134,35 @@ export default function Planning() {
     return format(date, "yyyy-MM-dd") === format(workDayDate, "yyyy-MM-dd");
   }, [date, currentTime]);
 
-  // Custom smooth scroll function for better performance
-  const smoothScrollTo = (element: HTMLElement, container: HTMLElement) => {
-    const elementRect = element.getBoundingClientRect();
-    const containerRect = container.getBoundingClientRect();
-    const targetScroll = container.scrollTop + elementRect.top - containerRect.top - (containerRect.height / 2) + (elementRect.height / 2);
-    
-    const startScroll = container.scrollTop;
-    const distance = targetScroll - startScroll;
-    const duration = 800;
-    let startTime: number | null = null;
-
-    const easeInOutCubic = (t: number) => {
-      return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-    };
-
-    const animateScroll = (currentTime: number) => {
-      if (!startTime) startTime = currentTime;
-      const elapsed = currentTime - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const easeProgress = easeInOutCubic(progress);
-      
-      container.scrollTop = startScroll + (distance * easeProgress);
-      
-      if (progress < 1) {
-        requestAnimationFrame(animateScroll);
-      }
-    };
-
-    requestAnimationFrame(animateScroll);
-  };
-
   // Track if we've already scrolled to prevent repeated scrolls
   const hasScrolledRef = useRef(false);
   
-  // Auto-scroll to live line on initial load only (not on every time update)
-  useLayoutEffect(() => {
+  // Scroll to live line using native scrollIntoView for better PWA compatibility
+  const scrollToLiveLine = useCallback(() => {
+    if (liveLineRef.current) {
+      liveLineRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+      hasScrolledRef.current = true;
+    }
+  }, []);
+  
+  // Auto-scroll to live line on initial load only
+  useEffect(() => {
     if (!isToday || hasScrolledRef.current) return;
     
-    // Scroll to live line after a short delay to ensure DOM is fully rendered
-    const scrollTimeout = setTimeout(() => {
-      if (liveLineRef.current && boardRef.current) {
-        smoothScrollTo(liveLineRef.current, boardRef.current);
-        hasScrolledRef.current = true;
-      }
-    }, 500);
+    // Use multiple attempts to ensure scroll happens after render
+    const attempt1 = setTimeout(scrollToLiveLine, 100);
+    const attempt2 = setTimeout(scrollToLiveLine, 500);
+    const attempt3 = setTimeout(scrollToLiveLine, 1000);
     
     return () => {
-      clearTimeout(scrollTimeout);
+      clearTimeout(attempt1);
+      clearTimeout(attempt2);
+      clearTimeout(attempt3);
     };
-  }, [isToday]);
+  }, [isToday, scrollToLiveLine]);
   
   // Reset scroll flag when date changes
   useEffect(() => {
