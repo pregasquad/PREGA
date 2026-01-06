@@ -97,13 +97,37 @@ export default function Planning() {
     };
   }, [isMobile]);
 
+  // Use requestAnimationFrame for data refresh to avoid PWA timer throttling
   useEffect(() => {
-    // Refresh data less frequently on mobile for better performance
-    const interval = isMobile ? 120000 : 30000;
-    const refreshTimer = setInterval(() => {
-      queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
-    }, interval);
-    return () => clearInterval(refreshTimer);
+    const refreshInterval = isMobile ? 120000 : 30000;
+    let animationFrameId: number;
+    let lastRefresh = Date.now();
+    
+    const checkRefresh = () => {
+      const now = Date.now();
+      if (now - lastRefresh >= refreshInterval) {
+        queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+        lastRefresh = now;
+      }
+      animationFrameId = requestAnimationFrame(checkRefresh);
+    };
+    
+    animationFrameId = requestAnimationFrame(checkRefresh);
+    
+    // Also refresh on visibility change (when returning to PWA)
+    const handleVisibilityRefresh = () => {
+      if (document.visibilityState === 'visible') {
+        queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+        lastRefresh = Date.now();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityRefresh);
+    
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+      document.removeEventListener('visibilitychange', handleVisibilityRefresh);
+    };
   }, [isMobile]);
 
   const getCurrentTimePosition = () => {
@@ -137,16 +161,26 @@ export default function Planning() {
   // Track if we've already scrolled to prevent repeated scrolls
   const hasScrolledRef = useRef(false);
   
-  // Scroll to live line using native scrollIntoView for better PWA compatibility
+  // Scroll to live line using manual scrollTo (scrollIntoView doesn't work in Chrome PWA for absolute elements)
   const scrollToLiveLine = useCallback(() => {
-    if (liveLineRef.current) {
-      liveLineRef.current.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-      });
-      hasScrolledRef.current = true;
-    }
-  }, []);
+    if (!boardRef.current) return;
+    
+    const position = getCurrentTimePosition();
+    if (position < 0) return;
+    
+    // Calculate scroll position to center the live line
+    // Position includes 48px offset for header row
+    const targetTop = position + 48;
+    const containerHeight = boardRef.current.clientHeight;
+    const scrollTop = Math.max(0, targetTop - containerHeight / 2);
+    
+    boardRef.current.scrollTo({
+      top: scrollTop,
+      behavior: 'smooth'
+    });
+    
+    hasScrolledRef.current = true;
+  }, [currentTime]);
   
   // Auto-scroll to live line on initial load only
   useEffect(() => {
@@ -164,10 +198,23 @@ export default function Planning() {
     };
   }, [isToday, scrollToLiveLine]);
   
-  // Reset scroll flag when date changes
+  // Reset scroll flag when date changes or when returning to the app
   useEffect(() => {
     hasScrolledRef.current = false;
   }, [date]);
+  
+  // Also scroll when app becomes visible (returning from background in PWA)
+  useEffect(() => {
+    const handleVisibilityScroll = () => {
+      if (document.visibilityState === 'visible' && isToday) {
+        hasScrolledRef.current = false;
+        setTimeout(scrollToLiveLine, 100);
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityScroll);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityScroll);
+  }, [isToday, scrollToLiveLine]);
   const [isEditFavoritesOpen, setIsEditFavoritesOpen] = useState(false);
   const [servicePopoverOpen, setServicePopoverOpen] = useState(false);
   const [appointmentSearch, setAppointmentSearch] = useState("");
