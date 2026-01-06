@@ -24,14 +24,12 @@ import { insertAppointmentSchema, insertStaffSchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
 const hours = [
-  "02:00","02:30","03:00","03:30","04:00","04:30",
-  "05:00","05:30","06:00","06:30","07:00","07:30",
-  "08:00","08:30","09:00","09:30","10:00","10:30",
-  "11:00","11:30","12:00","12:30","13:00","13:30",
-  "14:00","14:30","15:00","15:30","16:00","16:30",
-  "17:00","17:30","18:00","18:30","19:00","19:30",
-  "20:00","20:30","21:00","21:30","22:00","22:30",
-  "23:00","23:30","00:00","00:30","01:00","01:30"
+  "10:00","10:30","11:00","11:30","12:00","12:30",
+  "13:00","13:30","14:00","14:30","15:00","15:30",
+  "16:00","16:30","17:00","17:30","18:00","18:30",
+  "19:00","19:30","20:00","20:30","21:00","21:30",
+  "22:00","22:30","23:00","23:30","00:00","00:30",
+  "01:00","01:30"
 ];
 
 const formSchema = insertAppointmentSchema.extend({
@@ -42,7 +40,7 @@ const formSchema = insertAppointmentSchema.extend({
 
 type AppointmentFormValues = z.infer<typeof formSchema>;
 
-// Get the "work day" date - if time is between 00:00-01:59, it's still the previous day's schedule
+// Get the "work day" date - work day runs 10am to 2am, so before 2am is still previous day
 function getWorkDayDate(): Date {
   const now = new Date();
   const hour = now.getHours();
@@ -84,9 +82,16 @@ export default function Planning() {
     const now = currentTime;
     const currentHour = now.getHours();
     const currentMinutes = now.getMinutes();
-    // Schedule starts at 2 AM, so adjust the calculation
-    // Hours 02-23 map to slots 0-43, Hours 00-01 map to slots 44-47
-    let adjustedHour = currentHour >= 2 ? currentHour - 2 : currentHour + 22;
+    // Schedule runs from 10am to 2am (next day)
+    // Hours 10-23 map to slots 0-27, Hours 00-01 map to slots 28-31
+    let adjustedHour;
+    if (currentHour >= 10) {
+      adjustedHour = currentHour - 10;
+    } else if (currentHour < 2) {
+      adjustedHour = currentHour + 14; // 00:00 = slot 28, 01:00 = slot 30
+    } else {
+      return -1; // Outside work hours (2am-10am)
+    }
     const totalMinutes = adjustedHour * 60 + currentMinutes;
     const slotHeight = 48;
     const position = (totalMinutes / 30) * slotHeight;
@@ -666,7 +671,7 @@ export default function Planning() {
           }}
         >
           {/* Current Time Line - flex layout with sticky icon and spanning line */}
-          {isToday && (
+          {isToday && getCurrentTimePosition() >= 0 && (
             <div 
               ref={liveLineRef}
               className="absolute z-[35] pointer-events-none transition-all duration-1000 ease-in-out flex items-center"
