@@ -1,4 +1,4 @@
-import { db, schema } from "./db";
+import { db, schema, dbDialect } from "./db";
 import {
   type Appointment, type InsertAppointment,
   type Service, type InsertService,
@@ -11,8 +11,13 @@ import {
   type ExpenseCategory, type InsertExpenseCategory,
   type LoyaltyRedemption, type InsertLoyaltyRedemption
 } from "@shared/schema";
-import { eq, desc, and, gte, lte } from "drizzle-orm";
+import { eq, desc, and, gte, lte, sql } from "drizzle-orm";
 import { authStorage, type IAuthStorage } from "./replit_integrations/auth/storage";
+
+// Helper to check if we're using MySQL (no .returning() support)
+function isMySQL(): boolean {
+  return dbDialect === 'mysql';
+}
 
 export interface IStorage extends IAuthStorage {
   getAppointments(date?: string): Promise<Appointment[]>;
@@ -105,12 +110,23 @@ export class DatabaseStorage implements IStorage {
 
   async createAppointment(appointment: InsertAppointment): Promise<Appointment> {
     const s = schema();
+    if (isMySQL()) {
+      const result = await db().insert(s.appointments).values(appointment);
+      const insertId = (result as any)[0]?.insertId;
+      const [created] = await db().select().from(s.appointments).where(eq(s.appointments.id, insertId));
+      return created;
+    }
     const [created] = await db().insert(s.appointments).values(appointment).returning();
     return created;
   }
 
   async updateAppointment(id: number, appointment: Partial<InsertAppointment>): Promise<Appointment> {
     const s = schema();
+    if (isMySQL()) {
+      await db().update(s.appointments).set(appointment).where(eq(s.appointments.id, id));
+      const [updated] = await db().select().from(s.appointments).where(eq(s.appointments.id, id));
+      return updated;
+    }
     const [updated] = await db().update(s.appointments).set(appointment).where(eq(s.appointments.id, id)).returning();
     return updated;
   }
@@ -127,12 +143,23 @@ export class DatabaseStorage implements IStorage {
 
   async createService(service: InsertService): Promise<Service> {
     const s = schema();
+    if (isMySQL()) {
+      const result = await db().insert(s.services).values(service);
+      const insertId = (result as any)[0]?.insertId;
+      const [created] = await db().select().from(s.services).where(eq(s.services.id, insertId));
+      return created;
+    }
     const [created] = await db().insert(s.services).values(service).returning();
     return created;
   }
 
   async updateService(id: number, service: Partial<InsertService>): Promise<Service> {
     const s = schema();
+    if (isMySQL()) {
+      await db().update(s.services).set(service).where(eq(s.services.id, id));
+      const [updated] = await db().select().from(s.services).where(eq(s.services.id, id));
+      return updated;
+    }
     const [updated] = await db().update(s.services).set(service).where(eq(s.services.id, id)).returning();
     return updated;
   }
@@ -149,12 +176,23 @@ export class DatabaseStorage implements IStorage {
 
   async createCategory(category: InsertCategory): Promise<Category> {
     const s = schema();
+    if (isMySQL()) {
+      const result = await db().insert(s.categories).values(category);
+      const insertId = (result as any)[0]?.insertId;
+      const [created] = await db().select().from(s.categories).where(eq(s.categories.id, insertId));
+      return created;
+    }
     const [created] = await db().insert(s.categories).values(category).returning();
     return created;
   }
 
   async updateCategory(id: number, category: Partial<InsertCategory>): Promise<Category> {
     const s = schema();
+    if (isMySQL()) {
+      await db().update(s.categories).set(category).where(eq(s.categories.id, id));
+      const [updated] = await db().select().from(s.categories).where(eq(s.categories.id, id));
+      return updated;
+    }
     const [updated] = await db().update(s.categories).set(category).where(eq(s.categories.id, id)).returning();
     return updated;
   }
@@ -171,12 +209,23 @@ export class DatabaseStorage implements IStorage {
 
   async createStaff(st: InsertStaff): Promise<Staff> {
     const s = schema();
+    if (isMySQL()) {
+      const result = await db().insert(s.staff).values(st);
+      const insertId = (result as any)[0]?.insertId;
+      const [created] = await db().select().from(s.staff).where(eq(s.staff.id, insertId));
+      return created;
+    }
     const [created] = await db().insert(s.staff).values(st).returning();
     return created;
   }
 
   async updateStaff(id: number, st: Partial<InsertStaff>): Promise<Staff> {
     const s = schema();
+    if (isMySQL()) {
+      await db().update(s.staff).set(st).where(eq(s.staff.id, id));
+      const [updated] = await db().select().from(s.staff).where(eq(s.staff.id, id));
+      return updated;
+    }
     const [updated] = await db().update(s.staff).set(st).where(eq(s.staff.id, id)).returning();
     return updated;
   }
@@ -211,6 +260,12 @@ export class DatabaseStorage implements IStorage {
 
   async updateProductQuantity(id: number, quantity: number): Promise<Product> {
     const s = schema();
+    if (isMySQL()) {
+      await db().update(s.products).set({ quantity }).where(eq(s.products.id, id));
+      const [updated] = await db().select().from(s.products).where(eq(s.products.id, id));
+      if (!updated) throw new Error("Product not found");
+      return updated;
+    }
     const [updated] = await db().update(s.products).set({ quantity }).where(eq(s.products.id, id)).returning();
     if (!updated) {
       throw new Error("Product not found");
@@ -220,12 +275,23 @@ export class DatabaseStorage implements IStorage {
 
   async updateProduct(id: number, product: Partial<InsertProduct>): Promise<Product> {
     const s = schema();
+    if (isMySQL()) {
+      await db().update(s.products).set(product).where(eq(s.products.id, id));
+      const [updated] = await db().select().from(s.products).where(eq(s.products.id, id));
+      return updated;
+    }
     const [updated] = await db().update(s.products).set(product).where(eq(s.products.id, id)).returning();
     return updated;
   }
 
   async createProduct(product: InsertProduct): Promise<Product> {
     const s = schema();
+    if (isMySQL()) {
+      const result = await db().insert(s.products).values(product);
+      const insertId = (result as any)[0]?.insertId;
+      const [created] = await db().select().from(s.products).where(eq(s.products.id, insertId));
+      return created;
+    }
     const [created] = await db().insert(s.products).values(product).returning();
     return created;
   }
@@ -248,12 +314,23 @@ export class DatabaseStorage implements IStorage {
 
   async createClient(client: InsertClient): Promise<Client> {
     const s = schema();
+    if (isMySQL()) {
+      const result = await db().insert(s.clients).values(client);
+      const insertId = (result as any)[0]?.insertId;
+      const [created] = await db().select().from(s.clients).where(eq(s.clients.id, insertId));
+      return created;
+    }
     const [created] = await db().insert(s.clients).values(client).returning();
     return created;
   }
 
   async updateClient(id: number, client: Partial<InsertClient>): Promise<Client> {
     const s = schema();
+    if (isMySQL()) {
+      await db().update(s.clients).set(client).where(eq(s.clients.id, id));
+      const [updated] = await db().select().from(s.clients).where(eq(s.clients.id, id));
+      return updated;
+    }
     const [updated] = await db().update(s.clients).set(client).where(eq(s.clients.id, id)).returning();
     return updated;
   }
@@ -268,6 +345,15 @@ export class DatabaseStorage implements IStorage {
     const [client] = await db().select().from(s.clients).where(eq(s.clients.id, id));
     if (!client) throw new Error("Client not found");
     
+    if (isMySQL()) {
+      await db().update(s.clients).set({
+        loyaltyPoints: client.loyaltyPoints + points,
+        totalVisits: client.totalVisits + 1,
+        totalSpent: client.totalSpent + spent,
+      }).where(eq(s.clients.id, id));
+      const [updated] = await db().select().from(s.clients).where(eq(s.clients.id, id));
+      return updated;
+    }
     const [updated] = await db().update(s.clients).set({
       loyaltyPoints: client.loyaltyPoints + points,
       totalVisits: client.totalVisits + 1,
@@ -290,6 +376,12 @@ export class DatabaseStorage implements IStorage {
 
   async createCharge(charge: InsertCharge): Promise<Charge> {
     const s = schema();
+    if (isMySQL()) {
+      const result = await db().insert(s.charges).values(charge);
+      const insertId = (result as any)[0]?.insertId;
+      const [created] = await db().select().from(s.charges).where(eq(s.charges.id, insertId));
+      return created;
+    }
     const [created] = await db().insert(s.charges).values(charge).returning();
     return created;
   }
@@ -306,6 +398,12 @@ export class DatabaseStorage implements IStorage {
 
   async createStaffDeduction(deduction: InsertStaffDeduction): Promise<StaffDeduction> {
     const s = schema();
+    if (isMySQL()) {
+      const result = await db().insert(s.staffDeductions).values(deduction);
+      const insertId = (result as any)[0]?.insertId;
+      const [created] = await db().select().from(s.staffDeductions).where(eq(s.staffDeductions.id, insertId));
+      return created;
+    }
     const [created] = await db().insert(s.staffDeductions).values(deduction).returning();
     return created;
   }
@@ -322,6 +420,12 @@ export class DatabaseStorage implements IStorage {
 
   async createExpenseCategory(category: InsertExpenseCategory): Promise<ExpenseCategory> {
     const s = schema();
+    if (isMySQL()) {
+      const result = await db().insert(s.expenseCategories).values(category);
+      const insertId = (result as any)[0]?.insertId;
+      const [created] = await db().select().from(s.expenseCategories).where(eq(s.expenseCategories.id, insertId));
+      return created;
+    }
     const [created] = await db().insert(s.expenseCategories).values(category).returning();
     return created;
   }
@@ -343,7 +447,14 @@ export class DatabaseStorage implements IStorage {
 
   async createLoyaltyRedemption(redemption: InsertLoyaltyRedemption): Promise<LoyaltyRedemption> {
     const s = schema();
-    const [created] = await db().insert(s.loyaltyRedemptions).values(redemption).returning();
+    let created;
+    if (isMySQL()) {
+      const result = await db().insert(s.loyaltyRedemptions).values(redemption);
+      const insertId = (result as any)[0]?.insertId;
+      [created] = await db().select().from(s.loyaltyRedemptions).where(eq(s.loyaltyRedemptions.id, insertId));
+    } else {
+      [created] = await db().insert(s.loyaltyRedemptions).values(redemption).returning();
+    }
     
     const [client] = await db().select().from(s.clients).where(eq(s.clients.id, redemption.clientId));
     if (client) {
