@@ -779,60 +779,20 @@ export default function Planning() {
         </div>
       </div>
 
-      {/* Board */}
-      <div ref={boardRef} className="flex-1 overflow-auto bg-background rounded-xl border shadow-sm relative free-scroll" dir={isRtl ? "rtl" : "ltr"}>
+      {/* Board with sticky header */}
+      <div className="flex-1 flex flex-col bg-background rounded-xl border shadow-sm overflow-hidden" dir={isRtl ? "rtl" : "ltr"}>
+        {/* Sticky Staff Headers - outside scroll container */}
         <div 
-          className="grid relative"
+          className="grid bg-muted border-b border-gray-300 dark:border-gray-600 z-50 shrink-0"
           style={{ 
             gridTemplateColumns: `55px repeat(${staffList.length}, minmax(120px, 1fr))`,
-            gridAutoRows: '48px'
           }}
         >
-          {/* Current Time Line - positioned after time column */}
-          {isToday && getCurrentTimePosition() >= 0 && (
-            <div 
-              ref={liveLineRef}
-              className="absolute z-[35] pointer-events-none transition-all duration-1000 ease-in-out flex items-center"
-              style={{ 
-                top: `${getCurrentTimePosition() + 48}px`,
-                left: isRtl ? 0 : '55px',
-                right: isRtl ? '55px' : 0,
-                flexDirection: isRtl ? 'row' : 'row',
-              }}
-            >
-              {/* Scissors icon - positioned at the time column edge */}
-              <div 
-                className="shrink-0 z-[50] flex items-center absolute"
-                style={{
-                  left: isRtl ? 'auto' : 0,
-                  right: isRtl ? 0 : 'auto',
-                }}
-              >
-                <div className="relative flex items-center justify-center">
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 shadow-lg flex items-center justify-center border-2 border-white dark:border-gray-800">
-                    <Scissors className="w-3 h-3 text-white" />
-                  </div>
-                  <div className="absolute inset-0 w-7 h-7 rounded-full bg-orange-500 animate-ping opacity-30" />
-                </div>
-              </div>
-              {/* Line spanning staff columns */}
-              <div 
-                className="w-full h-0.5 shadow-sm"
-                style={{
-                  background: isRtl 
-                    ? 'linear-gradient(to left, #f97316, #fb923c, transparent)'
-                    : 'linear-gradient(to right, #f97316, #fb923c, transparent)',
-                }}
-              />
-            </div>
-          )}
-          {/* Top row - Staff headers (sticky) */}
-          <div className={cn("bg-card border-b border-gray-300 dark:border-gray-600 p-1 sticky top-0 z-40", isRtl ? "border-l" : "border-r")} style={{ gridColumn: 1, gridRow: 1 }}></div>
+          <div className={cn("bg-card p-1", isRtl ? "border-l" : "border-r")}></div>
           {staffList.map((s, staffIndex) => (
             <div 
               key={s.id} 
-              className={cn("bg-muted border-b border-gray-300 dark:border-gray-600 p-2 md:p-3 font-bold text-center text-xs md:text-sm sticky top-0 z-40", isRtl ? "border-l" : "border-r")}
-              style={{ gridColumn: staffIndex + 2, gridRow: 1 }}
+              className={cn("bg-muted p-2 md:p-3 font-bold text-center text-xs md:text-sm", isRtl ? "border-l border-gray-300 dark:border-gray-600" : "border-r border-gray-300 dark:border-gray-600")}
             >
               <div className="flex items-center justify-center gap-1">
                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
@@ -840,10 +800,59 @@ export default function Planning() {
               </div>
             </div>
           ))}
+        </div>
 
-          {/* Time rows */}
+        {/* Scrollable content */}
+        <div ref={boardRef} className="flex-1 overflow-auto relative free-scroll">
+          <div 
+            className="grid relative"
+            style={{ 
+              gridTemplateColumns: `55px repeat(${staffList.length}, minmax(120px, 1fr))`,
+              gridAutoRows: '48px'
+            }}
+          >
+            {/* Current Time Line - positioned after time column */}
+            {isToday && getCurrentTimePosition() >= 0 && (
+              <div 
+                ref={liveLineRef}
+                className="absolute z-[35] pointer-events-none transition-all duration-1000 ease-in-out flex items-center"
+                style={{ 
+                  top: `${getCurrentTimePosition()}px`,
+                  left: isRtl ? 0 : '55px',
+                  right: isRtl ? '55px' : 0,
+                  flexDirection: isRtl ? 'row' : 'row',
+                }}
+              >
+                {/* Scissors icon - positioned at the time column edge */}
+                <div 
+                  className="shrink-0 z-[50] flex items-center absolute"
+                  style={{
+                    left: isRtl ? 'auto' : 0,
+                    right: isRtl ? 0 : 'auto',
+                  }}
+                >
+                  <div className="relative flex items-center justify-center">
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 shadow-lg flex items-center justify-center border-2 border-white dark:border-gray-800">
+                      <Scissors className="w-3 h-3 text-white" />
+                    </div>
+                    <div className="absolute inset-0 w-7 h-7 rounded-full bg-orange-500 animate-ping opacity-30" />
+                  </div>
+                </div>
+                {/* Line spanning staff columns */}
+                <div 
+                  className="w-full h-0.5 shadow-sm"
+                  style={{
+                    background: isRtl 
+                      ? 'linear-gradient(to left, #f97316, #fb923c, transparent)'
+                      : 'linear-gradient(to right, #f97316, #fb923c, transparent)',
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Time rows */}
           {hours.map((hour, hourIndex) => {
-            const rowNum = hourIndex + 2; // +2 because row 1 is headers
+            const rowNum = hourIndex + 1; // headers are now outside the grid
             return (
             <React.Fragment key={hour}>
               <div 
@@ -947,6 +956,7 @@ export default function Planning() {
               })}
             </React.Fragment>
           );})}
+          </div>
         </div>
       </div>
 
