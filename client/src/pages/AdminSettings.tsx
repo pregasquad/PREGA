@@ -123,9 +123,13 @@ export default function AdminSettings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin-roles"] });
+      setIsDialogOpen(false);
       setEditingRole(null);
       resetForm();
       toast({ title: t("admin.userUpdated") });
+    },
+    onError: (err: any) => {
+      toast({ title: t("common.error"), description: err.message, variant: "destructive" });
     }
   });
 

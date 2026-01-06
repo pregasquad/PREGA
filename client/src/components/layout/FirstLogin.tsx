@@ -155,7 +155,9 @@ export function FirstLogin({ children }: FirstLoginProps) {
                   sessionStorage.setItem("user_authenticated", "true");
                   sessionStorage.setItem("current_user", "Setup");
                   sessionStorage.setItem("current_user_role", "owner");
+                  sessionStorage.setItem("admin_authenticated", "true");
                   setIsAuthenticated(true);
+                  window.location.href = "/settings";
                 }}
               >
                 {t("auth.setupFirstUser")}
