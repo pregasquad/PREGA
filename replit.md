@@ -27,10 +27,15 @@ Preferred communication style: Simple, everyday language.
 - **API Design**: RESTful endpoints defined in `shared/routes.ts` with Zod schemas for type-safe request/response validation
 
 ### Data Storage
-- **Database**: TiDB Cloud (MySQL-compatible) with Drizzle ORM
-- **Schema Location**: `shared/schema.ts` contains all table definitions using mysql-core
+- **Database**: Dual-dialect architecture with Drizzle ORM
+  - **PostgreSQL (Replit)**: Uses `DATABASE_URL` for Replit development
+  - **MySQL (Koyeb/TiDB)**: Uses `MYSQL_URL` with `DB_DIALECT=mysql` for production
+- **Schema Location**: 
+  - `shared/schema-postgres.ts` - PostgreSQL schema (pg-core)
+  - `shared/schema-mysql.ts` - MySQL schema (mysql-core)  
+  - `shared/schema.ts` - Auto-selects schema based on DB_DIALECT
 - **Migrations**: Drizzle Kit for schema management (`db:push` command)
-- **Environment Variables**: TIDB_DATABASE_URL (TiDB MySQL connection string with SSL)
+- **MySQL Fix**: All create/update methods in `server/storage.ts` handle drizzle-orm's ResultSetHeader object format for proper insertId extraction
 
 ### Authentication
 - **Provider**: Replit Auth (OpenID Connect)
@@ -70,8 +75,12 @@ Preferred communication style: Simple, everyday language.
 ## External Dependencies
 
 ### Database
-- **TiDB Cloud**: MySQL-compatible serverless database (requires TIDB_DATABASE_URL)
-- **Drizzle ORM**: Type-safe database queries and schema management with mysql2 driver
+- **Dual-dialect support**: PostgreSQL (Replit) and MySQL (TiDB Cloud/Koyeb)
+- **Environment variables**: 
+  - `DATABASE_URL` - PostgreSQL connection for Replit
+  - `MYSQL_URL` - MySQL connection for TiDB Cloud production
+  - `DB_DIALECT` - Set to "mysql" for MySQL mode
+- **Drizzle ORM**: Type-safe database queries with dialect-specific drivers
 
 ### Authentication
 - **Replit Auth**: OpenID Connect provider (requires `REPL_ID`, `SESSION_SECRET`)
@@ -104,10 +113,10 @@ Preferred communication style: Simple, everyday language.
 - `npm run db:push` - Push schema changes to database
 
 ## Recent Changes (January 2026)
-- Migrated database back to TiDB Cloud (MySQL-compatible)
-- Updated Drizzle ORM configuration for MySQL dialect with mysql2 driver
-- Updated schema from pg-core to mysql-core
-- Configured SSL for secure TiDB Cloud connections
+- **Dual-dialect Database Architecture**: Supports both PostgreSQL (Replit) and MySQL (TiDB/Koyeb)
+- **MySQL Compatibility Fix**: All storage.ts methods correctly extract insertId from drizzle-orm ResultSetHeader
+- **Error Handling**: All create/update operations validate results and throw descriptive errors
+- **WhatsApp SendZen**: Fixed template language code from ar_SA to ar for Arabic templates
 - Added multi-language support (French, English, Arabic) with RTL handling for Arabic
 - Created LanguageSwitcher component with flag icons and persistent language preference
 - Translations organized in client/src/i18n/locales/ with keys following {feature}.{key} pattern

@@ -30,7 +30,7 @@ export async function sendPushNotification(
     });
 
     const results = await Promise.allSettled(
-      subscriptions.map(async (sub) => {
+      subscriptions.map(async (sub: any) => {
         try {
           await webpush.sendNotification(
             {

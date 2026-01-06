@@ -112,8 +112,10 @@ export class DatabaseStorage implements IStorage {
     const s = schema();
     if (isMySQL()) {
       const result = await db().insert(s.appointments).values(appointment);
-      const insertId = (result as any)[0]?.insertId;
+      const insertId = (result as any).insertId ?? (result as any)[0]?.insertId;
+      if (!insertId) throw new Error("Failed to get insert ID");
       const [created] = await db().select().from(s.appointments).where(eq(s.appointments.id, insertId));
+      if (!created) throw new Error("Failed to retrieve created appointment");
       return created;
     }
     const [created] = await db().insert(s.appointments).values(appointment).returning();
@@ -125,6 +127,7 @@ export class DatabaseStorage implements IStorage {
     if (isMySQL()) {
       await db().update(s.appointments).set(appointment).where(eq(s.appointments.id, id));
       const [updated] = await db().select().from(s.appointments).where(eq(s.appointments.id, id));
+      if (!updated) throw new Error("Appointment not found");
       return updated;
     }
     const [updated] = await db().update(s.appointments).set(appointment).where(eq(s.appointments.id, id)).returning();
@@ -145,8 +148,10 @@ export class DatabaseStorage implements IStorage {
     const s = schema();
     if (isMySQL()) {
       const result = await db().insert(s.services).values(service);
-      const insertId = (result as any)[0]?.insertId;
+      const insertId = (result as any).insertId ?? (result as any)[0]?.insertId;
+      if (!insertId) throw new Error("Failed to get insert ID");
       const [created] = await db().select().from(s.services).where(eq(s.services.id, insertId));
+      if (!created) throw new Error("Failed to retrieve created service");
       return created;
     }
     const [created] = await db().insert(s.services).values(service).returning();
@@ -158,6 +163,7 @@ export class DatabaseStorage implements IStorage {
     if (isMySQL()) {
       await db().update(s.services).set(service).where(eq(s.services.id, id));
       const [updated] = await db().select().from(s.services).where(eq(s.services.id, id));
+      if (!updated) throw new Error("Service not found");
       return updated;
     }
     const [updated] = await db().update(s.services).set(service).where(eq(s.services.id, id)).returning();
@@ -178,8 +184,10 @@ export class DatabaseStorage implements IStorage {
     const s = schema();
     if (isMySQL()) {
       const result = await db().insert(s.categories).values(category);
-      const insertId = (result as any)[0]?.insertId;
+      const insertId = (result as any).insertId ?? (result as any)[0]?.insertId;
+      if (!insertId) throw new Error("Failed to get insert ID");
       const [created] = await db().select().from(s.categories).where(eq(s.categories.id, insertId));
+      if (!created) throw new Error("Failed to retrieve created category");
       return created;
     }
     const [created] = await db().insert(s.categories).values(category).returning();
@@ -191,6 +199,7 @@ export class DatabaseStorage implements IStorage {
     if (isMySQL()) {
       await db().update(s.categories).set(category).where(eq(s.categories.id, id));
       const [updated] = await db().select().from(s.categories).where(eq(s.categories.id, id));
+      if (!updated) throw new Error("Category not found");
       return updated;
     }
     const [updated] = await db().update(s.categories).set(category).where(eq(s.categories.id, id)).returning();
@@ -211,8 +220,10 @@ export class DatabaseStorage implements IStorage {
     const s = schema();
     if (isMySQL()) {
       const result = await db().insert(s.staff).values(st);
-      const insertId = (result as any)[0]?.insertId;
+      const insertId = (result as any).insertId ?? (result as any)[0]?.insertId;
+      if (!insertId) throw new Error("Failed to get insert ID");
       const [created] = await db().select().from(s.staff).where(eq(s.staff.id, insertId));
+      if (!created) throw new Error("Failed to retrieve created staff");
       return created;
     }
     const [created] = await db().insert(s.staff).values(st).returning();
@@ -224,6 +235,7 @@ export class DatabaseStorage implements IStorage {
     if (isMySQL()) {
       await db().update(s.staff).set(st).where(eq(s.staff.id, id));
       const [updated] = await db().select().from(s.staff).where(eq(s.staff.id, id));
+      if (!updated) throw new Error("Staff not found");
       return updated;
     }
     const [updated] = await db().update(s.staff).set(st).where(eq(s.staff.id, id)).returning();
@@ -278,6 +290,7 @@ export class DatabaseStorage implements IStorage {
     if (isMySQL()) {
       await db().update(s.products).set(product).where(eq(s.products.id, id));
       const [updated] = await db().select().from(s.products).where(eq(s.products.id, id));
+      if (!updated) throw new Error("Product not found");
       return updated;
     }
     const [updated] = await db().update(s.products).set(product).where(eq(s.products.id, id)).returning();
@@ -288,8 +301,10 @@ export class DatabaseStorage implements IStorage {
     const s = schema();
     if (isMySQL()) {
       const result = await db().insert(s.products).values(product);
-      const insertId = (result as any)[0]?.insertId;
+      const insertId = (result as any).insertId ?? (result as any)[0]?.insertId;
+      if (!insertId) throw new Error("Failed to get insert ID");
       const [created] = await db().select().from(s.products).where(eq(s.products.id, insertId));
+      if (!created) throw new Error("Failed to retrieve created product");
       return created;
     }
     const [created] = await db().insert(s.products).values(product).returning();
@@ -316,8 +331,10 @@ export class DatabaseStorage implements IStorage {
     const s = schema();
     if (isMySQL()) {
       const result = await db().insert(s.clients).values(client);
-      const insertId = (result as any)[0]?.insertId;
+      const insertId = (result as any).insertId ?? (result as any)[0]?.insertId;
+      if (!insertId) throw new Error("Failed to get insert ID");
       const [created] = await db().select().from(s.clients).where(eq(s.clients.id, insertId));
+      if (!created) throw new Error("Failed to retrieve created client");
       return created;
     }
     const [created] = await db().insert(s.clients).values(client).returning();
@@ -329,6 +346,7 @@ export class DatabaseStorage implements IStorage {
     if (isMySQL()) {
       await db().update(s.clients).set(client).where(eq(s.clients.id, id));
       const [updated] = await db().select().from(s.clients).where(eq(s.clients.id, id));
+      if (!updated) throw new Error("Client not found");
       return updated;
     }
     const [updated] = await db().update(s.clients).set(client).where(eq(s.clients.id, id)).returning();
@@ -352,6 +370,7 @@ export class DatabaseStorage implements IStorage {
         totalSpent: client.totalSpent + spent,
       }).where(eq(s.clients.id, id));
       const [updated] = await db().select().from(s.clients).where(eq(s.clients.id, id));
+      if (!updated) throw new Error("Failed to update client loyalty");
       return updated;
     }
     const [updated] = await db().update(s.clients).set({
@@ -378,8 +397,10 @@ export class DatabaseStorage implements IStorage {
     const s = schema();
     if (isMySQL()) {
       const result = await db().insert(s.charges).values(charge);
-      const insertId = (result as any)[0]?.insertId;
+      const insertId = (result as any).insertId ?? (result as any)[0]?.insertId;
+      if (!insertId) throw new Error("Failed to get insert ID");
       const [created] = await db().select().from(s.charges).where(eq(s.charges.id, insertId));
+      if (!created) throw new Error("Failed to retrieve created charge");
       return created;
     }
     const [created] = await db().insert(s.charges).values(charge).returning();
@@ -400,8 +421,10 @@ export class DatabaseStorage implements IStorage {
     const s = schema();
     if (isMySQL()) {
       const result = await db().insert(s.staffDeductions).values(deduction);
-      const insertId = (result as any)[0]?.insertId;
+      const insertId = (result as any).insertId ?? (result as any)[0]?.insertId;
+      if (!insertId) throw new Error("Failed to get insert ID");
       const [created] = await db().select().from(s.staffDeductions).where(eq(s.staffDeductions.id, insertId));
+      if (!created) throw new Error("Failed to retrieve created staff deduction");
       return created;
     }
     const [created] = await db().insert(s.staffDeductions).values(deduction).returning();
@@ -422,8 +445,10 @@ export class DatabaseStorage implements IStorage {
     const s = schema();
     if (isMySQL()) {
       const result = await db().insert(s.expenseCategories).values(category);
-      const insertId = (result as any)[0]?.insertId;
+      const insertId = (result as any).insertId ?? (result as any)[0]?.insertId;
+      if (!insertId) throw new Error("Failed to get insert ID");
       const [created] = await db().select().from(s.expenseCategories).where(eq(s.expenseCategories.id, insertId));
+      if (!created) throw new Error("Failed to retrieve created expense category");
       return created;
     }
     const [created] = await db().insert(s.expenseCategories).values(category).returning();
@@ -450,8 +475,10 @@ export class DatabaseStorage implements IStorage {
     let created;
     if (isMySQL()) {
       const result = await db().insert(s.loyaltyRedemptions).values(redemption);
-      const insertId = (result as any)[0]?.insertId;
+      const insertId = (result as any).insertId ?? (result as any)[0]?.insertId;
+      if (!insertId) throw new Error("Failed to get insert ID");
       [created] = await db().select().from(s.loyaltyRedemptions).where(eq(s.loyaltyRedemptions.id, insertId));
+      if (!created) throw new Error("Failed to retrieve created loyalty redemption");
     } else {
       [created] = await db().insert(s.loyaltyRedemptions).values(redemption).returning();
     }
@@ -480,7 +507,7 @@ export class DatabaseStorage implements IStorage {
       ));
     
     const allServices = await db().select().from(s.services);
-    const serviceMap = new Map(allServices.map((svc: any) => [svc.name, svc]));
+    const serviceMap: Map<string, any> = new Map(allServices.map((svc: any) => [svc.name, svc]));
     
     let totalRevenue = 0;
     let totalCommission = 0;
