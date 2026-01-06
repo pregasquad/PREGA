@@ -172,23 +172,6 @@ export function PushNotifications() {
     }
   };
 
-  const testNotification = async () => {
-    try {
-      await fetch('/api/push/test', { method: 'POST', credentials: 'include' });
-      toast({ 
-        title: t("common.success"), 
-        description: "Test notification sent!",
-        variant: "default"
-      });
-    } catch (error: any) {
-      toast({ 
-        title: t("common.error"), 
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  };
-
   if (!isSupported) {
     return null;
   }
@@ -211,15 +194,6 @@ export function PushNotifications() {
         )}
         {isSubscribed ? "On" : "Off"}
       </Button>
-      {isSubscribed && (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={testNotification}
-        >
-          Test
-        </Button>
-      )}
     </div>
   );
 }
