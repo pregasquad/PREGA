@@ -15,8 +15,8 @@ deploy:
       value: "8000"
     - key: DB_DIALECT
       value: mysql
-    - key: DATABASE_URL
-      secret: database-url
+    - key: MYSQL_URL
+      secret: mysql-url
   scaling:
     min: 1
     max: 2

@@ -1,17 +1,30 @@
 import * as postgresSchema from "@shared/schema/postgres";
 
-const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) {
-  throw new Error("DATABASE_URL must be set.");
-}
-
 export const dbDialect = process.env.DB_DIALECT || 'postgres';
+
+function getDatabaseUrl(): string {
+  if (dbDialect === 'mysql') {
+    const mysqlUrl = process.env.MYSQL_URL;
+    if (!mysqlUrl) {
+      throw new Error("MYSQL_URL must be set for MySQL/TiDB mode.");
+    }
+    return mysqlUrl;
+  } else {
+    const pgUrl = process.env.DATABASE_URL;
+    if (!pgUrl) {
+      throw new Error("DATABASE_URL must be set for PostgreSQL mode.");
+    }
+    return pgUrl;
+  }
+}
 
 let db: any;
 let pool: any;
 let schema: any = postgresSchema;
 
 export async function initializeDatabase() {
+  const databaseUrl = getDatabaseUrl();
+  
   if (dbDialect === 'mysql') {
     const { drizzle } = await import("drizzle-orm/mysql2");
     const mysql = await import("mysql2/promise");
