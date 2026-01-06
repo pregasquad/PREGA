@@ -16,6 +16,7 @@ import Salaries from "@/pages/Salaries";
 import Booking from "@/pages/Booking";
 import Clients from "@/pages/Clients";
 import StaffPerformance from "@/pages/StaffPerformance";
+import AdminSettings from "@/pages/AdminSettings";
 import NotFound from "@/pages/not-found";
 
 // Wrapper for pages with layout
@@ -74,6 +75,10 @@ function Router() {
 
       <Route path="/staff-performance">
         <PageRoute component={StaffPerformance} requireAdmin />
+      </Route>
+
+      <Route path="/admin-settings">
+        <PageRoute component={AdminSettings} requireAdmin />
       </Route>
 
       <Route path="/booking" component={Booking} />

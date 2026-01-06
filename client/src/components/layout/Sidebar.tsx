@@ -21,7 +21,8 @@ import {
   DollarSign,
   Users,
   TrendingUp,
-  Lock
+  Lock,
+  Settings
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -52,6 +53,7 @@ const NAV_ITEMS = [
   { labelKey: "nav.salaries", href: "/salaries", icon: DollarSign },
   { labelKey: "nav.staffPerformance", href: "/staff-performance", icon: TrendingUp },
   { labelKey: "nav.reports", href: "/reports", icon: BarChart3 },
+  { labelKey: "nav.adminSettings", href: "/admin-settings", icon: Settings },
   { labelKey: "nav.booking", href: "/booking", icon: ExternalLink, external: true },
 ];
 

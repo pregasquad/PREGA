@@ -9,7 +9,8 @@ import {
   type Charge, type InsertCharge,
   type StaffDeduction, type InsertStaffDeduction,
   type ExpenseCategory, type InsertExpenseCategory,
-  type LoyaltyRedemption, type InsertLoyaltyRedemption
+  type LoyaltyRedemption, type InsertLoyaltyRedemption,
+  type AdminRole, type InsertAdminRole
 } from "@shared/schema";
 import { eq, desc, and, gte, lte, sql } from "drizzle-orm";
 import { authStorage, type IAuthStorage } from "./replit_integrations/auth/storage";
@@ -79,6 +80,13 @@ export interface IStorage extends IAuthStorage {
     totalRevenue: number;
     totalCommission: number;
   }>;
+
+  getAdminRoles(): Promise<AdminRole[]>;
+  getAdminRole(id: number): Promise<AdminRole | undefined>;
+  getAdminRoleByName(name: string): Promise<AdminRole | undefined>;
+  createAdminRole(role: InsertAdminRole): Promise<AdminRole>;
+  updateAdminRole(id: number, role: Partial<InsertAdminRole>): Promise<AdminRole>;
+  deleteAdminRole(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -524,6 +532,54 @@ export class DatabaseStorage implements IStorage {
       totalRevenue,
       totalCommission,
     };
+  }
+
+  async getAdminRoles(): Promise<AdminRole[]> {
+    const s = schema();
+    return await db().select().from(s.adminRoles).orderBy(s.adminRoles.name);
+  }
+
+  async getAdminRole(id: number): Promise<AdminRole | undefined> {
+    const s = schema();
+    const [role] = await db().select().from(s.adminRoles).where(eq(s.adminRoles.id, id));
+    return role;
+  }
+
+  async getAdminRoleByName(name: string): Promise<AdminRole | undefined> {
+    const s = schema();
+    const [role] = await db().select().from(s.adminRoles).where(eq(s.adminRoles.name, name));
+    return role;
+  }
+
+  async createAdminRole(role: InsertAdminRole): Promise<AdminRole> {
+    const s = schema();
+    if (isMySQL()) {
+      const result = await db().insert(s.adminRoles).values(role);
+      const insertId = (result as any).insertId ?? (result as any)[0]?.insertId;
+      if (!insertId) throw new Error("Failed to get insert ID");
+      const [created] = await db().select().from(s.adminRoles).where(eq(s.adminRoles.id, insertId));
+      if (!created) throw new Error("Failed to retrieve created admin role");
+      return created;
+    }
+    const [created] = await db().insert(s.adminRoles).values(role).returning();
+    return created;
+  }
+
+  async updateAdminRole(id: number, role: Partial<InsertAdminRole>): Promise<AdminRole> {
+    const s = schema();
+    if (isMySQL()) {
+      await db().update(s.adminRoles).set(role).where(eq(s.adminRoles.id, id));
+      const [updated] = await db().select().from(s.adminRoles).where(eq(s.adminRoles.id, id));
+      if (!updated) throw new Error("Admin role not found");
+      return updated;
+    }
+    const [updated] = await db().update(s.adminRoles).set(role).where(eq(s.adminRoles.id, id)).returning();
+    return updated;
+  }
+
+  async deleteAdminRole(id: number): Promise<void> {
+    const s = schema();
+    await db().delete(s.adminRoles).where(eq(s.adminRoles.id, id));
   }
 }
 

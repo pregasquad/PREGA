@@ -204,3 +204,53 @@ export const pushSubscriptions = mysqlTable("push_subscriptions", {
 export const insertPushSubscriptionSchema = createInsertSchema(pushSubscriptions).omit({ id: true, createdAt: true });
 export type PushSubscription = typeof pushSubscriptions.$inferSelect;
 export type InsertPushSubscription = z.infer<typeof insertPushSubscriptionSchema>;
+
+export const adminRoles = mysqlTable("admin_roles", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull().unique(),
+  role: varchar("role", { length: 50 }).notNull().default("receptionist"),
+  pin: varchar("pin", { length: 10 }),
+  permissions: json("permissions").$type<string[]>().notNull().default([]),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertAdminRoleSchema = createInsertSchema(adminRoles).omit({ id: true, createdAt: true }).extend({
+  name: z.string().min(1, "Name is required"),
+  role: z.enum(["owner", "manager", "receptionist"]),
+  pin: z.string().min(4).max(10).optional(),
+  permissions: z.array(z.string()).optional(),
+});
+export type AdminRole = typeof adminRoles.$inferSelect;
+export type InsertAdminRole = z.infer<typeof insertAdminRoleSchema>;
+
+export const ROLE_PERMISSIONS = {
+  owner: [
+    "view_planning", "manage_appointments", 
+    "view_clients", "manage_clients",
+    "view_services", "manage_services",
+    "view_inventory", "manage_inventory",
+    "view_expenses", "manage_expenses",
+    "view_salaries", "manage_salaries",
+    "view_reports",
+    "view_staff_performance",
+    "manage_staff",
+    "admin_settings",
+    "export_data"
+  ],
+  manager: [
+    "view_planning", "manage_appointments",
+    "view_clients", "manage_clients", 
+    "view_services", "manage_services",
+    "view_inventory", "manage_inventory",
+    "view_expenses", "manage_expenses",
+    "view_salaries",
+    "view_reports",
+    "view_staff_performance",
+    "export_data"
+  ],
+  receptionist: [
+    "view_planning", "manage_appointments",
+    "view_clients",
+    "view_services"
+  ]
+} as const;

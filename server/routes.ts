@@ -8,6 +8,8 @@ import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
 import { vapidPublicKey, sendPushNotification } from "./push";
 import { db, schema } from "./db";
 import { eq } from "drizzle-orm";
+import { insertAdminRoleSchema, ROLE_PERMISSIONS } from "@shared/schema";
+import bcrypt from "bcryptjs";
 
 let io: SocketIOServer;
 
@@ -526,10 +528,219 @@ export async function registerRoutes(
     }
   });
 
+  // === Admin Roles ===
+  app.get("/api/admin-roles", async (_req, res) => {
+    const roles = await storage.getAdminRoles();
+    const safeRoles = roles.map(r => ({ ...r, pin: r.pin ? "****" : null }));
+    res.json(safeRoles);
+  });
+
+  app.get("/api/admin-roles/:id", async (req, res) => {
+    const role = await storage.getAdminRole(Number(req.params.id));
+    if (!role) return res.status(404).json({ message: "Admin role not found" });
+    res.json({ ...role, pin: role.pin ? "****" : null });
+  });
+
+  app.post("/api/admin-roles", async (req, res) => {
+    try {
+      const input = insertAdminRoleSchema.parse(req.body);
+      const permissions = ROLE_PERMISSIONS[input.role as keyof typeof ROLE_PERMISSIONS] || [];
+      
+      let hashedPin = input.pin;
+      if (input.pin && input.pin.length >= 4) {
+        hashedPin = await bcrypt.hash(input.pin, 10);
+      }
+      
+      const role = await storage.createAdminRole({
+        ...input,
+        pin: hashedPin,
+        permissions: input.permissions || [...permissions]
+      });
+      
+      const safeRole = { ...role, pin: role.pin ? "****" : null };
+      res.status(201).json(safeRole);
+    } catch (err: any) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      res.status(400).json({ message: err.message || "Failed to create admin role" });
+    }
+  });
+
+  app.patch("/api/admin-roles/:id", async (req, res) => {
+    try {
+      const updateData = { ...req.body };
+      
+      if (updateData.pin && updateData.pin.length >= 4) {
+        updateData.pin = await bcrypt.hash(updateData.pin, 10);
+      } else if (updateData.pin === "") {
+        updateData.pin = null;
+      }
+      
+      const role = await storage.updateAdminRole(Number(req.params.id), updateData);
+      const safeRole = { ...role, pin: role.pin ? "****" : null };
+      res.json(safeRole);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message || "Update failed" });
+    }
+  });
+
+  app.delete("/api/admin-roles/:id", async (req, res) => {
+    await storage.deleteAdminRole(Number(req.params.id));
+    res.status(204).send();
+  });
+
+  app.post("/api/admin-roles/verify-pin", async (req, res) => {
+    try {
+      const { name, pin } = z.object({
+        name: z.string(),
+        pin: z.string()
+      }).parse(req.body);
+      
+      const role = await storage.getAdminRoleByName(name);
+      if (!role) {
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
+      
+      if (!role.pin) {
+        return res.status(401).json({ success: false, message: "No PIN set" });
+      }
+      
+      const isValid = await bcrypt.compare(pin, role.pin);
+      if (!isValid) {
+        return res.status(401).json({ success: false, message: "Invalid PIN" });
+      }
+      
+      res.json({ success: true, role: role.role, permissions: role.permissions });
+    } catch (err: any) {
+      res.status(400).json({ success: false, message: err.message });
+    }
+  });
+
+  // === Data Export ===
+  app.get("/api/export/appointments", async (req, res) => {
+    try {
+      const { startDate, endDate } = z.object({
+        startDate: z.string().optional(),
+        endDate: z.string().optional()
+      }).parse(req.query);
+
+      let appointments;
+      if (startDate && endDate) {
+        appointments = await storage.getAppointmentsByDateRange(startDate, endDate);
+      } else {
+        appointments = await storage.getAppointments();
+      }
+      
+      const csv = generateCSV(appointments, [
+        'id', 'date', 'startTime', 'duration', 'client', 'service', 'staff', 'price', 'total', 'paid'
+      ]);
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename=appointments.csv');
+      res.send(csv);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/export/clients", async (_req, res) => {
+    try {
+      const clients = await storage.getClients();
+      const csv = generateCSV(clients, [
+        'id', 'name', 'phone', 'email', 'birthday', 'loyaltyPoints', 'totalVisits', 'totalSpent', 'createdAt'
+      ]);
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename=clients.csv');
+      res.send(csv);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/export/services", async (_req, res) => {
+    try {
+      const services = await storage.getServices();
+      const csv = generateCSV(services, [
+        'id', 'name', 'price', 'duration', 'category', 'commissionPercent'
+      ]);
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename=services.csv');
+      res.send(csv);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/export/staff", async (_req, res) => {
+    try {
+      const staffList = await storage.getStaff();
+      const csv = generateCSV(staffList, [
+        'id', 'name', 'phone', 'email', 'baseSalary'
+      ]);
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename=staff.csv');
+      res.send(csv);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/export/inventory", async (_req, res) => {
+    try {
+      const products = await storage.getProducts();
+      const csv = generateCSV(products, [
+        'id', 'name', 'quantity', 'lowStockThreshold', 'createdAt'
+      ]);
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename=inventory.csv');
+      res.send(csv);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/export/expenses", async (_req, res) => {
+    try {
+      const charges = await storage.getCharges();
+      const csv = generateCSV(charges, [
+        'id', 'type', 'name', 'amount', 'date', 'createdAt'
+      ]);
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename=expenses.csv');
+      res.send(csv);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   // Seed data if empty
   await seedDatabase();
 
   return httpServer;
+}
+
+function generateCSV(data: any[], columns: string[]): string {
+  if (data.length === 0) return columns.join(',') + '\n';
+  
+  const header = columns.join(',');
+  const rows = data.map(item => 
+    columns.map(col => {
+      const value = item[col];
+      if (value === null || value === undefined) return '';
+      if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) {
+        return `"${value.replace(/"/g, '""')}"`;
+      }
+      return String(value);
+    }).join(',')
+  );
+  
+  return [header, ...rows].join('\n');
 }
 
 async function seedDatabase() {
