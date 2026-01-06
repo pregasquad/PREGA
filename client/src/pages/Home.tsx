@@ -171,6 +171,14 @@ export default function Home() {
                   <Package className="w-4 h-4 text-destructive" />
                   <span className="font-medium">{product.name}</span>
                   <span className="text-destructive font-bold">({product.quantity})</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 ml-1"
+                    onClick={() => setLocation("/inventory")}
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </Button>
                 </div>
               ))}
             </div>
