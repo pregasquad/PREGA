@@ -784,6 +784,28 @@ export default function Planning() {
             </Button>
           </div>
 
+          {/* New Booking Button */}
+          <Button 
+            onClick={() => {
+              form.reset({
+                date: formattedDate,
+                startTime: "10:00",
+                duration: 60,
+                client: "",
+                service: "",
+                staff: staffList[0]?.name || "",
+                price: 0,
+                total: 0,
+                paid: true,
+              });
+              setEditingAppointment(null);
+              setIsDialogOpen(true);
+            }}
+            className="bg-black text-white px-3 py-1 rounded-xl text-sm"
+          >
+            <Plus className="w-4 h-4 ml-1" />
+            {t("planning.newBooking")}
+          </Button>
         </div>
       </div>
 
