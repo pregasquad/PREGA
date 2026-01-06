@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useMemo, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { format, addDays, startOfToday, parseISO, subDays } from "date-fns";
 import { useTranslation } from "react-i18next";
@@ -61,12 +61,40 @@ export default function Planning() {
   const boardRef = useRef<HTMLDivElement>(null);
   const liveLineRef = useRef<HTMLDivElement>(null);
 
+  // Use requestAnimationFrame + visibility API for PWA-compatible time updates
   useEffect(() => {
     setCurrentTime(new Date());
-    // Update time less frequently on mobile for better performance
-    const interval = isMobile ? 60000 : 30000;
-    const timer = setInterval(() => setCurrentTime(new Date()), interval);
-    return () => clearInterval(timer);
+    
+    let animationFrameId: number;
+    let lastUpdate = Date.now();
+    const updateInterval = isMobile ? 60000 : 30000;
+    
+    const updateTime = () => {
+      const now = Date.now();
+      if (now - lastUpdate >= updateInterval) {
+        setCurrentTime(new Date());
+        lastUpdate = now;
+      }
+      animationFrameId = requestAnimationFrame(updateTime);
+    };
+    
+    // Start the animation frame loop
+    animationFrameId = requestAnimationFrame(updateTime);
+    
+    // Handle visibility change for PWA - update immediately when app becomes visible
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        setCurrentTime(new Date());
+        lastUpdate = Date.now();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [isMobile]);
 
   useEffect(() => {
@@ -137,21 +165,30 @@ export default function Planning() {
     requestAnimationFrame(animateScroll);
   };
 
-  // Auto-scroll to live line on initial load and whenever currentTime updates
-  useEffect(() => {
-    if (!isToday) return;
+  // Track if we've already scrolled to prevent repeated scrolls
+  const hasScrolledRef = useRef(false);
+  
+  // Auto-scroll to live line on initial load only (not on every time update)
+  useLayoutEffect(() => {
+    if (!isToday || hasScrolledRef.current) return;
     
-    // Scroll to live line after a short delay to ensure DOM is updated
+    // Scroll to live line after a short delay to ensure DOM is fully rendered
     const scrollTimeout = setTimeout(() => {
       if (liveLineRef.current && boardRef.current) {
         smoothScrollTo(liveLineRef.current, boardRef.current);
+        hasScrolledRef.current = true;
       }
-    }, 300);
+    }, 500);
     
     return () => {
       clearTimeout(scrollTimeout);
     };
-  }, [isToday, currentTime]);
+  }, [isToday]);
+  
+  // Reset scroll flag when date changes
+  useEffect(() => {
+    hasScrolledRef.current = false;
+  }, [date]);
   const [isEditFavoritesOpen, setIsEditFavoritesOpen] = useState(false);
   const [servicePopoverOpen, setServicePopoverOpen] = useState(false);
   const [appointmentSearch, setAppointmentSearch] = useState("");
