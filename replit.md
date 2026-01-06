@@ -135,3 +135,11 @@ Preferred communication style: Simple, everyday language.
   - First request response time improved from ~964ms to ~142ms (7x faster)
   - Configured pool limits (10 max connections) for optimal performance
   - Works on both Replit and Koyeb deployment platforms
+- **Mobile UI Improvements**:
+  - Logo now visible in mobile header (appears alongside hamburger menu)
+  - Uses `md:hidden` class to only show on mobile devices
+- **Currency Display Precision**:
+  - Added `formatCurrency()` helper function for consistent currency display
+  - All monetary values display with up to 2 decimal places
+  - Removed Math.round() from commission calculations to preserve precision
+  - Updated Salaries, Reports, and StaffPerformance pages

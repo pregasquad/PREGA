@@ -22,7 +22,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0 relative">
           <header className="flex h-12 items-center justify-between px-4 border-b bg-background shrink-0 z-20">
-            <SidebarTrigger />
+            <div className="flex items-center gap-3">
+              <SidebarTrigger />
+              <div className="flex items-center gap-2 md:hidden">
+                <img src="/logo.png" alt="PREGA SQUAD" className="w-8 h-8 rounded-full object-cover" />
+                <span className="text-sm font-bold text-orange-500">PREGA SQUAD</span>
+              </div>
+            </div>
             <div className="flex items-center gap-2">
               <PushNotifications />
               <LanguageSwitcher />
