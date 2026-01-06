@@ -161,7 +161,7 @@ export default function Planning() {
   // Track if we've already scrolled to prevent repeated scrolls
   const hasScrolledRef = useRef(false);
   
-  // Scroll to live line using manual scrollTo (scrollIntoView doesn't work in Chrome PWA for absolute elements)
+  // Scroll to live line - Chrome PWA ignores scrollTo with smooth behavior, so we set scrollTop directly
   const scrollToLiveLine = useCallback(() => {
     if (!boardRef.current) return;
     
@@ -172,29 +172,67 @@ export default function Planning() {
     // Position includes 48px offset for header row
     const targetTop = position + 48;
     const containerHeight = boardRef.current.clientHeight;
-    const scrollTop = Math.max(0, targetTop - containerHeight / 2);
+    const targetScrollTop = Math.max(0, targetTop - containerHeight / 2);
     
-    boardRef.current.scrollTo({
-      top: scrollTop,
-      behavior: 'smooth'
+    // Use requestAnimationFrame to ensure DOM is ready, then directly set scrollTop
+    // Chrome PWA ignores scrollTo({behavior:'smooth'}) on overflow elements
+    requestAnimationFrame(() => {
+      if (boardRef.current) {
+        // Animate scroll manually for smooth effect that works in PWA
+        const startScrollTop = boardRef.current.scrollTop;
+        const distance = targetScrollTop - startScrollTop;
+        const duration = 500;
+        let startTime: number | null = null;
+        
+        const animateScroll = (timestamp: number) => {
+          if (!startTime) startTime = timestamp;
+          const elapsed = timestamp - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          // Ease out cubic
+          const easeProgress = 1 - Math.pow(1 - progress, 3);
+          
+          if (boardRef.current) {
+            boardRef.current.scrollTop = startScrollTop + (distance * easeProgress);
+          }
+          
+          if (progress < 1) {
+            requestAnimationFrame(animateScroll);
+          }
+        };
+        
+        requestAnimationFrame(animateScroll);
+        hasScrolledRef.current = true;
+      }
     });
-    
-    hasScrolledRef.current = true;
   }, [currentTime]);
   
-  // Auto-scroll to live line on initial load only
+  // Auto-scroll to live line on initial load only - wait for content to be rendered
   useEffect(() => {
     if (!isToday || hasScrolledRef.current) return;
     
-    // Use multiple attempts to ensure scroll happens after render
-    const attempt1 = setTimeout(scrollToLiveLine, 100);
-    const attempt2 = setTimeout(scrollToLiveLine, 500);
-    const attempt3 = setTimeout(scrollToLiveLine, 1000);
+    // Check if board has content before scrolling
+    const attemptScroll = () => {
+      if (boardRef.current && boardRef.current.scrollHeight > boardRef.current.clientHeight) {
+        scrollToLiveLine();
+        return true;
+      }
+      return false;
+    };
+    
+    // Try immediately
+    if (attemptScroll()) return;
+    
+    // Retry with increasing delays until content is ready
+    const attempt1 = setTimeout(() => { if (!hasScrolledRef.current) attemptScroll(); }, 200);
+    const attempt2 = setTimeout(() => { if (!hasScrolledRef.current) attemptScroll(); }, 500);
+    const attempt3 = setTimeout(() => { if (!hasScrolledRef.current) attemptScroll(); }, 1000);
+    const attempt4 = setTimeout(() => { if (!hasScrolledRef.current) attemptScroll(); }, 2000);
     
     return () => {
       clearTimeout(attempt1);
       clearTimeout(attempt2);
       clearTimeout(attempt3);
+      clearTimeout(attempt4);
     };
   }, [isToday, scrollToLiveLine]);
   
