@@ -747,6 +747,10 @@ export default function Planning() {
                 queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
                 queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
                 queryClient.invalidateQueries({ queryKey: ["/api/services"] });
+                // Scroll to top
+                if (boardRef.current) {
+                  boardRef.current.scrollTop = 0;
+                }
                 toast({ title: t("common.refreshed"), description: t("common.dataUpdated") });
               }}
             >
