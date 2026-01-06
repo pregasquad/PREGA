@@ -674,15 +674,15 @@ export default function Planning() {
           {isToday && getCurrentTimePosition() >= 0 && (
             <div 
               ref={liveLineRef}
-              className="absolute z-[35] pointer-events-none transition-all duration-1000 ease-in-out flex items-center"
+              className={cn("absolute z-[35] pointer-events-none transition-all duration-1000 ease-in-out flex items-center", isRtl ? "flex-row-reverse" : "flex-row")}
               style={{ 
                 top: `${getCurrentTimePosition() + 48}px`,
                 left: isRtl ? 0 : '55px',
                 right: isRtl ? '55px' : 0,
               }}
             >
-              {/* Scissors icon - at the start of the line */}
-              <div className={cn("shrink-0 z-[50] flex items-center", isRtl ? "order-last" : "order-first")}>
+              {/* Scissors icon - at the start of the line (next to time column) */}
+              <div className="shrink-0 z-[50] flex items-center">
                 <div className="relative flex items-center justify-center">
                   <div className="w-7 h-7 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 shadow-lg flex items-center justify-center border-2 border-white dark:border-gray-800">
                     <Scissors className="w-3 h-3 text-white" />
