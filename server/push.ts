@@ -39,7 +39,11 @@ export async function sendPushNotification(
                 auth: sub.auth,
               },
             },
-            payload
+            payload,
+            {
+              TTL: 300,
+              urgency: 'normal',
+            }
           );
           return { success: true, id: sub.id };
         } catch (error: any) {
