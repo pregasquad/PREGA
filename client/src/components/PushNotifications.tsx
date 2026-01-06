@@ -172,18 +172,15 @@ export function PushNotifications() {
     }
   };
 
-  if (!isSupported) {
-    return null;
-  }
-
   return (
     <div className="flex items-center gap-2">
       <Button
         variant={isSubscribed ? "default" : "outline"}
         size="sm"
-        onClick={isSubscribed ? unsubscribe : subscribe}
-        disabled={isLoading}
+        onClick={isSupported ? (isSubscribed ? unsubscribe : subscribe) : undefined}
+        disabled={isLoading || !isSupported}
         className="gap-2"
+        title={!isSupported ? "Add to Home Screen to enable notifications" : undefined}
       >
         {isLoading ? (
           <BellRing className="w-4 h-4 animate-pulse text-black fill-black" />
