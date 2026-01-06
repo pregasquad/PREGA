@@ -811,42 +811,48 @@ export default function Planning() {
               gridAutoRows: '48px'
             }}
           >
-            {/* Current Time Line - positioned after time column */}
+            {/* Current Time Line - BIG and VISIBLE */}
             {isToday && getCurrentTimePosition() >= 0 && (
               <div 
                 ref={liveLineRef}
-                className="absolute z-[35] pointer-events-none transition-all duration-1000 ease-in-out flex items-center"
+                className="absolute z-[35] pointer-events-none transition-all duration-1000 ease-in-out"
                 style={{ 
                   top: `${getCurrentTimePosition()}px`,
-                  left: isRtl ? 0 : '55px',
-                  right: isRtl ? '55px' : 0,
-                  flexDirection: isRtl ? 'row' : 'row',
+                  left: 0,
+                  right: 0,
                 }}
               >
-                {/* Scissors icon - positioned at the time column edge */}
-                <div 
-                  className="shrink-0 z-[50] flex items-center absolute"
-                  style={{
-                    left: isRtl ? 'auto' : 0,
-                    right: isRtl ? 0 : 'auto',
-                  }}
-                >
-                  <div className="relative flex items-center justify-center">
-                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 shadow-lg flex items-center justify-center border-2 border-white dark:border-gray-800">
-                      <Scissors className="w-3 h-3 text-white" />
+                {/* Main container with glow effect */}
+                <div className="flex items-center">
+                  {/* Time indicator badge on left */}
+                  <div 
+                    className="shrink-0 z-[50] flex items-center justify-center"
+                    style={{ width: '55px' }}
+                  >
+                    <div className="relative">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-500 via-orange-500 to-amber-500 shadow-xl flex items-center justify-center border-3 border-white dark:border-gray-900 animate-pulse">
+                        <Clock className="w-5 h-5 text-white drop-shadow-md" />
+                      </div>
+                      <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-red-500 to-orange-500 blur-md opacity-50 animate-pulse" />
                     </div>
-                    <div className="absolute inset-0 w-7 h-7 rounded-full bg-orange-500 animate-ping opacity-30" />
+                  </div>
+                  {/* Thick glowing line */}
+                  <div className="flex-1 relative">
+                    <div 
+                      className="h-1 rounded-full shadow-lg"
+                      style={{
+                        background: 'linear-gradient(to right, #ef4444, #f97316, #fbbf24)',
+                        boxShadow: '0 0 12px rgba(249, 115, 22, 0.6), 0 0 24px rgba(249, 115, 22, 0.3)',
+                      }}
+                    />
+                    <div 
+                      className="absolute inset-0 h-1 rounded-full opacity-60 blur-sm"
+                      style={{
+                        background: 'linear-gradient(to right, #ef4444, #f97316, #fbbf24)',
+                      }}
+                    />
                   </div>
                 </div>
-                {/* Line spanning staff columns */}
-                <div 
-                  className="w-full h-0.5 shadow-sm"
-                  style={{
-                    background: isRtl 
-                      ? 'linear-gradient(to left, #f97316, #fb923c, transparent)'
-                      : 'linear-gradient(to right, #f97316, #fb923c, transparent)',
-                  }}
-                />
               </div>
             )}
 
