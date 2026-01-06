@@ -1283,7 +1283,7 @@ export default function Planning() {
           className="fixed bottom-20 right-4 z-50 w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 shadow-lg flex items-center justify-center text-white hover:from-orange-600 hover:to-amber-600 transition-all active:scale-95"
           aria-label="Go to current time"
         >
-          <Scissors className="w-5 h-5" />
+          <Clock className="w-5 h-5" />
         </button>
       )}
     </div>
