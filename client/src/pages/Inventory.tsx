@@ -182,13 +182,13 @@ export default function Inventory() {
               <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">{t("inventory.quantity")}:</span>
-                  <span className={`text-2xl font-bold ${product.quantity <= (product.lowStockThreshold || 5) ? 'text-destructive' : 'text-primary'}`}>
+                  <span className={`text-2xl font-bold ${product.quantity <= (product.lowStockThreshold || 2) ? 'text-destructive' : 'text-primary'}`}>
                     {product.quantity}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">{t("inventory.minStock")}:</span>
-                  <span className="text-muted-foreground">{product.lowStockThreshold || 5}</span>
+                  <span className="text-muted-foreground">{product.lowStockThreshold || 2}</span>
                 </div>
                 
                 <div className="flex items-center gap-2">
@@ -240,7 +240,7 @@ export default function Inventory() {
                   </DialogContent>
                 </Dialog>
                 
-                {product.quantity <= (product.lowStockThreshold || 5) && (
+                {product.quantity <= (product.lowStockThreshold || 2) && (
                   <p className="text-xs text-destructive font-medium animate-pulse">
                     ⚠️ {t("inventory.stockAlert")}: {t("inventory.lowStock")}!
                   </p>
