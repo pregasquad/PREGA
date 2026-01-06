@@ -223,13 +223,13 @@ export default function Reports() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white border-0 shadow-lg shadow-indigo-500/20">
+        <Card className="bg-gradient-to-br from-orange-500 to-amber-600 text-white border-0 shadow-lg shadow-orange-500/20">
           <CardContent className="p-6">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-indigo-100 font-medium text-sm">{t("reports.totalRevenue")}</p>
+                <p className="text-orange-100 font-medium text-sm">{t("reports.totalRevenue")}</p>
                 <h3 className="text-4xl font-bold mt-2">{formatCurrency(stats.totalRevenue)} DH</h3>
-                <div className="mt-4 flex items-center text-indigo-100 text-sm">
+                <div className="mt-4 flex items-center text-orange-100 text-sm">
                   <span>{t("reports.collected")} {formatCurrency(stats.paidRevenue)} DH</span>
                 </div>
               </div>

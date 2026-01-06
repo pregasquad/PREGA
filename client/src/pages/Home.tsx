@@ -87,7 +87,7 @@ export default function Home() {
   const stats = [
     { label: t("home.todayAppointments"), value: appointments.length, icon: CalendarCheck, color: "text-blue-500" },
     { label: t("home.totalClients"), value: clients.length, icon: Users, color: "text-green-500" },
-    { label: t("home.availableServices"), value: services.length, icon: Scissors, color: "text-purple-500" },
+    { label: t("home.availableServices"), value: services.length, icon: Scissors, color: "text-orange-500" },
     { label: t("home.teamMembers"), value: staff.length, icon: Clock, color: "text-orange-500" },
   ];
 
