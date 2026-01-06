@@ -62,71 +62,49 @@ export default function Planning() {
   const headerRef = useRef<HTMLDivElement>(null);
   const liveLineRef = useRef<HTMLDivElement>(null);
 
-  // Use requestAnimationFrame + visibility API for PWA-compatible time updates
+  // Update time using setInterval (more efficient than requestAnimationFrame)
   useEffect(() => {
     setCurrentTime(new Date());
-    
-    let animationFrameId: number;
-    let lastUpdate = Date.now();
     const updateInterval = isMobile ? 60000 : 30000;
     
-    const updateTime = () => {
-      const now = Date.now();
-      if (now - lastUpdate >= updateInterval) {
-        setCurrentTime(new Date());
-        lastUpdate = now;
-      }
-      animationFrameId = requestAnimationFrame(updateTime);
-    };
-    
-    // Start the animation frame loop
-    animationFrameId = requestAnimationFrame(updateTime);
+    const intervalId = setInterval(() => {
+      setCurrentTime(new Date());
+    }, updateInterval);
     
     // Handle visibility change for PWA - update immediately when app becomes visible
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         setCurrentTime(new Date());
-        lastUpdate = Date.now();
       }
     };
     
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
     return () => {
-      cancelAnimationFrame(animationFrameId);
+      clearInterval(intervalId);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [isMobile]);
 
-  // Use requestAnimationFrame for data refresh to avoid PWA timer throttling
+  // Refresh data using setInterval (more efficient than requestAnimationFrame)
   useEffect(() => {
     const refreshInterval = isMobile ? 120000 : 30000;
-    let animationFrameId: number;
-    let lastRefresh = Date.now();
     
-    const checkRefresh = () => {
-      const now = Date.now();
-      if (now - lastRefresh >= refreshInterval) {
-        queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
-        lastRefresh = now;
-      }
-      animationFrameId = requestAnimationFrame(checkRefresh);
-    };
-    
-    animationFrameId = requestAnimationFrame(checkRefresh);
+    const intervalId = setInterval(() => {
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+    }, refreshInterval);
     
     // Also refresh on visibility change (when returning to PWA)
     const handleVisibilityRefresh = () => {
       if (document.visibilityState === 'visible') {
         queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
-        lastRefresh = Date.now();
       }
     };
     
     document.addEventListener('visibilitychange', handleVisibilityRefresh);
     
     return () => {
-      cancelAnimationFrame(animationFrameId);
+      clearInterval(intervalId);
       document.removeEventListener('visibilitychange', handleVisibilityRefresh);
     };
   }, [isMobile]);

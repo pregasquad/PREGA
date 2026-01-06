@@ -23,13 +23,15 @@ app.use(
 
 app.use(express.urlencoded({ extended: false }));
 
-// Disable caching for development (fixes Chrome loading issues)
-app.use((req, res, next) => {
-  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-  res.set('Pragma', 'no-cache');
-  res.set('Expires', '0');
-  next();
-});
+// Disable caching for development only (production uses proper caching for speed)
+if (process.env.NODE_ENV !== 'production') {
+  app.use((req, res, next) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    next();
+  });
+}
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
