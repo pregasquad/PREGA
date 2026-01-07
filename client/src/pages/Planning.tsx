@@ -773,10 +773,10 @@ export default function Planning() {
 
       {/* Board with sticky header */}
       <div className="flex flex-col bg-background rounded-2xl border-2 border-gray-200 dark:border-gray-700 shadow-lg" dir={isRtl ? "rtl" : "ltr"}>
-        {/* Sticky Staff Headers - outside scroll container, synced with board scroll */}
+        {/* Sticky Staff Headers - stays visible while scrolling */}
         <div 
           ref={headerRef}
-          className="grid bg-gradient-to-b from-orange-50 to-orange-100 dark:from-orange-950/30 dark:to-orange-900/20 border-b-2 border-orange-200 dark:border-orange-800 z-50 shrink-0 overflow-x-hidden"
+          className="grid sticky top-0 bg-gradient-to-b from-orange-50 to-orange-100 dark:from-orange-950/30 dark:to-orange-900/20 border-b-2 border-orange-200 dark:border-orange-800 z-50 shrink-0"
           style={{ 
             gridTemplateColumns: `60px repeat(${staffList.length}, minmax(100px, 1fr))`,
           }}
