@@ -473,7 +473,9 @@ export default function Planning() {
     if (editingAppointment) {
       updateMutation.mutate({ id: editingAppointment.id, ...data });
     } else {
-      createMutation.mutate(data);
+      // Add createdBy from current logged-in user
+      const currentUser = sessionStorage.getItem("current_user") || "Unknown";
+      createMutation.mutate({ ...data, createdBy: currentUser });
       playSuccessSound();
     }
     setIsDialogOpen(false);
@@ -985,6 +987,11 @@ export default function Planning() {
                 <Sparkles className="w-5 h-5" />
                 {editingAppointment ? t("planning.editBooking") : t("planning.newBooking")}
               </DialogTitle>
+              {editingAppointment?.createdBy && (
+                <p className="text-xs text-white/70 mt-1">
+                  {t("planning.createdBy")}: <span className="font-medium text-white">{editingAppointment.createdBy}</span>
+                </p>
+              )}
             </DialogHeader>
           </div>
           

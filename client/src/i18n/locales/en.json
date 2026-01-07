@@ -85,7 +85,8 @@
     "bookingUpdated": "Booking updated successfully",
     "bookingDeleted": "Booking deleted successfully",
     "appointmentMoved": "Appointment moved",
-    "moveError": "Failed to move appointment"
+    "moveError": "Failed to move appointment",
+    "createdBy": "Created by"
   },
   "services": {
     "title": "Services",

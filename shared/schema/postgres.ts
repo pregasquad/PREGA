@@ -79,6 +79,8 @@ export const appointments = pgTable("appointments", {
   total: doublePrecision("total").notNull(),
   paid: boolean("paid").default(false).notNull(),
   loyaltyPointsEarned: integer("loyalty_points_earned").default(0),
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const services = pgTable("services", {

@@ -85,7 +85,8 @@
     "bookingUpdated": "تم تحديث الحجز بنجاح",
     "bookingDeleted": "تم حذف الحجز بنجاح",
     "appointmentMoved": "تم نقل الموعد",
-    "moveError": "فشل نقل الموعد"
+    "moveError": "فشل نقل الموعد",
+    "createdBy": "أنشأه"
   },
   "services": {
     "title": "الخدمات",
