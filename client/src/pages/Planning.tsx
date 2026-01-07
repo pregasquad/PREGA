@@ -605,9 +605,11 @@ export default function Planning() {
   return (
     <div 
       ref={pageRef}
-      className="h-full bg-background px-1.5 pt-0.5 pb-1 md:px-3 md:pt-1 md:pb-2 flex flex-col"
+      className="bg-background px-1.5 pt-0.5 pb-1 md:px-3 md:pt-1 md:pb-2"
       dir={isRtl ? "rtl" : "ltr"}
     >
+      {/* Sticky Header - stays at top while scrolling */}
+      <div className="sticky top-0 z-40 bg-background pb-1">
       {/* Header */}
       <div className="mb-0.5 flex flex-col md:flex-row justify-between items-start md:items-center gap-0.5 shrink-0">
         <h1 className="text-lg md:text-xl font-bold">{t("planning.title")}</h1>
@@ -771,21 +773,20 @@ export default function Planning() {
         </div>
       </div>
 
-      {/* Board with sticky header */}
-      <div className="flex flex-col bg-background rounded-2xl border-2 border-gray-200 dark:border-gray-700 shadow-lg" dir={isRtl ? "rtl" : "ltr"}>
-        {/* Sticky Staff Headers - outside scroll container, synced with board scroll */}
+        {/* Staff Headers - inside sticky wrapper */}
         <div 
           ref={headerRef}
-          className="grid bg-gradient-to-b from-orange-50 to-orange-100 dark:from-orange-950/30 dark:to-orange-900/20 border-b-2 border-orange-200 dark:border-orange-800 z-50 shrink-0 overflow-x-hidden"
+          className="grid bg-gradient-to-b from-orange-50 to-orange-100 dark:from-orange-950/30 dark:to-orange-900/20 border-2 border-orange-200 dark:border-orange-800 rounded-t-2xl shrink-0 overflow-x-hidden"
           style={{ 
             gridTemplateColumns: `60px repeat(${staffList.length}, minmax(100px, 1fr))`,
           }}
+          dir={isRtl ? "rtl" : "ltr"}
         >
-          <div className={cn("bg-white/50 dark:bg-gray-900/50 py-1 px-1", isRtl ? "border-l-2 border-orange-200 dark:border-orange-800" : "border-r-2 border-orange-200 dark:border-orange-800")}></div>
+          <div className={cn("bg-white/50 dark:bg-gray-900/50 py-1.5 px-1", isRtl ? "border-l-2 border-orange-200 dark:border-orange-800" : "border-r-2 border-orange-200 dark:border-orange-800")}></div>
           {staffList.map((s, staffIndex) => (
             <div 
               key={s.id} 
-              className={cn("py-1 px-1 font-semibold text-center text-xs", isRtl ? "border-l border-orange-200/50 dark:border-orange-800/50" : "border-r border-orange-200/50 dark:border-orange-800/50")}
+              className={cn("py-1.5 px-1 font-semibold text-center text-xs", isRtl ? "border-l border-orange-200/50 dark:border-orange-800/50" : "border-r border-orange-200/50 dark:border-orange-800/50")}
             >
               <div className="flex items-center justify-center gap-1">
                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
@@ -794,9 +795,12 @@ export default function Planning() {
             </div>
           ))}
         </div>
+      </div>
 
-        {/* Schedule content - single scroll with parent */}
-        <div ref={boardRef} className="relative bg-white dark:bg-gray-950">
+      {/* Board schedule content */}
+      <div className="flex flex-col bg-background border-x-2 border-b-2 border-gray-200 dark:border-gray-700 rounded-b-2xl shadow-lg" dir={isRtl ? "rtl" : "ltr"}>
+        {/* Schedule content */}
+        <div ref={boardRef} className="relative bg-white dark:bg-gray-950 rounded-b-2xl">
           <div 
             className="grid relative"
             style={{ 
