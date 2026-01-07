@@ -6,19 +6,33 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { AdminLock } from "@/components/layout/AdminLock";
 import { FirstLogin } from "@/components/layout/FirstLogin";
+import { Suspense, lazy } from "react";
+import { Loader2 } from "lucide-react";
 
-import Home from "@/pages/Home";
+// Core pages - loaded immediately
 import Planning from "@/pages/Planning";
-import Services from "@/pages/Services";
-import Reports from "@/pages/Reports";
-import Inventory from "@/pages/Inventory";
-import Charges from "@/pages/Charges";
-import Salaries from "@/pages/Salaries";
 import Booking from "@/pages/Booking";
-import Clients from "@/pages/Clients";
-import StaffPerformance from "@/pages/StaffPerformance";
-import AdminSettings from "@/pages/AdminSettings";
-import NotFound from "@/pages/not-found";
+import Charges from "@/pages/Charges";
+
+// Admin pages - lazy loaded for faster initial load
+const Home = lazy(() => import("@/pages/Home"));
+const Services = lazy(() => import("@/pages/Services"));
+const Reports = lazy(() => import("@/pages/Reports"));
+const Inventory = lazy(() => import("@/pages/Inventory"));
+const Salaries = lazy(() => import("@/pages/Salaries"));
+const Clients = lazy(() => import("@/pages/Clients"));
+const StaffPerformance = lazy(() => import("@/pages/StaffPerformance"));
+const AdminSettings = lazy(() => import("@/pages/AdminSettings"));
+const NotFound = lazy(() => import("@/pages/not-found"));
+
+// Loading fallback component
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <Loader2 className="w-8 h-8 animate-spin text-primary" />
+    </div>
+  );
+}
 
 function PermissionGuard({ children, permission }: { children: React.ReactNode, permission?: string }) {
   if (!permission) return <>{children}</>;
@@ -56,10 +70,18 @@ function PermissionGuard({ children, permission }: { children: React.ReactNode, 
 }
 
 // Wrapper for pages with layout
-function PageRoute({ component: Component, requireAdmin = false, permission }: { component: React.ComponentType, requireAdmin?: boolean, permission?: string }) {
+function PageRoute({ component: Component, requireAdmin = false, permission, lazy: isLazy = false }: { component: React.ComponentType, requireAdmin?: boolean, permission?: string, lazy?: boolean }) {
+  const pageContent = isLazy ? (
+    <Suspense fallback={<PageLoader />}>
+      <Component />
+    </Suspense>
+  ) : (
+    <Component />
+  );
+
   const content = (
     <AppLayout>
-      <Component />
+      {pageContent}
     </AppLayout>
   );
 
@@ -80,7 +102,7 @@ function Router() {
       </Route>
 
       <Route path="/home">
-        <PageRoute component={Home} permission="view_home" />
+        <PageRoute component={Home} permission="view_home" lazy />
       </Route>
 
       <Route path="/planning">
@@ -88,15 +110,15 @@ function Router() {
       </Route>
 
       <Route path="/services">
-        <PageRoute component={Services} requireAdmin permission="view_services" />
+        <PageRoute component={Services} requireAdmin permission="view_services" lazy />
       </Route>
 
       <Route path="/reports">
-        <PageRoute component={Reports} requireAdmin permission="view_reports" />
+        <PageRoute component={Reports} requireAdmin permission="view_reports" lazy />
       </Route>
 
       <Route path="/inventory">
-        <PageRoute component={Inventory} requireAdmin permission="view_inventory" />
+        <PageRoute component={Inventory} requireAdmin permission="view_inventory" lazy />
       </Route>
 
       <Route path="/charges">
@@ -104,24 +126,28 @@ function Router() {
       </Route>
 
       <Route path="/salaries">
-        <PageRoute component={Salaries} requireAdmin permission="view_salaries" />
+        <PageRoute component={Salaries} requireAdmin permission="view_salaries" lazy />
       </Route>
 
       <Route path="/clients">
-        <PageRoute component={Clients} requireAdmin permission="view_clients" />
+        <PageRoute component={Clients} requireAdmin permission="view_clients" lazy />
       </Route>
 
       <Route path="/staff-performance">
-        <PageRoute component={StaffPerformance} requireAdmin permission="view_staff_performance" />
+        <PageRoute component={StaffPerformance} requireAdmin permission="view_staff_performance" lazy />
       </Route>
 
       <Route path="/admin-settings">
-        <PageRoute component={AdminSettings} requireAdmin permission="admin_settings" />
+        <PageRoute component={AdminSettings} requireAdmin permission="admin_settings" lazy />
       </Route>
 
       <Route path="/booking" component={Booking} />
 
-      <Route component={NotFound} />
+      <Route>
+        <Suspense fallback={<PageLoader />}>
+          <NotFound />
+        </Suspense>
+      </Route>
     </Switch>
   );
 }

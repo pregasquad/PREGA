@@ -179,3 +179,10 @@ Preferred communication style: Simple, everyday language.
   - bcryptjs for secure PIN hashing and comparison
   - All admin API endpoints validate and sanitize input
   - Role-based navigation: sidebar only shows permitted sections
+- **Mobile/iPhone Performance Optimizations**:
+  - Code splitting with React.lazy() for admin pages (Home, Services, Reports, Inventory, Salaries, Clients, StaffPerformance, AdminSettings)
+  - Smart data caching with staleTime: Services/Staff/Categories (5 min), Clients/Products (1 min), Appointments (30 sec)
+  - Reduced polling intervals - relies on Socket.IO for real-time updates with 2-3 minute fallback
+  - Vite bundle optimization with manual chunks for vendor libraries (react, radix-ui, recharts)
+  - Throttled visibility change handlers to prevent excessive refetches
+  - refetchOnWindowFocus disabled for Socket-managed data

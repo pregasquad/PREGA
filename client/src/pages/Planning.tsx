@@ -98,17 +98,22 @@ export default function Planning() {
     };
   }, [isMobile]);
 
-  // Refresh data using setInterval (more efficient than requestAnimationFrame)
+  // Refresh data - rely on socket.io for real-time updates, use long interval as fallback
+  // Socket.io in Sidebar handles instant notifications, this is just a safety net
   useEffect(() => {
-    const refreshInterval = isMobile ? 120000 : 30000;
+    // Mobile: refresh every 3 minutes, Desktop: every 2 minutes (socket handles real-time)
+    const refreshInterval = isMobile ? 180000 : 120000;
     
     const intervalId = setInterval(() => {
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
     }, refreshInterval);
     
-    // Also refresh on visibility change (when returning to PWA)
+    // Refresh on visibility change (when returning to PWA) - throttled
+    let lastRefresh = 0;
     const handleVisibilityRefresh = () => {
-      if (document.visibilityState === 'visible') {
+      const now = Date.now();
+      if (document.visibilityState === 'visible' && now - lastRefresh > 5000) {
+        lastRefresh = now;
         queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
       }
     };

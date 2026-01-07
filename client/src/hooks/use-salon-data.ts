@@ -14,6 +14,8 @@ export function useAppointments(date?: string) {
       if (!res.ok) throw new Error("Failed to fetch appointments");
       return api.appointments.list.responses[200].parse(await res.json());
     },
+    staleTime: 30000, // Data stays fresh for 30 seconds
+    refetchOnWindowFocus: false, // Don't refetch on tab focus (socket handles updates)
   });
 }
 
@@ -105,6 +107,7 @@ export function useServices() {
       if (!res.ok) throw new Error("Failed to fetch services");
       return api.services.list.responses[200].parse(await res.json());
     },
+    staleTime: 5 * 60 * 1000, // Services rarely change - cache for 5 minutes
   });
 }
 
@@ -116,6 +119,7 @@ export function useCategories() {
       if (!res.ok) throw new Error("Failed to fetch categories");
       return api.categories.list.responses[200].parse(await res.json());
     },
+    staleTime: 5 * 60 * 1000, // Categories rarely change - cache for 5 minutes
   });
 }
 
@@ -249,6 +253,7 @@ export function useStaff() {
       if (!res.ok) throw new Error("Failed to fetch staff");
       return api.staff.list.responses[200].parse(await res.json());
     },
+    staleTime: 5 * 60 * 1000, // Staff rarely changes - cache for 5 minutes
   });
 }
 
@@ -331,6 +336,7 @@ export function useClients() {
       if (!res.ok) throw new Error("Failed to fetch clients");
       return api.clients.list.responses[200].parse(await res.json());
     },
+    staleTime: 60000, // Cache clients for 1 minute
   });
 }
 
@@ -413,5 +419,6 @@ export function useProducts() {
       if (!res.ok) throw new Error("Failed to fetch products");
       return res.json();
     },
+    staleTime: 60000, // Cache products for 1 minute
   });
 }
