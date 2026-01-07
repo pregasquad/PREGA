@@ -526,5 +526,16 @@
     "noAppointmentsToday": "لا توجد مواعيد مجدولة لليوم",
     "teamStatus": "حالة الفريق",
     "appointmentsToday": "مواعيد اليوم"
+  },
+  "login": {
+    "welcomeBack": "مرحباً بعودتك",
+    "signInPrompt": "سجل الدخول لإدارة مواعيد الصالون",
+    "loginWithReplit": "تسجيل الدخول بـ Replit",
+    "secureAuth": "مصادقة آمنة مقدمة من Replit Auth"
+  },
+  "notFound": {
+    "title": "404 الصفحة غير موجودة",
+    "message": "الصفحة التي طلبتها غير موجودة أو تم نقلها.",
+    "returnHome": "العودة للرئيسية"
   }
 }

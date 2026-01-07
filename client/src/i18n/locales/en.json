@@ -526,5 +526,16 @@
     "noAppointmentsToday": "No appointments scheduled for today",
     "teamStatus": "Team Status",
     "appointmentsToday": "appointments today"
+  },
+  "login": {
+    "welcomeBack": "Welcome Back",
+    "signInPrompt": "Sign in to manage your salon appointments",
+    "loginWithReplit": "Log in with Replit",
+    "secureAuth": "Secure authentication powered by Replit Auth"
+  },
+  "notFound": {
+    "title": "404 Page Not Found",
+    "message": "The page you requested does not exist or has been moved.",
+    "returnHome": "Return Home"
   }
 }

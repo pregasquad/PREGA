@@ -5,6 +5,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  if (!base64String || typeof base64String !== 'string') {
+    throw new Error('Invalid base64 string provided');
+  }
+  
   // Remove any whitespace
   const cleanedBase64 = base64String.trim();
   

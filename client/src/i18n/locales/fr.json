@@ -526,5 +526,16 @@
     "noAppointmentsToday": "Aucun rendez-vous prévu pour aujourd'hui",
     "teamStatus": "État de l'Équipe",
     "appointmentsToday": "rendez-vous aujourd'hui"
+  },
+  "login": {
+    "welcomeBack": "Bienvenue",
+    "signInPrompt": "Connectez-vous pour gérer vos rendez-vous salon",
+    "loginWithReplit": "Se connecter avec Replit",
+    "secureAuth": "Authentification sécurisée par Replit Auth"
+  },
+  "notFound": {
+    "title": "404 Page Non Trouvée",
+    "message": "La page que vous avez demandée n'existe pas ou a été déplacée.",
+    "returnHome": "Retour à l'accueil"
   }
 }
