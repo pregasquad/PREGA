@@ -10,6 +10,7 @@ export default defineConfig({
     runtimeErrorOverlay(),
     VitePWA({
       registerType: 'autoUpdate',
+      injectRegister: false,
       includeAssets: ['favicon.png', 'logo.png', 'icon-192.png', 'icon-512.png'],
       manifest: {
         name: 'PREGASQUAD Manager',
@@ -48,23 +49,11 @@ export default defineConfig({
               cacheName: 'google-fonts-cache',
               expiration: {
                 maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365 // <== 365 days
+                maxAgeSeconds: 60 * 60 * 24 * 365
               },
               cacheableResponse: {
                 statuses: [0, 200]
               }
-            }
-          },
-          {
-            urlPattern: /\/api\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'api-cache',
-              expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24 // <== 24 hours
-              },
-              networkTimeoutSeconds: 10
             }
           }
         ]
