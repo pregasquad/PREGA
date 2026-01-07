@@ -64,7 +64,10 @@ export function FirstLogin({ children }: FirstLoginProps) {
 
   // Auto-login from local storage if session storage is lost
   useEffect(() => {
-    if (typeof window !== 'undefined' && !isAuthenticated) {
+    // Only auto-restore if we haven't explicitly logged out in this session
+    const wasLoggedOut = sessionStorage.getItem("explicit_logout") === "true";
+    
+    if (typeof window !== 'undefined' && !isAuthenticated && !wasLoggedOut) {
       const localAuth = localStorage.getItem("user_authenticated") === "true";
       if (localAuth) {
         const user = localStorage.getItem("current_user");

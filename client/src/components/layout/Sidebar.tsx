@@ -197,11 +197,19 @@ export function Sidebar() {
   };
 
   const handleLogout = () => {
+    // Clear all authentication-related storage
     sessionStorage.removeItem("user_authenticated");
     sessionStorage.removeItem("current_user");
     sessionStorage.removeItem("current_user_role");
     sessionStorage.removeItem("current_user_permissions");
     sessionStorage.removeItem("admin_authenticated");
+    
+    localStorage.removeItem("user_authenticated");
+    localStorage.removeItem("current_user");
+    localStorage.removeItem("current_user_role");
+    localStorage.removeItem("current_user_permissions");
+    localStorage.removeItem("admin_authenticated");
+
     window.location.href = "/";
   };
 
