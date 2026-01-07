@@ -807,7 +807,7 @@ export default function Planning() {
       </div>
 
       {/* Board with sticky header */}
-      <div className="flex-1 flex flex-col bg-background rounded-2xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden" dir={isRtl ? "rtl" : "ltr"}>
+      <div className="flex-1 min-h-0 flex flex-col bg-background rounded-2xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden" dir={isRtl ? "rtl" : "ltr"}>
         {/* Sticky Staff Headers - outside scroll container, synced with board scroll */}
         <div 
           ref={headerRef}
@@ -831,7 +831,7 @@ export default function Planning() {
         </div>
 
         {/* Scrollable content */}
-        <div ref={boardRef} className="flex-1 overflow-auto relative free-scroll bg-white dark:bg-gray-950">
+        <div ref={boardRef} className="flex-1 min-h-0 overflow-auto relative free-scroll bg-white dark:bg-gray-950">
           <div 
             className="grid relative"
             style={{ 
