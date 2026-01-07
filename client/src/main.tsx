@@ -4,6 +4,19 @@ import "./index.css";
 import "./i18n/config";
 import { registerSW } from 'virtual:pwa-register';
 
+// Restore session from local storage before app render to prevent 401s
+if (typeof window !== 'undefined') {
+  const localAuth = localStorage.getItem("user_authenticated") === "true";
+  const sessionAuth = sessionStorage.getItem("user_authenticated") === "true";
+  
+  if (localAuth && !sessionAuth) {
+    sessionStorage.setItem("user_authenticated", "true");
+    sessionStorage.setItem("current_user", localStorage.getItem("current_user") || "");
+    sessionStorage.setItem("current_user_role", localStorage.getItem("current_user_role") || "");
+    sessionStorage.setItem("current_user_permissions", localStorage.getItem("current_user_permissions") || "[]");
+  }
+}
+
 // Auto-update service worker using vite-plugin-pwa
 registerSW({ immediate: true });
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
@@ -54,13 +54,33 @@ export function FirstLogin({ children }: FirstLoginProps) {
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // Forgot PIN state
   const [showForgotPin, setShowForgotPin] = useState(false);
   const [businessPhone, setBusinessPhone] = useState("");
   const [newPin, setNewPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
   const [resetLoading, setResetLoading] = useState(false);
+
+  // Auto-login from local storage if session storage is lost
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !isAuthenticated) {
+      const localAuth = localStorage.getItem("user_authenticated") === "true";
+      if (localAuth) {
+        const user = localStorage.getItem("current_user");
+        const role = localStorage.getItem("current_user_role");
+        const perms = localStorage.getItem("current_user_permissions");
+        
+        if (user && role && perms) {
+          sessionStorage.setItem("user_authenticated", "true");
+          sessionStorage.setItem("current_user", user);
+          sessionStorage.setItem("current_user_role", role);
+          sessionStorage.setItem("current_user_permissions", perms);
+          setIsAuthenticated(true);
+        }
+      }
+    }
+  }, [isAuthenticated]);
 
   const { data: adminRoles = [] } = useQuery<AdminRole[]>({
     queryKey: ["/api/admin-roles"],
