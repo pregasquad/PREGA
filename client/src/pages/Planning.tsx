@@ -154,9 +154,8 @@ export default function Planning() {
     return format(date, "yyyy-MM-dd") === format(workDayDate, "yyyy-MM-dd");
   }, [date, currentTime]);
 
-  // BULLETPROOF SCROLL TO LIVE LINE - uses scrollIntoView on the actual element
+  // Scroll to live line - uses scrollIntoView for single page scroll
   const scrollToLiveLine = useCallback((smooth = false) => {
-    // Method 1: Use the actual live line element
     if (liveLineRef.current) {
       liveLineRef.current.scrollIntoView({ 
         block: 'center', 
@@ -165,53 +164,21 @@ export default function Planning() {
       });
       return true;
     }
-    
-    // Method 2: Fallback to manual scrollTop calculation
-    const board = boardRef.current;
-    if (!board || board.scrollHeight <= board.clientHeight) return false;
-    
-    const now = new Date();
-    const currentHour = now.getHours();
-    const currentMinutes = now.getMinutes();
-    
-    let adjustedHour;
-    if (currentHour >= 10) {
-      adjustedHour = currentHour - 10;
-    } else if (currentHour < 2) {
-      adjustedHour = currentHour + 14;
-    } else {
-      return false;
-    }
-    
-    const totalMinutes = adjustedHour * 60 + currentMinutes;
-    const slotHeight = 52;
-    const targetTop = (totalMinutes / 30) * slotHeight + 52;
-    const scrollTarget = Math.max(0, targetTop - board.clientHeight / 2);
-    
-    if (smooth) {
-      board.scrollTo({ top: scrollTarget, behavior: 'smooth' });
-    } else {
-      board.scrollTop = scrollTarget;
-    }
-    return true;
+    return false;
   }, []);
 
-  // AGGRESSIVE AUTO-SCROLL: Try many times with different delays
+  // Auto-scroll to live line on load
   useLayoutEffect(() => {
     if (!isToday) return;
     
-    // Try scrolling multiple times
-    const attempts = [0, 50, 100, 200, 300, 500, 800, 1000, 1500, 2000, 3000];
-    const timers: NodeJS.Timeout[] = [];
+    // Try scrolling after content loads
+    const timer1 = setTimeout(() => scrollToLiveLine(), 100);
+    const timer2 = setTimeout(() => scrollToLiveLine(), 500);
     
-    attempts.forEach(delay => {
-      const timer = setTimeout(() => {
-        scrollToLiveLine();
-      }, delay);
-      timers.push(timer);
-    });
-    
-    return () => timers.forEach(t => clearTimeout(t));
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
   }, [isToday, scrollToLiveLine]);
 
   // ResizeObserver: scroll when content loads
@@ -792,10 +759,8 @@ export default function Planning() {
                 queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
                 queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
                 queryClient.invalidateQueries({ queryKey: ["/api/services"] });
-                // Scroll to top
-                if (boardRef.current) {
-                  boardRef.current.scrollTop = 0;
-                }
+                // Scroll to top of page
+                window.scrollTo({ top: 0, behavior: 'smooth' });
                 toast({ title: t("common.refreshed"), description: t("common.dataUpdated") });
               }}
             >
@@ -807,7 +772,7 @@ export default function Planning() {
       </div>
 
       {/* Board with sticky header */}
-      <div className="flex-1 flex flex-col bg-background rounded-2xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden" dir={isRtl ? "rtl" : "ltr"}>
+      <div className="flex flex-col bg-background rounded-2xl border-2 border-gray-200 dark:border-gray-700 shadow-lg" dir={isRtl ? "rtl" : "ltr"}>
         {/* Sticky Staff Headers - outside scroll container, synced with board scroll */}
         <div 
           ref={headerRef}
@@ -830,8 +795,8 @@ export default function Planning() {
           ))}
         </div>
 
-        {/* Scrollable content */}
-        <div ref={boardRef} className="flex-1 overflow-auto relative free-scroll bg-white dark:bg-gray-950">
+        {/* Schedule content - single scroll with parent */}
+        <div ref={boardRef} className="relative bg-white dark:bg-gray-950">
           <div 
             className="grid relative"
             style={{ 
