@@ -185,12 +185,15 @@ export default function AdminSettings() {
   };
 
   const toggleWorkingDay = (day: number) => {
-    setBusinessForm(prev => ({
-      ...prev,
-      workingDays: prev.workingDays.includes(day)
-        ? prev.workingDays.filter(d => d !== day)
-        : [...prev.workingDays, day].sort((a, b) => a - b)
-    }));
+    setBusinessForm(prev => {
+      const workingDays = prev.workingDays || [];
+      return {
+        ...prev,
+        workingDays: workingDays.includes(day)
+          ? workingDays.filter(d => d !== day)
+          : [...workingDays, day].sort((a, b) => a - b)
+      };
+    });
   };
 
   const resetForm = () => {
@@ -376,7 +379,7 @@ export default function AdminSettings() {
                           >
                             <Checkbox
                               id={`day-${day.value}`}
-                              checked={businessForm.workingDays.includes(day.value)}
+                              checked={businessForm.workingDays?.includes(day.value) || false}
                               onCheckedChange={() => toggleWorkingDay(day.value)}
                             />
                             <label

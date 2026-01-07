@@ -182,7 +182,7 @@ export default function Inventory() {
               <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">{t("inventory.quantity")}:</span>
-                  <span className={`text-2xl font-bold ${product.quantity <= (product.lowStockThreshold || 2) ? 'text-destructive' : 'text-primary'}`}>
+                  <span className={`text-2xl font-bold ${Number(product.quantity || 0) <= Number(product.lowStockThreshold || 2) ? 'text-destructive' : 'text-primary'}`}>
                     {product.quantity}
                   </span>
                 </div>
@@ -195,15 +195,15 @@ export default function Inventory() {
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={() => updateStockMutation.mutate({ id: product.id, quantity: product.quantity + 1 })}
+                    onClick={() => updateStockMutation.mutate({ id: product.id, quantity: Number(product.quantity || 0) + 1 })}
                   >
                     <Plus className="h-4 w-4" />
                   </Button>
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={() => updateStockMutation.mutate({ id: product.id, quantity: Math.max(0, product.quantity - 1) })}
-                    disabled={product.quantity <= 0}
+                    onClick={() => updateStockMutation.mutate({ id: product.id, quantity: Math.max(0, Number(product.quantity || 0) - 1) })}
+                    disabled={Number(product.quantity || 0) <= 0}
                   >
                     <Minus className="h-4 w-4" />
                   </Button>
@@ -240,7 +240,7 @@ export default function Inventory() {
                   </DialogContent>
                 </Dialog>
                 
-                {product.quantity <= (product.lowStockThreshold || 2) && (
+                {Number(product.quantity || 0) <= Number(product.lowStockThreshold || 2) && (
                   <p className="text-xs text-destructive font-medium animate-pulse">
                     ⚠️ {t("inventory.stockAlert")}: {t("inventory.lowStock")}!
                   </p>

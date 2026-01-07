@@ -279,7 +279,11 @@ export class DatabaseStorage implements IStorage {
   async getLowStockProducts(): Promise<Product[]> {
     const s = schema();
     const allProducts = await db().select().from(s.products);
-    return allProducts.filter((p: any) => p.quantity <= p.lowStockThreshold);
+    return allProducts.filter((p: any) => {
+      const quantity = Number(p.quantity || 0);
+      const threshold = Number(p.lowStockThreshold || 0);
+      return quantity <= threshold;
+    });
   }
 
   async updateProductQuantity(id: number, quantity: number): Promise<Product> {
