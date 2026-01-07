@@ -52,6 +52,7 @@ const ALL_PERMISSIONS = [
   { key: "view_home", labelKey: "permissions.viewHome", icon: "Home" },
   { key: "view_planning", labelKey: "permissions.viewPlanning", icon: "Calendar" },
   { key: "manage_appointments", labelKey: "permissions.manageAppointments", icon: "Calendar" },
+  { key: "edit_cardboard", labelKey: "permissions.editCardboard", icon: "Layout" },
   { key: "view_services", labelKey: "permissions.viewServices", icon: "Scissors" },
   { key: "manage_services", labelKey: "permissions.manageServices", icon: "Scissors" },
   { key: "view_clients", labelKey: "permissions.viewClients", icon: "Users" },
