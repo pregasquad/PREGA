@@ -41,16 +41,26 @@ export function PushNotifications() {
 
   useEffect(() => {
     const checkSupport = async () => {
-      if ('serviceWorker' in navigator && 'PushManager' in window) {
+      const hasSW = 'serviceWorker' in navigator;
+      const hasPush = 'PushManager' in window;
+      const hasNotification = 'Notification' in window;
+      
+      console.log('[Push] Support check:', { hasSW, hasPush, hasNotification });
+      
+      if (hasSW && hasPush && hasNotification) {
         setIsSupported(true);
         
         try {
           const registration = await navigator.serviceWorker.ready;
+          console.log('[Push] Service worker ready:', registration.scope);
           const subscription = await registration.pushManager.getSubscription();
+          console.log('[Push] Existing subscription:', !!subscription);
           setIsSubscribed(!!subscription);
         } catch (e) {
-          console.log('Service worker not ready yet');
+          console.log('[Push] Service worker not ready yet:', e);
         }
+      } else {
+        console.log('[Push] Not supported - add app to Home Screen on iOS 16.4+');
       }
     };
     checkSupport();
