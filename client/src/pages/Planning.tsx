@@ -289,8 +289,11 @@ export default function Planning() {
   
   const { data: appointments = [], isLoading: loadingApps } = useAppointments(formattedDate);
   const { data: allAppointments = [] } = useAppointments();
-  const { data: staffList = [] } = useStaff();
-  const { data: services = [] } = useServices();
+  const { data: staffList = [], isLoading: loadingStaff } = useStaff();
+  const { data: services = [], isLoading: loadingServices } = useServices();
+  
+  // Show loading state while essential data loads
+  const isDataLoading = loadingStaff || loadingServices;
   const isAdmin = sessionStorage.getItem("admin_authenticated") === "true";
 
   // Scroll when data loads (staff or appointments)
@@ -612,6 +615,20 @@ export default function Planning() {
     }
     return false;
   };
+
+  // Show loading screen while data is loading
+  if (isDataLoading || staffList.length === 0) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center bg-background" dir={isRtl ? "rtl" : "ltr"}>
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center shadow-lg animate-pulse">
+            <span className="text-3xl font-bold text-white">P</span>
+          </div>
+          <p className="text-muted-foreground">{t("common.loading")}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div 
