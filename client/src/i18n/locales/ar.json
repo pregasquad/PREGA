@@ -371,7 +371,20 @@
     "noUsersConfigured": "لم يتم تكوين مستخدمين. يرجى الاتصال بالمسؤول.",
     "setupFirstUser": "إعداد المستخدم الأول",
     "selectUserToLogin": "اختر مستخدم لتسجيل الدخول",
-    "changeUser": "تغيير المستخدم"
+    "changeUser": "تغيير المستخدم",
+    "forgotPin": "نسيت رمز PIN؟",
+    "resetPin": "إعادة تعيين رمز PIN",
+    "resetPinFor": "إعادة تعيين رمز PIN لـ",
+    "enterBusinessPhoneToReset": "أدخل رقم هاتف العمل للتحقق من هويتك وإعادة تعيين رمز PIN الخاص بك.",
+    "businessPhone": "هاتف العمل",
+    "newPin": "رمز PIN الجديد",
+    "confirmPin": "تأكيد رمز PIN",
+    "pinTooShort": "يجب أن يحتوي رمز PIN على 4 أحرف على الأقل",
+    "pinsDoNotMatch": "رموز PIN غير متطابقة",
+    "invalidBusinessPhone": "رقم هاتف العمل غير صالح",
+    "resetFailed": "فشل إعادة تعيين رمز PIN",
+    "pinResetSuccess": "تم إعادة تعيين رمز PIN",
+    "pinResetSuccessDesc": "تم إعادة تعيين رمز PIN الخاص بك بنجاح. يرجى تسجيل الدخول باستخدام رمز PIN الجديد."
   },
   "language": {
     "select": "اللغة",

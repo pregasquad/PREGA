@@ -347,7 +347,7 @@ export function FirstLogin({ children }: FirstLoginProps) {
 
               <Button
                 type="button"
-                variant="link"
+                variant="ghost"
                 className="w-full text-sm text-muted-foreground hover:text-primary"
                 onClick={() => {
                   setShowForgotPin(true);

@@ -371,7 +371,20 @@
     "noUsersConfigured": "No users configured. Please contact administrator.",
     "setupFirstUser": "Setup First User",
     "selectUserToLogin": "Select a user to login",
-    "changeUser": "Change user"
+    "changeUser": "Change user",
+    "forgotPin": "Forgot PIN?",
+    "resetPin": "Reset PIN",
+    "resetPinFor": "Reset PIN for",
+    "enterBusinessPhoneToReset": "Enter the business phone number to verify your identity and reset your PIN.",
+    "businessPhone": "Business Phone",
+    "newPin": "New PIN",
+    "confirmPin": "Confirm PIN",
+    "pinTooShort": "PIN must be at least 4 characters",
+    "pinsDoNotMatch": "PINs do not match",
+    "invalidBusinessPhone": "Invalid business phone number",
+    "resetFailed": "PIN reset failed",
+    "pinResetSuccess": "PIN Reset",
+    "pinResetSuccessDesc": "Your PIN has been reset successfully. Please login with your new PIN."
   },
   "language": {
     "select": "Language",

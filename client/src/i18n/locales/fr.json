@@ -371,7 +371,20 @@
     "noUsersConfigured": "Aucun utilisateur configuré. Veuillez contacter l'administrateur.",
     "setupFirstUser": "Créer le premier utilisateur",
     "selectUserToLogin": "Sélectionnez un utilisateur pour vous connecter",
-    "changeUser": "Changer d'utilisateur"
+    "changeUser": "Changer d'utilisateur",
+    "forgotPin": "Code PIN oublié ?",
+    "resetPin": "Réinitialiser le code PIN",
+    "resetPinFor": "Réinitialiser le code PIN pour",
+    "enterBusinessPhoneToReset": "Entrez le numéro de téléphone professionnel pour vérifier votre identité et réinitialiser votre code PIN.",
+    "businessPhone": "Téléphone professionnel",
+    "newPin": "Nouveau code PIN",
+    "confirmPin": "Confirmer le code PIN",
+    "pinTooShort": "Le code PIN doit contenir au moins 4 caractères",
+    "pinsDoNotMatch": "Les codes PIN ne correspondent pas",
+    "invalidBusinessPhone": "Numéro de téléphone professionnel invalide",
+    "resetFailed": "Échec de la réinitialisation du code PIN",
+    "pinResetSuccess": "Code PIN réinitialisé",
+    "pinResetSuccessDesc": "Votre code PIN a été réinitialisé avec succès. Veuillez vous connecter avec votre nouveau code PIN."
   },
   "language": {
     "select": "Langue",
