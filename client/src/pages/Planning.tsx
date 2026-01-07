@@ -56,6 +56,18 @@ export default function Planning() {
   const isRtl = i18n.language === "ar";
   const isMobile = useIsMobile();
   const [date, setDate] = useState<Date>(getWorkDayDate());
+  
+  // Check if user has permission to edit the cardboard
+  const canEditCardboard = useMemo(() => {
+    try {
+      const permissions = JSON.parse(sessionStorage.getItem("current_user_permissions") || "[]");
+      // If no permissions set (empty array), allow full access (opt-in restriction model)
+      if (permissions.length === 0) return true;
+      return permissions.includes("edit_cardboard");
+    } catch {
+      return true; // Default to allowing edits if parsing fails
+    }
+  }, []);
   const [serviceSearch, setServiceSearch] = useState("");
   const [currentTime, setCurrentTime] = useState(new Date());
   const boardRef = useRef<HTMLDivElement>(null);
@@ -399,6 +411,7 @@ export default function Planning() {
   }, [allAppointments, appointmentSearch]);
 
   const handleSlotClick = (staffName: string, time: string) => {
+    if (!canEditCardboard) return;
     form.reset({
       date: formattedDate,
       startTime: time,
@@ -416,7 +429,7 @@ export default function Planning() {
 
   const handleAppointmentClick = (e: React.MouseEvent, app: any) => {
     e.stopPropagation();
-    if (!isAdmin) return;
+    if (!canEditCardboard) return;
     form.reset({
       date: app.date,
       startTime: app.startTime,
@@ -491,6 +504,10 @@ export default function Planning() {
   };
 
   const handleDragStart = (e: React.DragEvent, appointment: any) => {
+    if (!canEditCardboard) {
+      e.preventDefault();
+      return;
+    }
     setDraggedAppointment(appointment);
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setData("text/plain", appointment.id.toString());
@@ -515,7 +532,7 @@ export default function Planning() {
     e.preventDefault();
     setDragOverSlot(null);
     
-    if (!draggedAppointment) return;
+    if (!canEditCardboard || !draggedAppointment) return;
     
     const staffMember = staffList.find(s => s.name === staffName);
     if (!staffMember) return;
@@ -894,8 +911,8 @@ export default function Planning() {
                           "h-full p-2 rounded-lg text-white cursor-grab active:cursor-grabbing shadow-lg flex flex-col justify-between",
                           isDragging && "opacity-50 scale-95"
                         )}
-                        style={{ backgroundColor: s.color }}
-                        draggable
+                        style={{ backgroundColor: s.color, cursor: canEditCardboard ? 'grab' : 'default' }}
+                        draggable={canEditCardboard}
                         onDragStart={(e) => handleDragStart(e, booking)}
                         onDragEnd={handleDragEnd}
                         onClick={(e) => handleAppointmentClick(e, booking)}
