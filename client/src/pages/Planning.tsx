@@ -995,7 +995,6 @@ export default function Planning() {
             </DialogHeader>
           </div>
           
-          <ScrollArea className="max-h-[70vh]">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="p-4 space-y-3">
               
@@ -1271,7 +1270,6 @@ export default function Planning() {
               </div>
             </form>
           </Form>
-          </ScrollArea>
         </DialogContent>
       </Dialog>
       
