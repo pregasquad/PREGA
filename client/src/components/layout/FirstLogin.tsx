@@ -33,7 +33,18 @@ export function FirstLogin({ children }: FirstLoginProps) {
   const [location] = useLocation();
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     if (typeof window !== 'undefined') {
-      return sessionStorage.getItem("user_authenticated") === "true";
+      const sessionAuth = sessionStorage.getItem("user_authenticated") === "true";
+      if (sessionAuth) return true;
+      
+      const localAuth = localStorage.getItem("user_authenticated") === "true";
+      if (localAuth) {
+        // Restore session from local storage
+        sessionStorage.setItem("user_authenticated", "true");
+        sessionStorage.setItem("current_user", localStorage.getItem("current_user") || "");
+        sessionStorage.setItem("current_user_role", localStorage.getItem("current_user_role") || "");
+        sessionStorage.setItem("current_user_permissions", localStorage.getItem("current_user_permissions") || "[]");
+        return true;
+      }
     }
     return false;
   });
@@ -81,10 +92,17 @@ export function FirstLogin({ children }: FirstLoginProps) {
       const data = await response.json();
 
       if (data.success) {
+        const perms = JSON.stringify(data.permissions || []);
         sessionStorage.setItem("user_authenticated", "true");
         sessionStorage.setItem("current_user", selectedUser.name);
         sessionStorage.setItem("current_user_role", data.role || "");
-        sessionStorage.setItem("current_user_permissions", JSON.stringify(data.permissions || []));
+        sessionStorage.setItem("current_user_permissions", perms);
+        
+        localStorage.setItem("user_authenticated", "true");
+        localStorage.setItem("current_user", selectedUser.name);
+        localStorage.setItem("current_user_role", data.role || "");
+        localStorage.setItem("current_user_permissions", perms);
+        
         setIsAuthenticated(true);
       } else {
         setError(t("auth.wrongPassword"));

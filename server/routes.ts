@@ -564,14 +564,14 @@ export async function registerRoutes(
   });
 
   // Get specific admin role - protected
-  app.get("/api/admin-roles/:id", isPinAuthenticated, requirePermission("manage_admin_roles"), async (req, res) => {
+  app.get("/api/admin-roles/:id", isPinAuthenticated, requirePermission("admin_settings"), async (req, res) => {
     const role = await storage.getAdminRole(Number(req.params.id));
     if (!role) return res.status(404).json({ message: "Admin role not found" });
     res.json({ ...role, pin: role.pin ? "****" : null });
   });
 
   // Create admin role - protected
-  app.post("/api/admin-roles", isPinAuthenticated, requirePermission("manage_admin_roles"), async (req, res) => {
+  app.post("/api/admin-roles", isPinAuthenticated, requirePermission("admin_settings"), async (req, res) => {
     try {
       const input = insertAdminRoleSchema.parse(req.body);
       const permissions = ROLE_PERMISSIONS[input.role as keyof typeof ROLE_PERMISSIONS] || [];
@@ -584,7 +584,7 @@ export async function registerRoutes(
       const role = await storage.createAdminRole({
         ...input,
         pin: hashedPin,
-        permissions: input.permissions || [...permissions]
+        permissions: input.permissions && input.permissions.length > 0 ? input.permissions : [...permissions]
       });
       
       const safeRole = { ...role, pin: role.pin ? "****" : null };
@@ -598,7 +598,7 @@ export async function registerRoutes(
   });
 
   // Update admin role - protected
-  app.patch("/api/admin-roles/:id", isPinAuthenticated, requirePermission("manage_admin_roles"), async (req, res) => {
+  app.patch("/api/admin-roles/:id", isPinAuthenticated, requirePermission("admin_settings"), async (req, res) => {
     try {
       const updateData = { ...req.body };
       
@@ -617,7 +617,7 @@ export async function registerRoutes(
   });
 
   // Delete admin role - protected
-  app.delete("/api/admin-roles/:id", isPinAuthenticated, requirePermission("manage_admin_roles"), async (req, res) => {
+  app.delete("/api/admin-roles/:id", isPinAuthenticated, requirePermission("admin_settings"), async (req, res) => {
     await storage.deleteAdminRole(Number(req.params.id));
     res.status(204).send();
   });

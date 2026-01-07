@@ -49,7 +49,7 @@ export default function Charges() {
   });
 
   const defaultChargeTypes = DEFAULT_CHARGE_TYPES_KEYS.map(item => ({
-    id: item.id,
+    id: 0,
     name: item.value,
     label: t(item.key)
   }));

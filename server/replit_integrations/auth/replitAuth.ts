@@ -269,7 +269,7 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
 
 // PIN-based authentication middleware
 export const isPinAuthenticated: RequestHandler = (req, res, next) => {
-  if (req.session?.pinAuth?.userName) {
+  if (req.session?.pinAuth?.userName || req.session?.user_authenticated === true) {
     return next();
   }
   return res.status(401).json({ message: "Unauthorized - Please login with your PIN" });
