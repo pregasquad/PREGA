@@ -3,13 +3,10 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { PushNotifications } from "@/components/PushNotifications";
-import { useLocation } from "wouter";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { i18n } = useTranslation();
   const isRtl = i18n.language === "ar";
-  const [location] = useLocation();
-  const isPlanning = location === "/planning";
 
   const style = {
     "--sidebar-width": "16rem",
@@ -34,8 +31,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <LanguageSwitcher />
             </div>
           </header>
-          <main className={`flex-1 p-2 md:p-4 overflow-auto ${isPlanning ? 'h-0' : ''}`}>
-            <div className={isPlanning ? 'h-full flex flex-col' : 'min-h-full'}>
+          <main className="flex-1 p-2 md:p-4 overflow-auto min-h-0">
+            <div className="h-full flex flex-col min-h-0">
               {children}
             </div>
           </main>
