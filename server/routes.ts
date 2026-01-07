@@ -500,11 +500,13 @@ export async function registerRoutes(
     res.json({ publicKey: vapidPublicKey });
   });
 
-  app.post("/api/push/subscribe", isPinAuthenticated, async (req, res) => {
+  app.post("/api/push/subscribe", async (req, res) => {
     try {
+      console.log("[Push] Subscribe request received:", JSON.stringify(req.body).substring(0, 200));
       const { endpoint, keys } = req.body;
       
       if (!endpoint || !keys?.p256dh || !keys?.auth) {
+        console.log("[Push] Invalid subscription data");
         return res.status(400).json({ error: "Invalid subscription" });
       }
 
@@ -517,16 +519,19 @@ export async function registerRoutes(
           p256dh: keys.p256dh,
           auth: keys.auth,
         });
+        console.log("[Push] Subscription saved successfully");
+      } else {
+        console.log("[Push] Subscription already exists");
       }
       
       res.json({ success: true });
     } catch (err: any) {
-      console.error("Push subscription error:", err);
+      console.error("[Push] Subscription error:", err);
       res.status(500).json({ error: err.message });
     }
   });
 
-  app.post("/api/push/unsubscribe", isPinAuthenticated, async (req, res) => {
+  app.post("/api/push/unsubscribe", async (req, res) => {
     try {
       const { endpoint } = req.body;
       
