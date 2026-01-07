@@ -5,7 +5,7 @@ import { useLocation } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Lock, User, Settings } from "lucide-react";
+import { Lock, User, Settings, ArrowLeft } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 
@@ -158,15 +158,22 @@ export function FirstLogin({ children }: FirstLoginProps) {
             </div>
           ) : (
             <form onSubmit={handleLogin} className="w-full space-y-4">
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => {
                   setSelectedUser(null);
                   setPin("");
                   setError("");
                 }}
-                className="group flex flex-col items-center gap-2 mx-auto p-3"
+                className="mb-2"
               >
+                <ArrowLeft className="w-4 h-4 mr-1" />
+                {t("common.back")}
+              </Button>
+
+              <div className="flex flex-col items-center gap-2">
                 <div className={cn(
                   "w-20 h-20 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-lg ring-4 ring-primary/30 bg-gradient-to-br",
                   ROLE_COLORS[selectedUser.role] || "from-gray-400 to-gray-600"
@@ -174,8 +181,8 @@ export function FirstLogin({ children }: FirstLoginProps) {
                   {selectedUser.name.charAt(0).toUpperCase()}
                 </div>
                 <span className="text-lg font-semibold text-foreground">{selectedUser.name}</span>
-                <span className="text-xs text-primary hover:underline">{t("auth.changeUser")}</span>
-              </button>
+                <span className="text-xs text-muted-foreground capitalize">{selectedUser.role}</span>
+              </div>
 
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
