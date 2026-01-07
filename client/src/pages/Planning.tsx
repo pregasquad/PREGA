@@ -154,8 +154,9 @@ export default function Planning() {
     return format(date, "yyyy-MM-dd") === format(workDayDate, "yyyy-MM-dd");
   }, [date, currentTime]);
 
-  // Scroll to live line - uses scrollIntoView for single page scroll
+  // BULLETPROOF SCROLL TO LIVE LINE - uses scrollIntoView on the actual element
   const scrollToLiveLine = useCallback((smooth = false) => {
+    // Method 1: Use the actual live line element
     if (liveLineRef.current) {
       liveLineRef.current.scrollIntoView({ 
         block: 'center', 
@@ -164,21 +165,53 @@ export default function Planning() {
       });
       return true;
     }
-    return false;
+    
+    // Method 2: Fallback to manual scrollTop calculation
+    const board = boardRef.current;
+    if (!board || board.scrollHeight <= board.clientHeight) return false;
+    
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinutes = now.getMinutes();
+    
+    let adjustedHour;
+    if (currentHour >= 10) {
+      adjustedHour = currentHour - 10;
+    } else if (currentHour < 2) {
+      adjustedHour = currentHour + 14;
+    } else {
+      return false;
+    }
+    
+    const totalMinutes = adjustedHour * 60 + currentMinutes;
+    const slotHeight = 52;
+    const targetTop = (totalMinutes / 30) * slotHeight + 52;
+    const scrollTarget = Math.max(0, targetTop - board.clientHeight / 2);
+    
+    if (smooth) {
+      board.scrollTo({ top: scrollTarget, behavior: 'smooth' });
+    } else {
+      board.scrollTop = scrollTarget;
+    }
+    return true;
   }, []);
 
-  // Auto-scroll to live line on load
+  // AGGRESSIVE AUTO-SCROLL: Try many times with different delays
   useLayoutEffect(() => {
     if (!isToday) return;
     
-    // Try scrolling after content loads
-    const timer1 = setTimeout(() => scrollToLiveLine(), 100);
-    const timer2 = setTimeout(() => scrollToLiveLine(), 500);
+    // Try scrolling multiple times
+    const attempts = [0, 50, 100, 200, 300, 500, 800, 1000, 1500, 2000, 3000];
+    const timers: NodeJS.Timeout[] = [];
     
-    return () => {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-    };
+    attempts.forEach(delay => {
+      const timer = setTimeout(() => {
+        scrollToLiveLine();
+      }, delay);
+      timers.push(timer);
+    });
+    
+    return () => timers.forEach(t => clearTimeout(t));
   }, [isToday, scrollToLiveLine]);
 
   // ResizeObserver: scroll when content loads
@@ -759,8 +792,10 @@ export default function Planning() {
                 queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
                 queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
                 queryClient.invalidateQueries({ queryKey: ["/api/services"] });
-                // Scroll to top of page
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                // Scroll to top
+                if (boardRef.current) {
+                  boardRef.current.scrollTop = 0;
+                }
                 toast({ title: t("common.refreshed"), description: t("common.dataUpdated") });
               }}
             >
@@ -772,11 +807,11 @@ export default function Planning() {
       </div>
 
       {/* Board with sticky header */}
-      <div className="flex flex-col bg-background rounded-2xl border-2 border-gray-200 dark:border-gray-700 shadow-lg" dir={isRtl ? "rtl" : "ltr"}>
-        {/* Sticky Staff Headers - stays visible while scrolling */}
+      <div className="flex-1 flex flex-col bg-background rounded-2xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden" dir={isRtl ? "rtl" : "ltr"}>
+        {/* Sticky Staff Headers - outside scroll container, synced with board scroll */}
         <div 
           ref={headerRef}
-          className="grid sticky top-0 bg-gradient-to-b from-orange-50 to-orange-100 dark:from-orange-950/30 dark:to-orange-900/20 border-b-2 border-orange-200 dark:border-orange-800 z-50 shrink-0"
+          className="grid bg-gradient-to-b from-orange-50 to-orange-100 dark:from-orange-950/30 dark:to-orange-900/20 border-b-2 border-orange-200 dark:border-orange-800 z-50 shrink-0 overflow-x-hidden"
           style={{ 
             gridTemplateColumns: `60px repeat(${staffList.length}, minmax(100px, 1fr))`,
           }}
@@ -795,8 +830,8 @@ export default function Planning() {
           ))}
         </div>
 
-        {/* Schedule content - single scroll with parent */}
-        <div ref={boardRef} className="relative bg-white dark:bg-gray-950">
+        {/* Scrollable content */}
+        <div ref={boardRef} className="flex-1 overflow-auto relative free-scroll bg-white dark:bg-gray-950">
           <div 
             className="grid relative"
             style={{ 
