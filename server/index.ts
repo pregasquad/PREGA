@@ -2,7 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
-import { initializeDatabase, warmupDatabase, ensurePushSubscriptionsTable } from "./db";
+import { initializeDatabase, warmupDatabase, ensurePushSubscriptionsTable, ensureAppointmentsAuditColumns } from "./db";
 
 const app = express();
 const httpServer = createServer(app);
@@ -74,6 +74,7 @@ const startServer = async () => {
   await initializeDatabase();
   await warmupDatabase();
   await ensurePushSubscriptionsTable();
+  await ensureAppointmentsAuditColumns();
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

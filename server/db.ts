@@ -118,3 +118,52 @@ export async function ensurePushSubscriptionsTable(): Promise<void> {
     console.error("Failed to create push_subscriptions table:", error);
   }
 }
+
+// Auto-migration: Add missing columns to appointments table
+export async function ensureAppointmentsAuditColumns(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      
+      // Check if created_by column exists
+      const [createdByRows] = await connection.query(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_NAME = 'appointments' AND COLUMN_NAME = 'created_by'
+      `);
+      
+      if ((createdByRows as any[]).length === 0) {
+        await connection.query(`ALTER TABLE appointments ADD COLUMN created_by TEXT`);
+        console.log("Added created_by column to appointments table");
+      }
+      
+      // Check if created_at column exists
+      const [createdAtRows] = await connection.query(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_NAME = 'appointments' AND COLUMN_NAME = 'created_at'
+      `);
+      
+      if ((createdAtRows as any[]).length === 0) {
+        await connection.query(`ALTER TABLE appointments ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
+        console.log("Added created_at column to appointments table");
+      }
+      
+      connection.release();
+    } else {
+      // PostgreSQL version
+      await pool.query(`
+        DO $$ 
+        BEGIN 
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'appointments' AND column_name = 'created_by') THEN
+            ALTER TABLE appointments ADD COLUMN created_by TEXT;
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'appointments' AND column_name = 'created_at') THEN
+            ALTER TABLE appointments ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+          END IF;
+        END $$;
+      `);
+    }
+    console.log("Appointments audit columns ready");
+  } catch (error) {
+    console.error("Failed to ensure appointments audit columns:", error);
+  }
+}
