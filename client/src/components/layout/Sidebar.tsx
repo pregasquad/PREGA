@@ -197,6 +197,10 @@ export function Sidebar() {
   };
 
   const handleLogout = () => {
+    // Set explicit logout flag FIRST to prevent auto-restore on reload
+    sessionStorage.setItem("explicit_logout", "true");
+    localStorage.setItem("explicit_logout", "true");
+    
     // Clear all authentication-related storage
     sessionStorage.removeItem("user_authenticated");
     sessionStorage.removeItem("current_user");

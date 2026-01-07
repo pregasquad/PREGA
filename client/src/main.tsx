@@ -8,7 +8,8 @@ import { registerSW } from 'virtual:pwa-register';
 if (typeof window !== 'undefined') {
   const localAuth = localStorage.getItem("user_authenticated") === "true";
   const sessionAuth = sessionStorage.getItem("user_authenticated") === "true";
-  const wasLoggedOut = sessionStorage.getItem("explicit_logout") === "true";
+  const wasLoggedOut = sessionStorage.getItem("explicit_logout") === "true" || 
+                       localStorage.getItem("explicit_logout") === "true";
   
   if (localAuth && !sessionAuth && !wasLoggedOut) {
     sessionStorage.setItem("user_authenticated", "true");
