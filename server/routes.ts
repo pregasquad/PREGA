@@ -617,6 +617,43 @@ export async function registerRoutes(
     }
   });
 
+  // Reset PIN with business phone verification
+  app.post("/api/admin-roles/reset-pin", async (req, res) => {
+    try {
+      const { name, businessPhone, newPin } = z.object({
+        name: z.string(),
+        businessPhone: z.string(),
+        newPin: z.string().min(4, "PIN must be at least 4 characters")
+      }).parse(req.body);
+      
+      // Get business settings to verify phone
+      const settings = await storage.getBusinessSettings();
+      if (!settings || !settings.phone) {
+        return res.status(400).json({ success: false, message: "Business phone not configured" });
+      }
+      
+      // Normalize phone numbers for comparison (remove spaces, dashes, etc.)
+      const normalizePhone = (phone: string) => phone.replace(/[\s\-\(\)]/g, "");
+      if (normalizePhone(businessPhone) !== normalizePhone(settings.phone)) {
+        return res.status(401).json({ success: false, message: "Invalid business phone" });
+      }
+      
+      // Find the user
+      const role = await storage.getAdminRoleByName(name);
+      if (!role) {
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
+      
+      // Hash and update the new PIN
+      const hashedPin = await bcrypt.hash(newPin, 10);
+      await storage.updateAdminRole(role.id, { pin: hashedPin });
+      
+      res.json({ success: true, message: "PIN reset successfully" });
+    } catch (err: any) {
+      res.status(400).json({ success: false, message: err.message });
+    }
+  });
+
   // === Business Settings ===
   app.get("/api/business-settings", async (_req, res) => {
     try {

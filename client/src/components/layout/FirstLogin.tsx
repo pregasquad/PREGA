@@ -5,9 +5,10 @@ import { useLocation } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Lock, User, Settings, ArrowLeft } from "lucide-react";
+import { Lock, User, Settings, ArrowLeft, Phone, KeyRound } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 interface AdminRole {
   id: number;
@@ -28,6 +29,7 @@ const ROLE_COLORS: Record<string, string> = {
 
 export function FirstLogin({ children }: FirstLoginProps) {
   const { t } = useTranslation();
+  const { toast } = useToast();
   const [location] = useLocation();
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -41,6 +43,13 @@ export function FirstLogin({ children }: FirstLoginProps) {
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Forgot PIN state
+  const [showForgotPin, setShowForgotPin] = useState(false);
+  const [businessPhone, setBusinessPhone] = useState("");
+  const [newPin, setNewPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
 
   const { data: adminRoles = [] } = useQuery<AdminRole[]>({
     queryKey: ["/api/admin-roles"],
@@ -86,6 +95,55 @@ export function FirstLogin({ children }: FirstLoginProps) {
       setPin("");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleResetPin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    if (!selectedUser) {
+      setError(t("auth.selectUser"));
+      return;
+    }
+
+    if (newPin.length < 4) {
+      setError(t("auth.pinTooShort"));
+      return;
+    }
+
+    if (newPin !== confirmPin) {
+      setError(t("auth.pinsDoNotMatch"));
+      return;
+    }
+
+    setResetLoading(true);
+
+    try {
+      const response = await apiRequest("POST", "/api/admin-roles/reset-pin", {
+        name: selectedUser.name,
+        businessPhone,
+        newPin
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast({
+          title: t("auth.pinResetSuccess"),
+          description: t("auth.pinResetSuccessDesc"),
+        });
+        setShowForgotPin(false);
+        setBusinessPhone("");
+        setNewPin("");
+        setConfirmPin("");
+      } else {
+        setError(data.message || t("auth.resetFailed"));
+      }
+    } catch (err: any) {
+      setError(t("auth.invalidBusinessPhone"));
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -156,6 +214,83 @@ export function FirstLogin({ children }: FirstLoginProps) {
                 </div>
               )}
             </div>
+          ) : showForgotPin ? (
+            <form onSubmit={handleResetPin} className="w-full space-y-4">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setShowForgotPin(false);
+                  setBusinessPhone("");
+                  setNewPin("");
+                  setConfirmPin("");
+                  setError("");
+                }}
+                className="mb-2"
+              >
+                <ArrowLeft className="w-4 h-4 mr-1" />
+                {t("common.back")}
+              </Button>
+
+              <div className="flex flex-col items-center gap-2">
+                <div className={cn(
+                  "w-20 h-20 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-lg ring-4 ring-orange-300 bg-gradient-to-br",
+                  ROLE_COLORS[selectedUser.role] || "from-gray-400 to-gray-600"
+                )}>
+                  <KeyRound className="w-10 h-10" />
+                </div>
+                <span className="text-lg font-semibold text-foreground">{t("auth.resetPinFor")} {selectedUser.name}</span>
+              </div>
+
+              <p className="text-sm text-muted-foreground text-center">
+                {t("auth.enterBusinessPhoneToReset")}
+              </p>
+
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input
+                  type="tel"
+                  placeholder={t("auth.businessPhone")}
+                  value={businessPhone}
+                  onChange={(e) => setBusinessPhone(e.target.value)}
+                  className="h-12 pl-10"
+                  autoFocus
+                />
+              </div>
+
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input
+                  type="password"
+                  placeholder={t("auth.newPin")}
+                  value={newPin}
+                  onChange={(e) => setNewPin(e.target.value)}
+                  className="h-12 pl-10 text-center text-lg tracking-widest"
+                />
+              </div>
+
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input
+                  type="password"
+                  placeholder={t("auth.confirmPin")}
+                  value={confirmPin}
+                  onChange={(e) => setConfirmPin(e.target.value)}
+                  className="h-12 pl-10 text-center text-lg tracking-widest"
+                />
+              </div>
+
+              {error && <p className="text-sm text-destructive font-medium">{error}</p>}
+
+              <Button 
+                type="submit" 
+                className="w-full h-12 text-lg bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700"
+                disabled={resetLoading || !businessPhone || !newPin || !confirmPin}
+              >
+                {resetLoading ? t("common.loading") : t("auth.resetPin")}
+              </Button>
+            </form>
           ) : (
             <form onSubmit={handleLogin} className="w-full space-y-4">
               <Button
@@ -208,6 +343,19 @@ export function FirstLogin({ children }: FirstLoginProps) {
                 disabled={isLoading}
               >
                 {isLoading ? t("common.loading") : t("auth.login")}
+              </Button>
+
+              <Button
+                type="button"
+                variant="link"
+                className="w-full text-sm text-muted-foreground hover:text-primary"
+                onClick={() => {
+                  setShowForgotPin(true);
+                  setPin("");
+                  setError("");
+                }}
+              >
+                {t("auth.forgotPin")}
               </Button>
             </form>
           )}
