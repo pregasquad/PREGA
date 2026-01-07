@@ -406,7 +406,11 @@ export class DatabaseStorage implements IStorage {
 
   async getCharges(): Promise<Charge[]> {
     const s = schema();
-    return await db().select().from(s.charges).orderBy(desc(s.charges.createdAt));
+    const items = await db().select().from(s.charges).orderBy(desc(s.charges.createdAt));
+    return items.map((item: any) => ({
+      ...item,
+      amount: Number(item.amount || 0)
+    }));
   }
 
   async createCharge(charge: InsertCharge): Promise<Charge> {
@@ -529,10 +533,11 @@ export class DatabaseStorage implements IStorage {
     let totalCommission = 0;
     
     for (const appt of appts) {
-      totalRevenue += appt.total;
+      const amount = Number(appt.total || 0);
+      totalRevenue += amount;
       const service = serviceMap.get(appt.service);
-      const commissionRate = service?.commissionPercent || 50;
-      totalCommission += (appt.total * commissionRate) / 100;
+      const commissionRate = Number(service?.commissionPercent || 50);
+      totalCommission += (amount * commissionRate) / 100;
     }
     
     return {

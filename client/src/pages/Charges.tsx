@@ -100,10 +100,10 @@ export default function Charges() {
       return;
     }
     createMutation.mutate({
-      type,
-      name,
+      type: type || "Autre",
+      name: name,
       amount: Number(amount),
-      date,
+      date: date,
     });
   };
 
@@ -129,11 +129,11 @@ export default function Charges() {
                 <Label>{t("expenses.type")}</Label>
                 <Select value={type} onValueChange={setType}>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder={t("expenses.selectType")} />
                   </SelectTrigger>
                   <SelectContent>
                     {chargeTypes.map((t: any) => (
-                      <SelectItem key={t.name} value={t.name}>
+                      <SelectItem key={`${t.id}-${t.name}`} value={t.name}>
                         {t.label}
                       </SelectItem>
                     ))}

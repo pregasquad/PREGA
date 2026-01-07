@@ -248,30 +248,45 @@ export async function registerRoutes(
     }
   });
 
-  // Charges - protected routes
+  // Expenses - protected routes
   app.get("/api/charges", isPinAuthenticated, async (_req, res) => {
-    const items = await storage.getCharges();
-    res.json(items);
+    try {
+      const items = await storage.getCharges();
+      res.json(items);
+    } catch (err) {
+      console.error("Error fetching charges:", err);
+      res.status(500).json({ message: "Failed to fetch charges" });
+    }
   });
 
-  app.post("/api/charges", isPinAuthenticated, requirePermission("manage_charges"), async (req, res) => {
+  app.post("/api/charges", isPinAuthenticated, requirePermission("manage_expenses"), async (req, res) => {
     try {
       const item = await storage.createCharge(req.body);
       res.status(201).json(item);
     } catch (err) {
+      console.error("Error creating charge:", err);
       res.status(400).json({ message: "Failed to create charge" });
     }
   });
 
-  app.delete("/api/charges/:id", isPinAuthenticated, requirePermission("manage_charges"), async (req, res) => {
-    await storage.deleteCharge(Number(req.params.id));
-    res.status(204).send();
+  app.delete("/api/charges/:id", isPinAuthenticated, requirePermission("manage_expenses"), async (req, res) => {
+    try {
+      await storage.deleteCharge(Number(req.params.id));
+      res.status(204).send();
+    } catch (err) {
+      console.error("Error deleting charge:", err);
+      res.status(500).json({ message: "Failed to delete charge" });
+    }
   });
 
   // Staff Deductions - protected routes
   app.get("/api/staff-deductions", isPinAuthenticated, async (_req, res) => {
-    const items = await storage.getStaffDeductions();
-    res.json(items);
+    try {
+      const items = await storage.getStaffDeductions();
+      res.json(items);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch deductions" });
+    }
   });
 
   app.post("/api/staff-deductions", isPinAuthenticated, requirePermission("manage_salaries"), async (req, res) => {
@@ -284,8 +299,12 @@ export async function registerRoutes(
   });
 
   app.delete("/api/staff-deductions/:id", isPinAuthenticated, requirePermission("manage_salaries"), async (req, res) => {
-    await storage.deleteStaffDeduction(Number(req.params.id));
-    res.status(204).send();
+    try {
+      await storage.deleteStaffDeduction(Number(req.params.id));
+      res.status(204).send();
+    } catch (err) {
+      res.status(500).json({ message: "Failed to delete deduction" });
+    }
   });
 
   // Clients - protected routes
@@ -340,11 +359,15 @@ export async function registerRoutes(
 
   // Expense Categories - protected routes
   app.get("/api/expense-categories", isPinAuthenticated, async (_req, res) => {
-    const items = await storage.getExpenseCategories();
-    res.json(items);
+    try {
+      const items = await storage.getExpenseCategories();
+      res.json(items);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch categories" });
+    }
   });
 
-  app.post("/api/expense-categories", isPinAuthenticated, requirePermission("manage_charges"), async (req, res) => {
+  app.post("/api/expense-categories", isPinAuthenticated, requirePermission("manage_expenses"), async (req, res) => {
     try {
       const item = await storage.createExpenseCategory(req.body);
       res.status(201).json(item);
@@ -353,9 +376,13 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/expense-categories/:id", isPinAuthenticated, requirePermission("manage_charges"), async (req, res) => {
-    await storage.deleteExpenseCategory(Number(req.params.id));
-    res.status(204).send();
+  app.delete("/api/expense-categories/:id", isPinAuthenticated, requirePermission("manage_expenses"), async (req, res) => {
+    try {
+      await storage.deleteExpenseCategory(Number(req.params.id));
+      res.status(204).send();
+    } catch (err) {
+      res.status(500).json({ message: "Failed to delete category" });
+    }
   });
 
   // Loyalty Redemptions - protected routes
