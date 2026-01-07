@@ -167,3 +167,122 @@ export async function ensureAppointmentsAuditColumns(): Promise<void> {
     console.error("Failed to ensure appointments audit columns:", error);
   }
 }
+
+// Add foreign key constraints for data integrity (PostgreSQL only)
+export async function ensureForeignKeyConstraints(): Promise<void> {
+  if (dbDialect !== 'postgres') {
+    console.log("Foreign key constraints are only added for PostgreSQL");
+    return;
+  }
+  
+  try {
+    // Add foreign key from loyalty_redemptions to clients
+    await pool.query(`
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.table_constraints 
+          WHERE constraint_name = 'fk_loyalty_redemptions_client' 
+          AND table_name = 'loyalty_redemptions'
+        ) THEN
+          ALTER TABLE loyalty_redemptions 
+          ADD CONSTRAINT fk_loyalty_redemptions_client 
+          FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE;
+        END IF;
+      EXCEPTION WHEN OTHERS THEN
+        NULL; -- Ignore errors if constraint cannot be added
+      END $$;
+    `);
+    
+    // Add foreign key from appointments to clients (if client_id exists)
+    await pool.query(`
+      DO $$ 
+      BEGIN 
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'appointments' AND column_name = 'client_id'
+        ) AND NOT EXISTS (
+          SELECT 1 FROM information_schema.table_constraints 
+          WHERE constraint_name = 'fk_appointments_client' 
+          AND table_name = 'appointments'
+        ) THEN
+          ALTER TABLE appointments 
+          ADD CONSTRAINT fk_appointments_client 
+          FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE SET NULL;
+        END IF;
+      EXCEPTION WHEN OTHERS THEN
+        NULL;
+      END $$;
+    `);
+    
+    // Add foreign key from charges to expense_categories
+    await pool.query(`
+      DO $$ 
+      BEGIN 
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'charges' AND column_name = 'category_id'
+        ) AND NOT EXISTS (
+          SELECT 1 FROM information_schema.table_constraints 
+          WHERE constraint_name = 'fk_charges_category' 
+          AND table_name = 'charges'
+        ) THEN
+          ALTER TABLE charges 
+          ADD CONSTRAINT fk_charges_category 
+          FOREIGN KEY (category_id) REFERENCES expense_categories(id) ON DELETE SET NULL;
+        END IF;
+      EXCEPTION WHEN OTHERS THEN
+        NULL;
+      END $$;
+    `);
+    
+    // Add foreign key from services to products (linked_product_id)
+    await pool.query(`
+      DO $$ 
+      BEGIN 
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'services' AND column_name = 'linked_product_id'
+        ) AND NOT EXISTS (
+          SELECT 1 FROM information_schema.table_constraints 
+          WHERE constraint_name = 'fk_services_product' 
+          AND table_name = 'services'
+        ) THEN
+          ALTER TABLE services 
+          ADD CONSTRAINT fk_services_product 
+          FOREIGN KEY (linked_product_id) REFERENCES products(id) ON DELETE SET NULL;
+        END IF;
+      EXCEPTION WHEN OTHERS THEN
+        NULL;
+      END $$;
+    `);
+    
+    // Add indexes for better query performance
+    await pool.query(`
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_appointments_date') THEN
+          CREATE INDEX idx_appointments_date ON appointments(date);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_appointments_staff') THEN
+          CREATE INDEX idx_appointments_staff ON appointments(staff);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_appointments_client_id') THEN
+          CREATE INDEX idx_appointments_client_id ON appointments(client_id);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_charges_date') THEN
+          CREATE INDEX idx_charges_date ON charges(date);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_staff_deductions_date') THEN
+          CREATE INDEX idx_staff_deductions_date ON staff_deductions(date);
+        END IF;
+      EXCEPTION WHEN OTHERS THEN
+        NULL;
+      END $$;
+    `);
+    
+    console.log("Foreign key constraints and indexes ready");
+  } catch (error) {
+    console.error("Failed to add foreign key constraints:", error);
+  }
+}

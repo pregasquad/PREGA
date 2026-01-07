@@ -1,10 +1,10 @@
-import type { Express } from "express";
+import type { Express, RequestHandler } from "express";
 import type { Server } from "http";
 import { Server as SocketIOServer } from "socket.io";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
-import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
+import { setupAuth, registerAuthRoutes, isPinAuthenticated, requirePermission, checkRateLimit, recordFailedAttempt, clearAttempts } from "./replit_integrations/auth";
 import { vapidPublicKey, sendPushNotification } from "./push";
 import { db, schema } from "./db";
 import { eq } from "drizzle-orm";
@@ -42,25 +42,25 @@ export async function registerRoutes(
 
   // === API ROUTES ===
 
-  // Health check for Koyeb
+  // Health check for Koyeb (public)
   app.get("/api/health", (_req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
-  // Appointments
-  app.get(api.appointments.list.path, async (req, res) => {
+  // Appointments - protected routes
+  app.get(api.appointments.list.path, isPinAuthenticated, async (req, res) => {
     const { date } = z.object({ date: z.string().optional() }).parse(req.query);
     const items = await storage.getAppointments(date);
     res.json(items);
   });
 
   // Get all appointments (for salaries calculation)
-  app.get("/api/appointments/all", async (req, res) => {
+  app.get("/api/appointments/all", isPinAuthenticated, async (req, res) => {
     const items = await storage.getAppointments();
     res.json(items);
   });
 
-  app.post(api.appointments.create.path, async (req, res) => {
+  app.post(api.appointments.create.path, isPinAuthenticated, requirePermission("manage_appointments"), async (req, res) => {
     try {
       const input = api.appointments.create.input.parse(req.body);
       const item = await storage.createAppointment(input);
@@ -88,7 +88,7 @@ export async function registerRoutes(
     }
   });
 
-  app.put(api.appointments.update.path, async (req, res) => {
+  app.put(api.appointments.update.path, isPinAuthenticated, requirePermission("manage_appointments"), async (req, res) => {
     try {
       const input = api.appointments.update.input.parse(req.body);
       const item = await storage.updateAppointment(Number(req.params.id), input);
@@ -107,18 +107,18 @@ export async function registerRoutes(
     }
   });
 
-  app.delete(api.appointments.delete.path, async (req, res) => {
+  app.delete(api.appointments.delete.path, isPinAuthenticated, requirePermission("manage_appointments"), async (req, res) => {
     await storage.deleteAppointment(Number(req.params.id));
     res.status(204).send();
   });
 
-  // Services
-  app.get(api.services.list.path, async (req, res) => {
+  // Services - protected routes
+  app.get(api.services.list.path, isPinAuthenticated, async (req, res) => {
     const items = await storage.getServices();
     res.json(items);
   });
 
-  app.post(api.services.create.path, async (req, res) => {
+  app.post(api.services.create.path, isPinAuthenticated, requirePermission("manage_services"), async (req, res) => {
     try {
       const input = api.services.create.input.parse(req.body);
       const item = await storage.createService(input);
@@ -131,7 +131,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/services/:id", async (req, res) => {
+  app.patch("/api/services/:id", isPinAuthenticated, requirePermission("manage_services"), async (req, res) => {
     try {
       const item = await storage.updateService(Number(req.params.id), req.body);
       res.json(item);
@@ -140,18 +140,18 @@ export async function registerRoutes(
     }
   });
 
-  app.delete(api.services.delete.path, async (req, res) => {
+  app.delete(api.services.delete.path, isPinAuthenticated, requirePermission("manage_services"), async (req, res) => {
     await storage.deleteService(Number(req.params.id));
     res.status(204).send();
   });
 
-  // Categories
-  app.get(api.categories.list.path, async (req, res) => {
+  // Categories - protected routes
+  app.get(api.categories.list.path, isPinAuthenticated, async (req, res) => {
     const items = await storage.getCategories();
     res.json(items);
   });
 
-  app.post(api.categories.create.path, async (req, res) => {
+  app.post(api.categories.create.path, isPinAuthenticated, requirePermission("manage_services"), async (req, res) => {
     try {
       const input = api.categories.create.input.parse(req.body);
       const item = await storage.createCategory(input);
@@ -164,7 +164,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/categories/:id", async (req, res) => {
+  app.patch("/api/categories/:id", isPinAuthenticated, requirePermission("manage_services"), async (req, res) => {
     try {
       const item = await storage.updateCategory(Number(req.params.id), req.body);
       res.json(item);
@@ -173,71 +173,71 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/categories/:id", async (req, res) => {
+  app.delete("/api/categories/:id", isPinAuthenticated, requirePermission("manage_services"), async (req, res) => {
     await storage.deleteCategory(Number(req.params.id));
     res.status(204).send();
   });
 
-  // Staff
-  app.get(api.staff.list.path, async (req, res) => {
+  // Staff - protected routes
+  app.get(api.staff.list.path, isPinAuthenticated, async (req, res) => {
     const items = await storage.getStaff();
     res.json(items);
   });
 
-  app.post("/api/staff", async (req, res) => {
+  app.post("/api/staff", isPinAuthenticated, requirePermission("manage_staff"), async (req, res) => {
     const item = await storage.createStaff(req.body);
     res.status(201).json(item);
   });
 
-  app.patch("/api/staff/:id", async (req, res) => {
+  app.patch("/api/staff/:id", isPinAuthenticated, requirePermission("manage_staff"), async (req, res) => {
     const item = await storage.updateStaff(Number(req.params.id), req.body);
     res.json(item);
   });
 
-  app.delete("/api/staff/:id", async (req, res) => {
+  app.delete("/api/staff/:id", isPinAuthenticated, requirePermission("manage_staff"), async (req, res) => {
     await storage.deleteStaff(Number(req.params.id));
     res.status(204).send();
   });
 
-  // Products/Inventory
-  app.get("/api/products", async (_req, res) => {
+  // Products/Inventory - protected routes
+  app.get("/api/products", isPinAuthenticated, async (_req, res) => {
     const products = await storage.getProducts();
     res.json(products);
   });
 
-  app.get("/api/products/low-stock", async (_req, res) => {
+  app.get("/api/products/low-stock", isPinAuthenticated, async (_req, res) => {
     const items = await storage.getLowStockProducts();
     res.json(items);
   });
 
-  app.get("/api/products/by-name/:name", async (req, res) => {
+  app.get("/api/products/by-name/:name", isPinAuthenticated, async (req, res) => {
     const product = await storage.getProductByName(req.params.name);
     if (!product) return res.status(404).json({ message: "Product not found" });
     res.json(product);
   });
 
-  app.post("/api/products", async (req, res) => {
+  app.post("/api/products", isPinAuthenticated, requirePermission("manage_products"), async (req, res) => {
     const item = await storage.createProduct(req.body);
     res.status(201).json(item);
   });
 
-  app.patch("/api/products/:id", async (req, res) => {
+  app.patch("/api/products/:id", isPinAuthenticated, requirePermission("manage_products"), async (req, res) => {
     const item = await storage.updateProduct(Number(req.params.id), req.body);
     res.json(item);
   });
 
-  app.delete("/api/products/:id", async (req, res) => {
+  app.delete("/api/products/:id", isPinAuthenticated, requirePermission("manage_products"), async (req, res) => {
     await storage.deleteProduct(Number(req.params.id));
     res.status(204).send();
   });
 
-  app.get("/api/products/:id", async (req, res) => {
+  app.get("/api/products/:id", isPinAuthenticated, async (req, res) => {
     const product = await storage.getProducts().then(prods => prods.find(p => p.id === parseInt(req.params.id)));
     if (!product) return res.status(404).json({ message: "Product not found" });
     res.json(product);
   });
 
-  app.patch("/api/products/:id/quantity", async (req, res) => {
+  app.patch("/api/products/:id/quantity", isPinAuthenticated, requirePermission("manage_products"), async (req, res) => {
     const { quantity } = req.body;
     if (typeof quantity !== "number") return res.status(400).json({ message: "Invalid quantity" });
     try {
@@ -248,13 +248,13 @@ export async function registerRoutes(
     }
   });
 
-  // Charges
-  app.get("/api/charges", async (_req, res) => {
+  // Charges - protected routes
+  app.get("/api/charges", isPinAuthenticated, async (_req, res) => {
     const items = await storage.getCharges();
     res.json(items);
   });
 
-  app.post("/api/charges", async (req, res) => {
+  app.post("/api/charges", isPinAuthenticated, requirePermission("manage_charges"), async (req, res) => {
     try {
       const item = await storage.createCharge(req.body);
       res.status(201).json(item);
@@ -263,18 +263,18 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/charges/:id", async (req, res) => {
+  app.delete("/api/charges/:id", isPinAuthenticated, requirePermission("manage_charges"), async (req, res) => {
     await storage.deleteCharge(Number(req.params.id));
     res.status(204).send();
   });
 
-  // Staff Deductions
-  app.get("/api/staff-deductions", async (_req, res) => {
+  // Staff Deductions - protected routes
+  app.get("/api/staff-deductions", isPinAuthenticated, async (_req, res) => {
     const items = await storage.getStaffDeductions();
     res.json(items);
   });
 
-  app.post("/api/staff-deductions", async (req, res) => {
+  app.post("/api/staff-deductions", isPinAuthenticated, requirePermission("manage_salaries"), async (req, res) => {
     try {
       const item = await storage.createStaffDeduction(req.body);
       res.status(201).json(item);
@@ -283,29 +283,29 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/staff-deductions/:id", async (req, res) => {
+  app.delete("/api/staff-deductions/:id", isPinAuthenticated, requirePermission("manage_salaries"), async (req, res) => {
     await storage.deleteStaffDeduction(Number(req.params.id));
     res.status(204).send();
   });
 
-  // Clients
-  app.get("/api/clients", async (_req, res) => {
+  // Clients - protected routes
+  app.get("/api/clients", isPinAuthenticated, async (_req, res) => {
     const items = await storage.getClients();
     res.json(items);
   });
 
-  app.get("/api/clients/:id", async (req, res) => {
+  app.get("/api/clients/:id", isPinAuthenticated, async (req, res) => {
     const client = await storage.getClient(Number(req.params.id));
     if (!client) return res.status(404).json({ message: "Client not found" });
     res.json(client);
   });
 
-  app.get("/api/clients/:id/appointments", async (req, res) => {
+  app.get("/api/clients/:id/appointments", isPinAuthenticated, async (req, res) => {
     const appointments = await storage.getClientAppointments(Number(req.params.id));
     res.json(appointments);
   });
 
-  app.post("/api/clients", async (req, res) => {
+  app.post("/api/clients", isPinAuthenticated, requirePermission("manage_clients"), async (req, res) => {
     try {
       const item = await storage.createClient(req.body);
       res.status(201).json(item);
@@ -314,7 +314,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/clients/:id", async (req, res) => {
+  app.patch("/api/clients/:id", isPinAuthenticated, requirePermission("manage_clients"), async (req, res) => {
     try {
       const item = await storage.updateClient(Number(req.params.id), req.body);
       res.json(item);
@@ -323,7 +323,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/clients/:id/loyalty", async (req, res) => {
+  app.patch("/api/clients/:id/loyalty", isPinAuthenticated, requirePermission("manage_clients"), async (req, res) => {
     try {
       const { points, spent } = req.body;
       const item = await storage.updateClientLoyalty(Number(req.params.id), points, spent);
@@ -333,18 +333,18 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/clients/:id", async (req, res) => {
+  app.delete("/api/clients/:id", isPinAuthenticated, requirePermission("manage_clients"), async (req, res) => {
     await storage.deleteClient(Number(req.params.id));
     res.status(204).send();
   });
 
-  // Expense Categories
-  app.get("/api/expense-categories", async (_req, res) => {
+  // Expense Categories - protected routes
+  app.get("/api/expense-categories", isPinAuthenticated, async (_req, res) => {
     const items = await storage.getExpenseCategories();
     res.json(items);
   });
 
-  app.post("/api/expense-categories", async (req, res) => {
+  app.post("/api/expense-categories", isPinAuthenticated, requirePermission("manage_charges"), async (req, res) => {
     try {
       const item = await storage.createExpenseCategory(req.body);
       res.status(201).json(item);
@@ -353,19 +353,19 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/expense-categories/:id", async (req, res) => {
+  app.delete("/api/expense-categories/:id", isPinAuthenticated, requirePermission("manage_charges"), async (req, res) => {
     await storage.deleteExpenseCategory(Number(req.params.id));
     res.status(204).send();
   });
 
-  // Loyalty Redemptions
-  app.get("/api/loyalty-redemptions", async (req, res) => {
+  // Loyalty Redemptions - protected routes
+  app.get("/api/loyalty-redemptions", isPinAuthenticated, async (req, res) => {
     const clientId = req.query.clientId ? Number(req.query.clientId) : undefined;
     const items = await storage.getLoyaltyRedemptions(clientId);
     res.json(items);
   });
 
-  app.post("/api/loyalty-redemptions", async (req, res) => {
+  app.post("/api/loyalty-redemptions", isPinAuthenticated, requirePermission("manage_clients"), async (req, res) => {
     try {
       const item = await storage.createLoyaltyRedemption(req.body);
       res.status(201).json(item);
@@ -374,8 +374,8 @@ export async function registerRoutes(
     }
   });
 
-  // Staff Performance
-  app.get("/api/staff-performance/:staffName", async (req, res) => {
+  // Staff Performance - protected routes
+  app.get("/api/staff-performance/:staffName", isPinAuthenticated, async (req, res) => {
     try {
       const { startDate, endDate } = z.object({
         startDate: z.string(),
@@ -393,8 +393,8 @@ export async function registerRoutes(
     }
   });
 
-  // WhatsApp Notifications (SendZen)
-  app.post("/api/notifications/send", async (req, res) => {
+  // WhatsApp Notifications (SendZen) - protected routes
+  app.post("/api/notifications/send", isPinAuthenticated, async (req, res) => {
     try {
       const { sendWhatsAppMessage } = await import("./sendzen");
       const { phone, message } = z.object({
@@ -414,7 +414,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/notifications/appointment-reminder", async (req, res) => {
+  app.post("/api/notifications/appointment-reminder", isPinAuthenticated, async (req, res) => {
     try {
       const { sendAppointmentReminder } = await import("./sendzen");
       const { clientPhone, clientName, appointmentDate, appointmentTime, serviceName } = z.object({
@@ -437,7 +437,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/notifications/booking-confirmation", async (req, res) => {
+  app.post("/api/notifications/booking-confirmation", isPinAuthenticated, async (req, res) => {
     try {
       const { sendBookingConfirmation } = await import("./sendzen");
       const { clientPhone, clientName, appointmentDate, appointmentTime, serviceName } = z.object({
@@ -473,7 +473,7 @@ export async function registerRoutes(
     res.json({ publicKey: vapidPublicKey });
   });
 
-  app.post("/api/push/subscribe", async (req, res) => {
+  app.post("/api/push/subscribe", isPinAuthenticated, async (req, res) => {
     try {
       const { endpoint, keys } = req.body;
       
@@ -499,7 +499,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/push/unsubscribe", async (req, res) => {
+  app.post("/api/push/unsubscribe", isPinAuthenticated, async (req, res) => {
     try {
       const { endpoint } = req.body;
       
@@ -515,7 +515,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/push/test", async (_req, res) => {
+  app.post("/api/push/test", isPinAuthenticated, async (_req, res) => {
     try {
       const results = await sendPushNotification(
         "PREGA SQUAD",
@@ -529,19 +529,22 @@ export async function registerRoutes(
   });
 
   // === Admin Roles ===
+  // List admin roles - public (for login screen, PINs are masked)
   app.get("/api/admin-roles", async (_req, res) => {
     const roles = await storage.getAdminRoles();
     const safeRoles = roles.map(r => ({ ...r, pin: r.pin ? "****" : null }));
     res.json(safeRoles);
   });
 
-  app.get("/api/admin-roles/:id", async (req, res) => {
+  // Get specific admin role - protected
+  app.get("/api/admin-roles/:id", isPinAuthenticated, requirePermission("manage_admin_roles"), async (req, res) => {
     const role = await storage.getAdminRole(Number(req.params.id));
     if (!role) return res.status(404).json({ message: "Admin role not found" });
     res.json({ ...role, pin: role.pin ? "****" : null });
   });
 
-  app.post("/api/admin-roles", async (req, res) => {
+  // Create admin role - protected
+  app.post("/api/admin-roles", isPinAuthenticated, requirePermission("manage_admin_roles"), async (req, res) => {
     try {
       const input = insertAdminRoleSchema.parse(req.body);
       const permissions = ROLE_PERMISSIONS[input.role as keyof typeof ROLE_PERMISSIONS] || [];
@@ -567,7 +570,8 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/admin-roles/:id", async (req, res) => {
+  // Update admin role - protected
+  app.patch("/api/admin-roles/:id", isPinAuthenticated, requirePermission("manage_admin_roles"), async (req, res) => {
     try {
       const updateData = { ...req.body };
       
@@ -585,7 +589,8 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/admin-roles/:id", async (req, res) => {
+  // Delete admin role - protected
+  app.delete("/api/admin-roles/:id", isPinAuthenticated, requirePermission("manage_admin_roles"), async (req, res) => {
     await storage.deleteAdminRole(Number(req.params.id));
     res.status(204).send();
   });
@@ -597,8 +602,22 @@ export async function registerRoutes(
         pin: z.string()
       }).parse(req.body);
       
+      // Rate limiting by IP + username
+      const identifier = `${req.ip}:${name}`;
+      const rateCheck = checkRateLimit(identifier);
+      
+      if (!rateCheck.allowed) {
+        const lockoutRemaining = Math.ceil((rateCheck.lockoutUntil! - Date.now()) / 1000);
+        return res.status(429).json({ 
+          success: false, 
+          message: `Too many failed attempts. Try again in ${lockoutRemaining} seconds.`,
+          lockoutSeconds: lockoutRemaining
+        });
+      }
+      
       const role = await storage.getAdminRoleByName(name);
       if (!role) {
+        recordFailedAttempt(identifier);
         return res.status(404).json({ success: false, message: "User not found" });
       }
       
@@ -608,13 +627,51 @@ export async function registerRoutes(
       
       const isValid = await bcrypt.compare(pin, role.pin);
       if (!isValid) {
-        return res.status(401).json({ success: false, message: "Invalid PIN" });
+        recordFailedAttempt(identifier);
+        return res.status(401).json({ 
+          success: false, 
+          message: "Invalid PIN",
+          remainingAttempts: rateCheck.remainingAttempts - 1
+        });
       }
+      
+      // Clear failed attempts on successful login
+      clearAttempts(identifier);
+      
+      // Store authentication in server session
+      req.session.pinAuth = {
+        userName: role.name,
+        role: role.role,
+        permissions: role.permissions || [],
+        authenticatedAt: Date.now()
+      };
       
       res.json({ success: true, role: role.role, permissions: role.permissions });
     } catch (err: any) {
       res.status(400).json({ success: false, message: err.message });
     }
+  });
+  
+  // Get current session status
+  app.get("/api/auth/session", (req, res) => {
+    if (req.session?.pinAuth) {
+      res.json({
+        authenticated: true,
+        userName: req.session.pinAuth.userName,
+        role: req.session.pinAuth.role,
+        permissions: req.session.pinAuth.permissions
+      });
+    } else {
+      res.json({ authenticated: false });
+    }
+  });
+  
+  // Logout endpoint
+  app.post("/api/auth/pin-logout", (req, res) => {
+    if (req.session?.pinAuth) {
+      delete req.session.pinAuth;
+    }
+    res.json({ success: true });
   });
 
   // Reset PIN with business phone verification
@@ -654,8 +711,8 @@ export async function registerRoutes(
     }
   });
 
-  // === Business Settings ===
-  app.get("/api/business-settings", async (_req, res) => {
+  // === Business Settings - protected routes ===
+  app.get("/api/business-settings", isPinAuthenticated, async (_req, res) => {
     try {
       const settings = await storage.getBusinessSettings();
       if (!settings) {
@@ -674,7 +731,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/business-settings", async (req, res) => {
+  app.patch("/api/business-settings", isPinAuthenticated, requirePermission("manage_business_settings"), async (req, res) => {
     try {
       const settings = await storage.updateBusinessSettings(req.body);
       res.json(settings);
@@ -683,8 +740,8 @@ export async function registerRoutes(
     }
   });
 
-  // === Data Export ===
-  app.get("/api/export/appointments", async (req, res) => {
+  // === Data Export - protected routes ===
+  app.get("/api/export/appointments", isPinAuthenticated, requirePermission("export_data"), async (req, res) => {
     try {
       const { startDate, endDate } = z.object({
         startDate: z.string().optional(),
@@ -710,7 +767,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/export/clients", async (_req, res) => {
+  app.get("/api/export/clients", isPinAuthenticated, requirePermission("export_data"), async (_req, res) => {
     try {
       const clients = await storage.getClients();
       const csv = generateCSV(clients, [
@@ -725,7 +782,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/export/services", async (_req, res) => {
+  app.get("/api/export/services", isPinAuthenticated, requirePermission("export_data"), async (_req, res) => {
     try {
       const services = await storage.getServices();
       const csv = generateCSV(services, [
@@ -740,7 +797,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/export/staff", async (_req, res) => {
+  app.get("/api/export/staff", isPinAuthenticated, requirePermission("export_data"), async (_req, res) => {
     try {
       const staffList = await storage.getStaff();
       const csv = generateCSV(staffList, [
@@ -755,7 +812,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/export/inventory", async (_req, res) => {
+  app.get("/api/export/inventory", isPinAuthenticated, requirePermission("export_data"), async (_req, res) => {
     try {
       const products = await storage.getProducts();
       const csv = generateCSV(products, [
@@ -770,7 +827,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/export/expenses", async (_req, res) => {
+  app.get("/api/export/expenses", isPinAuthenticated, requirePermission("export_data"), async (_req, res) => {
     try {
       const charges = await storage.getCharges();
       const csv = generateCSV(charges, [

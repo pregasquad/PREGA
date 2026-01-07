@@ -8,6 +8,64 @@ import memoize from "memoizee";
 import MemoryStore from "memorystore";
 import { authStorage } from "./storage";
 
+// Extend session data type for PIN-based auth
+declare module 'express-session' {
+  interface SessionData {
+    pinAuth?: {
+      userName: string;
+      role: string;
+      permissions: string[];
+      authenticatedAt: number;
+    };
+  }
+}
+
+// Rate limiting for PIN attempts
+const pinAttempts = new Map<string, { count: number; lastAttempt: number }>();
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_DURATION = 5 * 60 * 1000; // 5 minutes
+
+export function checkRateLimit(identifier: string): { allowed: boolean; remainingAttempts: number; lockoutUntil?: number } {
+  const now = Date.now();
+  const record = pinAttempts.get(identifier);
+  
+  if (!record) {
+    return { allowed: true, remainingAttempts: MAX_ATTEMPTS };
+  }
+  
+  // Reset if lockout period has passed
+  if (now - record.lastAttempt > LOCKOUT_DURATION) {
+    pinAttempts.delete(identifier);
+    return { allowed: true, remainingAttempts: MAX_ATTEMPTS };
+  }
+  
+  if (record.count >= MAX_ATTEMPTS) {
+    return { 
+      allowed: false, 
+      remainingAttempts: 0, 
+      lockoutUntil: record.lastAttempt + LOCKOUT_DURATION 
+    };
+  }
+  
+  return { allowed: true, remainingAttempts: MAX_ATTEMPTS - record.count };
+}
+
+export function recordFailedAttempt(identifier: string): void {
+  const now = Date.now();
+  const record = pinAttempts.get(identifier);
+  
+  if (!record || now - record.lastAttempt > LOCKOUT_DURATION) {
+    pinAttempts.set(identifier, { count: 1, lastAttempt: now });
+  } else {
+    record.count++;
+    record.lastAttempt = now;
+  }
+}
+
+export function clearAttempts(identifier: string): void {
+  pinAttempts.delete(identifier);
+}
+
 const getOidcConfig = memoize(
   async () => {
     return await client.discovery(
@@ -18,6 +76,30 @@ const getOidcConfig = memoize(
   { maxAge: 3600 * 1000 }
 );
 
+// Session secret handling - require in production, warn in development
+let cachedSecret: string = "";
+function getSessionSecret(): string {
+  if (cachedSecret) return cachedSecret;
+  
+  if (process.env.SESSION_SECRET) {
+    cachedSecret = process.env.SESSION_SECRET;
+    return cachedSecret;
+  }
+  
+  // Generate a random secret
+  const crypto = require('crypto');
+  cachedSecret = crypto.randomBytes(32).toString('hex');
+  
+  // In production, log error prominently
+  if (process.env.NODE_ENV === 'production') {
+    console.error("CRITICAL: SESSION_SECRET environment variable is not set. This is required for production deployments.");
+  } else {
+    console.warn("WARNING: No SESSION_SECRET set. Using a random session secret for this session. Set SESSION_SECRET for persistent sessions.");
+  }
+  
+  return cachedSecret;
+}
+
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   const MemoryStoreSession = MemoryStore(session);
@@ -25,7 +107,7 @@ export function getSession() {
     checkPeriod: 86400000, // prune expired entries every 24h
   });
   return session({
-    secret: process.env.SESSION_SECRET || "pregasquad-default-secret",
+    secret: getSessionSecret(),
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
@@ -33,6 +115,7 @@ export function getSession() {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       maxAge: sessionTtl,
+      sameSite: 'strict', // Prevent CSRF attacks
     },
   });
 }
@@ -183,3 +266,37 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     return;
   }
 };
+
+// PIN-based authentication middleware
+export const isPinAuthenticated: RequestHandler = (req, res, next) => {
+  if (req.session?.pinAuth?.userName) {
+    return next();
+  }
+  return res.status(401).json({ message: "Unauthorized - Please login with your PIN" });
+};
+
+// Permission check middleware - creates a middleware that checks for specific permission
+export function requirePermission(permission: string): RequestHandler {
+  return (req, res, next) => {
+    const pinAuth = req.session?.pinAuth;
+    if (!pinAuth) {
+      return res.status(401).json({ message: "Unauthorized - Please login first" });
+    }
+    
+    // Empty permissions array means full access (opt-in restriction model)
+    if (!pinAuth.permissions || pinAuth.permissions.length === 0) {
+      return next();
+    }
+    
+    if (pinAuth.permissions.includes(permission)) {
+      return next();
+    }
+    
+    return res.status(403).json({ message: "Forbidden - You do not have permission to access this resource" });
+  };
+}
+
+// Get current session info
+export function getSessionInfo(req: any): { userName: string; role: string; permissions: string[] } | null {
+  return req.session?.pinAuth || null;
+}
