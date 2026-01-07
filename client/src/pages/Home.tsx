@@ -41,6 +41,7 @@ export default function Home() {
 
   const handleAdminLogout = () => {
     sessionStorage.removeItem("admin_authenticated");
+    localStorage.removeItem("admin_authenticated");
     setLocation("/planning");
   };
 
