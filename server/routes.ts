@@ -607,10 +607,18 @@ export async function registerRoutes(
     try {
       const updateData = { ...req.body };
       
-      if (updateData.pin && updateData.pin.length >= 4) {
-        updateData.pin = await bcrypt.hash(updateData.pin, 10);
-      } else if (updateData.pin === "") {
-        updateData.pin = null;
+      // Handle PIN update
+      if (updateData.pin !== undefined) {
+        if (updateData.pin === "" || updateData.pin === null) {
+          // Clear PIN
+          updateData.pin = null;
+        } else if (updateData.pin.length < 4) {
+          // Reject short PINs
+          return res.status(400).json({ message: "PIN must be at least 4 characters" });
+        } else {
+          // Hash valid PIN
+          updateData.pin = await bcrypt.hash(updateData.pin, 10);
+        }
       }
       
       const role = await storage.updateAdminRole(Number(req.params.id), updateData);
