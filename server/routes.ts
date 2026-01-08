@@ -228,17 +228,17 @@ export async function registerRoutes(
     res.json(product);
   });
 
-  app.post("/api/products", isPinAuthenticated, requirePermission("manage_products"), async (req, res) => {
+  app.post("/api/products", isPinAuthenticated, requirePermission("manage_inventory"), async (req, res) => {
     const item = await storage.createProduct(req.body);
     res.status(201).json(item);
   });
 
-  app.patch("/api/products/:id", isPinAuthenticated, requirePermission("manage_products"), async (req, res) => {
+  app.patch("/api/products/:id", isPinAuthenticated, requirePermission("manage_inventory"), async (req, res) => {
     const item = await storage.updateProduct(Number(req.params.id), req.body);
     res.json(item);
   });
 
-  app.delete("/api/products/:id", isPinAuthenticated, requirePermission("manage_products"), async (req, res) => {
+  app.delete("/api/products/:id", isPinAuthenticated, requirePermission("manage_inventory"), async (req, res) => {
     await storage.deleteProduct(Number(req.params.id));
     res.status(204).send();
   });
@@ -249,7 +249,7 @@ export async function registerRoutes(
     res.json(product);
   });
 
-  app.patch("/api/products/:id/quantity", isPinAuthenticated, requirePermission("manage_products"), async (req, res) => {
+  app.patch("/api/products/:id/quantity", isPinAuthenticated, requirePermission("manage_inventory"), async (req, res) => {
     const { quantity } = req.body;
     if (typeof quantity !== "number") return res.status(400).json({ message: "Invalid quantity" });
     try {
