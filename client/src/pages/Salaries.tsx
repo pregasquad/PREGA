@@ -311,7 +311,7 @@ export default function Salaries() {
 
       <div className="flex gap-2 flex-wrap">
         <Select value={period} onValueChange={(v) => setPeriod(v as PeriodType)}>
-          <SelectTrigger className="w-24 h-8 text-xs">
+          <SelectTrigger className="w-28 h-9 text-sm">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -323,8 +323,8 @@ export default function Salaries() {
 
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8 text-xs px-2">
-              <CalendarIcon className="h-3 w-3 mr-1" />
+            <Button variant="outline" size="sm" className="h-9 text-sm px-3">
+              <CalendarIcon className="h-4 w-4 mr-2" />
               {format(selectedDate, "d/M/yy")}
             </Button>
           </PopoverTrigger>
@@ -339,7 +339,7 @@ export default function Salaries() {
         </Popover>
 
         <Select value={selectedStaff} onValueChange={setSelectedStaff}>
-          <SelectTrigger className="w-24 h-8 text-xs">
+          <SelectTrigger className="w-28 h-9 text-sm">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -354,46 +354,46 @@ export default function Salaries() {
       <div className="grid grid-cols-2 gap-2">
         <Card>
           <CardContent className="p-3">
-            <p className="text-xs text-muted-foreground">{t("salaries.totalRevenue")}</p>
-            <p className="text-xl font-bold">{formatCurrency(totalRevenue)}</p>
+            <p className="text-sm text-muted-foreground">{t("salaries.totalRevenue")}</p>
+            <p className="text-2xl font-bold">{formatCurrency(totalRevenue)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-3">
-            <p className="text-xs text-muted-foreground">{t("salaries.staffCommissions")}</p>
-            <p className="text-xl font-bold text-green-600">{formatCurrency(totalCommissions)}</p>
+            <p className="text-sm text-muted-foreground">{t("salaries.staffCommissions")}</p>
+            <p className="text-2xl font-bold text-green-600">{formatCurrency(totalCommissions)}</p>
           </CardContent>
         </Card>
         <Card className="bg-primary/5">
           <CardContent className="p-3">
-            <p className="text-xs text-muted-foreground">{t("salaries.salonShare")}</p>
-            <p className="text-xl font-bold text-primary">{formatCurrency(salonPortion)}</p>
+            <p className="text-sm text-muted-foreground">{t("salaries.salonShare")}</p>
+            <p className="text-2xl font-bold text-primary">{formatCurrency(salonPortion)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-3">
-            <p className="text-xs text-muted-foreground">{t("salaries.appointmentsCount")}</p>
-            <p className="text-xl font-bold">{totalAppointments}</p>
+            <p className="text-sm text-muted-foreground">{t("salaries.appointmentsCount")}</p>
+            <p className="text-2xl font-bold">{totalAppointments}</p>
           </CardContent>
         </Card>
       </div>
 
       <Card>
         <CardHeader className="p-3 pb-2">
-          <CardTitle className="text-sm">{t("salaries.budget")}</CardTitle>
+          <CardTitle className="text-base">{t("salaries.budget")}</CardTitle>
         </CardHeader>
         <CardContent className="p-3 pt-0 space-y-2">
-          <div className="p-2 bg-primary/5 rounded-lg space-y-1">
-            <p className="text-xs font-medium">{t("salaries.salonAccount")}</p>
-            <div className="flex justify-between text-xs">
+          <div className="p-3 bg-primary/5 rounded-lg space-y-1.5">
+            <p className="text-sm font-medium">{t("salaries.salonAccount")}</p>
+            <div className="flex justify-between text-sm">
               <span>{t("salaries.salonRevenueShare")}</span>
               <span className="text-primary">{formatCurrency(salonPortion)}</span>
             </div>
-            <div className="flex justify-between text-xs text-red-600">
+            <div className="flex justify-between text-sm text-red-600">
               <span>{t("salaries.totalExpenses")}</span>
               <span>-{formatCurrency(totalExpenses)}</span>
             </div>
-            <div className="flex justify-between text-sm font-bold border-t pt-1">
+            <div className="flex justify-between text-base font-bold border-t pt-1">
               <span>{t("salaries.salonNetProfit")}</span>
               <span className={netProfit >= 0 ? 'text-green-600' : 'text-red-600'}>
                 {formatCurrency(netProfit)}
@@ -401,17 +401,17 @@ export default function Salaries() {
             </div>
           </div>
 
-          <div className="p-2 bg-green-50 rounded-lg space-y-1">
-            <p className="text-xs font-medium">{t("salaries.staffAccount")}</p>
-            <div className="flex justify-between text-xs">
+          <div className="p-3 bg-green-50 rounded-lg space-y-1.5">
+            <p className="text-sm font-medium">{t("salaries.staffAccount")}</p>
+            <div className="flex justify-between text-sm">
               <span>{t("salaries.totalCommissionsDue")}</span>
               <span className="text-green-600">{formatCurrency(totalCommissions)}</span>
             </div>
-            <div className="flex justify-between text-xs text-orange-600">
+            <div className="flex justify-between text-sm text-orange-600">
               <span>{t("salaries.totalDeductions")}</span>
               <span>-{formatCurrency(totalDeductions)}</span>
             </div>
-            <div className="flex justify-between text-sm font-bold border-t pt-1">
+            <div className="flex justify-between text-base font-bold border-t pt-1">
               <span>{t("salaries.netDueToStaff")}</span>
               <span className={netStaffPayable >= 0 ? 'text-green-600' : 'text-red-600'}>
                 {formatCurrency(netStaffPayable)}
@@ -423,16 +423,16 @@ export default function Salaries() {
 
       <Card>
         <CardHeader className="p-3 pb-2">
-          <CardTitle className="text-sm">{t("salaries.staffEarningsDetails")}</CardTitle>
+          <CardTitle className="text-base">{t("salaries.staffEarningsDetails")}</CardTitle>
         </CardHeader>
         <CardContent className="p-3 pt-0 space-y-2">
           {staffEarnings.map((earning) => (
-            <div key={earning.name} className="p-2 bg-muted/50 rounded-lg">
+            <div key={earning.name} className="p-3 bg-muted/50 rounded-lg">
               <div className="flex justify-between items-center">
-                <span className="font-medium text-sm">{earning.name}</span>
-                <span className="text-xs text-muted-foreground">{earning.appointmentsCount} rdv</span>
+                <span className="font-medium text-base">{earning.name}</span>
+                <span className="text-sm text-muted-foreground">{earning.appointmentsCount} rdv</span>
               </div>
-              <div className="grid grid-cols-2 gap-2 mt-1 text-xs">
+              <div className="grid grid-cols-2 gap-2 mt-1 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Rev:</span>
                   <span>{formatCurrency(earning.totalRevenue)}</span>
@@ -455,7 +455,7 @@ export default function Salaries() {
       {selectedStaff !== "all" && (
         <Card>
           <CardHeader className="p-3 pb-2">
-            <CardTitle className="text-sm">{t("salaries.serviceDetails")} - {selectedStaff}</CardTitle>
+            <CardTitle className="text-base">{t("salaries.serviceDetails")} - {selectedStaff}</CardTitle>
           </CardHeader>
           <CardContent className="p-3 pt-0 space-y-2">
             {staffEarnings
@@ -464,12 +464,12 @@ export default function Salaries() {
               Object.entries(
                 staffEarnings.find((e) => e.name === selectedStaff)!.services
               ).map(([serviceName, data]) => (
-                <div key={serviceName} className="p-2 bg-muted/50 rounded-lg">
+                <div key={serviceName} className="p-3 bg-muted/50 rounded-lg">
                   <div className="flex justify-between items-center">
-                    <span className="font-medium text-xs">{serviceName}</span>
-                    <span className="text-xs text-muted-foreground">{getServiceCommission(serviceName)}% | x{data.count}</span>
+                    <span className="font-medium text-sm">{serviceName}</span>
+                    <span className="text-sm text-muted-foreground">{getServiceCommission(serviceName)}% | x{data.count}</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 mt-1 text-xs">
+                  <div className="grid grid-cols-2 gap-2 mt-1 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Rev:</span>
                       <span>{formatCurrency(data.revenue)}</span>
@@ -490,7 +490,7 @@ export default function Salaries() {
           <CollapsibleTrigger asChild>
             <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors p-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm">{t("salaries.commissionRatesByService")}</CardTitle>
+                <CardTitle className="text-base">{t("salaries.commissionRatesByService")}</CardTitle>
                 <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${commissionRatesOpen ? 'rotate-180' : ''}`} />
               </div>
             </CardHeader>
@@ -504,9 +504,9 @@ export default function Salaries() {
                 const isEditing = editingServiceId === service.id;
 
                 return (
-                  <div key={service.id} className="p-2 bg-muted/50 rounded-lg">
+                  <div key={service.id} className="p-3 bg-muted/50 rounded-lg">
                     <div className="flex justify-between items-center">
-                      <span className="font-medium text-sm">{service.name}</span>
+                      <span className="font-medium text-base">{service.name}</span>
                       <div className="flex items-center gap-1">
                         {isEditing ? (
                           <>
@@ -516,43 +516,43 @@ export default function Salaries() {
                               max={100}
                               value={editValue}
                               onChange={(e) => setEditValue(e.target.value)}
-                              className="w-14 h-7 text-xs"
+                              className="w-16 h-8 text-sm"
                             />
-                            <span className="text-xs">%</span>
+                            <span className="text-sm">%</span>
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-6 w-6"
+                              className="h-7 w-7"
                               onClick={() => saveCommission(service.id)}
                               disabled={updateCommissionMutation.isPending}
                             >
-                              <Check className="h-3 w-3 text-green-600" />
+                              <Check className="h-4 w-4 text-green-600" />
                             </Button>
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-6 w-6"
+                              className="h-7 w-7"
                               onClick={cancelEditing}
                             >
-                              <X className="h-3 w-3 text-destructive" />
+                              <X className="h-4 w-4 text-destructive" />
                             </Button>
                           </>
                         ) : (
                           <>
-                            <span className="text-xs bg-primary/10 px-1.5 py-0.5 rounded">{commissionPercent}%</span>
+                            <span className="text-sm bg-primary/10 px-2 py-0.5 rounded">{commissionPercent}%</span>
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-6 w-6"
+                              className="h-7 w-7"
                               onClick={() => startEditing(service)}
                             >
-                              <Edit2 className="h-3 w-3" />
+                              <Edit2 className="h-4 w-4" />
                             </Button>
                           </>
                         )}
                       </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-2 mt-1 text-xs">
+                    <div className="grid grid-cols-3 gap-2 mt-1 text-sm">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">{t("salaries.price")}:</span>
                         <span>{formatCurrency(service.price)}</span>
@@ -576,14 +576,14 @@ export default function Salaries() {
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between p-3 pb-2">
-          <CardTitle className="flex items-center gap-2 text-sm">
+          <CardTitle className="flex items-center gap-2 text-base">
             <Receipt className="h-4 w-4" />
             {t("salaries.expensesAndCosts")}
           </CardTitle>
           <Dialog open={showChargeDialog} onOpenChange={setShowChargeDialog}>
             <DialogTrigger asChild>
-              <Button size="sm" className="h-7 text-xs px-2">
-                <Plus className="h-3 w-3 mr-1" />
+              <Button size="sm" className="h-8 text-sm px-3">
+                <Plus className="h-4 w-4 mr-1" />
                 +
               </Button>
             </DialogTrigger>
@@ -646,13 +646,13 @@ export default function Salaries() {
         </CardHeader>
         <CardContent className="p-3 pt-0 space-y-2">
           {filteredCharges.map((charge) => (
-            <div key={charge.id} className="p-2 bg-red-50 rounded-lg flex justify-between items-center">
+            <div key={charge.id} className="p-3 bg-red-50 rounded-lg flex justify-between items-center">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium truncate">{charge.name}</span>
-                  <span className="text-[10px] px-1.5 py-0.5 bg-red-100 rounded text-red-700">{getChargeTypeLabel(charge.type)}</span>
+                  <span className="text-sm font-medium truncate">{charge.name}</span>
+                  <span className="text-xs px-1.5 py-0.5 bg-red-100 rounded text-red-700">{getChargeTypeLabel(charge.type)}</span>
                 </div>
-                <div className="flex gap-2 text-xs mt-0.5">
+                <div className="flex gap-2 text-sm mt-0.5">
                   <span className="text-red-600 font-semibold">{formatCurrency(charge.amount)}</span>
                   <span className="text-muted-foreground">{format(parseISO(charge.date), "d/M/yy")}</span>
                 </div>
@@ -660,10 +660,10 @@ export default function Salaries() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 shrink-0"
+                className="h-8 w-8 shrink-0"
                 onClick={() => deleteChargeMutation.mutate(charge.id)}
               >
-                <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                <Trash2 className="h-4 w-4 text-destructive" />
               </Button>
             </div>
           ))}
@@ -677,14 +677,14 @@ export default function Salaries() {
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between p-3 pb-2">
-          <CardTitle className="flex items-center gap-2 text-sm">
+          <CardTitle className="flex items-center gap-2 text-base">
             <UserMinus className="h-4 w-4" />
             {t("salaries.staffDeductions")}
           </CardTitle>
           <Dialog open={showDeductionDialog} onOpenChange={setShowDeductionDialog}>
             <DialogTrigger asChild>
-              <Button size="sm" className="h-7 text-xs px-2">
-                <Plus className="h-3 w-3 mr-1" />
+              <Button size="sm" className="h-8 text-sm px-3">
+                <Plus className="h-4 w-4 mr-1" />
                 +
               </Button>
             </DialogTrigger>
@@ -758,14 +758,14 @@ export default function Salaries() {
         </CardHeader>
         <CardContent className="p-3 pt-0 space-y-2">
           {filteredDeductions.map((deduction) => (
-            <div key={deduction.id} className="p-2 bg-orange-50 rounded-lg flex justify-between items-center">
+            <div key={deduction.id} className="p-3 bg-orange-50 rounded-lg flex justify-between items-center">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium">{deduction.staffName}</span>
-                  <span className="text-[10px] px-1.5 py-0.5 bg-orange-100 rounded text-orange-700">{getDeductionTypeLabel(deduction.type)}</span>
+                  <span className="text-sm font-medium">{deduction.staffName}</span>
+                  <span className="text-xs px-1.5 py-0.5 bg-orange-100 rounded text-orange-700">{getDeductionTypeLabel(deduction.type)}</span>
                 </div>
-                <div className="text-xs text-muted-foreground truncate">{deduction.description}</div>
-                <div className="flex gap-2 text-xs mt-0.5">
+                <div className="text-sm text-muted-foreground truncate">{deduction.description}</div>
+                <div className="flex gap-2 text-sm mt-0.5">
                   <span className="text-orange-600 font-semibold">{formatCurrency(deduction.amount)}</span>
                   <span className="text-muted-foreground">{format(parseISO(deduction.date), "d/M/yy")}</span>
                 </div>
@@ -773,10 +773,10 @@ export default function Salaries() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 shrink-0"
+                className="h-8 w-8 shrink-0"
                 onClick={() => deleteDeductionMutation.mutate(deduction.id)}
               >
-                <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                <Trash2 className="h-4 w-4 text-destructive" />
               </Button>
             </div>
           ))}
