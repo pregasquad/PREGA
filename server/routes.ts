@@ -91,7 +91,19 @@ export async function registerRoutes(
   app.put(api.appointments.update.path, isPinAuthenticated, requirePermission("manage_appointments"), async (req, res) => {
     try {
       const input = api.appointments.update.input.parse(req.body);
+      
+      const oldAppointment = await storage.getAppointment(Number(req.params.id));
       const item = await storage.updateAppointment(Number(req.params.id), input);
+      
+      if (item.paid && oldAppointment && !oldAppointment.paid) {
+        const service = await storage.getServiceByName(item.service);
+        if (service?.linkedProductId) {
+          const product = await storage.getProducts().then(prods => prods.find(p => p.id === service.linkedProductId));
+          if (product && product.quantity > 0) {
+            await storage.updateProductQuantity(product.id, product.quantity - 1);
+          }
+        }
+      }
       
       io.emit("appointment:updated", item);
       if (item.paid) {

@@ -30,6 +30,7 @@ export interface IStorage extends IAuthStorage {
   getAppointment(id: number): Promise<Appointment | undefined>;
 
   getServices(): Promise<Service[]>;
+  getServiceByName(name: string): Promise<Service | undefined>;
   createService(service: InsertService): Promise<Service>;
   updateService(id: number, service: Partial<InsertService>): Promise<Service>;
   deleteService(id: number): Promise<void>;
@@ -154,6 +155,12 @@ export class DatabaseStorage implements IStorage {
   async getServices(): Promise<Service[]> {
     const s = schema();
     return await db().select().from(s.services);
+  }
+
+  async getServiceByName(name: string): Promise<Service | undefined> {
+    const s = schema();
+    const [service] = await db().select().from(s.services).where(eq(s.services.name, name));
+    return service;
   }
 
   async createService(service: InsertService): Promise<Service> {
