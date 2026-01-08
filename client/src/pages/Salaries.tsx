@@ -643,15 +643,16 @@ export default function Salaries() {
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between p-3 sm:p-6">
-          <CardTitle className="flex items-center gap-2">
-            <Receipt className="h-5 w-5" />
+          <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+            <Receipt className="h-4 w-4 sm:h-5 sm:w-5" />
             {t("salaries.expensesAndCosts")}
           </CardTitle>
           <Dialog open={showChargeDialog} onOpenChange={setShowChargeDialog}>
             <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className={`h-4 w-4 ${i18n.language === "ar" ? "ml-2" : "mr-2"}`} />
-                {t("salaries.addExpense")}
+              <Button size="sm" className="text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3">
+                <Plus className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${i18n.language === "ar" ? "ml-1" : "mr-1"}`} />
+                <span className="hidden sm:inline">{t("salaries.addExpense")}</span>
+                <span className="sm:hidden">+</span>
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -711,59 +712,62 @@ export default function Salaries() {
             </DialogContent>
           </Dialog>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("common.type")}</TableHead>
-                <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("common.description")}</TableHead>
-                <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("common.amount")}</TableHead>
-                <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("common.date")}</TableHead>
-                <TableHead className={`${i18n.language === "ar" ? "text-right" : "text-left"} w-[60px]`}></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredCharges.map((charge) => (
-                <TableRow key={charge.id}>
-                  <TableCell>{getChargeTypeLabel(charge.type)}</TableCell>
-                  <TableCell>{charge.name}</TableCell>
-                  <TableCell className="text-red-600 font-semibold">{formatCurrency(charge.amount)} {t("common.currency")}</TableCell>
-                  <TableCell>{format(parseISO(charge.date), "d MMM yyyy", { locale: getDateLocale() })}</TableCell>
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => deleteChargeMutation.mutate(charge.id)}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {filteredCharges.length === 0 && (
+        <CardContent className="p-0 sm:p-6 sm:pt-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                    {t("salaries.noExpensesForPeriod")}
-                  </TableCell>
+                  <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("common.type")}</TableHead>
+                  <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("common.description")}</TableHead>
+                  <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("common.amount")}</TableHead>
+                  <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("common.date")}</TableHead>
+                  <TableHead className={`text-xs sm:text-sm ${i18n.language === "ar" ? "text-right" : "text-left"} w-[40px]`}></TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredCharges.map((charge) => (
+                  <TableRow key={charge.id}>
+                    <TableCell className="text-xs sm:text-sm whitespace-nowrap">{getChargeTypeLabel(charge.type)}</TableCell>
+                    <TableCell className="text-xs sm:text-sm">{charge.name}</TableCell>
+                    <TableCell className="text-red-600 font-semibold text-xs sm:text-sm whitespace-nowrap">{formatCurrency(charge.amount)}</TableCell>
+                    <TableCell className="text-xs sm:text-sm whitespace-nowrap">{format(parseISO(charge.date), "d/M/yy", { locale: getDateLocale() })}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 sm:h-8 sm:w-8"
+                        onClick={() => deleteChargeMutation.mutate(charge.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-destructive" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {filteredCharges.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8 text-sm">
+                      {t("salaries.noExpensesForPeriod")}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <UserMinus className="h-5 w-5" />
+        <CardHeader className="flex flex-row items-center justify-between p-3 sm:p-6">
+          <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+            <UserMinus className="h-4 w-4 sm:h-5 sm:w-5" />
             {t("salaries.staffDeductions")}
           </CardTitle>
           <Dialog open={showDeductionDialog} onOpenChange={setShowDeductionDialog}>
             <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className={`h-4 w-4 ${i18n.language === "ar" ? "ml-2" : "mr-2"}`} />
-                {t("salaries.addDeduction")}
+              <Button size="sm" className="text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3">
+                <Plus className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${i18n.language === "ar" ? "ml-1" : "mr-1"}`} />
+                <span className="hidden sm:inline">{t("salaries.addDeduction")}</span>
+                <span className="sm:hidden">+</span>
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -834,47 +838,49 @@ export default function Salaries() {
             </DialogContent>
           </Dialog>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("salaries.staff")}</TableHead>
-                <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("common.type")}</TableHead>
-                <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("common.description")}</TableHead>
-                <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("common.amount")}</TableHead>
-                <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("common.date")}</TableHead>
-                <TableHead className={`${i18n.language === "ar" ? "text-right" : "text-left"} w-[60px]`}></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredDeductions.map((deduction) => (
-                <TableRow key={deduction.id}>
-                  <TableCell className="font-medium">{deduction.staffName}</TableCell>
-                  <TableCell>{getDeductionTypeLabel(deduction.type)}</TableCell>
-                  <TableCell>{deduction.description}</TableCell>
-                  <TableCell className="text-orange-600 font-semibold">{formatCurrency(deduction.amount)} {t("common.currency")}</TableCell>
-                  <TableCell>{format(parseISO(deduction.date), "d MMM yyyy", { locale: getDateLocale() })}</TableCell>
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => deleteDeductionMutation.mutate(deduction.id)}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {filteredDeductions.length === 0 && (
+        <CardContent className="p-0 sm:p-6 sm:pt-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                    {t("salaries.noDeductionsForPeriod")}
-                  </TableCell>
+                  <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("salaries.staff")}</TableHead>
+                  <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("common.type")}</TableHead>
+                  <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("common.description")}</TableHead>
+                  <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("common.amount")}</TableHead>
+                  <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("common.date")}</TableHead>
+                  <TableHead className={`text-xs sm:text-sm ${i18n.language === "ar" ? "text-right" : "text-left"} w-[40px]`}></TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredDeductions.map((deduction) => (
+                  <TableRow key={deduction.id}>
+                    <TableCell className="font-medium text-xs sm:text-sm whitespace-nowrap">{deduction.staffName}</TableCell>
+                    <TableCell className="text-xs sm:text-sm whitespace-nowrap">{getDeductionTypeLabel(deduction.type)}</TableCell>
+                    <TableCell className="text-xs sm:text-sm">{deduction.description}</TableCell>
+                    <TableCell className="text-orange-600 font-semibold text-xs sm:text-sm whitespace-nowrap">{formatCurrency(deduction.amount)}</TableCell>
+                    <TableCell className="text-xs sm:text-sm whitespace-nowrap">{format(parseISO(deduction.date), "d/M/yy", { locale: getDateLocale() })}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 sm:h-8 sm:w-8"
+                        onClick={() => deleteDeductionMutation.mutate(deduction.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-destructive" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {filteredDeductions.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8 text-sm">
+                      {t("salaries.noDeductionsForPeriod")}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>
