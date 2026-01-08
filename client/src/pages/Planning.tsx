@@ -636,25 +636,25 @@ export default function Planning() {
     );
   }
 
-  // Show session expired message if API failed with auth error
-  if (hasAuthError) {
-    const handleRelogin = () => {
+  // Auto-redirect to login if session expired
+  useEffect(() => {
+    if (hasAuthError) {
       sessionStorage.clear();
       localStorage.removeItem("user_authenticated");
       localStorage.removeItem("current_user");
       window.location.href = "/";
-    };
-    
+    }
+  }, [hasAuthError]);
+
+  // Show brief message while redirecting
+  if (hasAuthError) {
     return (
       <div className="h-full flex flex-col items-center justify-center bg-background" dir={isRtl ? "rtl" : "ltr"}>
-        <div className="flex flex-col items-center gap-4 text-center p-4">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-red-400 to-red-600 flex items-center justify-center shadow-lg">
-            <span className="text-3xl font-bold text-white">!</span>
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center shadow-lg animate-pulse">
+            <span className="text-3xl font-bold text-white">P</span>
           </div>
           <p className="text-muted-foreground">{t("planning.sessionExpired")}</p>
-          <Button onClick={handleRelogin} className="mt-2">
-            {t("common.back")} 
-          </Button>
         </div>
       </div>
     );
