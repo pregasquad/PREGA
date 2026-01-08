@@ -1,8 +1,61 @@
+import { useRef, useCallback } from "react";
 import { Sidebar } from "./Sidebar";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { PushNotifications } from "@/components/PushNotifications";
+
+function SwipeableContent({ children, isRtl }: { children: React.ReactNode; isRtl: boolean }) {
+  const { openMobile, setOpenMobile, isMobile } = useSidebar();
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (!isMobile || touchStartX.current === null || touchStartY.current === null) return;
+
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
+    const deltaX = touchEndX - touchStartX.current;
+    const deltaY = touchEndY - touchStartY.current;
+
+    // Only trigger if horizontal swipe is dominant and significant
+    if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
+      if (isRtl) {
+        // RTL: swipe left opens, swipe right closes
+        if (deltaX < 0 && !openMobile) {
+          setOpenMobile(true);
+        } else if (deltaX > 0 && openMobile) {
+          setOpenMobile(false);
+        }
+      } else {
+        // LTR: swipe right opens, swipe left closes
+        if (deltaX > 0 && !openMobile) {
+          setOpenMobile(true);
+        } else if (deltaX < 0 && openMobile) {
+          setOpenMobile(false);
+        }
+      }
+    }
+
+    touchStartX.current = null;
+    touchStartY.current = null;
+  }, [isMobile, isRtl, openMobile, setOpenMobile]);
+
+  return (
+    <div 
+      className="flex-1 flex flex-col min-w-0 relative"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
+      {children}
+    </div>
+  );
+}
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { i18n } = useTranslation();
@@ -17,7 +70,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     <SidebarProvider style={style as React.CSSProperties}>
       <div className="flex h-screen w-full overflow-hidden bg-background safe-area-p" dir={isRtl ? "rtl" : "ltr"}>
         <Sidebar />
-        <div className="flex-1 flex flex-col min-w-0 relative">
+        <SwipeableContent isRtl={isRtl}>
           <header className="flex h-12 items-center justify-between px-4 border-b bg-background shrink-0 z-20">
             <div className="flex items-center gap-3">
               <SidebarTrigger />
@@ -36,7 +89,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               {children}
             </div>
           </main>
-        </div>
+        </SwipeableContent>
       </div>
     </SidebarProvider>
   );
