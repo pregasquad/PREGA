@@ -638,7 +638,7 @@ export default function Planning() {
   return (
     <div 
       ref={pageRef}
-      className="h-full overflow-hidden bg-background px-1.5 pt-0.5 pb-1 md:px-3 md:pt-1 md:pb-2 flex flex-col"
+      className="h-full overflow-auto bg-background px-1.5 pt-0.5 pb-1 md:px-3 md:pt-1 md:pb-2 flex flex-col"
       dir={isRtl ? "rtl" : "ltr"}
     >
       {/* Header */}
@@ -807,11 +807,11 @@ export default function Planning() {
       </div>
 
       {/* Board with sticky header */}
-      <div className="flex-1 min-h-0 flex flex-col bg-background rounded-2xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden" dir={isRtl ? "rtl" : "ltr"}>
-        {/* Sticky Staff Headers - outside scroll container, synced with board scroll */}
+      <div className="flex flex-col bg-background rounded-2xl border-2 border-gray-200 dark:border-gray-700 shadow-lg" dir={isRtl ? "rtl" : "ltr"}>
+        {/* Sticky Staff Headers */}
         <div 
           ref={headerRef}
-          className="grid bg-gradient-to-b from-orange-50 to-orange-100 dark:from-orange-950/30 dark:to-orange-900/20 border-b-2 border-orange-200 dark:border-orange-800 z-50 shrink-0 overflow-x-hidden"
+          className="grid bg-gradient-to-b from-orange-50 to-orange-100 dark:from-orange-950/30 dark:to-orange-900/20 border-b-2 border-orange-200 dark:border-orange-800 z-50 sticky top-0"
           style={{ 
             gridTemplateColumns: `60px repeat(${staffList.length}, minmax(100px, 1fr))`,
           }}
@@ -830,8 +830,8 @@ export default function Planning() {
           ))}
         </div>
 
-        {/* Scrollable content */}
-        <div ref={boardRef} className="flex-1 min-h-0 overflow-auto relative free-scroll bg-white dark:bg-gray-950">
+        {/* Board content - no internal scroll */}
+        <div ref={boardRef} className="relative bg-white dark:bg-gray-950">
           <div 
             className="grid relative"
             style={{ 
