@@ -1,4 +1,5 @@
 import { useRef, useCallback } from "react";
+import { useLocation } from "wouter";
 import { Sidebar } from "./Sidebar";
 import { SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { useTranslation } from "react-i18next";
@@ -60,6 +61,10 @@ function SwipeableContent({ children, isRtl }: { children: React.ReactNode; isRt
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { i18n } = useTranslation();
   const isRtl = i18n.language === "ar";
+  const [location] = useLocation();
+  
+  // Planning page handles its own scrolling - disable outer scroll
+  const isPlanning = location === "/" || location === "/planning";
 
   const style = {
     "--sidebar-width": "16rem",
@@ -84,7 +89,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <LanguageSwitcher />
             </div>
           </header>
-          <main className="flex-1 p-2 md:p-4 overflow-auto min-h-0">
+          <main className={`flex-1 min-h-0 ${isPlanning ? 'overflow-hidden p-0' : 'overflow-auto p-2 md:p-4'}`}>
             <div className="h-full flex flex-col min-h-0">
               {children}
             </div>
