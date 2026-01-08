@@ -204,7 +204,6 @@ export default function Salaries() {
       totalCommission: number; 
       appointmentsCount: number;
       services: Record<string, { count: number; revenue: number; commission: number }>;
-      dailyCommissions: Record<string, number>;
     }> = {};
 
     staff.forEach((s) => {
@@ -213,8 +212,7 @@ export default function Salaries() {
         totalRevenue: 0, 
         totalCommission: 0, 
         appointmentsCount: 0,
-        services: {},
-        dailyCommissions: {}
+        services: {}
       };
     });
 
@@ -225,19 +223,16 @@ export default function Salaries() {
           totalRevenue: 0, 
           totalCommission: 0, 
           appointmentsCount: 0,
-          services: {},
-          dailyCommissions: {}
+          services: {}
         };
       }
       
       const commissionPercent = getServiceCommission(apt.service);
       const commission = (apt.total * commissionPercent) / 100;
-      const aptDateKey = apt.date.split('T')[0];
       
       earnings[apt.staff].totalRevenue += apt.total;
       earnings[apt.staff].totalCommission += commission;
       earnings[apt.staff].appointmentsCount += 1;
-      earnings[apt.staff].dailyCommissions[aptDateKey] = (earnings[apt.staff].dailyCommissions[aptDateKey] || 0) + commission;
 
       if (!earnings[apt.staff].services[apt.service]) {
         earnings[apt.staff].services[apt.service] = { count: 0, revenue: 0, commission: 0 };
@@ -270,40 +265,8 @@ export default function Salaries() {
            (isBefore(deductionDate, endOfDay(end)) || isEqual(deductionDate, endOfDay(end)));
   });
 
-  const calculateDateAwareDeductions = () => {
-    let totalAppliedDeductions = 0;
-    
-    staffEarnings.forEach(staffMember => {
-      const staffDeductions = filteredDeductions
-        .filter(d => d.staffName === staffMember.name)
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-      
-      const sortedDates = Object.keys(staffMember.dailyCommissions).sort();
-      
-      staffDeductions.forEach(deduction => {
-        const deductionDateStr = deduction.date.split('T')[0];
-        let remainingDeduction = deduction.amount;
-        
-        for (const dateKey of sortedDates) {
-          if (dateKey >= deductionDateStr && remainingDeduction > 0) {
-            const availableCommission = staffMember.dailyCommissions[dateKey] || 0;
-            const toDeduct = Math.min(remainingDeduction, availableCommission);
-            remainingDeduction -= toDeduct;
-            totalAppliedDeductions += toDeduct;
-          }
-        }
-        
-        if (remainingDeduction > 0) {
-          totalAppliedDeductions += remainingDeduction;
-        }
-      });
-    });
-    
-    return totalAppliedDeductions;
-  };
-
   const totalExpenses = filteredCharges.reduce((sum, c) => sum + c.amount, 0);
-  const totalDeductions = calculateDateAwareDeductions();
+  const totalDeductions = filteredDeductions.reduce((sum, d) => sum + d.amount, 0);
   const netProfit = salonPortion - totalExpenses;
   const netStaffPayable = totalCommissions - totalDeductions;
 
