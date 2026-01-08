@@ -294,11 +294,12 @@ export default function Planning() {
   
   const { data: appointments = [], isLoading: loadingApps } = useAppointments(formattedDate);
   const { data: allAppointments = [] } = useAppointments();
-  const { data: staffList = [], isLoading: loadingStaff } = useStaff();
-  const { data: services = [], isLoading: loadingServices } = useServices();
+  const { data: staffList = [], isLoading: loadingStaff, isError: staffError } = useStaff();
+  const { data: services = [], isLoading: loadingServices, isError: servicesError } = useServices();
   
   // Show loading state while essential data loads
   const isDataLoading = loadingStaff || loadingServices;
+  const hasAuthError = (staffError || servicesError) && staffList.length === 0;
   const isAdmin = sessionStorage.getItem("admin_authenticated") === "true";
 
   // Scroll when data loads (staff or appointments)
@@ -635,6 +636,30 @@ export default function Planning() {
     );
   }
 
+  // Show session expired message if API failed with auth error
+  if (hasAuthError) {
+    const handleRelogin = () => {
+      sessionStorage.clear();
+      localStorage.removeItem("user_authenticated");
+      localStorage.removeItem("current_user");
+      window.location.href = "/";
+    };
+    
+    return (
+      <div className="h-full flex flex-col items-center justify-center bg-background" dir={isRtl ? "rtl" : "ltr"}>
+        <div className="flex flex-col items-center gap-4 text-center p-4">
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-red-400 to-red-600 flex items-center justify-center shadow-lg">
+            <span className="text-3xl font-bold text-white">!</span>
+          </div>
+          <p className="text-muted-foreground">{t("planning.sessionExpired")}</p>
+          <Button onClick={handleRelogin} className="mt-2">
+            {t("common.back")} 
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   // Show empty state if no staff configured
   if (staffList.length === 0) {
     return (
@@ -643,7 +668,7 @@ export default function Planning() {
           <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center shadow-lg">
             <span className="text-3xl font-bold text-white">?</span>
           </div>
-          <p className="text-muted-foreground">{t("planning.noStaff") || "No staff configured. Please add staff in Admin Settings."}</p>
+          <p className="text-muted-foreground">{t("planning.noStaff")}</p>
         </div>
       </div>
     );

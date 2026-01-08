@@ -86,7 +86,9 @@
     "bookingDeleted": "تم حذف الحجز بنجاح",
     "appointmentMoved": "تم نقل الموعد",
     "moveError": "فشل نقل الموعد",
-    "createdBy": "أنشأه"
+    "createdBy": "أنشأه",
+    "noStaff": "لم يتم تكوين أي موظفين. يرجى إضافة موظفين في إعدادات المسؤول.",
+    "sessionExpired": "انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى."
   },
   "services": {
     "title": "الخدمات",
