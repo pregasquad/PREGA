@@ -33,6 +33,11 @@ export function FirstLogin({ children }: FirstLoginProps) {
   const [location] = useLocation();
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     if (typeof window !== 'undefined') {
+      // Check if user explicitly logged out - don't auto-restore
+      const wasLoggedOut = sessionStorage.getItem("explicit_logout") === "true" ||
+                           localStorage.getItem("explicit_logout") === "true";
+      if (wasLoggedOut) return false;
+      
       const sessionAuth = sessionStorage.getItem("user_authenticated") === "true";
       if (sessionAuth) return true;
       
