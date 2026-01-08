@@ -621,8 +621,8 @@ export default function Planning() {
     return false;
   };
 
-  // Show loading screen while data is loading
-  if (isDataLoading || staffList.length === 0) {
+  // Show loading screen only while actively loading
+  if (isDataLoading) {
     return (
       <div className="h-full flex flex-col items-center justify-center bg-background" dir={isRtl ? "rtl" : "ltr"}>
         <div className="flex flex-col items-center gap-4">
@@ -630,6 +630,20 @@ export default function Planning() {
             <span className="text-3xl font-bold text-white">P</span>
           </div>
           <p className="text-muted-foreground">{t("common.loading")}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show empty state if no staff configured
+  if (staffList.length === 0) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center bg-background" dir={isRtl ? "rtl" : "ltr"}>
+        <div className="flex flex-col items-center gap-4 text-center p-4">
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center shadow-lg">
+            <span className="text-3xl font-bold text-white">?</span>
+          </div>
+          <p className="text-muted-foreground">{t("planning.noStaff") || "No staff configured. Please add staff in Admin Settings."}</p>
         </div>
       </div>
     );
