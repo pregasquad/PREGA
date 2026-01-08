@@ -317,9 +317,9 @@ export default function Salaries() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 md:gap-4 items-center">
+      <div className="flex flex-wrap gap-2 items-center">
         <Select value={period} onValueChange={(v) => setPeriod(v as PeriodType)}>
-          <SelectTrigger className="w-[150px]">
+          <SelectTrigger className="w-[100px] sm:w-[130px] h-9 text-xs sm:text-sm">
             <SelectValue placeholder={t("salaries.period")} />
           </SelectTrigger>
           <SelectContent>
@@ -331,9 +331,9 @@ export default function Salaries() {
 
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" className={`w-[200px] justify-start ${i18n.language === "ar" ? "text-right" : "text-left"}`}>
-              <CalendarIcon className={`h-4 w-4 ${i18n.language === "ar" ? "ml-2" : "mr-2"}`} />
-              {format(selectedDate, "PPP", { locale: getDateLocale() })}
+            <Button variant="outline" size="sm" className={`w-auto min-w-[120px] sm:min-w-[160px] justify-start text-xs sm:text-sm h-9 ${i18n.language === "ar" ? "text-right" : "text-left"}`}>
+              <CalendarIcon className={`h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 ${i18n.language === "ar" ? "ml-1.5" : "mr-1.5"}`} />
+              <span className="truncate">{format(selectedDate, "d MMM yy", { locale: getDateLocale() })}</span>
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
@@ -347,7 +347,7 @@ export default function Salaries() {
         </Popover>
 
         <Select value={selectedStaff} onValueChange={setSelectedStaff}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-[100px] sm:w-[140px] h-9 text-xs sm:text-sm">
             <SelectValue placeholder={t("salaries.staff")} />
           </SelectTrigger>
           <SelectContent>
@@ -359,92 +359,92 @@ export default function Salaries() {
         </Select>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">{t("salaries.totalRevenue")}</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+        <Card className="p-0">
+          <CardHeader className="flex flex-row items-center justify-between p-3 pb-1">
+            <CardTitle className="text-xs sm:text-sm font-medium">{t("salaries.totalRevenue")}</CardTitle>
+            <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalRevenue)} {t("common.currency")}</div>
-            <p className="text-xs text-muted-foreground">
-              {format(start, "d MMM", { locale: getDateLocale() })} - {format(end, "d MMM yyyy", { locale: getDateLocale() })}
+          <CardContent className="p-3 pt-0">
+            <div className="text-lg sm:text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
+              {format(start, "d/M", { locale: getDateLocale() })} - {format(end, "d/M", { locale: getDateLocale() })}
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">{t("salaries.staffCommissions")}</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+        <Card className="p-0">
+          <CardHeader className="flex flex-row items-center justify-between p-3 pb-1">
+            <CardTitle className="text-xs sm:text-sm font-medium">{t("salaries.staffCommissions")}</CardTitle>
+            <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{formatCurrency(totalCommissions)} {t("common.currency")}</div>
-            <p className="text-xs text-muted-foreground">{t("salaries.amountDueToStaff")}</p>
+          <CardContent className="p-3 pt-0">
+            <div className="text-lg sm:text-2xl font-bold text-green-600">{formatCurrency(totalCommissions)}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{t("salaries.amountDueToStaff")}</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-primary/5 border-primary/20">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">{t("salaries.salonShare")}</CardTitle>
-            <Building2 className="h-4 w-4 text-primary" />
+        <Card className="bg-primary/5 border-primary/20 p-0">
+          <CardHeader className="flex flex-row items-center justify-between p-3 pb-1">
+            <CardTitle className="text-xs sm:text-sm font-medium">{t("salaries.salonShare")}</CardTitle>
+            <Building2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">{formatCurrency(salonPortion)} {t("common.currency")}</div>
-            <p className="text-xs text-muted-foreground">{t("salaries.remainingForSalon")}</p>
+          <CardContent className="p-3 pt-0">
+            <div className="text-lg sm:text-2xl font-bold text-primary">{formatCurrency(salonPortion)}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{t("salaries.remainingForSalon")}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">{t("salaries.appointmentsCount")}</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+        <Card className="p-0">
+          <CardHeader className="flex flex-row items-center justify-between p-3 pb-1">
+            <CardTitle className="text-xs sm:text-sm font-medium">{t("salaries.appointmentsCount")}</CardTitle>
+            <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalAppointments}</div>
-            <p className="text-xs text-muted-foreground">{t("salaries.paidAppointments")}</p>
+          <CardContent className="p-3 pt-0">
+            <div className="text-lg sm:text-2xl font-bold">{totalAppointments}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{t("salaries.paidAppointments")}</p>
           </CardContent>
         </Card>
       </div>
 
       <Card className="border-2 border-dashed">
-        <CardHeader>
-          <CardTitle className="text-xl">{t("salaries.budget")}</CardTitle>
+        <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-4">
+          <CardTitle className="text-base sm:text-xl">{t("salaries.budget")}</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-3 p-4 bg-primary/5 rounded-lg">
-              <h3 className="font-bold text-lg border-b pb-2">{t("salaries.salonAccount")}</h3>
-              <div className="flex justify-between">
+        <CardContent className="p-3 sm:p-6 pt-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-6">
+            <div className="space-y-2 sm:space-y-3 p-3 sm:p-4 bg-primary/5 rounded-lg">
+              <h3 className="font-bold text-sm sm:text-lg border-b pb-2">{t("salaries.salonAccount")}</h3>
+              <div className="flex justify-between text-xs sm:text-base">
                 <span>{t("salaries.salonRevenueShare")}:</span>
-                <span className="font-semibold text-primary">{formatCurrency(salonPortion)} {t("common.currency")}</span>
+                <span className="font-semibold text-primary">{formatCurrency(salonPortion)}</span>
               </div>
-              <div className="flex justify-between text-red-600">
+              <div className="flex justify-between text-red-600 text-xs sm:text-base">
                 <span>{t("salaries.totalExpenses")}:</span>
-                <span className="font-semibold">- {formatCurrency(totalExpenses)} {t("common.currency")}</span>
+                <span className="font-semibold">- {formatCurrency(totalExpenses)}</span>
               </div>
-              <div className="flex justify-between pt-2 border-t-2 text-lg">
+              <div className="flex justify-between pt-2 border-t-2 text-sm sm:text-lg">
                 <span className="font-bold">{t("salaries.salonNetProfit")}:</span>
                 <span className={`font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatCurrency(netProfit)} {t("common.currency")}
+                  {formatCurrency(netProfit)}
                 </span>
               </div>
             </div>
 
-            <div className="space-y-3 p-4 bg-green-50 rounded-lg">
-              <h3 className="font-bold text-lg border-b pb-2">{t("salaries.staffAccount")}</h3>
-              <div className="flex justify-between">
+            <div className="space-y-2 sm:space-y-3 p-3 sm:p-4 bg-green-50 rounded-lg">
+              <h3 className="font-bold text-sm sm:text-lg border-b pb-2">{t("salaries.staffAccount")}</h3>
+              <div className="flex justify-between text-xs sm:text-base">
                 <span>{t("salaries.totalCommissionsDue")}:</span>
-                <span className="font-semibold text-green-600">{formatCurrency(totalCommissions)} {t("common.currency")}</span>
+                <span className="font-semibold text-green-600">{formatCurrency(totalCommissions)}</span>
               </div>
-              <div className="flex justify-between text-orange-600">
+              <div className="flex justify-between text-orange-600 text-xs sm:text-base">
                 <span>{t("salaries.totalDeductions")}:</span>
-                <span className="font-semibold">- {formatCurrency(totalDeductions)} {t("common.currency")}</span>
+                <span className="font-semibold">- {formatCurrency(totalDeductions)}</span>
               </div>
-              <div className="flex justify-between pt-2 border-t-2 text-lg">
+              <div className="flex justify-between pt-2 border-t-2 text-sm sm:text-lg">
                 <span className="font-bold">{t("salaries.netDueToStaff")}:</span>
                 <span className={`font-bold ${netStaffPayable >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatCurrency(netStaffPayable)} {t("common.currency")}
+                  {formatCurrency(netStaffPayable)}
                 </span>
               </div>
             </div>
@@ -453,85 +453,89 @@ export default function Salaries() {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>{t("salaries.staffEarningsDetails")}</CardTitle>
+        <CardHeader className="p-3 sm:p-6">
+          <CardTitle className="text-sm sm:text-base">{t("salaries.staffEarningsDetails")}</CardTitle>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("salaries.staff")}</TableHead>
-                <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("salaries.appointmentsCount")}</TableHead>
-                <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("salaries.totalRevenue")}</TableHead>
-                <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("salaries.commissionDue")}</TableHead>
-                <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("salaries.salonShare")}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {staffEarnings.map((earning) => (
-                <TableRow key={earning.name}>
-                  <TableCell className="font-medium">{earning.name}</TableCell>
-                  <TableCell>{earning.appointmentsCount}</TableCell>
-                  <TableCell>{formatCurrency(earning.totalRevenue)} {t("common.currency")}</TableCell>
-                  <TableCell className="text-green-600 font-semibold">
-                    {formatCurrency(earning.totalCommission)} {t("common.currency")}
-                  </TableCell>
-                  <TableCell className="text-primary font-semibold">
-                    {formatCurrency(earning.totalRevenue - earning.totalCommission)} {t("common.currency")}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {staffEarnings.length === 0 && (
+        <CardContent className="p-0 sm:p-6 sm:pt-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                    {t("salaries.noDataForPeriod")}
-                  </TableCell>
+                  <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("salaries.staff")}</TableHead>
+                  <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>#</TableHead>
+                  <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("salaries.totalRevenue")}</TableHead>
+                  <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("salaries.commissionDue")}</TableHead>
+                  <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("salaries.salonShare")}</TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {staffEarnings.map((earning) => (
+                  <TableRow key={earning.name}>
+                    <TableCell className="font-medium text-xs sm:text-sm whitespace-nowrap">{earning.name}</TableCell>
+                    <TableCell className="text-xs sm:text-sm">{earning.appointmentsCount}</TableCell>
+                    <TableCell className="text-xs sm:text-sm whitespace-nowrap">{formatCurrency(earning.totalRevenue)}</TableCell>
+                    <TableCell className="text-green-600 font-semibold text-xs sm:text-sm whitespace-nowrap">
+                      {formatCurrency(earning.totalCommission)}
+                    </TableCell>
+                    <TableCell className="text-primary font-semibold text-xs sm:text-sm whitespace-nowrap">
+                      {formatCurrency(earning.totalRevenue - earning.totalCommission)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {staffEarnings.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8 text-sm">
+                      {t("salaries.noDataForPeriod")}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 
       {selectedStaff !== "all" && (
         <Card>
-          <CardHeader>
-            <CardTitle>{t("salaries.serviceDetails")} - {selectedStaff}</CardTitle>
+          <CardHeader className="p-3 sm:p-6">
+            <CardTitle className="text-sm sm:text-base">{t("salaries.serviceDetails")} - {selectedStaff}</CardTitle>
           </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("salaries.service")}</TableHead>
-                  <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("salaries.commissionPercent")}</TableHead>
-                  <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("salaries.times")}</TableHead>
-                  <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("salaries.revenue")}</TableHead>
-                  <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("salaries.commission")}</TableHead>
-                  <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("salaries.salonShare")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {staffEarnings
-                  .find((e) => e.name === selectedStaff)
-                  ?.services &&
-                  Object.entries(
-                    staffEarnings.find((e) => e.name === selectedStaff)!.services
-                  ).map(([serviceName, data]) => (
-                    <TableRow key={serviceName}>
-                      <TableCell className="font-medium">{serviceName}</TableCell>
-                      <TableCell>{getServiceCommission(serviceName)}%</TableCell>
-                      <TableCell>{data.count}</TableCell>
-                      <TableCell>{formatCurrency(data.revenue)} {t("common.currency")}</TableCell>
-                      <TableCell className="text-green-600">
-                        {formatCurrency(data.commission)} {t("common.currency")}
-                      </TableCell>
-                      <TableCell className="text-primary">
-                        {formatCurrency(data.revenue - data.commission)} {t("common.currency")}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-              </TableBody>
-            </Table>
+          <CardContent className="p-0 sm:p-6 sm:pt-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("salaries.service")}</TableHead>
+                    <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>%</TableHead>
+                    <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>#</TableHead>
+                    <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("salaries.revenue")}</TableHead>
+                    <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("salaries.commission")}</TableHead>
+                    <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("salaries.salonShare")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {staffEarnings
+                    .find((e) => e.name === selectedStaff)
+                    ?.services &&
+                    Object.entries(
+                      staffEarnings.find((e) => e.name === selectedStaff)!.services
+                    ).map(([serviceName, data]) => (
+                      <TableRow key={serviceName}>
+                        <TableCell className="font-medium text-xs sm:text-sm">{serviceName}</TableCell>
+                        <TableCell className="text-xs sm:text-sm">{getServiceCommission(serviceName)}%</TableCell>
+                        <TableCell className="text-xs sm:text-sm">{data.count}</TableCell>
+                        <TableCell className="text-xs sm:text-sm whitespace-nowrap">{formatCurrency(data.revenue)}</TableCell>
+                        <TableCell className="text-green-600 text-xs sm:text-sm whitespace-nowrap">
+                          {formatCurrency(data.commission)}
+                        </TableCell>
+                        <TableCell className="text-primary text-xs sm:text-sm whitespace-nowrap">
+                          {formatCurrency(data.revenue - data.commission)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -539,104 +543,106 @@ export default function Salaries() {
       <Collapsible open={commissionRatesOpen} onOpenChange={setCommissionRatesOpen}>
         <Card>
           <CollapsibleTrigger asChild>
-            <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+            <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors p-3 sm:p-6">
               <div className="flex items-center justify-between">
-                <CardTitle>{t("salaries.commissionRatesByService")}</CardTitle>
-                <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform duration-200 ${commissionRatesOpen ? 'rotate-180' : ''}`} />
+                <CardTitle className="text-sm sm:text-base">{t("salaries.commissionRatesByService")}</CardTitle>
+                <ChevronDown className={`h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground transition-transform duration-200 ${commissionRatesOpen ? 'rotate-180' : ''}`} />
               </div>
             </CardHeader>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("salaries.service")}</TableHead>
-                    <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("salaries.price")}</TableHead>
-                    <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("salaries.commissionPercent")}</TableHead>
-                    <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("salaries.staffCommission")}</TableHead>
-                    <TableHead className={i18n.language === "ar" ? "text-right" : "text-left"}>{t("salaries.salonShare")}</TableHead>
-                    <TableHead className={`${i18n.language === "ar" ? "text-right" : "text-left"} w-[100px]`}>{t("common.edit")}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {services.map((service) => {
-                    const commissionPercent = service.commissionPercent ?? 50;
-                    const staffAmount = (service.price * commissionPercent) / 100;
-                    const salonAmount = service.price - staffAmount;
-                    const isEditing = editingServiceId === service.id;
+            <CardContent className="p-0 sm:p-6 sm:pt-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("salaries.service")}</TableHead>
+                      <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("salaries.price")}</TableHead>
+                      <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>%</TableHead>
+                      <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("salaries.staffCommission")}</TableHead>
+                      <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("salaries.salonShare")}</TableHead>
+                      <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"} w-[60px] sm:w-[100px]`}></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {services.map((service) => {
+                      const commissionPercent = service.commissionPercent ?? 50;
+                      const staffAmount = (service.price * commissionPercent) / 100;
+                      const salonAmount = service.price - staffAmount;
+                      const isEditing = editingServiceId === service.id;
 
-                    return (
-                      <TableRow key={service.id}>
-                        <TableCell className="font-medium">{service.name}</TableCell>
-                        <TableCell>{service.price} {t("common.currency")}</TableCell>
-                        <TableCell>
-                          {isEditing ? (
-                            <div className="flex items-center gap-2">
-                              <Input
-                                type="number"
-                                min={0}
-                                max={100}
-                                value={editValue}
-                                onChange={(e) => setEditValue(e.target.value)}
-                                className="w-20 h-8"
-                              />
-                              <span>%</span>
-                            </div>
-                          ) : (
-                            <span>{commissionPercent}%</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-green-600">
-                          {formatCurrency(staffAmount)} {t("common.currency")}
-                        </TableCell>
-                        <TableCell className="text-primary">
-                          {formatCurrency(salonAmount)} {t("common.currency")}
-                        </TableCell>
-                        <TableCell>
-                          {isEditing ? (
-                            <div className="flex gap-1">
+                      return (
+                        <TableRow key={service.id}>
+                          <TableCell className="font-medium text-xs sm:text-sm">{service.name}</TableCell>
+                          <TableCell className="text-xs sm:text-sm whitespace-nowrap">{service.price}</TableCell>
+                          <TableCell className="text-xs sm:text-sm">
+                            {isEditing ? (
+                              <div className="flex items-center gap-1">
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  max={100}
+                                  value={editValue}
+                                  onChange={(e) => setEditValue(e.target.value)}
+                                  className="w-14 sm:w-20 h-7 sm:h-8 text-xs sm:text-sm"
+                                />
+                                <span>%</span>
+                              </div>
+                            ) : (
+                              <span>{commissionPercent}%</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-green-600 text-xs sm:text-sm whitespace-nowrap">
+                            {formatCurrency(staffAmount)}
+                          </TableCell>
+                          <TableCell className="text-primary text-xs sm:text-sm whitespace-nowrap">
+                            {formatCurrency(salonAmount)}
+                          </TableCell>
+                          <TableCell className="text-xs sm:text-sm">
+                            {isEditing ? (
+                              <div className="flex gap-0.5">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 sm:h-8 sm:w-8"
+                                  onClick={() => saveCommission(service.id)}
+                                  disabled={updateCommissionMutation.isPending}
+                                >
+                                  <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-600" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 sm:h-8 sm:w-8"
+                                  onClick={cancelEditing}
+                                >
+                                  <X className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-destructive" />
+                                </Button>
+                              </div>
+                            ) : (
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8"
-                                onClick={() => saveCommission(service.id)}
-                                disabled={updateCommissionMutation.isPending}
+                                className="h-7 w-7 sm:h-8 sm:w-8"
+                                onClick={() => startEditing(service)}
                               >
-                                <Check className="h-4 w-4 text-green-600" />
+                                <Edit2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                               </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={cancelEditing}
-                              >
-                                <X className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => startEditing(service)}
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                          )}
+                            )}
                         </TableCell>
                       </TableRow>
                     );
                   })}
                 </TableBody>
               </Table>
+              </div>
             </CardContent>
           </CollapsibleContent>
         </Card>
       </Collapsible>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-row items-center justify-between p-3 sm:p-6">
           <CardTitle className="flex items-center gap-2">
             <Receipt className="h-5 w-5" />
             {t("salaries.expensesAndCosts")}
