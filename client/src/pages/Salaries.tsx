@@ -488,99 +488,87 @@ export default function Salaries() {
       <Collapsible open={commissionRatesOpen} onOpenChange={setCommissionRatesOpen}>
         <Card>
           <CollapsibleTrigger asChild>
-            <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors p-3 sm:p-6">
+            <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors p-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm sm:text-base">{t("salaries.commissionRatesByService")}</CardTitle>
-                <ChevronDown className={`h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground transition-transform duration-200 ${commissionRatesOpen ? 'rotate-180' : ''}`} />
+                <CardTitle className="text-sm">{t("salaries.commissionRatesByService")}</CardTitle>
+                <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${commissionRatesOpen ? 'rotate-180' : ''}`} />
               </div>
             </CardHeader>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <CardContent className="p-0 sm:p-6 sm:pt-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("salaries.service")}</TableHead>
-                      <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("salaries.price")}</TableHead>
-                      <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>%</TableHead>
-                      <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("salaries.staffCommission")}</TableHead>
-                      <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("salaries.salonShare")}</TableHead>
-                      <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"} w-[60px] sm:w-[100px]`}></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {services.map((service) => {
-                      const commissionPercent = service.commissionPercent ?? 50;
-                      const staffAmount = (service.price * commissionPercent) / 100;
-                      const salonAmount = service.price - staffAmount;
-                      const isEditing = editingServiceId === service.id;
+            <CardContent className="p-3 pt-0 space-y-2">
+              {services.map((service) => {
+                const commissionPercent = service.commissionPercent ?? 50;
+                const staffAmount = (service.price * commissionPercent) / 100;
+                const salonAmount = service.price - staffAmount;
+                const isEditing = editingServiceId === service.id;
 
-                      return (
-                        <TableRow key={service.id}>
-                          <TableCell className="font-medium text-xs sm:text-sm">{service.name}</TableCell>
-                          <TableCell className="text-xs sm:text-sm whitespace-nowrap">{service.price}</TableCell>
-                          <TableCell className="text-xs sm:text-sm">
-                            {isEditing ? (
-                              <div className="flex items-center gap-1">
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  max={100}
-                                  value={editValue}
-                                  onChange={(e) => setEditValue(e.target.value)}
-                                  className="w-14 sm:w-20 h-7 sm:h-8 text-xs sm:text-sm"
-                                />
-                                <span>%</span>
-                              </div>
-                            ) : (
-                              <span>{commissionPercent}%</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-green-600 text-xs sm:text-sm whitespace-nowrap">
-                            {formatCurrency(staffAmount)}
-                          </TableCell>
-                          <TableCell className="text-primary text-xs sm:text-sm whitespace-nowrap">
-                            {formatCurrency(salonAmount)}
-                          </TableCell>
-                          <TableCell className="text-xs sm:text-sm">
-                            {isEditing ? (
-                              <div className="flex gap-0.5">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 sm:h-8 sm:w-8"
-                                  onClick={() => saveCommission(service.id)}
-                                  disabled={updateCommissionMutation.isPending}
-                                >
-                                  <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-600" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 sm:h-8 sm:w-8"
-                                  onClick={cancelEditing}
-                                >
-                                  <X className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-destructive" />
-                                </Button>
-                              </div>
-                            ) : (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 sm:h-8 sm:w-8"
-                                onClick={() => startEditing(service)}
-                              >
-                                <Edit2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                              </Button>
-                            )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-              </div>
+                return (
+                  <div key={service.id} className="p-2 bg-muted/50 rounded-lg">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium text-sm">{service.name}</span>
+                      <div className="flex items-center gap-1">
+                        {isEditing ? (
+                          <>
+                            <Input
+                              type="number"
+                              min={0}
+                              max={100}
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              className="w-14 h-7 text-xs"
+                            />
+                            <span className="text-xs">%</span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => saveCommission(service.id)}
+                              disabled={updateCommissionMutation.isPending}
+                            >
+                              <Check className="h-3 w-3 text-green-600" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={cancelEditing}
+                            >
+                              <X className="h-3 w-3 text-destructive" />
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-xs bg-primary/10 px-1.5 py-0.5 rounded">{commissionPercent}%</span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => startEditing(service)}
+                            >
+                              <Edit2 className="h-3 w-3" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 mt-1 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">{t("salaries.price")}:</span>
+                        <span>{formatCurrency(service.price)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Staff:</span>
+                        <span className="text-green-600">{formatCurrency(staffAmount)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Salon:</span>
+                        <span className="text-primary">{formatCurrency(salonAmount)}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </CardContent>
           </CollapsibleContent>
         </Card>
