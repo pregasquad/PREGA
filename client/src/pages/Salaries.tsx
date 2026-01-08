@@ -293,34 +293,26 @@ export default function Salaries() {
   };
 
   return (
-    <div className="space-y-4 md:space-y-6 max-w-6xl mx-auto px-2 md:px-0" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl md:text-2xl lg:text-3xl font-display font-bold">{t("salaries.pageTitle")}</h1>
-          <p className="text-sm md:text-base text-muted-foreground">{t("salaries.pageDesc")}</p>
-        </div>
-        <div className="flex items-center gap-2 md:gap-3">
-          <span className="text-xs text-muted-foreground hidden sm:inline">
-            {t("salaries.lastUpdate")}: {format(lastUpdate, "HH:mm:ss", { locale: getDateLocale() })}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              refetchAppointments();
-              setLastUpdate(new Date());
-            }}
-          >
-            <RefreshCw className={`h-4 w-4 ${i18n.language === "ar" ? "ml-2" : "mr-2"}`} />
-            <span className="hidden sm:inline">{t("common.refresh")}</span>
-          </Button>
-        </div>
+    <div className="h-full flex flex-col gap-3 p-2" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
+      <div className="flex justify-between items-center">
+        <h1 className="text-lg font-bold">{t("salaries.pageTitle")}</h1>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8"
+          onClick={() => {
+            refetchAppointments();
+            setLastUpdate(new Date());
+          }}
+        >
+          <RefreshCw className="h-4 w-4" />
+        </Button>
       </div>
 
-      <div className="flex flex-wrap gap-2 items-center">
+      <div className="flex gap-2 flex-wrap">
         <Select value={period} onValueChange={(v) => setPeriod(v as PeriodType)}>
-          <SelectTrigger className="w-[100px] sm:w-[130px] h-9 text-xs sm:text-sm">
-            <SelectValue placeholder={t("salaries.period")} />
+          <SelectTrigger className="w-24 h-8 text-xs">
+            <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="day">{t("salaries.day")}</SelectItem>
@@ -331,9 +323,9 @@ export default function Salaries() {
 
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className={`w-auto min-w-[120px] sm:min-w-[160px] justify-start text-xs sm:text-sm h-9 ${i18n.language === "ar" ? "text-right" : "text-left"}`}>
-              <CalendarIcon className={`h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 ${i18n.language === "ar" ? "ml-1.5" : "mr-1.5"}`} />
-              <span className="truncate">{format(selectedDate, "d MMM yy", { locale: getDateLocale() })}</span>
+            <Button variant="outline" size="sm" className="h-8 text-xs px-2">
+              <CalendarIcon className="h-3 w-3 mr-1" />
+              {format(selectedDate, "d/M/yy")}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
@@ -347,8 +339,8 @@ export default function Salaries() {
         </Popover>
 
         <Select value={selectedStaff} onValueChange={setSelectedStaff}>
-          <SelectTrigger className="w-[100px] sm:w-[140px] h-9 text-xs sm:text-sm">
-            <SelectValue placeholder={t("salaries.staff")} />
+          <SelectTrigger className="w-24 h-8 text-xs">
+            <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t("salaries.allStaff")}</SelectItem>
@@ -359,183 +351,136 @@ export default function Salaries() {
         </Select>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
-        <Card className="p-0">
-          <CardHeader className="flex flex-row items-center justify-between p-3 pb-1">
-            <CardTitle className="text-xs sm:text-sm font-medium">{t("salaries.totalRevenue")}</CardTitle>
-            <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className="p-3 pt-0">
-            <div className="text-lg sm:text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
-            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
-              {format(start, "d/M", { locale: getDateLocale() })} - {format(end, "d/M", { locale: getDateLocale() })}
-            </p>
+      <div className="grid grid-cols-2 gap-2">
+        <Card>
+          <CardContent className="p-3">
+            <p className="text-xs text-muted-foreground">{t("salaries.totalRevenue")}</p>
+            <p className="text-xl font-bold">{formatCurrency(totalRevenue)}</p>
           </CardContent>
         </Card>
-
-        <Card className="p-0">
-          <CardHeader className="flex flex-row items-center justify-between p-3 pb-1">
-            <CardTitle className="text-xs sm:text-sm font-medium">{t("salaries.staffCommissions")}</CardTitle>
-            <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className="p-3 pt-0">
-            <div className="text-lg sm:text-2xl font-bold text-green-600">{formatCurrency(totalCommissions)}</div>
-            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{t("salaries.amountDueToStaff")}</p>
+        <Card>
+          <CardContent className="p-3">
+            <p className="text-xs text-muted-foreground">{t("salaries.staffCommissions")}</p>
+            <p className="text-xl font-bold text-green-600">{formatCurrency(totalCommissions)}</p>
           </CardContent>
         </Card>
-
-        <Card className="bg-primary/5 border-primary/20 p-0">
-          <CardHeader className="flex flex-row items-center justify-between p-3 pb-1">
-            <CardTitle className="text-xs sm:text-sm font-medium">{t("salaries.salonShare")}</CardTitle>
-            <Building2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
-          </CardHeader>
-          <CardContent className="p-3 pt-0">
-            <div className="text-lg sm:text-2xl font-bold text-primary">{formatCurrency(salonPortion)}</div>
-            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{t("salaries.remainingForSalon")}</p>
+        <Card className="bg-primary/5">
+          <CardContent className="p-3">
+            <p className="text-xs text-muted-foreground">{t("salaries.salonShare")}</p>
+            <p className="text-xl font-bold text-primary">{formatCurrency(salonPortion)}</p>
           </CardContent>
         </Card>
-
-        <Card className="p-0">
-          <CardHeader className="flex flex-row items-center justify-between p-3 pb-1">
-            <CardTitle className="text-xs sm:text-sm font-medium">{t("salaries.appointmentsCount")}</CardTitle>
-            <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className="p-3 pt-0">
-            <div className="text-lg sm:text-2xl font-bold">{totalAppointments}</div>
-            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{t("salaries.paidAppointments")}</p>
+        <Card>
+          <CardContent className="p-3">
+            <p className="text-xs text-muted-foreground">{t("salaries.appointmentsCount")}</p>
+            <p className="text-xl font-bold">{totalAppointments}</p>
           </CardContent>
         </Card>
       </div>
 
-      <Card className="border-2 border-dashed">
-        <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-4">
-          <CardTitle className="text-base sm:text-xl">{t("salaries.budget")}</CardTitle>
+      <Card>
+        <CardHeader className="p-3 pb-2">
+          <CardTitle className="text-sm">{t("salaries.budget")}</CardTitle>
         </CardHeader>
-        <CardContent className="p-3 sm:p-6 pt-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-6">
-            <div className="space-y-2 sm:space-y-3 p-3 sm:p-4 bg-primary/5 rounded-lg">
-              <h3 className="font-bold text-sm sm:text-lg border-b pb-2">{t("salaries.salonAccount")}</h3>
-              <div className="flex justify-between text-xs sm:text-base">
-                <span>{t("salaries.salonRevenueShare")}:</span>
-                <span className="font-semibold text-primary">{formatCurrency(salonPortion)}</span>
-              </div>
-              <div className="flex justify-between text-red-600 text-xs sm:text-base">
-                <span>{t("salaries.totalExpenses")}:</span>
-                <span className="font-semibold">- {formatCurrency(totalExpenses)}</span>
-              </div>
-              <div className="flex justify-between pt-2 border-t-2 text-sm sm:text-lg">
-                <span className="font-bold">{t("salaries.salonNetProfit")}:</span>
-                <span className={`font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatCurrency(netProfit)}
-                </span>
-              </div>
+        <CardContent className="p-3 pt-0 space-y-2">
+          <div className="p-2 bg-primary/5 rounded-lg space-y-1">
+            <p className="text-xs font-medium">{t("salaries.salonAccount")}</p>
+            <div className="flex justify-between text-xs">
+              <span>{t("salaries.salonRevenueShare")}</span>
+              <span className="text-primary">{formatCurrency(salonPortion)}</span>
             </div>
+            <div className="flex justify-between text-xs text-red-600">
+              <span>{t("salaries.totalExpenses")}</span>
+              <span>-{formatCurrency(totalExpenses)}</span>
+            </div>
+            <div className="flex justify-between text-sm font-bold border-t pt-1">
+              <span>{t("salaries.salonNetProfit")}</span>
+              <span className={netProfit >= 0 ? 'text-green-600' : 'text-red-600'}>
+                {formatCurrency(netProfit)}
+              </span>
+            </div>
+          </div>
 
-            <div className="space-y-2 sm:space-y-3 p-3 sm:p-4 bg-green-50 rounded-lg">
-              <h3 className="font-bold text-sm sm:text-lg border-b pb-2">{t("salaries.staffAccount")}</h3>
-              <div className="flex justify-between text-xs sm:text-base">
-                <span>{t("salaries.totalCommissionsDue")}:</span>
-                <span className="font-semibold text-green-600">{formatCurrency(totalCommissions)}</span>
-              </div>
-              <div className="flex justify-between text-orange-600 text-xs sm:text-base">
-                <span>{t("salaries.totalDeductions")}:</span>
-                <span className="font-semibold">- {formatCurrency(totalDeductions)}</span>
-              </div>
-              <div className="flex justify-between pt-2 border-t-2 text-sm sm:text-lg">
-                <span className="font-bold">{t("salaries.netDueToStaff")}:</span>
-                <span className={`font-bold ${netStaffPayable >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatCurrency(netStaffPayable)}
-                </span>
-              </div>
+          <div className="p-2 bg-green-50 rounded-lg space-y-1">
+            <p className="text-xs font-medium">{t("salaries.staffAccount")}</p>
+            <div className="flex justify-between text-xs">
+              <span>{t("salaries.totalCommissionsDue")}</span>
+              <span className="text-green-600">{formatCurrency(totalCommissions)}</span>
+            </div>
+            <div className="flex justify-between text-xs text-orange-600">
+              <span>{t("salaries.totalDeductions")}</span>
+              <span>-{formatCurrency(totalDeductions)}</span>
+            </div>
+            <div className="flex justify-between text-sm font-bold border-t pt-1">
+              <span>{t("salaries.netDueToStaff")}</span>
+              <span className={netStaffPayable >= 0 ? 'text-green-600' : 'text-red-600'}>
+                {formatCurrency(netStaffPayable)}
+              </span>
             </div>
           </div>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader className="p-3 sm:p-6">
-          <CardTitle className="text-sm sm:text-base">{t("salaries.staffEarningsDetails")}</CardTitle>
+        <CardHeader className="p-3 pb-2">
+          <CardTitle className="text-sm">{t("salaries.staffEarningsDetails")}</CardTitle>
         </CardHeader>
-        <CardContent className="p-0 sm:p-6 sm:pt-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("salaries.staff")}</TableHead>
-                  <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>#</TableHead>
-                  <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("salaries.totalRevenue")}</TableHead>
-                  <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("salaries.commissionDue")}</TableHead>
-                  <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("salaries.salonShare")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {staffEarnings.map((earning) => (
-                  <TableRow key={earning.name}>
-                    <TableCell className="font-medium text-xs sm:text-sm whitespace-nowrap">{earning.name}</TableCell>
-                    <TableCell className="text-xs sm:text-sm">{earning.appointmentsCount}</TableCell>
-                    <TableCell className="text-xs sm:text-sm whitespace-nowrap">{formatCurrency(earning.totalRevenue)}</TableCell>
-                    <TableCell className="text-green-600 font-semibold text-xs sm:text-sm whitespace-nowrap">
-                      {formatCurrency(earning.totalCommission)}
-                    </TableCell>
-                    <TableCell className="text-primary font-semibold text-xs sm:text-sm whitespace-nowrap">
-                      {formatCurrency(earning.totalRevenue - earning.totalCommission)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {staffEarnings.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8 text-sm">
-                      {t("salaries.noDataForPeriod")}
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+        <CardContent className="p-3 pt-0 space-y-2">
+          {staffEarnings.map((earning) => (
+            <div key={earning.name} className="p-2 bg-muted/50 rounded-lg">
+              <div className="flex justify-between items-center">
+                <span className="font-medium text-sm">{earning.name}</span>
+                <span className="text-xs text-muted-foreground">{earning.appointmentsCount} rdv</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 mt-1 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Rev:</span>
+                  <span>{formatCurrency(earning.totalRevenue)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Com:</span>
+                  <span className="text-green-600">{formatCurrency(earning.totalCommission)}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+          {staffEarnings.length === 0 && (
+            <p className="text-center text-muted-foreground py-4 text-sm">
+              {t("salaries.noDataForPeriod")}
+            </p>
+          )}
         </CardContent>
       </Card>
 
       {selectedStaff !== "all" && (
         <Card>
-          <CardHeader className="p-3 sm:p-6">
-            <CardTitle className="text-sm sm:text-base">{t("salaries.serviceDetails")} - {selectedStaff}</CardTitle>
+          <CardHeader className="p-3 pb-2">
+            <CardTitle className="text-sm">{t("salaries.serviceDetails")} - {selectedStaff}</CardTitle>
           </CardHeader>
-          <CardContent className="p-0 sm:p-6 sm:pt-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("salaries.service")}</TableHead>
-                    <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>%</TableHead>
-                    <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>#</TableHead>
-                    <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("salaries.revenue")}</TableHead>
-                    <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("salaries.commission")}</TableHead>
-                    <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("salaries.salonShare")}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {staffEarnings
-                    .find((e) => e.name === selectedStaff)
-                    ?.services &&
-                    Object.entries(
-                      staffEarnings.find((e) => e.name === selectedStaff)!.services
-                    ).map(([serviceName, data]) => (
-                      <TableRow key={serviceName}>
-                        <TableCell className="font-medium text-xs sm:text-sm">{serviceName}</TableCell>
-                        <TableCell className="text-xs sm:text-sm">{getServiceCommission(serviceName)}%</TableCell>
-                        <TableCell className="text-xs sm:text-sm">{data.count}</TableCell>
-                        <TableCell className="text-xs sm:text-sm whitespace-nowrap">{formatCurrency(data.revenue)}</TableCell>
-                        <TableCell className="text-green-600 text-xs sm:text-sm whitespace-nowrap">
-                          {formatCurrency(data.commission)}
-                        </TableCell>
-                        <TableCell className="text-primary text-xs sm:text-sm whitespace-nowrap">
-                          {formatCurrency(data.revenue - data.commission)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                </TableBody>
-              </Table>
-            </div>
+          <CardContent className="p-3 pt-0 space-y-2">
+            {staffEarnings
+              .find((e) => e.name === selectedStaff)
+              ?.services &&
+              Object.entries(
+                staffEarnings.find((e) => e.name === selectedStaff)!.services
+              ).map(([serviceName, data]) => (
+                <div key={serviceName} className="p-2 bg-muted/50 rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium text-xs">{serviceName}</span>
+                    <span className="text-xs text-muted-foreground">{getServiceCommission(serviceName)}% | x{data.count}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 mt-1 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Rev:</span>
+                      <span>{formatCurrency(data.revenue)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Com:</span>
+                      <span className="text-green-600">{formatCurrency(data.commission)}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
           </CardContent>
         </Card>
       )}
@@ -642,17 +587,16 @@ export default function Salaries() {
       </Collapsible>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between p-3 sm:p-6">
-          <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-            <Receipt className="h-4 w-4 sm:h-5 sm:w-5" />
+        <CardHeader className="flex flex-row items-center justify-between p-3 pb-2">
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <Receipt className="h-4 w-4" />
             {t("salaries.expensesAndCosts")}
           </CardTitle>
           <Dialog open={showChargeDialog} onOpenChange={setShowChargeDialog}>
             <DialogTrigger asChild>
-              <Button size="sm" className="text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3">
-                <Plus className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${i18n.language === "ar" ? "ml-1" : "mr-1"}`} />
-                <span className="hidden sm:inline">{t("salaries.addExpense")}</span>
-                <span className="sm:hidden">+</span>
+              <Button size="sm" className="h-7 text-xs px-2">
+                <Plus className="h-3 w-3 mr-1" />
+                +
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -712,62 +656,48 @@ export default function Salaries() {
             </DialogContent>
           </Dialog>
         </CardHeader>
-        <CardContent className="p-0 sm:p-6 sm:pt-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("common.type")}</TableHead>
-                  <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("common.description")}</TableHead>
-                  <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("common.amount")}</TableHead>
-                  <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("common.date")}</TableHead>
-                  <TableHead className={`text-xs sm:text-sm ${i18n.language === "ar" ? "text-right" : "text-left"} w-[40px]`}></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredCharges.map((charge) => (
-                  <TableRow key={charge.id}>
-                    <TableCell className="text-xs sm:text-sm whitespace-nowrap">{getChargeTypeLabel(charge.type)}</TableCell>
-                    <TableCell className="text-xs sm:text-sm">{charge.name}</TableCell>
-                    <TableCell className="text-red-600 font-semibold text-xs sm:text-sm whitespace-nowrap">{formatCurrency(charge.amount)}</TableCell>
-                    <TableCell className="text-xs sm:text-sm whitespace-nowrap">{format(parseISO(charge.date), "d/M/yy", { locale: getDateLocale() })}</TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 sm:h-8 sm:w-8"
-                        onClick={() => deleteChargeMutation.mutate(charge.id)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-destructive" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {filteredCharges.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8 text-sm">
-                      {t("salaries.noExpensesForPeriod")}
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+        <CardContent className="p-3 pt-0 space-y-2">
+          {filteredCharges.map((charge) => (
+            <div key={charge.id} className="p-2 bg-red-50 rounded-lg flex justify-between items-center">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium truncate">{charge.name}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 bg-red-100 rounded text-red-700">{getChargeTypeLabel(charge.type)}</span>
+                </div>
+                <div className="flex gap-2 text-xs mt-0.5">
+                  <span className="text-red-600 font-semibold">{formatCurrency(charge.amount)}</span>
+                  <span className="text-muted-foreground">{format(parseISO(charge.date), "d/M/yy")}</span>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 shrink-0"
+                onClick={() => deleteChargeMutation.mutate(charge.id)}
+              >
+                <Trash2 className="h-3.5 w-3.5 text-destructive" />
+              </Button>
+            </div>
+          ))}
+          {filteredCharges.length === 0 && (
+            <p className="text-center text-muted-foreground py-4 text-sm">
+              {t("salaries.noExpensesForPeriod")}
+            </p>
+          )}
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between p-3 sm:p-6">
-          <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-            <UserMinus className="h-4 w-4 sm:h-5 sm:w-5" />
+        <CardHeader className="flex flex-row items-center justify-between p-3 pb-2">
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <UserMinus className="h-4 w-4" />
             {t("salaries.staffDeductions")}
           </CardTitle>
           <Dialog open={showDeductionDialog} onOpenChange={setShowDeductionDialog}>
             <DialogTrigger asChild>
-              <Button size="sm" className="text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3">
-                <Plus className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${i18n.language === "ar" ? "ml-1" : "mr-1"}`} />
-                <span className="hidden sm:inline">{t("salaries.addDeduction")}</span>
-                <span className="sm:hidden">+</span>
+              <Button size="sm" className="h-7 text-xs px-2">
+                <Plus className="h-3 w-3 mr-1" />
+                +
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -838,49 +768,35 @@ export default function Salaries() {
             </DialogContent>
           </Dialog>
         </CardHeader>
-        <CardContent className="p-0 sm:p-6 sm:pt-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("salaries.staff")}</TableHead>
-                  <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("common.type")}</TableHead>
-                  <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("common.description")}</TableHead>
-                  <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("common.amount")}</TableHead>
-                  <TableHead className={`text-xs sm:text-sm whitespace-nowrap ${i18n.language === "ar" ? "text-right" : "text-left"}`}>{t("common.date")}</TableHead>
-                  <TableHead className={`text-xs sm:text-sm ${i18n.language === "ar" ? "text-right" : "text-left"} w-[40px]`}></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredDeductions.map((deduction) => (
-                  <TableRow key={deduction.id}>
-                    <TableCell className="font-medium text-xs sm:text-sm whitespace-nowrap">{deduction.staffName}</TableCell>
-                    <TableCell className="text-xs sm:text-sm whitespace-nowrap">{getDeductionTypeLabel(deduction.type)}</TableCell>
-                    <TableCell className="text-xs sm:text-sm">{deduction.description}</TableCell>
-                    <TableCell className="text-orange-600 font-semibold text-xs sm:text-sm whitespace-nowrap">{formatCurrency(deduction.amount)}</TableCell>
-                    <TableCell className="text-xs sm:text-sm whitespace-nowrap">{format(parseISO(deduction.date), "d/M/yy", { locale: getDateLocale() })}</TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 sm:h-8 sm:w-8"
-                        onClick={() => deleteDeductionMutation.mutate(deduction.id)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-destructive" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {filteredDeductions.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8 text-sm">
-                      {t("salaries.noDeductionsForPeriod")}
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+        <CardContent className="p-3 pt-0 space-y-2">
+          {filteredDeductions.map((deduction) => (
+            <div key={deduction.id} className="p-2 bg-orange-50 rounded-lg flex justify-between items-center">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium">{deduction.staffName}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 bg-orange-100 rounded text-orange-700">{getDeductionTypeLabel(deduction.type)}</span>
+                </div>
+                <div className="text-xs text-muted-foreground truncate">{deduction.description}</div>
+                <div className="flex gap-2 text-xs mt-0.5">
+                  <span className="text-orange-600 font-semibold">{formatCurrency(deduction.amount)}</span>
+                  <span className="text-muted-foreground">{format(parseISO(deduction.date), "d/M/yy")}</span>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 shrink-0"
+                onClick={() => deleteDeductionMutation.mutate(deduction.id)}
+              >
+                <Trash2 className="h-3.5 w-3.5 text-destructive" />
+              </Button>
+            </div>
+          ))}
+          {filteredDeductions.length === 0 && (
+            <p className="text-center text-muted-foreground py-4 text-sm">
+              {t("salaries.noDeductionsForPeriod")}
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>
