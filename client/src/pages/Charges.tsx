@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, TrendingDown, FolderPlus } from "lucide-react";
 
@@ -193,49 +192,38 @@ export default function Charges() {
         <CardHeader>
           <CardTitle>{t("expenses.expenseList")}</CardTitle>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t("expenses.type")}</TableHead>
-                <TableHead>{t("common.name")}</TableHead>
-                <TableHead>{t("expenses.amount")}</TableHead>
-                <TableHead>{t("common.date")}</TableHead>
-                <TableHead className="w-[80px]">{t("common.actions")}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {charges.map((charge: any) => (
-                <TableRow key={charge.id}>
-                  <TableCell>
+        <CardContent className="space-y-3">
+          {charges.map((charge: any) => (
+            <div key={charge.id} className="p-3 bg-red-50 dark:bg-red-950/20 rounded-lg flex justify-between items-center">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-medium truncate">{charge.name}</span>
+                  <span className="text-xs px-1.5 py-0.5 bg-red-100 dark:bg-red-900/50 rounded text-red-700 dark:text-red-300">
                     {chargeTypes.find((t: any) => t.name === charge.type)?.label || charge.type}
-                  </TableCell>
-                  <TableCell>{charge.name}</TableCell>
-                  <TableCell className="font-semibold">{charge.amount} {t("common.currency")}</TableCell>
-                  <TableCell>{charge.date}</TableCell>
-                  <TableCell>
-                    {isAdmin && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => deleteMutation.mutate(charge.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {charges.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                    {t("expenses.noExpenses")}
-                  </TableCell>
-                </TableRow>
+                  </span>
+                </div>
+                <div className="flex gap-2 text-sm mt-0.5">
+                  <span className="text-red-600 dark:text-red-400 font-semibold">{charge.amount} {t("common.currency")}</span>
+                  <span className="text-muted-foreground">{charge.date}</span>
+                </div>
+              </div>
+              {isAdmin && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={() => deleteMutation.mutate(charge.id)}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
               )}
-            </TableBody>
-          </Table>
+            </div>
+          ))}
+          {charges.length === 0 && (
+            <p className="text-center text-muted-foreground py-8">
+              {t("expenses.noExpenses")}
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>
