@@ -10,31 +10,49 @@ function SwipeableContent({ children, isRtl }: { children: React.ReactNode; isRt
   const { openMobile, setOpenMobile, isMobile } = useSidebar();
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
+  const isEdgeSwipe = useRef<boolean>(false);
+
+  const EDGE_THRESHOLD = 30;
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
+    const startX = e.touches[0].clientX;
+    const screenWidth = window.innerWidth;
+    
+    touchStartX.current = startX;
     touchStartY.current = e.touches[0].clientY;
-  }, []);
+    
+    if (isRtl) {
+      isEdgeSwipe.current = !openMobile 
+        ? startX > screenWidth - EDGE_THRESHOLD
+        : startX < EDGE_THRESHOLD;
+    } else {
+      isEdgeSwipe.current = !openMobile 
+        ? startX < EDGE_THRESHOLD
+        : startX > screenWidth - EDGE_THRESHOLD;
+    }
+  }, [isRtl, openMobile]);
 
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-    if (!isMobile || touchStartX.current === null || touchStartY.current === null) return;
+    if (!isMobile || touchStartX.current === null || touchStartY.current === null || !isEdgeSwipe.current) {
+      touchStartX.current = null;
+      touchStartY.current = null;
+      isEdgeSwipe.current = false;
+      return;
+    }
 
     const touchEndX = e.changedTouches[0].clientX;
     const touchEndY = e.changedTouches[0].clientY;
     const deltaX = touchEndX - touchStartX.current;
     const deltaY = touchEndY - touchStartY.current;
 
-    // Only trigger if horizontal swipe is dominant and significant
     if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
       if (isRtl) {
-        // RTL: swipe left opens, swipe right closes
         if (deltaX < 0 && !openMobile) {
           setOpenMobile(true);
         } else if (deltaX > 0 && openMobile) {
           setOpenMobile(false);
         }
       } else {
-        // LTR: swipe right opens, swipe left closes
         if (deltaX > 0 && !openMobile) {
           setOpenMobile(true);
         } else if (deltaX < 0 && openMobile) {
@@ -45,6 +63,7 @@ function SwipeableContent({ children, isRtl }: { children: React.ReactNode; isRt
 
     touchStartX.current = null;
     touchStartY.current = null;
+    isEdgeSwipe.current = false;
   }, [isMobile, isRtl, openMobile, setOpenMobile]);
 
   return (
