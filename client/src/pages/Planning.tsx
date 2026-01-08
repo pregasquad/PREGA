@@ -302,6 +302,16 @@ export default function Planning() {
   const hasAuthError = (staffError || servicesError) && staffList.length === 0;
   const isAdmin = sessionStorage.getItem("admin_authenticated") === "true";
 
+  // Auto-redirect to login if session expired
+  useEffect(() => {
+    if (hasAuthError) {
+      sessionStorage.clear();
+      localStorage.removeItem("user_authenticated");
+      localStorage.removeItem("current_user");
+      window.location.href = "/";
+    }
+  }, [hasAuthError]);
+
   // Scroll when data loads (staff or appointments)
   useEffect(() => {
     if (staffList.length > 0 && !dataLoadedRef.current && isToday) {
@@ -636,32 +646,8 @@ export default function Planning() {
     );
   }
 
-  // Auto-redirect to login if session expired
-  useEffect(() => {
-    if (hasAuthError) {
-      sessionStorage.clear();
-      localStorage.removeItem("user_authenticated");
-      localStorage.removeItem("current_user");
-      window.location.href = "/";
-    }
-  }, [hasAuthError]);
-
-  // Show brief message while redirecting
-  if (hasAuthError) {
-    return (
-      <div className="h-full flex flex-col items-center justify-center bg-background" dir={isRtl ? "rtl" : "ltr"}>
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center shadow-lg animate-pulse">
-            <span className="text-3xl font-bold text-white">P</span>
-          </div>
-          <p className="text-muted-foreground">{t("planning.sessionExpired")}</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show empty state if no staff configured
-  if (staffList.length === 0) {
+  // Show empty state if no staff configured (skip if auth error - will auto-redirect)
+  if (staffList.length === 0 && !hasAuthError) {
     return (
       <div className="h-full flex flex-col items-center justify-center bg-background" dir={isRtl ? "rtl" : "ltr"}>
         <div className="flex flex-col items-center gap-4 text-center p-4">
