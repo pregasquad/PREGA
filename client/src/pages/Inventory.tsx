@@ -28,7 +28,7 @@ export default function Inventory() {
 
   const productForm = useForm({
     resolver: zodResolver(insertProductSchema),
-    defaultValues: { name: "", quantity: 0 }
+    defaultValues: { name: "", quantity: 0, lowStockThreshold: 5 }
   });
 
   const staffForm = useForm({
@@ -154,7 +154,18 @@ export default function Inventory() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>{t("inventory.quantity")}</FormLabel>
-                        <FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} /></FormControl>
+                        <FormControl><Input type="number" value={field.value ?? 0} onChange={e => field.onChange(parseInt(e.target.value) || 0)} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={productForm.control}
+                    name="lowStockThreshold"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("inventory.minStock")}</FormLabel>
+                        <FormControl><Input type="number" value={field.value ?? 5} onChange={e => field.onChange(parseInt(e.target.value) || 0)} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -212,7 +223,11 @@ export default function Inventory() {
                     size="icon"
                     onClick={() => {
                       setEditingProduct(product);
-                      productForm.reset(product);
+                      productForm.reset({
+                        name: product.name,
+                        quantity: product.quantity ?? 0,
+                        lowStockThreshold: product.lowStockThreshold ?? 5
+                      });
                     }}
                   >
                     <Edit2 className="h-4 w-4" />
@@ -231,6 +246,26 @@ export default function Inventory() {
                             <FormItem>
                               <FormLabel>{t("inventory.productName")}</FormLabel>
                               <FormControl><Input {...field} /></FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={productForm.control}
+                          name="quantity"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{t("inventory.quantity")}</FormLabel>
+                              <FormControl><Input type="number" value={field.value ?? 0} onChange={e => field.onChange(parseInt(e.target.value) || 0)} /></FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={productForm.control}
+                          name="lowStockThreshold"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{t("inventory.minStock")}</FormLabel>
+                              <FormControl><Input type="number" value={field.value ?? 5} onChange={e => field.onChange(parseInt(e.target.value) || 0)} /></FormControl>
                             </FormItem>
                           )}
                         />
