@@ -250,13 +250,39 @@ export function FirstLogin({ children }: FirstLoginProps) {
                   <Button 
                     variant="outline" 
                     className="w-full"
-                    onClick={() => {
-                      sessionStorage.setItem("user_authenticated", "true");
-                      sessionStorage.setItem("current_user", "Setup");
-                      sessionStorage.setItem("current_user_role", "owner");
-                      sessionStorage.setItem("current_user_permissions", JSON.stringify([]));
-                      setIsAuthenticated(true);
-                      window.location.href = "/admin-settings";
+                    onClick={async () => {
+                      try {
+                        // Create server-side session first
+                        const res = await fetch("/api/auth/setup-session", {
+                          method: "POST",
+                          credentials: "include"
+                        });
+                        
+                        if (!res.ok) {
+                          const data = await res.json();
+                          toast({
+                            title: t("common.error"),
+                            description: data.message || t("common.somethingWentWrong"),
+                            variant: "destructive"
+                          });
+                          return;
+                        }
+                        
+                        // Then set client-side storage
+                        sessionStorage.setItem("user_authenticated", "true");
+                        sessionStorage.setItem("current_user", "Setup");
+                        sessionStorage.setItem("current_user_role", "owner");
+                        sessionStorage.setItem("current_user_permissions", JSON.stringify([]));
+                        
+                        // Redirect to admin settings
+                        window.location.href = "/admin-settings";
+                      } catch (err) {
+                        toast({
+                          title: t("common.error"),
+                          description: t("common.somethingWentWrong"),
+                          variant: "destructive"
+                        });
+                      }
                     }}
                   >
                     <Settings className="w-4 h-4 mr-2" />

@@ -17,6 +17,7 @@ declare module 'express-session' {
       permissions: string[];
       authenticatedAt: number;
     };
+    user_authenticated?: boolean;
   }
 }
 

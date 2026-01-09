@@ -725,6 +725,28 @@ export async function registerRoutes(
     }
     res.json({ success: true });
   });
+  
+  // Setup session - allows first-time setup when no admin users exist
+  app.post("/api/auth/setup-session", async (req, res) => {
+    try {
+      const roles = await storage.getAdminRoles();
+      if (roles.length > 0) {
+        return res.status(403).json({ success: false, message: "Admin users already exist. Please login normally." });
+      }
+      
+      // Create a temporary setup session with full owner permissions
+      req.session.pinAuth = {
+        userName: "Setup",
+        role: "owner",
+        permissions: [],
+        authenticatedAt: Date.now()
+      };
+      
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
 
   // Reset PIN with business phone verification
   app.post("/api/admin-roles/reset-pin", async (req, res) => {
