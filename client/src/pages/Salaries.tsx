@@ -36,6 +36,8 @@ export default function Salaries() {
   const [showChargeDialog, setShowChargeDialog] = useState(false);
   const [showDeductionDialog, setShowDeductionDialog] = useState(false);
   const [commissionRatesOpen, setCommissionRatesOpen] = useState(false);
+  const [expensesOpen, setExpensesOpen] = useState(false);
+  const [deductionsOpen, setDeductionsOpen] = useState(false);
   const [newCharge, setNewCharge] = useState({ type: "rent", name: "", amount: 0, date: format(new Date(), "yyyy-MM-dd") });
   const [newDeduction, setNewDeduction] = useState<{ staffName: string; type: "advance" | "loan" | "penalty" | "other"; description: string; amount: number; date: string }>({ staffName: "", type: "advance", description: "", amount: 0, date: format(new Date(), "yyyy-MM-dd") });
 
@@ -574,219 +576,239 @@ export default function Salaries() {
         </Card>
       </Collapsible>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between p-3 pb-2">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Receipt className="h-4 w-4" />
-            {t("salaries.expensesAndCosts")}
-          </CardTitle>
-          <Dialog open={showChargeDialog} onOpenChange={setShowChargeDialog}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="h-8 text-sm px-3">
-                <Plus className="h-4 w-4 mr-1" />
-                +
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>{t("salaries.addNewExpense")}</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label>{t("salaries.expenseType")}</Label>
-                  <Select value={newCharge.type} onValueChange={(v) => setNewCharge({ ...newCharge, type: v })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="rent">{t("salaries.rent")}</SelectItem>
-                      <SelectItem value="utilities">{t("salaries.utilities")}</SelectItem>
-                      <SelectItem value="products">{t("salaries.products")}</SelectItem>
-                      <SelectItem value="equipment">{t("salaries.equipment")}</SelectItem>
-                      <SelectItem value="maintenance">{t("salaries.maintenance")}</SelectItem>
-                      <SelectItem value="other">{t("salaries.other")}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>{t("common.description")}</Label>
-                  <Input
-                    value={newCharge.name}
-                    onChange={(e) => setNewCharge({ ...newCharge, name: e.target.value })}
-                    placeholder={t("salaries.expenseDescription")}
-                  />
-                </div>
-                <div>
-                  <Label>{t("salaries.amountDH")}</Label>
-                  <Input
-                    type="number"
-                    value={newCharge.amount || ""}
-                    onChange={(e) => setNewCharge({ ...newCharge, amount: parseFloat(e.target.value) || 0 })}
-                    placeholder="0"
-                  />
-                </div>
-                <div>
-                  <Label>{t("common.date")}</Label>
-                  <Input
-                    type="date"
-                    value={newCharge.date}
-                    onChange={(e) => setNewCharge({ ...newCharge, date: e.target.value })}
-                  />
-                </div>
-                <Button
-                  className="w-full"
-                  onClick={() => createChargeMutation.mutate(newCharge)}
-                  disabled={!newCharge.name || !newCharge.amount || createChargeMutation.isPending}
-                >
-                  {t("common.save")}
-                </Button>
+      <Collapsible open={expensesOpen} onOpenChange={setExpensesOpen}>
+        <Card>
+          <CollapsibleTrigger asChild>
+            <CardHeader className="flex flex-row items-center justify-between p-3 pb-2 cursor-pointer hover:bg-muted/50 transition-colors">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Receipt className="h-4 w-4" />
+                {t("salaries.expensesAndCosts")}
+                <span className="text-sm font-normal text-muted-foreground">({filteredCharges.length})</span>
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                <Dialog open={showChargeDialog} onOpenChange={setShowChargeDialog}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" className="h-8 text-sm px-3" onClick={(e) => e.stopPropagation()}>
+                      <Plus className="h-4 w-4 mr-1" />
+                      +
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>{t("salaries.addNewExpense")}</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label>{t("salaries.expenseType")}</Label>
+                        <Select value={newCharge.type} onValueChange={(v) => setNewCharge({ ...newCharge, type: v })}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="rent">{t("salaries.rent")}</SelectItem>
+                            <SelectItem value="utilities">{t("salaries.utilities")}</SelectItem>
+                            <SelectItem value="products">{t("salaries.products")}</SelectItem>
+                            <SelectItem value="equipment">{t("salaries.equipment")}</SelectItem>
+                            <SelectItem value="maintenance">{t("salaries.maintenance")}</SelectItem>
+                            <SelectItem value="other">{t("salaries.other")}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>{t("common.description")}</Label>
+                        <Input
+                          value={newCharge.name}
+                          onChange={(e) => setNewCharge({ ...newCharge, name: e.target.value })}
+                          placeholder={t("salaries.expenseDescription")}
+                        />
+                      </div>
+                      <div>
+                        <Label>{t("salaries.amountDH")}</Label>
+                        <Input
+                          type="number"
+                          value={newCharge.amount || ""}
+                          onChange={(e) => setNewCharge({ ...newCharge, amount: parseFloat(e.target.value) || 0 })}
+                          placeholder="0"
+                        />
+                      </div>
+                      <div>
+                        <Label>{t("common.date")}</Label>
+                        <Input
+                          type="date"
+                          value={newCharge.date}
+                          onChange={(e) => setNewCharge({ ...newCharge, date: e.target.value })}
+                        />
+                      </div>
+                      <Button
+                        className="w-full"
+                        onClick={() => createChargeMutation.mutate(newCharge)}
+                        disabled={!newCharge.name || !newCharge.amount || createChargeMutation.isPending}
+                      >
+                        {t("common.save")}
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+                <ChevronDown className={`h-4 w-4 transition-transform ${expensesOpen ? "rotate-180" : ""}`} />
               </div>
-            </DialogContent>
-          </Dialog>
-        </CardHeader>
-        <CardContent className="p-3 pt-0 space-y-2">
-          {filteredCharges.map((charge) => (
-            <div key={charge.id} className="p-3 bg-red-50 rounded-lg flex justify-between items-center">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium truncate">{charge.name}</span>
-                  <span className="text-xs px-1.5 py-0.5 bg-red-100 rounded text-red-700">{getChargeTypeLabel(charge.type)}</span>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="p-3 pt-0 space-y-2">
+              {filteredCharges.map((charge) => (
+                <div key={charge.id} className="p-3 bg-red-50 rounded-lg flex justify-between items-center">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium truncate">{charge.name}</span>
+                      <span className="text-xs px-1.5 py-0.5 bg-red-100 rounded text-red-700">{getChargeTypeLabel(charge.type)}</span>
+                    </div>
+                    <div className="flex gap-2 text-sm mt-0.5">
+                      <span className="text-red-600 font-semibold">{formatCurrency(charge.amount)}</span>
+                      <span className="text-muted-foreground">{format(parseISO(charge.date), "d/M/yy")}</span>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={() => deleteChargeMutation.mutate(charge.id)}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
                 </div>
-                <div className="flex gap-2 text-sm mt-0.5">
-                  <span className="text-red-600 font-semibold">{formatCurrency(charge.amount)}</span>
-                  <span className="text-muted-foreground">{format(parseISO(charge.date), "d/M/yy")}</span>
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 shrink-0"
-                onClick={() => deleteChargeMutation.mutate(charge.id)}
-              >
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
-            </div>
-          ))}
-          {filteredCharges.length === 0 && (
-            <p className="text-center text-muted-foreground py-4 text-sm">
-              {t("salaries.noExpensesForPeriod")}
-            </p>
-          )}
-        </CardContent>
-      </Card>
+              ))}
+              {filteredCharges.length === 0 && (
+                <p className="text-center text-muted-foreground py-4 text-sm">
+                  {t("salaries.noExpensesForPeriod")}
+                </p>
+              )}
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between p-3 pb-2">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <UserMinus className="h-4 w-4" />
-            {t("salaries.staffDeductions")}
-          </CardTitle>
-          <Dialog open={showDeductionDialog} onOpenChange={setShowDeductionDialog}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="h-8 text-sm px-3">
-                <Plus className="h-4 w-4 mr-1" />
-                +
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>{t("salaries.addStaffDeduction")}</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label>{t("salaries.staff")}</Label>
-                  <Select value={newDeduction.staffName} onValueChange={(v) => setNewDeduction({ ...newDeduction, staffName: v })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder={t("salaries.selectStaff")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {staff.map((s) => (
-                        <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>{t("salaries.deductionType")}</Label>
-                  <Select value={newDeduction.type} onValueChange={(v) => setNewDeduction({ ...newDeduction, type: v as "advance" | "loan" | "penalty" | "other" })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="advance">{t("salaries.advance")}</SelectItem>
-                      <SelectItem value="loan">{t("salaries.loan")}</SelectItem>
-                      <SelectItem value="penalty">{t("salaries.penalty")}</SelectItem>
-                      <SelectItem value="other">{t("salaries.other")}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>{t("common.description")}</Label>
-                  <Input
-                    value={newDeduction.description}
-                    onChange={(e) => setNewDeduction({ ...newDeduction, description: e.target.value })}
-                    placeholder={t("salaries.deductionDescription")}
-                  />
-                </div>
-                <div>
-                  <Label>{t("salaries.amountDH")}</Label>
-                  <Input
-                    type="number"
-                    value={newDeduction.amount || ""}
-                    onChange={(e) => setNewDeduction({ ...newDeduction, amount: parseFloat(e.target.value) || 0 })}
-                    placeholder="0"
-                  />
-                </div>
-                <div>
-                  <Label>{t("common.date")}</Label>
-                  <Input
-                    type="date"
-                    value={newDeduction.date}
-                    onChange={(e) => setNewDeduction({ ...newDeduction, date: e.target.value })}
-                  />
-                </div>
-                <Button
-                  className="w-full"
-                  onClick={() => createDeductionMutation.mutate(newDeduction)}
-                  disabled={!newDeduction.staffName || !newDeduction.description || !newDeduction.amount || createDeductionMutation.isPending}
-                >
-                  {t("common.save")}
-                </Button>
+      <Collapsible open={deductionsOpen} onOpenChange={setDeductionsOpen}>
+        <Card>
+          <CollapsibleTrigger asChild>
+            <CardHeader className="flex flex-row items-center justify-between p-3 pb-2 cursor-pointer hover:bg-muted/50 transition-colors">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <UserMinus className="h-4 w-4" />
+                {t("salaries.staffDeductions")}
+                <span className="text-sm font-normal text-muted-foreground">({filteredDeductions.length})</span>
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                <Dialog open={showDeductionDialog} onOpenChange={setShowDeductionDialog}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" className="h-8 text-sm px-3" onClick={(e) => e.stopPropagation()}>
+                      <Plus className="h-4 w-4 mr-1" />
+                      +
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>{t("salaries.addStaffDeduction")}</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label>{t("salaries.staff")}</Label>
+                        <Select value={newDeduction.staffName} onValueChange={(v) => setNewDeduction({ ...newDeduction, staffName: v })}>
+                          <SelectTrigger>
+                            <SelectValue placeholder={t("salaries.selectStaff")} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {staff.map((s) => (
+                              <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>{t("salaries.deductionType")}</Label>
+                        <Select value={newDeduction.type} onValueChange={(v) => setNewDeduction({ ...newDeduction, type: v as "advance" | "loan" | "penalty" | "other" })}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="advance">{t("salaries.advance")}</SelectItem>
+                            <SelectItem value="loan">{t("salaries.loan")}</SelectItem>
+                            <SelectItem value="penalty">{t("salaries.penalty")}</SelectItem>
+                            <SelectItem value="other">{t("salaries.other")}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>{t("common.description")}</Label>
+                        <Input
+                          value={newDeduction.description}
+                          onChange={(e) => setNewDeduction({ ...newDeduction, description: e.target.value })}
+                          placeholder={t("salaries.deductionDescription")}
+                        />
+                      </div>
+                      <div>
+                        <Label>{t("salaries.amountDH")}</Label>
+                        <Input
+                          type="number"
+                          value={newDeduction.amount || ""}
+                          onChange={(e) => setNewDeduction({ ...newDeduction, amount: parseFloat(e.target.value) || 0 })}
+                          placeholder="0"
+                        />
+                      </div>
+                      <div>
+                        <Label>{t("common.date")}</Label>
+                        <Input
+                          type="date"
+                          value={newDeduction.date}
+                          onChange={(e) => setNewDeduction({ ...newDeduction, date: e.target.value })}
+                        />
+                      </div>
+                      <Button
+                        className="w-full"
+                        onClick={() => createDeductionMutation.mutate(newDeduction)}
+                        disabled={!newDeduction.staffName || !newDeduction.description || !newDeduction.amount || createDeductionMutation.isPending}
+                      >
+                        {t("common.save")}
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+                <ChevronDown className={`h-4 w-4 transition-transform ${deductionsOpen ? "rotate-180" : ""}`} />
               </div>
-            </DialogContent>
-          </Dialog>
-        </CardHeader>
-        <CardContent className="p-3 pt-0 space-y-2">
-          {filteredDeductions.map((deduction) => (
-            <div key={deduction.id} className="p-3 bg-orange-50 rounded-lg flex justify-between items-center">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">{deduction.staffName}</span>
-                  <span className="text-xs px-1.5 py-0.5 bg-orange-100 rounded text-orange-700">{getDeductionTypeLabel(deduction.type)}</span>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="p-3 pt-0 space-y-2">
+              {filteredDeductions.map((deduction) => (
+                <div key={deduction.id} className="p-3 bg-orange-50 rounded-lg flex justify-between items-center">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">{deduction.staffName}</span>
+                      <span className="text-xs px-1.5 py-0.5 bg-orange-100 rounded text-orange-700">{getDeductionTypeLabel(deduction.type)}</span>
+                    </div>
+                    <div className="text-sm text-muted-foreground truncate">{deduction.description}</div>
+                    <div className="flex gap-2 text-sm mt-0.5">
+                      <span className="text-orange-600 font-semibold">{formatCurrency(deduction.amount)}</span>
+                      <span className="text-muted-foreground">{format(parseISO(deduction.date), "d/M/yy")}</span>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={() => deleteDeductionMutation.mutate(deduction.id)}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
                 </div>
-                <div className="text-sm text-muted-foreground truncate">{deduction.description}</div>
-                <div className="flex gap-2 text-sm mt-0.5">
-                  <span className="text-orange-600 font-semibold">{formatCurrency(deduction.amount)}</span>
-                  <span className="text-muted-foreground">{format(parseISO(deduction.date), "d/M/yy")}</span>
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 shrink-0"
-                onClick={() => deleteDeductionMutation.mutate(deduction.id)}
-              >
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
-            </div>
-          ))}
-          {filteredDeductions.length === 0 && (
-            <p className="text-center text-muted-foreground py-4 text-sm">
-              {t("salaries.noDeductionsForPeriod")}
-            </p>
-          )}
-        </CardContent>
-      </Card>
+              ))}
+              {filteredDeductions.length === 0 && (
+                <p className="text-center text-muted-foreground py-4 text-sm">
+                  {t("salaries.noDeductionsForPeriod")}
+                </p>
+              )}
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
     </div>
   );
 }
