@@ -5,6 +5,7 @@ import { SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sid
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { PushNotifications } from "@/components/PushNotifications";
+import { LowStockAlert } from "./LowStockAlert";
 
 function SwipeableContent({ children, isRtl }: { children: React.ReactNode; isRtl: boolean }) {
   const { openMobile, setOpenMobile, isMobile } = useSidebar();
@@ -108,6 +109,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <LanguageSwitcher />
             </div>
           </header>
+          <LowStockAlert />
           <main className={`flex-1 min-h-0 ${isPlanning ? 'overflow-hidden p-0' : 'overflow-auto p-2 md:p-4'}`}>
             <div className="h-full flex flex-col min-h-0">
               {children}

@@ -53,6 +53,9 @@
     "thisMonth": "Ce mois",
     "currency": "DH",
     "results": "résultats",
+    "more": "de plus",
+    "offline": "Vous êtes hors ligne",
+    "online": "De nouveau en ligne",
     "created": "Créé",
     "updated": "Mis à jour",
     "deleted": "Supprimé",
@@ -182,7 +185,8 @@
     "reorderLevel": "Niveau de Réapprovisionnement",
     "usageHistory": "Historique d'Utilisation",
     "adjustStock": "Ajuster Stock",
-    "confirmDelete": "Êtes-vous sûr de vouloir supprimer ce produit?"
+    "confirmDelete": "Êtes-vous sûr de vouloir supprimer ce produit?",
+    "lowStockWarning": "{{count}} produit(s) en stock faible"
   },
   "expenses": {
     "title": "Dépenses",
@@ -334,7 +338,12 @@
     "revenueByStaff": "Revenus par Employé",
     "staffRevenueDesc": "Distribution des performances pour chaque membre de l'équipe",
     "revenue": "Revenus",
-    "topServicesDesc": "Traitements les plus populaires réservés"
+    "topServicesDesc": "Traitements les plus populaires réservés",
+    "comparison": "vs Période Précédente",
+    "increase": "augmentation",
+    "decrease": "diminution",
+    "noChange": "sans changement",
+    "previousPeriod": "Période Précédente"
   },
   "booking": {
     "title": "Réservez votre Rendez-vous",

@@ -186,3 +186,26 @@ Preferred communication style: Simple, everyday language.
   - Vite bundle optimization with manual chunks for vendor libraries (react, radix-ui, recharts)
   - Throttled visibility change handlers to prevent excessive refetches
   - refetchOnWindowFocus disabled for Socket-managed data
+- **Page Transition Animations**:
+  - Smooth fade/slide animations between pages using framer-motion
+  - AnimatePresence for coordinated enter/exit transitions
+  - PageTransition wrapper component in App.tsx
+- **Low Stock Alerts System**:
+  - Global notification banner when products fall below lowStockThreshold
+  - Shows in AppLayout below header on all pages
+  - Individual dismiss or dismiss-all with session persistence
+  - Re-appears when new low-stock items are detected
+- **Period Comparison in Reports**:
+  - Automatic comparison with previous period (same duration)
+  - Revenue and appointments percentage change indicators
+  - Arrow icons (up/down) and color coding (green/red)
+  - Previous period revenue shown in summary cards
+- **Offline Mode (PWA)**:
+  - Service worker caches API responses, images, and static assets
+  - NetworkFirst strategy for appointments, StaleWhileRevalidate for other API endpoints
+  - OfflineIndicator component shows connectivity status
+  - Works on iOS Safari with Add to Home Screen
+- **Salaries Page Collapsible Sections**:
+  - Expenses and Staff Deductions sections now collapsible
+  - Count badges show number of items
+  - Consistent with Commission Rates section design
