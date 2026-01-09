@@ -66,6 +66,7 @@ export function FirstLogin({ children }: FirstLoginProps) {
   const [newPin, setNewPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
   const [resetLoading, setResetLoading] = useState(false);
+  const [showLoginTransition, setShowLoginTransition] = useState(false);
 
   // Auto-login from local storage if session storage is lost
   useEffect(() => {
@@ -136,7 +137,11 @@ export function FirstLogin({ children }: FirstLoginProps) {
         localStorage.setItem("current_user_role", data.role || "");
         localStorage.setItem("current_user_permissions", perms);
         
-        setIsAuthenticated(true);
+        // Show loading transition animation before rendering main content
+        setShowLoginTransition(true);
+        setTimeout(() => {
+          setIsAuthenticated(true);
+        }, 1500);
       } else {
         setError(t("auth.wrongPassword"));
         setPin("");
@@ -200,6 +205,25 @@ export function FirstLogin({ children }: FirstLoginProps) {
 
   if (isAuthenticated || isPublicRoute) {
     return <>{children}</>;
+  }
+  
+  // Show loading transition with logo animation after successful login
+  if (showLoginTransition) {
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-orange-50 to-orange-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="relative animate-pulse">
+          <img 
+            src="/loading-logo.png" 
+            alt="Loading" 
+            className="w-32 h-32 object-contain"
+          />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-36 h-36 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+          </div>
+        </div>
+        <p className="mt-6 text-lg font-medium text-primary animate-pulse">{t("common.loading")}...</p>
+      </div>
+    );
   }
 
   return (

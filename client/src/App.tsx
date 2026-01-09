@@ -27,11 +27,21 @@ const StaffPerformance = lazy(() => import("@/pages/StaffPerformance"));
 const AdminSettings = lazy(() => import("@/pages/AdminSettings"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
-// Loading fallback component
+// Loading fallback component with logo animation
 function PageLoader() {
   return (
-    <div className="flex items-center justify-center min-h-[60vh]">
-      <Loader2 className="w-8 h-8 animate-spin text-primary" />
+    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+      <div className="relative">
+        <img 
+          src="/loading-logo.png" 
+          alt="Loading" 
+          className="w-24 h-24 object-contain animate-pulse"
+        />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-28 h-28 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+        </div>
+      </div>
+      <p className="text-sm text-muted-foreground animate-pulse">Loading...</p>
     </div>
   );
 }
