@@ -828,7 +828,7 @@ export default function Planning() {
       </div>
 
       {/* Board with sticky header */}
-      <div className="flex-1 min-h-0 flex flex-col bg-background rounded-2xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden" dir={isRtl ? "rtl" : "ltr"}>
+      <div className="flex-1 min-h-0 flex flex-col bg-background rounded-2xl border-2 border-gray-200 dark:border-gray-700 shadow-lg" dir={isRtl ? "rtl" : "ltr"}>
         {/* Sticky Staff Headers - outside scroll container, synced with board scroll */}
         <div 
           ref={headerRef}
