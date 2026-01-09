@@ -124,6 +124,40 @@ export async function registerRoutes(
     res.status(204).send();
   });
 
+  // Public endpoints for booking page (no authentication required)
+  app.get("/api/public/services", async (_req, res) => {
+    const items = await storage.getServices();
+    res.json(items);
+  });
+  
+  app.get("/api/public/staff", async (_req, res) => {
+    const items = await storage.getStaff();
+    res.json(items);
+  });
+  
+  app.get("/api/public/categories", async (_req, res) => {
+    const items = await storage.getCategories();
+    res.json(items);
+  });
+  
+  // Public appointments for slot availability checking (limited info)
+  app.get("/api/public/appointments", async (req, res) => {
+    const dateStr = req.query.date as string | undefined;
+    let appointments = await storage.getAppointments();
+    if (dateStr) {
+      appointments = appointments.filter(a => a.date === dateStr);
+    }
+    // Return only what's needed for availability checking
+    const publicAppointments = appointments.map(a => ({
+      id: a.id,
+      date: a.date,
+      startTime: a.startTime,
+      duration: a.duration,
+      staff: a.staff
+    }));
+    res.json(publicAppointments);
+  });
+
   // Services - protected routes
   app.get(api.services.list.path, isPinAuthenticated, async (req, res) => {
     const items = await storage.getServices();
