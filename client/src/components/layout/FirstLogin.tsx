@@ -211,16 +211,12 @@ export function FirstLogin({ children }: FirstLoginProps) {
   if (showLoginTransition) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-orange-50 to-orange-100 dark:from-gray-900 dark:to-gray-800">
-        <div className="relative animate-pulse">
-          <img 
-            src="/loading-logo.png" 
-            alt="Loading" 
-            className="w-32 h-32 object-contain"
-          />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-36 h-36 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-          </div>
-        </div>
+        <img 
+          src="/loading-logo.png" 
+          alt="Loading" 
+          className="w-32 h-32 object-contain animate-spin"
+          style={{ animationDuration: '2s' }}
+        />
         <p className="mt-6 text-lg font-medium text-primary animate-pulse">{t("common.loading")}...</p>
       </div>
     );

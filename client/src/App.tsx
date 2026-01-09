@@ -31,16 +31,12 @@ const NotFound = lazy(() => import("@/pages/not-found"));
 function PageLoader() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-      <div className="relative">
-        <img 
-          src="/loading-logo.png" 
-          alt="Loading" 
-          className="w-24 h-24 object-contain animate-pulse"
-        />
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-28 h-28 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-        </div>
-      </div>
+      <img 
+        src="/loading-logo.png" 
+        alt="Loading" 
+        className="w-20 h-20 object-contain animate-spin"
+        style={{ animationDuration: '2s' }}
+      />
       <p className="text-sm text-muted-foreground animate-pulse">Loading...</p>
     </div>
   );
