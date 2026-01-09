@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { CalendarIcon, ChevronLeft, ChevronRight, Plus, Trash2, Check, X, Search, Star, RefreshCw, Sparkles, CreditCard, Settings2, Scissors, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
+import { LogoSpinner } from "@/components/LogoSpinner";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -636,12 +637,7 @@ export default function Planning() {
   if (isDataLoading) {
     return (
       <div className="h-full flex flex-col items-center justify-center bg-background" dir={isRtl ? "rtl" : "ltr"}>
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center shadow-lg animate-pulse">
-            <span className="text-3xl font-bold text-white">P</span>
-          </div>
-          <p className="text-muted-foreground">{t("common.loading")}</p>
-        </div>
+        <LogoSpinner size="lg" />
       </div>
     );
   }

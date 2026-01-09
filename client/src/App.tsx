@@ -9,7 +9,7 @@ import { FirstLogin } from "@/components/layout/FirstLogin";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { OfflineIndicator } from "@/components/layout/OfflineIndicator";
 import { Suspense, lazy } from "react";
-import { Loader2 } from "lucide-react";
+import { LogoSpinner } from "@/components/LogoSpinner";
 
 // Core pages - loaded immediately
 import Planning from "@/pages/Planning";
@@ -30,14 +30,8 @@ const NotFound = lazy(() => import("@/pages/not-found"));
 // Loading fallback component with logo animation
 function PageLoader() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-      <img 
-        src="/loading-logo.png" 
-        alt="Loading" 
-        className="w-20 h-20 object-contain animate-spin"
-        style={{ animationDuration: '2s' }}
-      />
-      <p className="text-sm text-muted-foreground animate-pulse">Loading...</p>
+    <div className="flex flex-col items-center justify-center min-h-[60vh]">
+      <LogoSpinner size="md" />
     </div>
   );
 }

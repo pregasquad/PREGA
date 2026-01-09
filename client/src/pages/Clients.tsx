@@ -14,6 +14,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit2, Trash2, User, Phone, Mail, Gift, Calendar as CalendarIcon, Star, Crown, Award, Zap, Clock } from "lucide-react";
+import { LogoSpinner } from "@/components/LogoSpinner";
 import { format, startOfToday } from "date-fns";
 import { ar, enUS, fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -295,7 +296,11 @@ export default function Clients() {
   );
 
   if (isLoading) {
-    return <div className="p-6 text-center">{t("common.loading")}</div>;
+    return (
+      <div className="flex items-center justify-center h-64">
+        <LogoSpinner size="md" />
+      </div>
+    );
   }
 
   return (
