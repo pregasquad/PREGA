@@ -140,6 +140,7 @@ export function FirstLogin({ children }: FirstLoginProps) {
         // Show loading transition animation before rendering main content
         setShowLoginTransition(true);
         setTimeout(() => {
+          setShowLoginTransition(false);
           setIsAuthenticated(true);
         }, 1500);
       } else {
@@ -203,11 +204,13 @@ export function FirstLogin({ children }: FirstLoginProps) {
     }
   };
 
-  if (isAuthenticated || isPublicRoute) {
+  // Public routes always show content
+  if (isPublicRoute) {
     return <>{children}</>;
   }
-  
+
   // Show loading transition with logo animation after successful login
+  // Keep overlay mounted until transition completes to prevent flash
   if (showLoginTransition) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-orange-50 to-orange-100 dark:from-gray-900 dark:to-gray-800">
@@ -222,6 +225,12 @@ export function FirstLogin({ children }: FirstLoginProps) {
     );
   }
 
+  // Show content when authenticated (transition is done)
+  if (isAuthenticated) {
+    return <>{children}</>;
+  }
+
+  // Show login form
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-orange-50 to-orange-100 dark:from-gray-900 dark:to-gray-800 p-4">
       <Card className="w-full max-w-lg p-6 md:p-8 shadow-2xl border-2 border-primary/20">
