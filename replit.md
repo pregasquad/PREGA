@@ -109,9 +109,22 @@ Preferred communication style: Simple, everyday language.
 
 ## Development Commands
 - `npm run dev` - Start development server on port 5000
-- `npm run build` - Build for production
+- `npm run build` - Build for production (full-stack)
+- `npm run build:netlify` - Build frontend only for Netlify deployment
 - `npm run start` - Start production server
 - `npm run db:push` - Push schema changes to database
+
+## Deployment Options
+
+### Netlify (Frontend Only)
+- Build command: `npm run build:netlify`
+- Publish directory: `dist/public`
+- Configuration: See `netlify.toml` and `NETLIFY_DEPLOY.md`
+- **Note**: Backend must be hosted separately (Railway, Render, or Replit)
+- Set `BACKEND_URL` environment variable to your backend URL
+
+### Koyeb (Full-Stack)
+- See `KOYEB_DEPLOY.md` for full-stack deployment instructions
 
 ## Recent Changes (January 2026)
 - **First Login Interface**: Users must login before accessing the application
