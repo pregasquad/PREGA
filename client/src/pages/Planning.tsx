@@ -852,7 +852,14 @@ export default function Planning() {
         </div>
 
         {/* Scrollable content */}
-        <div ref={boardRef} className="flex-1 min-h-0 overflow-auto relative free-scroll bg-white dark:bg-gray-950">
+        <div 
+          ref={boardRef} 
+          className="flex-1 min-h-0 overflow-auto relative bg-white dark:bg-gray-950"
+          style={{ 
+            WebkitOverflowScrolling: 'touch',
+            overscrollBehavior: 'contain'
+          }}
+        >
           <div 
             className="grid relative"
             style={{ 
@@ -953,10 +960,14 @@ export default function Planning() {
                     >
                       <div 
                         className={cn(
-                          "h-full p-2 rounded-lg text-white cursor-grab active:cursor-grabbing shadow-lg flex flex-col justify-between",
+                          "h-full p-2 rounded-lg text-white shadow-lg flex flex-col justify-between",
+                          canEditCardboard && "cursor-grab active:cursor-grabbing",
                           isDragging && "opacity-50 scale-95"
                         )}
-                        style={{ backgroundColor: s.color, cursor: canEditCardboard ? 'grab' : 'default' }}
+                        style={{ 
+                          backgroundColor: s.color, 
+                          touchAction: 'none'
+                        }}
                         draggable={canEditCardboard}
                         onDragStart={(e) => handleDragStart(e, booking)}
                         onDragEnd={handleDragEnd}
