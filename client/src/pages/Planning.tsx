@@ -857,7 +857,8 @@ export default function Planning() {
           className="flex-1 min-h-0 overflow-auto relative bg-white dark:bg-gray-950"
           style={{ 
             WebkitOverflowScrolling: 'touch',
-            overscrollBehavior: 'contain'
+            overscrollBehavior: 'contain',
+            touchAction: 'pan-y'
           }}
         >
           <div 
@@ -961,16 +962,13 @@ export default function Planning() {
                       <div 
                         className={cn(
                           "h-full p-2 rounded-lg text-white shadow-lg flex flex-col justify-between",
-                          canEditCardboard && "cursor-grab active:cursor-grabbing",
+                          canEditCardboard && !isMobile && "cursor-grab active:cursor-grabbing",
                           isDragging && "opacity-50 scale-95"
                         )}
-                        style={{ 
-                          backgroundColor: s.color, 
-                          touchAction: 'none'
-                        }}
-                        draggable={canEditCardboard}
-                        onDragStart={(e) => handleDragStart(e, booking)}
-                        onDragEnd={handleDragEnd}
+                        style={{ backgroundColor: s.color }}
+                        draggable={canEditCardboard && !isMobile}
+                        onDragStart={!isMobile ? (e) => handleDragStart(e, booking) : undefined}
+                        onDragEnd={!isMobile ? handleDragEnd : undefined}
                         onClick={(e) => handleAppointmentClick(e, booking)}
                       >
                         <div>
