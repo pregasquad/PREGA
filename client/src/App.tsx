@@ -9,7 +9,7 @@ import { FirstLogin } from "@/components/layout/FirstLogin";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { OfflineIndicator } from "@/components/layout/OfflineIndicator";
 import { Suspense, lazy } from "react";
-import { LogoSpinner } from "@/components/LogoSpinner";
+import { Loader2 } from "lucide-react";
 
 // Core pages - loaded immediately
 import Planning from "@/pages/Planning";
@@ -27,11 +27,11 @@ const StaffPerformance = lazy(() => import("@/pages/StaffPerformance"));
 const AdminSettings = lazy(() => import("@/pages/AdminSettings"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
-// Loading fallback component with logo animation
+// Loading fallback component
 function PageLoader() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh]">
-      <LogoSpinner size="md" />
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <Loader2 className="w-8 h-8 animate-spin text-primary" />
     </div>
   );
 }

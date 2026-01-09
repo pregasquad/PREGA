@@ -17,7 +17,6 @@ import { Label } from "@/components/ui/label";
 import { CalendarIcon, ChevronLeft, ChevronRight, Plus, Trash2, Check, X, Search, Star, RefreshCw, Sparkles, CreditCard, Settings2, Scissors, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
-import { LogoSpinner } from "@/components/LogoSpinner";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -637,7 +636,12 @@ export default function Planning() {
   if (isDataLoading) {
     return (
       <div className="h-full flex flex-col items-center justify-center bg-background" dir={isRtl ? "rtl" : "ltr"}>
-        <LogoSpinner size="lg" />
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center shadow-lg animate-pulse">
+            <span className="text-3xl font-bold text-white">P</span>
+          </div>
+          <p className="text-muted-foreground">{t("common.loading")}</p>
+        </div>
       </div>
     );
   }
@@ -828,7 +832,7 @@ export default function Planning() {
       </div>
 
       {/* Board with sticky header */}
-      <div className="flex-1 min-h-0 flex flex-col bg-background rounded-2xl border-2 border-gray-200 dark:border-gray-700 shadow-lg" dir={isRtl ? "rtl" : "ltr"}>
+      <div className="flex-1 min-h-0 flex flex-col bg-background rounded-2xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden" dir={isRtl ? "rtl" : "ltr"}>
         {/* Sticky Staff Headers - outside scroll container, synced with board scroll */}
         <div 
           ref={headerRef}
@@ -852,15 +856,7 @@ export default function Planning() {
         </div>
 
         {/* Scrollable content */}
-        <div 
-          ref={boardRef} 
-          className="flex-1 min-h-0 overflow-auto relative bg-white dark:bg-gray-950"
-          style={{ 
-            WebkitOverflowScrolling: 'touch',
-            overscrollBehavior: 'contain',
-            touchAction: 'pan-y'
-          }}
-        >
+        <div ref={boardRef} className="flex-1 min-h-0 overflow-auto relative free-scroll bg-white dark:bg-gray-950">
           <div 
             className="grid relative"
             style={{ 
@@ -961,14 +957,13 @@ export default function Planning() {
                     >
                       <div 
                         className={cn(
-                          "h-full p-2 rounded-lg text-white shadow-lg flex flex-col justify-between",
-                          canEditCardboard && !isMobile && "cursor-grab active:cursor-grabbing",
+                          "h-full p-2 rounded-lg text-white cursor-grab active:cursor-grabbing shadow-lg flex flex-col justify-between",
                           isDragging && "opacity-50 scale-95"
                         )}
-                        style={{ backgroundColor: s.color }}
-                        draggable={canEditCardboard && !isMobile}
-                        onDragStart={!isMobile ? (e) => handleDragStart(e, booking) : undefined}
-                        onDragEnd={!isMobile ? handleDragEnd : undefined}
+                        style={{ backgroundColor: s.color, cursor: canEditCardboard ? 'grab' : 'default' }}
+                        draggable={canEditCardboard}
+                        onDragStart={(e) => handleDragStart(e, booking)}
+                        onDragEnd={handleDragEnd}
                         onClick={(e) => handleAppointmentClick(e, booking)}
                       >
                         <div>

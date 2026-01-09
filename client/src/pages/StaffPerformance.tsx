@@ -7,8 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
-import { Users, DollarSign, Calendar, TrendingUp, Award } from "lucide-react";
-import { LogoSpinner } from "@/components/LogoSpinner";
+import { Users, DollarSign, Calendar, TrendingUp, Award, Loader2 } from "lucide-react";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import type { Staff, Appointment, Service } from "@shared/schema";
 
@@ -121,7 +120,7 @@ export default function StaffPerformance() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
-        <LogoSpinner size="md" />
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
