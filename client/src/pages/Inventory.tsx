@@ -29,7 +29,7 @@ export default function Inventory() {
 
   const productForm = useForm({
     resolver: zodResolver(insertProductSchema),
-    defaultValues: { name: "", quantity: 0 }
+    defaultValues: { name: "", quantity: 0, lowStockThreshold: 5 }
   });
 
   const staffForm = useForm({
@@ -232,6 +232,23 @@ export default function Inventory() {
                             <FormItem>
                               <FormLabel>{t("inventory.productName")}</FormLabel>
                               <FormControl><Input {...field} /></FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={productForm.control}
+                          name="lowStockThreshold"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{t("inventory.minStock")}</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="number" 
+                                  {...field} 
+                                  value={field.value || 5}
+                                  onChange={e => field.onChange(parseInt(e.target.value) || 5)} 
+                                />
+                              </FormControl>
                             </FormItem>
                           )}
                         />
