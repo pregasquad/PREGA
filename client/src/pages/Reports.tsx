@@ -3,12 +3,12 @@ import { useTranslation } from "react-i18next";
 import { useAppointments, useStaff } from "@/hooks/use-salon-data";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from "recharts";
-import { TrendingUp, TrendingDown, Users, CalendarCheck, Calendar as CalendarIcon, ChevronRight, ChevronLeft, ArrowUp, ArrowDown, Minus } from "lucide-react";
+import { TrendingUp, Users, CalendarCheck, Calendar as CalendarIcon, ChevronRight, ChevronLeft } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addWeeks, subWeeks, addMonths, subMonths, isWithinInterval, parseISO, startOfDay, endOfDay, differenceInDays } from "date-fns";
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addWeeks, subWeeks, addMonths, subMonths, isWithinInterval, parseISO, startOfDay, endOfDay } from "date-fns";
 import { ar, enUS, fr } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
 
@@ -69,25 +69,6 @@ export default function Reports() {
     });
   }, [appointments, dateRange]);
 
-  const previousDateRange = useMemo(() => {
-    const daysDiff = differenceInDays(dateRange.end, dateRange.start) + 1;
-    return {
-      start: new Date(dateRange.start.getTime() - daysDiff * 24 * 60 * 60 * 1000),
-      end: new Date(dateRange.end.getTime() - daysDiff * 24 * 60 * 60 * 1000)
-    };
-  }, [dateRange]);
-
-  const previousAppointments = useMemo(() => {
-    return appointments.filter(app => {
-      try {
-        const appDate = parseISO(app.date);
-        return isWithinInterval(appDate, { start: previousDateRange.start, end: previousDateRange.end });
-      } catch {
-        return false;
-      }
-    });
-  }, [appointments, previousDateRange]);
-
   const navigatePeriod = (direction: "prev" | "next") => {
     if (viewMode === "weekly") {
       setSelectedDate(direction === "prev" ? subWeeks(selectedDate, 1) : addWeeks(selectedDate, 1));
@@ -100,12 +81,6 @@ export default function Reports() {
     const totalRevenue = filteredAppointments.reduce((sum, app) => sum + Number(app.total || 0), 0);
     const paidRevenue = filteredAppointments.filter(app => app.paid).reduce((sum, app) => sum + Number(app.total || 0), 0);
     const totalAppointments = filteredAppointments.length;
-    
-    const prevTotalRevenue = previousAppointments.reduce((sum, app) => sum + Number(app.total || 0), 0);
-    const prevTotalAppointments = previousAppointments.length;
-    
-    const revenueChange = prevTotalRevenue > 0 ? ((totalRevenue - prevTotalRevenue) / prevTotalRevenue) * 100 : 0;
-    const appointmentsChange = prevTotalAppointments > 0 ? ((totalAppointments - prevTotalAppointments) / prevTotalAppointments) * 100 : 0;
     
     const staffRevenue = staffList.map(s => {
       const revenue = filteredAppointments
@@ -124,18 +99,8 @@ export default function Reports() {
       .sort((a, b) => b.value - a.value)
       .slice(0, 5);
 
-    return { 
-      totalRevenue, 
-      paidRevenue, 
-      totalAppointments, 
-      staffRevenue, 
-      serviceData,
-      prevTotalRevenue,
-      prevTotalAppointments,
-      revenueChange,
-      appointmentsChange
-    };
-  }, [filteredAppointments, previousAppointments, staffList]);
+    return { totalRevenue, paidRevenue, totalAppointments, staffRevenue, serviceData };
+  }, [filteredAppointments, staffList]);
 
   const staffPerformance = useMemo(() => {
     return staffList.map(staff => {
@@ -264,18 +229,12 @@ export default function Reports() {
               <div>
                 <p className="text-orange-100 font-medium text-sm">{t("reports.totalRevenue")}</p>
                 <h3 className="text-4xl font-bold mt-2">{formatCurrency(stats.totalRevenue)} DH</h3>
-                <div className="mt-2 flex items-center text-orange-100 text-sm">
+                <div className="mt-4 flex items-center text-orange-100 text-sm">
                   <span>{t("reports.collected")} {formatCurrency(stats.paidRevenue)} DH</span>
                 </div>
-                {stats.prevTotalRevenue > 0 && (
-                  <div className={`mt-2 flex items-center gap-1 text-sm ${stats.revenueChange >= 0 ? 'text-green-200' : 'text-red-200'}`}>
-                    {stats.revenueChange > 0 ? <ArrowUp className="w-3 h-3" /> : stats.revenueChange < 0 ? <ArrowDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
-                    <span>{Math.abs(stats.revenueChange).toFixed(1)}% {t("reports.comparison")}</span>
-                  </div>
-                )}
               </div>
               <div className="p-3 bg-white/20 rounded-xl">
-                {stats.revenueChange >= 0 ? <TrendingUp className="w-6 h-6 text-white" /> : <TrendingDown className="w-6 h-6 text-white" />}
+                <TrendingUp className="w-6 h-6 text-white" />
               </div>
             </div>
           </CardContent>
@@ -287,16 +246,10 @@ export default function Reports() {
               <div>
                 <p className="text-muted-foreground font-medium text-sm">{t("reports.appointments")}</p>
                 <h3 className="text-4xl font-bold mt-2 text-foreground">{stats.totalAppointments}</h3>
-                <div className="mt-2 flex items-center text-emerald-600 text-sm font-medium">
+                <div className="mt-4 flex items-center text-emerald-600 text-sm font-medium">
                   <CalendarCheck className="w-4 h-4 ml-1" />
                   <span>{periodSubLabel}</span>
                 </div>
-                {stats.prevTotalAppointments > 0 && (
-                  <div className={`mt-2 flex items-center gap-1 text-sm ${stats.appointmentsChange >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                    {stats.appointmentsChange > 0 ? <ArrowUp className="w-3 h-3" /> : stats.appointmentsChange < 0 ? <ArrowDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
-                    <span>{Math.abs(stats.appointmentsChange).toFixed(1)}% {t("reports.comparison")}</span>
-                  </div>
-                )}
               </div>
               <div className="p-3 bg-primary/20 rounded-xl">
                 <CalendarCheck className="w-6 h-6 text-primary" />
@@ -311,12 +264,9 @@ export default function Reports() {
               <div>
                 <p className="text-muted-foreground font-medium text-sm">{t("reports.activeStaff")}</p>
                 <h3 className="text-4xl font-bold mt-2 text-foreground">{staffList.length}</h3>
-                <div className="mt-2 flex items-center text-blue-600 text-sm font-medium">
+                <div className="mt-4 flex items-center text-blue-600 text-sm font-medium">
                   <Users className="w-4 h-4 ml-1" />
                   <span>{t("reports.members")}</span>
-                </div>
-                <div className="mt-2 text-sm text-muted-foreground">
-                  {t("reports.previousPeriod")}: {formatCurrency(stats.prevTotalRevenue)} DH
                 </div>
               </div>
               <div className="p-3 bg-blue-100 rounded-xl">

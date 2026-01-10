@@ -2,8 +2,7 @@ import { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslation } from "react-i18next";
-import { useQuery } from "@tanstack/react-query";
-import { useCreateAppointment } from "@/hooks/use-salon-data";
+import { useStaff, useServices, useCreateAppointment, useAppointments } from "@/hooks/use-salon-data";
 import { queryClient } from "@/lib/queryClient";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -16,7 +15,6 @@ import { ar, enUS, fr } from "date-fns/locale";
 import { Clock, CheckCircle2, Scissors, User, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
-import type { Staff, Service } from "@shared/schema";
 
 const bookingSchema = z.object({
   client: z.string().min(1),
@@ -47,24 +45,8 @@ export default function Booking() {
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [isSuccess, setIsSuccess] = useState(false);
   
-  // Use public endpoints for booking page (no auth required)
-  const { data: staffList = [] } = useQuery<Staff[]>({
-    queryKey: ["/api/public/staff"],
-    queryFn: async () => {
-      const res = await fetch("/api/public/staff");
-      if (!res.ok) throw new Error("Failed to fetch staff");
-      return res.json();
-    },
-  });
-  
-  const { data: services = [] } = useQuery<Service[]>({
-    queryKey: ["/api/public/services"],
-    queryFn: async () => {
-      const res = await fetch("/api/public/services");
-      if (!res.ok) throw new Error("Failed to fetch services");
-      return res.json();
-    },
-  });
+  const { data: staffList = [] } = useStaff();
+  const { data: services = [] } = useServices();
   
   const getDateLocale = () => {
     switch (i18n.language) {
@@ -74,21 +56,7 @@ export default function Booking() {
     }
   };
   const formattedDate = date ? format(date, "yyyy-MM-dd") : "";
-  
-  // Use public endpoint for appointment availability checking
-  const { data: appointments = [] } = useQuery<{id: number; date: string; startTime: string; duration: number; staff: string}[]>({
-    queryKey: ["/api/public/appointments", formattedDate],
-    queryFn: async () => {
-      const url = formattedDate 
-        ? `/api/public/appointments?date=${formattedDate}`
-        : "/api/public/appointments";
-      const res = await fetch(url);
-      if (!res.ok) throw new Error("Failed to fetch appointments");
-      return res.json();
-    },
-    enabled: !!formattedDate,
-  });
-  
+  const { data: appointments = [] } = useAppointments(formattedDate);
   const createMutation = useCreateAppointment();
 
   const form = useForm<BookingFormValues>({

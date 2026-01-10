@@ -17,7 +17,6 @@ declare module 'express-session' {
       permissions: string[];
       authenticatedAt: number;
     };
-    user_authenticated?: boolean;
   }
 }
 
@@ -110,13 +109,13 @@ export function getSession() {
   return session({
     secret: getSessionSecret(),
     store: sessionStore,
-    resave: true,
+    resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production" || !!process.env.REPL_ID,
+      secure: process.env.NODE_ENV === "production",
       maxAge: sessionTtl,
-      sameSite: 'none', // Required for iframe/cross-origin in Replit preview
+      sameSite: 'strict', // Prevent CSRF attacks
     },
   });
 }

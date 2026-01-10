@@ -53,9 +53,6 @@
     "thisMonth": "This Month",
     "currency": "DH",
     "results": "results",
-    "more": "more",
-    "offline": "You are offline",
-    "online": "Back online",
     "created": "Created",
     "updated": "Updated",
     "deleted": "Deleted",
@@ -185,8 +182,7 @@
     "reorderLevel": "Reorder Level",
     "usageHistory": "Usage History",
     "adjustStock": "Adjust Stock",
-    "confirmDelete": "Are you sure you want to delete this product?",
-    "lowStockWarning": "{{count}} product(s) low on stock"
+    "confirmDelete": "Are you sure you want to delete this product?"
   },
   "expenses": {
     "title": "Expenses",
@@ -338,12 +334,7 @@
     "revenueByStaff": "Revenue by Staff",
     "staffRevenueDesc": "Performance distribution for each team member",
     "revenue": "Revenue",
-    "topServicesDesc": "Most popular treatments booked",
-    "comparison": "vs Previous Period",
-    "increase": "increase",
-    "decrease": "decrease",
-    "noChange": "no change",
-    "previousPeriod": "Previous Period"
+    "topServicesDesc": "Most popular treatments booked"
   },
   "booking": {
     "title": "Book Your Appointment",

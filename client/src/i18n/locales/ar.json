@@ -53,9 +53,6 @@
     "thisMonth": "هذا الشهر",
     "currency": "درهم",
     "results": "نتائج",
-    "more": "المزيد",
-    "offline": "أنت غير متصل",
-    "online": "متصل مرة أخرى",
     "created": "تم الإنشاء",
     "updated": "تم التحديث",
     "deleted": "تم الحذف",
@@ -185,8 +182,7 @@
     "reorderLevel": "مستوى إعادة الطلب",
     "usageHistory": "سجل الاستخدام",
     "adjustStock": "تعديل المخزون",
-    "confirmDelete": "هل أنت متأكد من حذف هذا المنتج؟",
-    "lowStockWarning": "{{count}} منتج(ات) في مخزون منخفض"
+    "confirmDelete": "هل أنت متأكد من حذف هذا المنتج؟"
   },
   "expenses": {
     "title": "المصاريف",
@@ -338,12 +334,7 @@
     "revenueByStaff": "الإيرادات حسب الموظف",
     "staffRevenueDesc": "توزيع الأداء لكل عضو في الفريق",
     "revenue": "الإيرادات",
-    "topServicesDesc": "أكثر العلاجات شعبية المحجوزة",
-    "comparison": "مقارنة بالفترة السابقة",
-    "increase": "زيادة",
-    "decrease": "انخفاض",
-    "noChange": "بدون تغيير",
-    "previousPeriod": "الفترة السابقة"
+    "topServicesDesc": "أكثر العلاجات شعبية المحجوزة"
   },
   "booking": {
     "title": "احجز موعدك",

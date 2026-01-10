@@ -124,40 +124,6 @@ export async function registerRoutes(
     res.status(204).send();
   });
 
-  // Public endpoints for booking page (no authentication required)
-  app.get("/api/public/services", async (_req, res) => {
-    const items = await storage.getServices();
-    res.json(items);
-  });
-  
-  app.get("/api/public/staff", async (_req, res) => {
-    const items = await storage.getStaff();
-    res.json(items);
-  });
-  
-  app.get("/api/public/categories", async (_req, res) => {
-    const items = await storage.getCategories();
-    res.json(items);
-  });
-  
-  // Public appointments for slot availability checking (limited info)
-  app.get("/api/public/appointments", async (req, res) => {
-    const dateStr = req.query.date as string | undefined;
-    let appointments = await storage.getAppointments();
-    if (dateStr) {
-      appointments = appointments.filter(a => a.date === dateStr);
-    }
-    // Return only what's needed for availability checking
-    const publicAppointments = appointments.map(a => ({
-      id: a.id,
-      date: a.date,
-      startTime: a.startTime,
-      duration: a.duration,
-      staff: a.staff
-    }));
-    res.json(publicAppointments);
-  });
-
   // Services - protected routes
   app.get(api.services.list.path, isPinAuthenticated, async (req, res) => {
     const items = await storage.getServices();
@@ -732,14 +698,7 @@ export async function registerRoutes(
         authenticatedAt: Date.now()
       };
       
-      // Ensure session is saved before responding
-      req.session.save((err) => {
-        if (err) {
-          console.error("Session save error:", err);
-          return res.status(500).json({ success: false, message: "Session error" });
-        }
-        res.json({ success: true, role: role.role, permissions: role.permissions });
-      });
+      res.json({ success: true, role: role.role, permissions: role.permissions });
     } catch (err: any) {
       res.status(400).json({ success: false, message: err.message });
     }
@@ -765,35 +724,6 @@ export async function registerRoutes(
       delete req.session.pinAuth;
     }
     res.json({ success: true });
-  });
-  
-  // Setup session - allows first-time setup when no admin users exist
-  app.post("/api/auth/setup-session", async (req, res) => {
-    try {
-      const roles = await storage.getAdminRoles();
-      if (roles.length > 0) {
-        return res.status(403).json({ success: false, message: "Admin users already exist. Please login normally." });
-      }
-      
-      // Create a temporary setup session with full owner permissions
-      req.session.pinAuth = {
-        userName: "Setup",
-        role: "owner",
-        permissions: [],
-        authenticatedAt: Date.now()
-      };
-      
-      // Ensure session is saved before responding
-      req.session.save((err) => {
-        if (err) {
-          console.error("Session save error:", err);
-          return res.status(500).json({ success: false, message: "Session error" });
-        }
-        res.json({ success: true });
-      });
-    } catch (err: any) {
-      res.status(500).json({ success: false, message: err.message });
-    }
   });
 
   // Reset PIN with business phone verification

@@ -6,8 +6,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { AdminLock } from "@/components/layout/AdminLock";
 import { FirstLogin } from "@/components/layout/FirstLogin";
-import { PageTransition } from "@/components/layout/PageTransition";
-import { OfflineIndicator } from "@/components/layout/OfflineIndicator";
 import { Suspense, lazy } from "react";
 import { Loader2 } from "lucide-react";
 
@@ -83,9 +81,7 @@ function PageRoute({ component: Component, requireAdmin = false, permission, laz
 
   const content = (
     <AppLayout>
-      <PageTransition>
-        {pageContent}
-      </PageTransition>
+      {pageContent}
     </AppLayout>
   );
 
@@ -160,7 +156,6 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <OfflineIndicator />
         <Toaster />
         <FirstLogin>
           <Router />
