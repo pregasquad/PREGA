@@ -18,6 +18,7 @@ import {
   Trash2, Edit, Calendar, User, Briefcase, Package, 
   CreditCard, Building2, Clock, Save
 } from "lucide-react";
+import { SpinningLogo } from "@/components/ui/spinning-logo";
 
 interface AdminRole {
   id: number;
@@ -307,7 +308,7 @@ export default function AdminSettings() {
             </CardHeader>
             <CardContent>
               {isLoadingBusiness ? (
-                <p className="text-center py-4 text-muted-foreground">{t("common.loading")}</p>
+                <div className="flex items-center justify-center py-8"><SpinningLogo size="lg" /></div>
               ) : (
                 <form onSubmit={handleBusinessSave} className="space-y-6">
                   <div className="grid gap-4 md:grid-cols-2">
@@ -536,7 +537,7 @@ export default function AdminSettings() {
             </CardHeader>
             <CardContent>
               {isLoading ? (
-                <p className="text-center py-4 text-muted-foreground">{t("common.loading")}</p>
+                <div className="flex items-center justify-center py-8"><SpinningLogo size="lg" /></div>
               ) : adminRoles.length === 0 ? (
                 <p className="text-center py-4 text-muted-foreground">{t("admin.noUsers")}</p>
               ) : (

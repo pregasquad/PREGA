@@ -7,7 +7,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { AdminLock } from "@/components/layout/AdminLock";
 import { FirstLogin } from "@/components/layout/FirstLogin";
 import { Suspense, lazy } from "react";
-import { Loader2 } from "lucide-react";
+import { SpinningLogo } from "@/components/ui/spinning-logo";
 
 // Core pages - loaded immediately
 import Planning from "@/pages/Planning";
@@ -29,7 +29,7 @@ const NotFound = lazy(() => import("@/pages/not-found"));
 function PageLoader() {
   return (
     <div className="flex items-center justify-center min-h-[60vh]">
-      <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <SpinningLogo size="lg" />
     </div>
   );
 }
