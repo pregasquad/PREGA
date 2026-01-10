@@ -109,7 +109,7 @@ export default function Charges() {
   const totalCharges = charges.reduce((sum: number, c: any) => sum + c.amount, 0);
 
   return (
-    <div className="h-full flex flex-col gap-4 md:gap-6 p-2 md:p-4" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
+    <div className="h-full flex flex-col gap-4 md:gap-6 p-2 md:p-4 animate-fade-in" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
       <div className="flex justify-between items-center">
         <h1 className="text-xl md:text-2xl lg:text-3xl font-display font-bold">{t("expenses.title")}</h1>
       </div>

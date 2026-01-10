@@ -93,7 +93,7 @@ export default function Home() {
   ];
 
   return (
-    <div className="space-y-8 p-6" dir={isRtl ? "rtl" : "ltr"}>
+    <div className="space-y-8 p-6 animate-fade-in" dir={isRtl ? "rtl" : "ltr"}>
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-display font-bold">{t("home.dashboard")}</h1>

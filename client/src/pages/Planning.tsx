@@ -662,7 +662,7 @@ export default function Planning() {
   return (
     <div 
       ref={pageRef}
-      className="h-full overflow-hidden bg-background px-1.5 pt-0.5 pb-1 md:px-3 md:pt-1 md:pb-2 flex flex-col"
+      className="h-full overflow-hidden bg-background px-1.5 pt-0.5 pb-1 md:px-3 md:pt-1 md:pb-2 flex flex-col animate-fade-in"
       dir={isRtl ? "rtl" : "ltr"}
     >
       {/* Header */}

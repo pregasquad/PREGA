@@ -272,7 +272,7 @@ export default function AdminSettings() {
   ];
 
   return (
-    <div className="space-y-6 p-2 md:p-4">
+    <div className="space-y-6 p-2 md:p-4 animate-fade-in">
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl md:text-3xl font-bold font-display flex items-center gap-2">
           <Shield className="w-6 h-6 md:w-8 md:h-8" />

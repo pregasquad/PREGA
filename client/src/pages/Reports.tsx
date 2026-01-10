@@ -153,7 +153,7 @@ export default function Reports() {
   }, [viewMode, t]);
 
   return (
-    <div className="space-y-4 md:space-y-6 max-w-6xl mx-auto p-2 md:p-4 lg:p-6" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
+    <div className="space-y-4 md:space-y-6 max-w-6xl mx-auto p-2 md:p-4 lg:p-6 animate-fade-in" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 md:gap-4">
         <div>
           <h1 className="text-xl md:text-2xl lg:text-3xl font-display font-bold">{t("reports.pageTitle")}</h1>

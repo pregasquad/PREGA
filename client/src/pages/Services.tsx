@@ -98,7 +98,7 @@ export default function Services() {
   };
 
   return (
-    <div className="space-y-4 md:space-y-6 max-w-5xl mx-auto px-2 md:px-0" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
+    <div className="space-y-4 md:space-y-6 max-w-5xl mx-auto px-2 md:px-0 animate-fade-in" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
       <div>
         <h1 className="text-xl md:text-2xl lg:text-3xl font-display font-bold">{t("services.pageTitle")}</h1>
         <p className="text-sm md:text-base text-muted-foreground">{t("services.pageDesc")}</p>

@@ -127,7 +127,7 @@ export default function StaffPerformance() {
   }
 
   return (
-    <div className="p-2 md:p-4 lg:p-6 space-y-4 md:space-y-6" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
+    <div className="p-2 md:p-4 lg:p-6 space-y-4 md:space-y-6 animate-fade-in" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
           <h1 className="text-xl md:text-2xl font-bold">{t("staffPerformance.pageTitle")}</h1>

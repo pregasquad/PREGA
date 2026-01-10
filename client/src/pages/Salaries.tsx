@@ -295,7 +295,7 @@ export default function Salaries() {
   };
 
   return (
-    <div className="h-full flex flex-col gap-3 p-2" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
+    <div className="h-full flex flex-col gap-3 p-2 animate-fade-in" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
       <div className="flex justify-between items-center">
         <h1 className="text-lg font-bold">{t("salaries.pageTitle")}</h1>
         <Button
