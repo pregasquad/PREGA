@@ -87,7 +87,8 @@ export default function Salaries() {
       if (!res.ok) return [];
       return res.json();
     },
-    refetchInterval: 30000,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const { data: charges = [] } = useQuery<Charge[]>({

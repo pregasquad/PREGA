@@ -117,9 +117,8 @@ export function Sidebar() {
       if (!res.ok) return [];
       return res.json();
     },
-    staleTime: 60000, // Data stays fresh for 1 minute
-    refetchInterval: 120000, // Poll every 2 minutes (socket.io handles real-time updates)
-    refetchOnWindowFocus: false, // Don't refetch on focus - socket handles it
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Play notification sound

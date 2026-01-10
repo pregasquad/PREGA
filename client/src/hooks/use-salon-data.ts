@@ -14,7 +14,7 @@ export function useAppointments(date?: string) {
       if (!res.ok) throw new Error("Failed to fetch appointments");
       return api.appointments.list.responses[200].parse(await res.json());
     },
-    staleTime: 30000, // Data stays fresh for 30 seconds
+    staleTime: 5 * 60 * 1000, // Data stays fresh for 5 minutes - socket.io handles real-time updates
     refetchOnWindowFocus: false, // Don't refetch on tab focus (socket handles updates)
   });
 }
@@ -336,7 +336,7 @@ export function useClients() {
       if (!res.ok) throw new Error("Failed to fetch clients");
       return api.clients.list.responses[200].parse(await res.json());
     },
-    staleTime: 60000, // Cache clients for 1 minute
+    staleTime: 5 * 60 * 1000, // Cache clients for 5 minutes
   });
 }
 
@@ -419,6 +419,6 @@ export function useProducts() {
       if (!res.ok) throw new Error("Failed to fetch products");
       return res.json();
     },
-    staleTime: 60000, // Cache products for 1 minute
+    staleTime: 5 * 60 * 1000, // Cache products for 5 minutes
   });
 }
