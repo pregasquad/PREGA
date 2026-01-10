@@ -179,6 +179,11 @@ Preferred communication style: Simple, everyday language.
   - bcryptjs for secure PIN hashing and comparison
   - All admin API endpoints validate and sanitize input
   - Role-based navigation: sidebar only shows permitted sections
+- **Custom Spinning Logo Loading Indicator**:
+  - SpinningLogo component (`client/src/components/ui/spinning-logo.tsx`) displays PREGA SQUAD logo with spin animation
+  - Replaces all Loader2 icons across the app (Planning, Clients, Inventory, StaffPerformance, AdminSettings, App.tsx)
+  - Logo stored at `client/public/prega_logo.png`
+  - Sizes: sm (8), md (12), lg (16), xl (24) with 1.5s animation duration
 - **Mobile/iPhone Performance Optimizations**:
   - Code splitting with React.lazy() for admin pages (Home, Services, Reports, Inventory, Salaries, Clients, StaffPerformance, AdminSettings)
   - Smart data caching with staleTime: Services/Staff/Categories (5 min), Clients/Products (1 min), Appointments (30 sec)
