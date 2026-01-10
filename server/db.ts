@@ -10,9 +10,9 @@ function getDatabaseUrl(): string {
     }
     return mysqlUrl;
   } else {
-    const pgUrl = process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL;
+    const pgUrl = process.env.DATABASE_URL;
     if (!pgUrl) {
-      throw new Error("SUPABASE_DATABASE_URL or DATABASE_URL must be set for PostgreSQL mode.");
+      throw new Error("DATABASE_URL must be set for PostgreSQL mode.");
     }
     return pgUrl;
   }
@@ -46,28 +46,14 @@ export async function initializeDatabase() {
     db = drizzle(pool, { schema, mode: "default" });
     console.log("Using MySQL/TiDB database");
   } else {
-    const isSupabase = !!process.env.SUPABASE_DATABASE_URL;
+    const { drizzle } = await import("drizzle-orm/neon-serverless");
+    const { Pool, neonConfig } = await import("@neondatabase/serverless");
+    const ws = (await import("ws")).default;
     
-    if (isSupabase) {
-      const { drizzle } = await import("drizzle-orm/node-postgres");
-      const pg = await import("pg");
-      
-      pool = new pg.default.Pool({ 
-        connectionString: databaseUrl,
-        ssl: { rejectUnauthorized: false }
-      });
-      db = drizzle(pool, { schema });
-      console.log("Using Supabase PostgreSQL database");
-    } else {
-      const { drizzle } = await import("drizzle-orm/neon-serverless");
-      const { Pool, neonConfig } = await import("@neondatabase/serverless");
-      const ws = (await import("ws")).default;
-      
-      neonConfig.webSocketConstructor = ws;
-      pool = new Pool({ connectionString: databaseUrl });
-      db = drizzle(pool, { schema });
-      console.log("Using PostgreSQL database (Neon)");
-    }
+    neonConfig.webSocketConstructor = ws;
+    pool = new Pool({ connectionString: databaseUrl });
+    db = drizzle(pool, { schema });
+    console.log("Using PostgreSQL database");
   }
 }
 

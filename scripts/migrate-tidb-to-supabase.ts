@@ -306,15 +306,7 @@ async function main() {
   });
   console.log('Connected to TiDB (MySQL)');
   
-  const pgUrl = new URL(SUPABASE_URL!);
-  const pgClient = new pg.Client({
-    host: pgUrl.hostname,
-    port: parseInt(pgUrl.port) || 5432,
-    user: decodeURIComponent(pgUrl.username),
-    password: decodeURIComponent(pgUrl.password),
-    database: pgUrl.pathname.slice(1),
-    ssl: { rejectUnauthorized: false }
-  });
+  const pgClient = new pg.Client({ connectionString: SUPABASE_URL });
   await pgClient.connect();
   console.log('Connected to Supabase (PostgreSQL)');
   
