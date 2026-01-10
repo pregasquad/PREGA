@@ -191,3 +191,9 @@ Preferred communication style: Simple, everyday language.
   - Vite bundle optimization with manual chunks for vendor libraries (react, radix-ui, recharts)
   - Throttled visibility change handlers to prevent excessive refetches
   - refetchOnWindowFocus disabled for Socket-managed data
+- **Smooth Page Transitions (Anti-Flash)**:
+  - CSS animations defined in `client/src/index.css`: fadeIn, fadeInUp keyframes
+  - `.animate-fade-in` class (0.2s ease-out) applied to all page content wrappers
+  - `.loading-container` class provides consistent centered layout during loading states
+  - All pages (Planning, Clients, Inventory, Reports, Salaries, Services, Charges, Home, StaffPerformance, AdminSettings, Booking) now fade in smoothly
+  - Loading states in App.tsx PageLoader use `loading-container` for stable layout
