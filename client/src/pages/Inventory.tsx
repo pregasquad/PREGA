@@ -95,7 +95,7 @@ export default function Inventory() {
     },
   });
 
-  if (isLoading) return <div className="flex items-center justify-center h-64"><SpinningLogo size="lg" /></div>;
+  if (isLoading) return <div className="loading-container h-64"><SpinningLogo size="lg" /></div>;
 
   return (
     <div className="p-2 md:p-4 lg:p-6 space-y-4 md:space-y-6" dir={i18n.language === "ar" ? "rtl" : "ltr"}>

@@ -25,10 +25,10 @@ const StaffPerformance = lazy(() => import("@/pages/StaffPerformance"));
 const AdminSettings = lazy(() => import("@/pages/AdminSettings"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
-// Loading fallback component
+// Loading fallback component with smooth fade
 function PageLoader() {
   return (
-    <div className="flex items-center justify-center min-h-[60vh]">
+    <div className="loading-container min-h-[60vh]">
       <SpinningLogo size="lg" />
     </div>
   );

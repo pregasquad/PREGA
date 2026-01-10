@@ -308,7 +308,7 @@ export default function AdminSettings() {
             </CardHeader>
             <CardContent>
               {isLoadingBusiness ? (
-                <div className="flex items-center justify-center py-8"><SpinningLogo size="lg" /></div>
+                <div className="loading-container py-8"><SpinningLogo size="lg" /></div>
               ) : (
                 <form onSubmit={handleBusinessSave} className="space-y-6">
                   <div className="grid gap-4 md:grid-cols-2">
@@ -537,7 +537,7 @@ export default function AdminSettings() {
             </CardHeader>
             <CardContent>
               {isLoading ? (
-                <div className="flex items-center justify-center py-8"><SpinningLogo size="lg" /></div>
+                <div className="loading-container py-8"><SpinningLogo size="lg" /></div>
               ) : adminRoles.length === 0 ? (
                 <p className="text-center py-4 text-muted-foreground">{t("admin.noUsers")}</p>
               ) : (

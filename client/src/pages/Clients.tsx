@@ -296,7 +296,7 @@ export default function Clients() {
   );
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-64"><SpinningLogo size="lg" /></div>;
+    return <div className="loading-container h-64"><SpinningLogo size="lg" /></div>;
   }
 
   return (

@@ -144,3 +144,46 @@
 .calendar-scroll::-webkit-scrollbar-thumb {
   @apply bg-border rounded-full hover:bg-muted-foreground/30 transition-colors;
 }
+
+/* Smooth page transitions - prevent flashing */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from { 
+    opacity: 0; 
+    transform: translateY(8px);
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.25s ease-out forwards;
+}
+
+/* Page content wrapper - smooth transitions */
+.page-content {
+  animation: fadeIn 0.15s ease-out;
+}
+
+/* Prevent layout shift during loading */
+.loading-container {
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Smooth content swap */
+.content-ready {
+  animation: fadeIn 0.2s ease-out;
+}

@@ -636,7 +636,7 @@ export default function Planning() {
   // Show loading screen only while actively loading
   if (isDataLoading) {
     return (
-      <div className="h-full flex flex-col items-center justify-center bg-background" dir={isRtl ? "rtl" : "ltr"}>
+      <div className="h-full loading-container bg-background" dir={isRtl ? "rtl" : "ltr"}>
         <div className="flex flex-col items-center gap-4">
           <SpinningLogo size="xl" />
           <p className="text-muted-foreground">{t("common.loading")}</p>
