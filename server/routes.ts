@@ -732,7 +732,14 @@ export async function registerRoutes(
         authenticatedAt: Date.now()
       };
       
-      res.json({ success: true, role: role.role, permissions: role.permissions });
+      // Ensure session is saved before responding
+      req.session.save((err) => {
+        if (err) {
+          console.error("Session save error:", err);
+          return res.status(500).json({ success: false, message: "Session error" });
+        }
+        res.json({ success: true, role: role.role, permissions: role.permissions });
+      });
     } catch (err: any) {
       res.status(400).json({ success: false, message: err.message });
     }
@@ -776,7 +783,14 @@ export async function registerRoutes(
         authenticatedAt: Date.now()
       };
       
-      res.json({ success: true });
+      // Ensure session is saved before responding
+      req.session.save((err) => {
+        if (err) {
+          console.error("Session save error:", err);
+          return res.status(500).json({ success: false, message: "Session error" });
+        }
+        res.json({ success: true });
+      });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }

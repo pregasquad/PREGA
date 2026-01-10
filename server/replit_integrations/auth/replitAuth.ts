@@ -110,13 +110,13 @@ export function getSession() {
   return session({
     secret: getSessionSecret(),
     store: sessionStore,
-    resave: false,
+    resave: true,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: process.env.NODE_ENV === "production" || !!process.env.REPL_ID,
       maxAge: sessionTtl,
-      sameSite: 'strict', // Prevent CSRF attacks
+      sameSite: 'none', // Required for iframe/cross-origin in Replit preview
     },
   });
 }
