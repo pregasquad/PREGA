@@ -151,28 +151,8 @@
   to { opacity: 1; }
 }
 
-@keyframes fadeInUp {
-  from { 
-    opacity: 0; 
-    transform: translateY(8px);
-  }
-  to { 
-    opacity: 1; 
-    transform: translateY(0);
-  }
-}
-
 .animate-fade-in {
-  animation: fadeIn 0.2s ease-out forwards;
-}
-
-.animate-fade-in-up {
-  animation: fadeInUp 0.25s ease-out forwards;
-}
-
-/* Page content wrapper - smooth transitions */
-.page-content {
-  animation: fadeIn 0.15s ease-out;
+  animation: fadeIn 0.1s ease-out forwards;
 }
 
 /* Prevent layout shift during loading */
