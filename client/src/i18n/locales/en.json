@@ -472,7 +472,9 @@
     "permissions": "Permissions",
     "permissionsDesc": "Select which pages and features this user can access",
     "selectAll": "Select All",
-    "clearAll": "Clear All"
+    "clearAll": "Clear All",
+    "photo": "Photo",
+    "photoUploaded": "Photo uploaded successfully"
   },
   "permissions": {
     "viewHome": "View Home",

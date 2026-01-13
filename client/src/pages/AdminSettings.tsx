@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { 
   UserPlus, Users, Shield, Download, FileSpreadsheet, 
   Trash2, Edit, Calendar, User, Briefcase, Package, 
-  CreditCard, Building2, Clock, Save
+  CreditCard, Building2, Clock, Save, Camera, Loader2
 } from "lucide-react";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
 
@@ -25,6 +25,7 @@ interface AdminRole {
   name: string;
   role: string;
   pin: string | null;
+  photoUrl: string | null;
   permissions: string[];
   createdAt: string;
 }
@@ -165,6 +166,34 @@ export default function AdminSettings() {
       toast({ title: t("admin.userDeleted") });
     }
   });
+
+  const [uploadingPhotoId, setUploadingPhotoId] = useState<number | null>(null);
+
+  const handlePhotoUpload = async (roleId: number, file: File) => {
+    setUploadingPhotoId(roleId);
+    try {
+      const formData = new FormData();
+      formData.append("photo", file);
+      
+      const res = await fetch(`/api/admin-roles/${roleId}/photo`, {
+        method: "POST",
+        body: formData,
+        credentials: "include"
+      });
+      
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Upload failed");
+      }
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/admin-roles"] });
+      toast({ title: t("admin.photoUploaded") });
+    } catch (err: any) {
+      toast({ title: t("common.error"), description: err.message, variant: "destructive" });
+    } finally {
+      setUploadingPhotoId(null);
+    }
+  };
 
   const businessMutation = useMutation({
     mutationFn: async (data: Partial<BusinessSettings>) => {
@@ -544,6 +573,7 @@ export default function AdminSettings() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>{t("admin.photo")}</TableHead>
                       <TableHead>{t("common.name")}</TableHead>
                       <TableHead>{t("admin.role")}</TableHead>
                       <TableHead>{t("admin.permissions")}</TableHead>
@@ -554,6 +584,47 @@ export default function AdminSettings() {
                   <TableBody>
                     {adminRoles.map((role) => (
                       <TableRow key={role.id}>
+                        <TableCell>
+                          <div className="relative inline-block">
+                            {role.photoUrl ? (
+                              <img 
+                                src={role.photoUrl} 
+                                alt={role.name}
+                                className="w-12 h-12 rounded-full object-cover border-2 border-primary/20"
+                              />
+                            ) : (
+                              <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white text-lg font-bold bg-gradient-to-br ${
+                                role.role === "owner" ? "from-red-400 to-red-600" :
+                                role.role === "manager" ? "from-blue-400 to-blue-600" :
+                                "from-green-400 to-green-600"
+                              }`}>
+                                {role.name.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                            <label className="absolute -bottom-1 -right-1 cursor-pointer">
+                              <input 
+                                type="file"
+                                className="hidden"
+                                accept="image/jpeg,image/png,image/webp"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    handlePhotoUpload(role.id, file);
+                                    e.target.value = "";
+                                  }
+                                }}
+                                disabled={uploadingPhotoId === role.id}
+                              />
+                              <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/80 transition-colors">
+                                {uploadingPhotoId === role.id ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <Camera className="w-3 h-3" />
+                                )}
+                              </div>
+                            </label>
+                          </div>
+                        </TableCell>
                         <TableCell className="font-medium">{role.name}</TableCell>
                         <TableCell>
                           <Badge className={`${ROLE_LABELS[role.role]?.color || "bg-gray-500"} text-white`}>

@@ -212,6 +212,7 @@ export const adminRoles = pgTable("admin_roles", {
   name: varchar("name", { length: 100 }).notNull().unique(),
   role: varchar("role", { length: 50 }).notNull().default("receptionist"),
   pin: varchar("pin", { length: 255 }),
+  photoUrl: varchar("photo_url", { length: 500 }),
   permissions: json("permissions").$type<string[]>().notNull().default([]),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -220,6 +221,7 @@ export const insertAdminRoleSchema = createInsertSchema(adminRoles).omit({ id: t
   name: z.string().min(1, "Name is required"),
   role: z.enum(["owner", "manager", "receptionist"]),
   pin: z.string().min(4).optional(),
+  photoUrl: z.string().optional(),
   permissions: z.array(z.string()).optional(),
 });
 export type AdminRole = typeof adminRoles.$inferSelect;

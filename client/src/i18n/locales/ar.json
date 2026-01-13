@@ -472,7 +472,9 @@
     "permissions": "الصلاحيات",
     "permissionsDesc": "اختر الصفحات والميزات التي يمكن لهذا المستخدم الوصول إليها",
     "selectAll": "تحديد الكل",
-    "clearAll": "إلغاء الكل"
+    "clearAll": "إلغاء الكل",
+    "photo": "صورة",
+    "photoUploaded": "تم رفع الصورة بنجاح"
   },
   "permissions": {
     "viewHome": "عرض الرئيسية",

@@ -15,6 +15,7 @@ interface AdminRole {
   name: string;
   role: string;
   pin: string | null;
+  photoUrl: string | null;
 }
 
 interface FirstLoginProps {
@@ -227,12 +228,20 @@ export function FirstLogin({ children }: FirstLoginProps) {
                     onClick={() => setSelectedUser(role)}
                     className="group flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-muted/50 transition-all duration-200"
                   >
-                    <div className={cn(
-                      "w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center text-white text-2xl md:text-3xl font-bold shadow-lg transition-transform group-hover:scale-110 bg-gradient-to-br",
-                      ROLE_COLORS[role.role] || "from-gray-400 to-gray-600"
-                    )}>
-                      {role.name.charAt(0).toUpperCase()}
-                    </div>
+                    {role.photoUrl ? (
+                      <img 
+                        src={role.photoUrl}
+                        alt={role.name}
+                        className="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover shadow-lg transition-transform group-hover:scale-110 ring-4 ring-primary/20"
+                      />
+                    ) : (
+                      <div className={cn(
+                        "w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center text-white text-2xl md:text-3xl font-bold shadow-lg transition-transform group-hover:scale-110 bg-gradient-to-br",
+                        ROLE_COLORS[role.role] || "from-gray-400 to-gray-600"
+                      )}>
+                        {role.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
                     <span className="text-sm font-medium text-foreground">{role.name}</span>
                     <span className="text-xs text-muted-foreground capitalize">{role.role}</span>
                   </button>
@@ -360,12 +369,20 @@ export function FirstLogin({ children }: FirstLoginProps) {
               </Button>
 
               <div className="flex flex-col items-center gap-2">
-                <div className={cn(
-                  "w-20 h-20 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-lg ring-4 ring-primary/30 bg-gradient-to-br",
-                  ROLE_COLORS[selectedUser.role] || "from-gray-400 to-gray-600"
-                )}>
-                  {selectedUser.name.charAt(0).toUpperCase()}
-                </div>
+                {selectedUser.photoUrl ? (
+                  <img 
+                    src={selectedUser.photoUrl}
+                    alt={selectedUser.name}
+                    className="w-20 h-20 rounded-full object-cover shadow-lg ring-4 ring-primary/30"
+                  />
+                ) : (
+                  <div className={cn(
+                    "w-20 h-20 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-lg ring-4 ring-primary/30 bg-gradient-to-br",
+                    ROLE_COLORS[selectedUser.role] || "from-gray-400 to-gray-600"
+                  )}>
+                    {selectedUser.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
                 <span className="text-lg font-semibold text-foreground">{selectedUser.name}</span>
                 <span className="text-xs text-muted-foreground capitalize">{selectedUser.role}</span>
               </div>

@@ -472,7 +472,9 @@
     "permissions": "Permissions",
     "permissionsDesc": "Sélectionnez les pages et fonctionnalités accessibles à cet utilisateur",
     "selectAll": "Tout Sélectionner",
-    "clearAll": "Tout Effacer"
+    "clearAll": "Tout Effacer",
+    "photo": "Photo",
+    "photoUploaded": "Photo téléchargée avec succès"
   },
   "permissions": {
     "viewHome": "Voir Accueil",
