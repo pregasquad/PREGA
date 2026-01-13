@@ -287,7 +287,7 @@ export async function ensureForeignKeyConstraints(): Promise<void> {
   }
 }
 
-// Auto-migration: Add photo_url column to admin_roles table
+// Auto-migration: Add/upgrade photo_url column to admin_roles table (TEXT for base64 storage)
 export async function ensureAdminRolesPhotoColumn(): Promise<void> {
   try {
     if (dbDialect === 'mysql') {
@@ -295,26 +295,37 @@ export async function ensureAdminRolesPhotoColumn(): Promise<void> {
       
       // Check if photo_url column exists
       const [rows] = await connection.query(`
-        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+        SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS 
         WHERE TABLE_NAME = 'admin_roles' AND COLUMN_NAME = 'photo_url'
       `);
       
       if ((rows as any[]).length === 0) {
-        await connection.query(`ALTER TABLE admin_roles ADD COLUMN photo_url VARCHAR(500)`);
-        console.log("Added photo_url column to admin_roles table");
+        await connection.query(`ALTER TABLE admin_roles ADD COLUMN photo_url MEDIUMTEXT`);
+        console.log("Added photo_url column (MEDIUMTEXT) to admin_roles table");
+      } else if ((rows as any[])[0].DATA_TYPE === 'varchar') {
+        // Upgrade from VARCHAR to MEDIUMTEXT for base64 storage
+        await connection.query(`ALTER TABLE admin_roles MODIFY COLUMN photo_url MEDIUMTEXT`);
+        console.log("Upgraded photo_url column to MEDIUMTEXT for base64 storage");
       }
       
       connection.release();
     } else {
-      // PostgreSQL version
-      await pool.query(`
-        DO $$ 
-        BEGIN 
-          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'admin_roles' AND column_name = 'photo_url') THEN
-            ALTER TABLE admin_roles ADD COLUMN photo_url VARCHAR(500);
-          END IF;
-        END $$;
+      // PostgreSQL version - TEXT type can hold any size
+      // First check if column exists
+      const result = await pool.query(`
+        SELECT data_type FROM information_schema.columns 
+        WHERE table_name = 'admin_roles' AND column_name = 'photo_url'
       `);
+      
+      if (result.rows.length === 0) {
+        // Column doesn't exist, add it
+        await pool.query(`ALTER TABLE admin_roles ADD COLUMN photo_url TEXT`);
+        console.log("Added photo_url column (TEXT) to admin_roles table");
+      } else if (result.rows[0].data_type === 'character varying') {
+        // Upgrade from VARCHAR to TEXT for base64 storage
+        await pool.query(`ALTER TABLE admin_roles ALTER COLUMN photo_url TYPE TEXT`);
+        console.log("Upgraded photo_url column to TEXT for base64 storage");
+      }
     }
     console.log("Admin roles photo column ready");
   } catch (error) {

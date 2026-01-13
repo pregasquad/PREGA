@@ -212,7 +212,7 @@ export const adminRoles = mysqlTable("admin_roles", {
   name: varchar("name", { length: 100 }).notNull().unique(),
   role: varchar("role", { length: 50 }).notNull().default("receptionist"),
   pin: varchar("pin", { length: 255 }),
-  photoUrl: varchar("photo_url", { length: 500 }),
+  photoUrl: text("photo_url"),
   permissions: json("permissions").$type<string[]>().notNull().default([]),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
