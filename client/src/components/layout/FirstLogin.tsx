@@ -2,10 +2,9 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Lock, User, Settings, ArrowLeft, Phone, KeyRound } from "lucide-react";
+import { Lock, User, Settings, ArrowLeft, Phone, KeyRound, Sparkles } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -23,9 +22,15 @@ interface FirstLoginProps {
 }
 
 const ROLE_COLORS: Record<string, string> = {
-  owner: "from-red-400 to-red-600",
-  manager: "from-blue-400 to-blue-600",
-  receptionist: "from-green-400 to-green-600"
+  owner: "from-rose-400 via-pink-500 to-purple-500",
+  manager: "from-blue-400 via-cyan-500 to-teal-500",
+  receptionist: "from-emerald-400 via-green-500 to-teal-500"
+};
+
+const ROLE_GLOW: Record<string, string> = {
+  owner: "shadow-rose-500/30",
+  manager: "shadow-blue-500/30",
+  receptionist: "shadow-emerald-500/30"
 };
 
 export function FirstLogin({ children }: FirstLoginProps) {
@@ -34,7 +39,6 @@ export function FirstLogin({ children }: FirstLoginProps) {
   const [location] = useLocation();
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     if (typeof window !== 'undefined') {
-      // Check if user explicitly logged out - don't auto-restore
       const wasLoggedOut = sessionStorage.getItem("explicit_logout") === "true" ||
                            localStorage.getItem("explicit_logout") === "true";
       if (wasLoggedOut) return false;
@@ -44,7 +48,6 @@ export function FirstLogin({ children }: FirstLoginProps) {
       
       const localAuth = localStorage.getItem("user_authenticated") === "true";
       if (localAuth) {
-        // Restore session from local storage
         sessionStorage.setItem("user_authenticated", "true");
         sessionStorage.setItem("current_user", localStorage.getItem("current_user") || "");
         sessionStorage.setItem("current_user_role", localStorage.getItem("current_user_role") || "");
@@ -61,16 +64,13 @@ export function FirstLogin({ children }: FirstLoginProps) {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // Forgot PIN state
   const [showForgotPin, setShowForgotPin] = useState(false);
   const [businessPhone, setBusinessPhone] = useState("");
   const [newPin, setNewPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
   const [resetLoading, setResetLoading] = useState(false);
 
-  // Auto-login from local storage if session storage is lost
   useEffect(() => {
-    // Only auto-restore if we haven't explicitly logged out
     const wasLoggedOut = sessionStorage.getItem("explicit_logout") === "true" ||
                          localStorage.getItem("explicit_logout") === "true";
     
@@ -122,7 +122,6 @@ export function FirstLogin({ children }: FirstLoginProps) {
       const data = await response.json();
 
       if (data.success) {
-        // Clear the explicit logout flags so user stays logged in
         sessionStorage.removeItem("explicit_logout");
         localStorage.removeItem("explicit_logout");
         
@@ -204,61 +203,88 @@ export function FirstLogin({ children }: FirstLoginProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-orange-50 to-orange-100 dark:from-gray-900 dark:to-gray-800 p-4">
-      <Card className="w-full max-w-lg p-6 md:p-8 shadow-2xl border-2 border-primary/20">
-        <div className="flex flex-col items-center gap-6 text-center">
-          <div className="flex items-center gap-3">
-            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center shadow-lg">
-              <span className="text-3xl font-bold text-white">P</span>
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden">
+      {/* Elegant gradient background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950" />
+      
+      {/* Animated gradient orbs */}
+      <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] rounded-full bg-gradient-to-br from-blue-400/20 to-cyan-400/20 blur-3xl animate-pulse" />
+      <div className="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] rounded-full bg-gradient-to-br from-purple-400/20 to-pink-400/20 blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+      <div className="absolute top-[40%] right-[20%] w-[300px] h-[300px] rounded-full bg-gradient-to-br from-teal-400/15 to-emerald-400/15 blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
+      
+      {/* Glass card */}
+      <div className="relative w-full max-w-md mx-4 p-8 rounded-3xl bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-2xl shadow-black/5 dark:shadow-black/20 animate-fade-in">
+        <div className="flex flex-col items-center gap-8 text-center">
+          {/* Logo section */}
+          <div className="flex flex-col items-center gap-3">
+            <div className="relative">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 via-cyan-500 to-teal-500 flex items-center justify-center shadow-lg shadow-blue-500/25 rotate-3 transition-transform hover:rotate-0">
+                <span className="text-3xl font-black text-white">P</span>
+              </div>
+              <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg">
+                <Sparkles className="w-3 h-3 text-white" />
+              </div>
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold text-primary">PREGA SQUAD</h1>
+            <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-white dark:via-slate-200 dark:to-slate-400 bg-clip-text text-transparent tracking-tight">
+              PREGA SQUAD
+            </h1>
           </div>
 
-          <div>
-            <h2 className="text-xl md:text-2xl font-bold font-display">{t("auth.welcome")}</h2>
-            <p className="text-muted-foreground mt-1 text-sm">{t("auth.selectUserToLogin")}</p>
+          {/* Welcome text */}
+          <div className="space-y-1">
+            <h2 className="text-xl font-semibold text-slate-800 dark:text-white">{t("auth.welcome")}</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{t("auth.selectUserToLogin")}</p>
           </div>
 
           {!selectedUser ? (
             <div className="w-full">
-              <div className="flex flex-wrap justify-center gap-4 py-4">
+              <div className="flex flex-wrap justify-center gap-6 py-4">
                 {adminRoles.map((role) => (
                   <button
                     key={role.id}
                     onClick={() => setSelectedUser(role)}
-                    className="group flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-muted/50 transition-all duration-200"
+                    className="group flex flex-col items-center gap-3 p-4 rounded-2xl hover:bg-white/50 dark:hover:bg-white/5 transition-all duration-300"
                   >
-                    {role.photoUrl ? (
-                      <img 
-                        src={role.photoUrl}
-                        alt={role.name}
-                        className="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover shadow-lg transition-transform group-hover:scale-110 ring-4 ring-primary/20"
-                      />
-                    ) : (
-                      <div className={cn(
-                        "w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center text-white text-2xl md:text-3xl font-bold shadow-lg transition-transform group-hover:scale-110 bg-gradient-to-br",
-                        ROLE_COLORS[role.role] || "from-gray-400 to-gray-600"
-                      )}>
-                        {role.name.charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                    <span className="text-sm font-medium text-foreground">{role.name}</span>
-                    <span className="text-xs text-muted-foreground capitalize">{role.role}</span>
+                    <div className="relative">
+                      {role.photoUrl ? (
+                        <img 
+                          src={role.photoUrl}
+                          alt={role.name}
+                          className={cn(
+                            "w-20 h-20 rounded-2xl object-cover shadow-xl transition-all duration-300 group-hover:scale-105 group-hover:shadow-2xl ring-2 ring-white/50 dark:ring-white/20",
+                            ROLE_GLOW[role.role] || "shadow-slate-500/30"
+                          )}
+                        />
+                      ) : (
+                        <div className={cn(
+                          "w-20 h-20 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-xl transition-all duration-300 group-hover:scale-105 group-hover:shadow-2xl bg-gradient-to-br",
+                          ROLE_COLORS[role.role] || "from-slate-400 to-slate-600",
+                          ROLE_GLOW[role.role] || "shadow-slate-500/30"
+                        )}>
+                          {role.name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      {/* Online indicator */}
+                      <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900 shadow-lg" />
+                    </div>
+                    <div className="text-center">
+                      <span className="block text-sm font-semibold text-slate-800 dark:text-white">{role.name}</span>
+                      <span className="block text-xs text-slate-500 dark:text-slate-400 capitalize">{role.role}</span>
+                    </div>
                   </button>
                 ))}
               </div>
 
               {adminRoles.length === 0 && (
                 <div className="space-y-4 py-6">
-                  <div className="w-20 h-20 mx-auto rounded-full bg-muted flex items-center justify-center">
-                    <User className="w-10 h-10 text-muted-foreground" />
+                  <div className="w-20 h-20 mx-auto rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                    <User className="w-10 h-10 text-slate-400" />
                   </div>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
                     {t("auth.noUsersConfigured")}
                   </p>
                   <Button 
-                    variant="outline" 
-                    className="w-full"
+                    className="w-full h-12 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-medium shadow-lg shadow-blue-500/25 transition-all"
                     onClick={() => {
                       sessionStorage.setItem("user_authenticated", "true");
                       sessionStorage.setItem("current_user", "Setup");
@@ -275,7 +301,7 @@ export function FirstLogin({ children }: FirstLoginProps) {
               )}
             </div>
           ) : showForgotPin ? (
-            <form onSubmit={handleResetPin} className="w-full space-y-4">
+            <form onSubmit={handleResetPin} className="w-full space-y-5">
               <Button
                 type="button"
                 variant="ghost"
@@ -287,72 +313,74 @@ export function FirstLogin({ children }: FirstLoginProps) {
                   setConfirmPin("");
                   setError("");
                 }}
-                className="mb-2"
+                className="mb-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
               >
                 <ArrowLeft className="w-4 h-4 mr-1" />
                 {t("common.back")}
               </Button>
 
-              <div className="flex flex-col items-center gap-2">
+              <div className="flex flex-col items-center gap-3">
                 <div className={cn(
-                  "w-20 h-20 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-lg ring-4 ring-orange-300 bg-gradient-to-br",
-                  ROLE_COLORS[selectedUser.role] || "from-gray-400 to-gray-600"
+                  "w-20 h-20 rounded-2xl flex items-center justify-center text-white shadow-xl bg-gradient-to-br",
+                  ROLE_COLORS[selectedUser.role] || "from-slate-400 to-slate-600"
                 )}>
                   <KeyRound className="w-10 h-10" />
                 </div>
-                <span className="text-lg font-semibold text-foreground">{t("auth.resetPinFor")} {selectedUser.name}</span>
+                <span className="text-lg font-semibold text-slate-800 dark:text-white">{t("auth.resetPinFor")} {selectedUser.name}</span>
               </div>
 
-              <p className="text-sm text-muted-foreground text-center">
+              <p className="text-sm text-slate-500 dark:text-slate-400 text-center">
                 {t("auth.enterBusinessPhoneToReset")}
               </p>
 
               <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <Input
                   type="tel"
                   placeholder={t("auth.businessPhone")}
                   value={businessPhone}
                   onChange={(e) => setBusinessPhone(e.target.value)}
-                  className="h-12 pl-10"
+                  className="h-14 pl-12 rounded-xl border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                   autoFocus
                 />
               </div>
 
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <Input
                   type="password"
                   placeholder={t("auth.newPin")}
                   value={newPin}
                   onChange={(e) => setNewPin(e.target.value)}
-                  className="h-12 pl-10 text-center text-lg tracking-widest"
+                  className="h-14 pl-12 rounded-xl border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 text-center text-lg tracking-[0.5em] font-mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                 />
               </div>
 
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <Input
                   type="password"
                   placeholder={t("auth.confirmPin")}
                   value={confirmPin}
                   onChange={(e) => setConfirmPin(e.target.value)}
-                  className="h-12 pl-10 text-center text-lg tracking-widest"
+                  className="h-14 pl-12 rounded-xl border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 text-center text-lg tracking-[0.5em] font-mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                 />
               </div>
 
-              {error && <p className="text-sm text-destructive font-medium">{error}</p>}
+              {error && (
+                <p className="text-sm text-rose-500 font-medium bg-rose-50 dark:bg-rose-500/10 rounded-lg py-2 px-3">{error}</p>
+              )}
 
               <Button 
                 type="submit" 
-                className="w-full h-12 text-lg bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700"
+                className="w-full h-14 text-base font-semibold rounded-xl bg-gradient-to-r from-blue-500 via-cyan-500 to-teal-500 hover:from-blue-600 hover:via-cyan-600 hover:to-teal-600 text-white shadow-lg shadow-blue-500/25 transition-all active:scale-[0.98]"
                 disabled={resetLoading || !businessPhone || !newPin || !confirmPin}
               >
                 {resetLoading ? t("common.loading") : t("auth.resetPin")}
               </Button>
             </form>
           ) : (
-            <form onSubmit={handleLogin} className="w-full space-y-4">
+            <form onSubmit={handleLogin} className="w-full space-y-5">
               <Button
                 type="button"
                 variant="ghost"
@@ -362,52 +390,60 @@ export function FirstLogin({ children }: FirstLoginProps) {
                   setPin("");
                   setError("");
                 }}
-                className="mb-2"
+                className="mb-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
               >
                 <ArrowLeft className="w-4 h-4 mr-1" />
                 {t("common.back")}
               </Button>
 
-              <div className="flex flex-col items-center gap-2">
+              <div className="flex flex-col items-center gap-3">
                 {selectedUser.photoUrl ? (
                   <img 
                     src={selectedUser.photoUrl}
                     alt={selectedUser.name}
-                    className="w-20 h-20 rounded-full object-cover shadow-lg ring-4 ring-primary/30"
+                    className={cn(
+                      "w-24 h-24 rounded-2xl object-cover shadow-xl ring-4 ring-white/50 dark:ring-white/20",
+                      ROLE_GLOW[selectedUser.role] || "shadow-slate-500/30"
+                    )}
                   />
                 ) : (
                   <div className={cn(
-                    "w-20 h-20 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-lg ring-4 ring-primary/30 bg-gradient-to-br",
-                    ROLE_COLORS[selectedUser.role] || "from-gray-400 to-gray-600"
+                    "w-24 h-24 rounded-2xl flex items-center justify-center text-white text-3xl font-bold shadow-xl bg-gradient-to-br",
+                    ROLE_COLORS[selectedUser.role] || "from-slate-400 to-slate-600",
+                    ROLE_GLOW[selectedUser.role] || "shadow-slate-500/30"
                   )}>
                     {selectedUser.name.charAt(0).toUpperCase()}
                   </div>
                 )}
-                <span className="text-lg font-semibold text-foreground">{selectedUser.name}</span>
-                <span className="text-xs text-muted-foreground capitalize">{selectedUser.role}</span>
+                <div className="text-center">
+                  <span className="block text-xl font-semibold text-slate-800 dark:text-white">{selectedUser.name}</span>
+                  <span className="block text-sm text-slate-500 dark:text-slate-400 capitalize">{selectedUser.role}</span>
+                </div>
               </div>
 
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <Input
                   type="password"
                   placeholder={t("auth.enterPin")}
                   value={pin}
                   onChange={(e) => setPin(e.target.value)}
                   className={cn(
-                    "h-12 pl-10 text-center text-lg tracking-widest",
-                    error && "border-destructive focus-visible:ring-destructive"
+                    "h-14 pl-12 rounded-xl border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 text-center text-xl tracking-[0.5em] font-mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all",
+                    error && "border-rose-500 focus:ring-rose-500/20 focus:border-rose-500"
                   )}
                   autoComplete="current-password"
                   autoFocus
                 />
               </div>
 
-              {error && <p className="text-sm text-destructive font-medium">{error}</p>}
+              {error && (
+                <p className="text-sm text-rose-500 font-medium bg-rose-50 dark:bg-rose-500/10 rounded-lg py-2 px-3">{error}</p>
+              )}
 
               <Button 
                 type="submit" 
-                className="w-full h-12 text-lg bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700"
+                className="w-full h-14 text-base font-semibold rounded-xl bg-gradient-to-r from-blue-500 via-cyan-500 to-teal-500 hover:from-blue-600 hover:via-cyan-600 hover:to-teal-600 text-white shadow-lg shadow-blue-500/25 transition-all active:scale-[0.98]"
                 disabled={isLoading}
               >
                 {isLoading ? t("common.loading") : t("auth.login")}
@@ -416,7 +452,7 @@ export function FirstLogin({ children }: FirstLoginProps) {
               <Button
                 type="button"
                 variant="ghost"
-                className="w-full text-sm text-muted-foreground hover:text-primary"
+                className="w-full text-sm text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                 onClick={() => {
                   setShowForgotPin(true);
                   setPin("");
@@ -428,7 +464,10 @@ export function FirstLogin({ children }: FirstLoginProps) {
             </form>
           )}
         </div>
-      </Card>
+        
+        {/* Bottom decorative line */}
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-24 h-1 rounded-full bg-gradient-to-r from-blue-500 via-cyan-500 to-teal-500 opacity-50" />
+      </div>
     </div>
   );
 }
