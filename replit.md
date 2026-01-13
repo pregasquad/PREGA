@@ -64,6 +64,16 @@ Preferred communication style: Simple, everyday language.
 - **Recharts**: Charting library.
 - **date-fns**: Date manipulation utilities.
 
+### Public Booking Page
+- **Route**: `/booking` - Public-facing appointment booking page
+- **Design**: iOS liquid glass aesthetic with glassmorphism effects, gradient backgrounds, and smooth animations
+- **Public API Endpoints** (rate-limited, sanitized responses):
+  - `GET /api/public/services` - Service list (id, name, category, duration, price only)
+  - `GET /api/public/staff` - Staff list (id, name, color only)
+  - `GET /api/public/appointments` - Availability check (minimal appointment data)
+  - `POST /api/public/appointments` - Create booking (strict input validation, forced unpaid status)
+- **Security**: Rate limiting (10 req/min per IP), input validation with Zod, sanitized responses
+
 ### Notifications
 - **SendZen API**: For WhatsApp appointment reminders and booking confirmations.
   - Endpoints: `/api/notifications/send`, `/api/notifications/appointment-reminder`, `/api/notifications/booking-confirmation`.
