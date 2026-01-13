@@ -677,10 +677,13 @@ export default function Planning() {
   // Show loading screen only while actively loading
   if (isDataLoading) {
     return (
-      <div className="h-full loading-container bg-background" dir={isRtl ? "rtl" : "ltr"}>
-        <div className="flex flex-col items-center gap-4">
-          <SpinningLogo size="xl" />
-          <p className="text-muted-foreground">{t("common.loading")}</p>
+      <div className="h-full loading-container liquid-gradient-subtle" dir={isRtl ? "rtl" : "ltr"}>
+        <div className="flex flex-col items-center gap-5">
+          <div className="relative">
+            <SpinningLogo size="xl" />
+            <div className="absolute inset-0 rounded-full bg-primary/20 blur-xl animate-pulse" />
+          </div>
+          <p className="text-muted-foreground font-medium">{t("common.loading")}</p>
         </div>
       </div>
     );
@@ -689,12 +692,12 @@ export default function Planning() {
   // Show empty state if no staff configured (skip if auth error - will auto-redirect)
   if (staffList.length === 0 && !hasAuthError) {
     return (
-      <div className="h-full flex flex-col items-center justify-center bg-background" dir={isRtl ? "rtl" : "ltr"}>
-        <div className="flex flex-col items-center gap-4 text-center p-4">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center shadow-lg">
-            <span className="text-3xl font-bold text-white">?</span>
+      <div className="h-full flex flex-col items-center justify-center liquid-gradient-subtle" dir={isRtl ? "rtl" : "ltr"}>
+        <div className="flex flex-col items-center gap-5 text-center p-6 glass-card">
+          <div className="w-20 h-20 rounded-3xl liquid-gradient flex items-center justify-center shadow-xl">
+            <span className="text-4xl font-bold text-white">?</span>
           </div>
-          <p className="text-muted-foreground">{t("planning.noStaff")}</p>
+          <p className="text-muted-foreground font-medium">{t("planning.noStaff")}</p>
         </div>
       </div>
     );
@@ -703,35 +706,35 @@ export default function Planning() {
   return (
     <div 
       ref={pageRef}
-      className="h-full overflow-hidden bg-background px-1.5 pt-0.5 pb-1 md:px-3 md:pt-1 md:pb-2 flex flex-col animate-fade-in"
+      className="h-full overflow-hidden liquid-gradient-subtle px-2 pt-1 pb-2 md:px-4 md:pt-2 md:pb-3 flex flex-col animate-fade-in"
       dir={isRtl ? "rtl" : "ltr"}
       onTouchStart={isMobile ? handleTouchStart : undefined}
       onTouchEnd={isMobile ? handleTouchEnd : undefined}
     >
-      {/* Header */}
-      <div className="mb-0.5 flex flex-col md:flex-row justify-between items-start md:items-center gap-0.5 shrink-0">
-        <h1 className="text-lg md:text-xl font-bold">{t("planning.title")}</h1>
+      {/* Header - iOS Liquid Glass Style */}
+      <div className="mb-2 flex flex-col md:flex-row justify-between items-start md:items-center gap-2 shrink-0">
+        <h1 className="text-xl md:text-2xl font-semibold gradient-text">{t("planning.title")}</h1>
         
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-          {/* Staff Revenue */}
-          <div className="flex flex-wrap items-center gap-1">
+          {/* Staff Revenue - Glass Pills */}
+          <div className="flex flex-wrap items-center gap-1.5">
             {stats.perStaff.map(s => (
-              <div key={s.id} className="bg-card px-2 py-1 rounded-lg border text-xs flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
-                <span className="font-medium">{s.name}</span>
-                <span className="font-bold">{s.total} DH</span>
+              <div key={s.id} className="glass-card px-3 py-1.5 text-xs flex items-center gap-1.5 hover:scale-105 transition-transform">
+                <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: s.color }} />
+                <span className="font-medium text-foreground/80">{s.name}</span>
+                <span className="font-bold text-foreground">{s.total} DH</span>
               </div>
             ))}
           </div>
 
-          {/* Total */}
-          <div className="bg-primary text-primary-foreground px-3 py-1 rounded-lg text-sm font-bold">
+          {/* Total - Liquid Gradient */}
+          <div className="liquid-gradient text-white px-4 py-1.5 rounded-2xl text-sm font-bold shadow-lg hover:shadow-xl transition-shadow">
             {stats.total} DH
           </div>
 
-          {/* Search with Price */}
+          {/* Search with Price - Glass Style */}
           <div className="relative">
-            <div className="flex items-center gap-1 bg-card rounded-lg border p-1">
+            <div className="flex items-center gap-1 glass-card px-2 py-1">
               {showSearchInput ? (
                 <>
                   <Input
@@ -739,18 +742,18 @@ export default function Planning() {
                     placeholder={t("common.search") + "..."}
                     value={appointmentSearch}
                     onChange={(e) => setAppointmentSearch(e.target.value)}
-                    className="h-7 w-32 md:w-40 text-xs border-0 focus-visible:ring-0"
+                    className="h-7 w-32 md:w-40 text-xs border-0 bg-transparent focus-visible:ring-0"
                     autoFocus
                   />
                   {appointmentSearch && searchResults.count > 0 && (
-                    <div className="bg-green-500 text-white px-2 py-0.5 rounded text-xs font-bold whitespace-nowrap">
+                    <div className="bg-emerald-500/90 text-white px-2 py-0.5 rounded-full text-xs font-bold whitespace-nowrap">
                       {searchResults.count} = {searchResults.total} DH
                     </div>
                   )}
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="h-7 w-7"
+                    className="h-7 w-7 rounded-full hover:bg-muted/50"
                     onClick={() => {
                       setShowSearchInput(false);
                       setAppointmentSearch("");
@@ -763,16 +766,16 @@ export default function Planning() {
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="h-7 w-7"
+                  className="h-7 w-7 rounded-full hover:bg-muted/50"
                   onClick={() => setShowSearchInput(true)}
                 >
                   <Search className="w-4 h-4" />
                 </Button>
               )}
             </div>
-            {/* Search Results Dropdown */}
+            {/* Search Results Dropdown - Glass Panel */}
             {showSearchInput && appointmentSearch && searchResults.count > 0 && (
-              <div className="absolute top-full mt-1 ltr:right-0 rtl:left-0 z-50 w-72 md:w-80 bg-card border rounded-lg shadow-lg max-h-64 overflow-auto">
+              <div className="absolute top-full mt-2 ltr:right-0 rtl:left-0 z-50 w-72 md:w-80 glass-card rounded-2xl max-h-64 overflow-auto shadow-xl">
                 <div className="p-2 border-b bg-muted/50 sticky top-0">
                   <span className="text-xs font-medium text-muted-foreground">
                     {searchResults.count} {t("common.results")}
@@ -822,7 +825,7 @@ export default function Planning() {
                     </div>
                   );
                 })}
-                <div className="p-2 bg-green-500 text-white sticky bottom-0">
+                <div className="p-2.5 bg-emerald-500/90 text-white sticky bottom-0 rounded-b-2xl">
                   <div className="flex justify-between items-center text-sm font-bold">
                     <span>Total</span>
                     <span>{searchResults.total} DH</span>
@@ -832,31 +835,32 @@ export default function Planning() {
             )}
           </div>
 
-          {/* Date Navigation */}
-          <div className="flex items-center gap-1 bg-card rounded-lg border p-1">
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDate(d => addDays(d, -1))}>
+          {/* Date Navigation - Glass Pills */}
+          <div className="flex items-center gap-1 glass-card px-2 py-1">
+            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-muted/50" onClick={() => setDate(d => addDays(d, -1))}>
               <ChevronRight className="w-4 h-4" />
             </Button>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="ghost" className="h-7 px-2 text-xs">
+                <Button variant="ghost" className="h-7 px-3 text-xs rounded-full hover:bg-muted/50">
                   <CalendarIcon className="w-3 h-3 ml-1" />
                   {format(date, "dd/MM")}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="end">
+              <PopoverContent className="w-auto p-0 rounded-2xl glass-card shadow-xl" align="end">
                 <Calendar mode="single" selected={date} onSelect={(d) => d && setDate(d)} initialFocus />
               </PopoverContent>
             </Popover>
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDate(d => addDays(d, 1))}>
+            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-muted/50" onClick={() => setDate(d => addDays(d, 1))}>
               <ChevronLeft className="w-4 h-4" />
             </Button>
             <Button 
               variant={isToday ? "ghost" : "default"}
               size="sm" 
               className={cn(
-                "h-7 px-2 text-xs font-medium",
-                !isToday && "bg-orange-500 hover:bg-orange-600 text-white"
+                "h-7 px-3 text-xs font-semibold rounded-full transition-all",
+                !isToday && "liquid-gradient text-white shadow-md hover:shadow-lg",
+                isToday && "hover:bg-muted/50"
               )}
               onClick={() => setDate(getWorkDayDate())}
             >
@@ -865,7 +869,7 @@ export default function Planning() {
             <Button 
               variant="ghost" 
               size="icon" 
-              className="h-7 w-7"
+              className="h-7 w-7 rounded-full hover:bg-muted/50"
               onClick={() => {
                 queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
                 queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
@@ -883,32 +887,32 @@ export default function Planning() {
         </div>
       </div>
 
-      {/* Board with sticky header */}
-      <div className="flex-1 min-h-0 flex flex-col bg-background rounded-2xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden" dir={isRtl ? "rtl" : "ltr"}>
-        {/* Sticky Staff Headers - outside scroll container, synced with board scroll */}
+      {/* Board with sticky header - Glass Container */}
+      <div className="flex-1 min-h-0 flex flex-col glass-card rounded-3xl overflow-hidden" dir={isRtl ? "rtl" : "ltr"}>
+        {/* Sticky Staff Headers - iOS Liquid Glass Style */}
         <div 
           ref={headerRef}
-          className="grid bg-gradient-to-b from-orange-50 to-orange-100 dark:from-orange-950/30 dark:to-orange-900/20 border-b-2 border-orange-200 dark:border-orange-800 z-50 shrink-0 overflow-x-hidden"
+          className="grid glass border-b border-white/20 dark:border-white/5 z-50 shrink-0 overflow-x-hidden"
           style={{ 
             gridTemplateColumns: `60px repeat(${staffList.length}, minmax(100px, 1fr))`,
           }}
         >
-          <div className={cn("bg-white/50 dark:bg-gray-900/50 py-1 px-1", isRtl ? "border-l-2 border-orange-200 dark:border-orange-800" : "border-r-2 border-orange-200 dark:border-orange-800")}></div>
+          <div className={cn("bg-white/30 dark:bg-white/5 py-2 px-1", isRtl ? "border-l border-white/20 dark:border-white/5" : "border-r border-white/20 dark:border-white/5")}></div>
           {staffList.map((s, staffIndex) => (
             <div 
               key={s.id} 
-              className={cn("py-1 px-1 font-semibold text-center text-xs", isRtl ? "border-l border-orange-200/50 dark:border-orange-800/50" : "border-r border-orange-200/50 dark:border-orange-800/50")}
+              className={cn("py-2 px-1 font-semibold text-center text-xs", isRtl ? "border-l border-white/10 dark:border-white/5" : "border-r border-white/10 dark:border-white/5")}
             >
-              <div className="flex items-center justify-center gap-1">
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
-                <span className="text-gray-800 dark:text-gray-100 truncate">{s.name}</span>
+              <div className="flex items-center justify-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full shadow-sm ring-2 ring-white/30" style={{ backgroundColor: s.color }} />
+                <span className="text-foreground/90 truncate font-medium">{s.name}</span>
               </div>
             </div>
           ))}
         </div>
 
         {/* Scrollable content */}
-        <div ref={boardRef} className="flex-1 min-h-0 overflow-auto relative free-scroll bg-white dark:bg-gray-950">
+        <div ref={boardRef} className="flex-1 min-h-0 overflow-auto relative free-scroll planning-scroll bg-white/80 dark:bg-slate-900/80">
           <div 
             className="grid relative"
             style={{ 
@@ -916,7 +920,7 @@ export default function Planning() {
               gridAutoRows: '52px'
             }}
           >
-            {/* Current Time Line - BIG and VISIBLE */}
+            {/* Current Time Line - iOS Liquid Glass Style */}
             {isToday && getCurrentTimePosition() >= 0 && (
               <div 
                 ref={liveLineRef}
@@ -929,31 +933,31 @@ export default function Planning() {
               >
                 {/* Main container with glow effect */}
                 <div className="flex items-center">
-                  {/* Time indicator badge on left */}
+                  {/* Time indicator badge on left - Liquid Glass Circle */}
                   <div 
                     className="shrink-0 z-[50] flex items-center justify-center"
                     style={{ width: '60px' }}
                   >
                     <div className="relative">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-500 via-orange-500 to-amber-500 shadow-xl flex items-center justify-center border-3 border-white dark:border-gray-900 animate-pulse">
+                      <div className="w-10 h-10 rounded-full liquid-gradient shadow-xl flex items-center justify-center border-2 border-white/50 live-indicator">
                         <Scissors className="w-5 h-5 text-white drop-shadow-md" />
                       </div>
-                      <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-red-500 to-orange-500 blur-md opacity-50 animate-pulse" />
+                      <div className="absolute -inset-1 rounded-full liquid-gradient blur-lg opacity-40 animate-pulse" />
                     </div>
                   </div>
-                  {/* Thick glowing line */}
+                  {/* Thick glowing line - Liquid gradient */}
                   <div className="flex-1 relative">
                     <div 
                       className="h-1 rounded-full shadow-lg"
                       style={{
-                        background: 'linear-gradient(to right, #ef4444, #f97316, #fbbf24)',
-                        boxShadow: '0 0 12px rgba(249, 115, 22, 0.6), 0 0 24px rgba(249, 115, 22, 0.3)',
+                        background: 'linear-gradient(to right, hsl(211, 100%, 50%), hsl(187, 100%, 50%), hsl(163, 100%, 45%))',
+                        boxShadow: '0 0 16px rgba(59, 130, 246, 0.5), 0 0 32px rgba(59, 130, 246, 0.25)',
                       }}
                     />
                     <div 
-                      className="absolute inset-0 h-1 rounded-full opacity-60 blur-sm"
+                      className="absolute inset-0 h-1 rounded-full opacity-50 blur-sm"
                       style={{
-                        background: 'linear-gradient(to right, #ef4444, #f97316, #fbbf24)',
+                        background: 'linear-gradient(to right, hsl(211, 100%, 50%), hsl(187, 100%, 50%))',
                       }}
                     />
                   </div>
@@ -968,8 +972,8 @@ export default function Planning() {
             <React.Fragment key={hour}>
               <div 
                 className={cn(
-                  "bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-2 py-1 text-sm font-semibold text-gray-600 dark:text-gray-300 sticky z-30 flex items-center justify-center",
-                  isRtl ? "right-0 border-l-2 border-orange-200 dark:border-orange-800" : "left-0 border-r-2 border-orange-200 dark:border-orange-800"
+                  "bg-white/60 dark:bg-slate-800/60 border-b border-slate-200/50 dark:border-slate-700/50 px-2 py-1 text-sm font-medium text-slate-500 dark:text-slate-400 sticky z-30 flex items-center justify-center",
+                  isRtl ? "right-0 border-l border-primary/20" : "left-0 border-r border-primary/20"
                 )}
                 style={{ gridColumn: 1, gridRow: rowNum }}
               >
@@ -986,7 +990,7 @@ export default function Planning() {
                   return (
                     <div
                       key={`${s.id}-${hour}-covered`}
-                      className={cn("border-b border-gray-100 dark:border-gray-800 min-h-[52px] bg-white dark:bg-gray-950", isRtl ? "border-l border-gray-100 dark:border-gray-800" : "border-r border-gray-100 dark:border-gray-800")}
+                      className={cn("border-b border-slate-100/50 dark:border-slate-800/50 min-h-[52px] bg-transparent", isRtl ? "border-l border-slate-100/50 dark:border-slate-800/50" : "border-r border-slate-100/50 dark:border-slate-800/50")}
                       style={{ gridColumn: colNum, gridRow: rowNum }}
                     />
                   );
@@ -1001,7 +1005,7 @@ export default function Planning() {
                   return (
                     <div
                       key={`${s.id}-${hour}`}
-                      className="p-0.5 z-10"
+                      className="p-1 z-10"
                       style={{ 
                         gridColumn: colNum,
                         gridRow: `${rowNum} / span ${span}`
@@ -1009,30 +1013,36 @@ export default function Planning() {
                     >
                       <div 
                         className={cn(
-                          "h-full p-2 rounded-lg text-white cursor-grab active:cursor-grabbing shadow-lg flex flex-col justify-between",
+                          "appointment-card h-full p-2.5 text-white cursor-grab active:cursor-grabbing flex flex-col justify-between relative overflow-hidden",
                           isDragging && "opacity-50 scale-95"
                         )}
-                        style={{ backgroundColor: s.color, cursor: canEditCardboard ? 'grab' : 'default' }}
+                        style={{ 
+                          background: `linear-gradient(135deg, ${s.color}ee, ${s.color}cc)`,
+                          cursor: canEditCardboard ? 'grab' : 'default'
+                        }}
                         draggable={canEditCardboard}
                         onDragStart={(e) => handleDragStart(e, booking)}
                         onDragEnd={handleDragEnd}
                         onClick={(e) => handleAppointmentClick(e, booking)}
                       >
-                        <div>
-                          <div className="font-bold text-xs md:text-sm truncate">{booking.client || "—"}</div>
+                        <div className="water-shimmer absolute inset-0 opacity-30" />
+                        <div className="relative z-10">
+                          <div className="font-semibold text-xs md:text-sm truncate">{booking.client || "—"}</div>
                           <div className="text-[10px] md:text-xs opacity-90 truncate">{booking.service}</div>
-                          <div className="text-[9px] opacity-70">{booking.startTime}</div>
+                          <div className="text-[9px] opacity-70 font-medium">{booking.startTime}</div>
                         </div>
-                        <div className="flex items-center justify-between mt-auto">
-                          <span className="text-[10px] opacity-80">{booking.duration}د</span>
-                          <div className="flex items-center gap-1">
+                        <div className="flex items-center justify-between mt-auto relative z-10">
+                          <span className="text-[10px] opacity-80 font-medium">{booking.duration}′</span>
+                          <div className="flex items-center gap-1.5">
                             <span className="font-bold text-xs">{booking.total} DH</span>
                             {booking.paid ? (
-                              <CreditCard className="w-3 h-3 text-white" />
+                              <div className="bg-white/20 rounded-full p-1">
+                                <CreditCard className="w-3 h-3 text-white" />
+                              </div>
                             ) : (
                               <button
                                 onClick={(e) => handleMarkAsPaid(e, booking)}
-                                className="bg-white/20 hover:bg-white/30 rounded-full p-1 flex items-center gap-0.5"
+                                className="bg-white/25 hover:bg-white/40 rounded-full p-1 flex items-center gap-0.5 transition-colors"
                               >
                                 <CreditCard className="w-3 h-3" />
                                 <Check className="w-2 h-2" />
@@ -1049,10 +1059,10 @@ export default function Planning() {
                   <div
                     key={`${s.id}-${hour}`}
                     className={cn(
-                      "border-b border-gray-100 dark:border-gray-800 min-h-[52px] transition-all duration-200 bg-white dark:bg-gray-950",
-                      isRtl ? "border-l border-gray-100 dark:border-gray-800" : "border-r border-gray-100 dark:border-gray-800",
-                      "hover:bg-orange-50 dark:hover:bg-orange-950/20 cursor-pointer",
-                      isDragOver && "bg-orange-100 dark:bg-orange-900/30 ring-2 ring-orange-500 ring-inset"
+                      "border-b border-slate-100/50 dark:border-slate-800/50 min-h-[52px] transition-all duration-300 bg-transparent",
+                      isRtl ? "border-l border-slate-100/50 dark:border-slate-800/50" : "border-r border-slate-100/50 dark:border-slate-800/50",
+                      "hover:bg-primary/5 dark:hover:bg-primary/10 cursor-pointer",
+                      isDragOver && "bg-primary/10 dark:bg-primary/20 ring-2 ring-primary/50 ring-inset"
                     )}
                     style={{ 
                       gridColumn: colNum,
@@ -1071,18 +1081,19 @@ export default function Planning() {
         </div>
       </div>
 
-      {/* Appointment Dialog */}
+      {/* Appointment Dialog - iOS Liquid Glass */}
       <Dialog open={isDialogOpen} onOpenChange={(open) => {
         setIsDialogOpen(open);
         if (!open) setIsEditFavoritesOpen(false);
       }}>
         <DialogContent 
-          className="w-[calc(100vw-24px)] max-w-[420px] p-0 border-0 shadow-2xl bg-gradient-to-b from-background to-muted/30 rounded-3xl overflow-hidden" 
+          className="w-[calc(100vw-24px)] max-w-[420px] p-0 border-0 shadow-2xl glass-card rounded-3xl overflow-hidden animate-fade-in-scale" 
           dir={isRtl ? "rtl" : "ltr"}
         >
-          <div className="bg-gradient-to-r from-orange-500 via-orange-600 to-amber-500 px-4 py-3 text-white">
-            <DialogHeader>
-              <DialogTitle className="text-base font-bold flex items-center gap-2">
+          <div className="liquid-gradient px-5 py-4 text-white relative overflow-hidden">
+            <div className="water-shimmer absolute inset-0 opacity-20" />
+            <DialogHeader className="relative z-10">
+              <DialogTitle className="text-lg font-semibold flex items-center gap-2">
                 <Sparkles className="w-5 h-5" />
                 {editingAppointment ? t("planning.editBooking") : t("planning.newBooking")}
               </DialogTitle>
@@ -1095,11 +1106,11 @@ export default function Planning() {
           </div>
           
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="p-4 space-y-3">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="p-5 space-y-4">
               
-              {/* Price Row - FIRST */}
-              <div className="flex items-center gap-3 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 rounded-2xl p-3 border border-emerald-200 dark:border-emerald-800">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-lg">
+              {/* Price Row - FIRST - Glass Card */}
+              <div className="flex items-center gap-3 glass-subtle rounded-2xl p-4">
+                <div className="w-11 h-11 rounded-2xl liquid-gradient flex items-center justify-center shadow-lg">
                   <CreditCard className="w-5 h-5 text-white" />
                 </div>
                 <FormField
@@ -1112,7 +1123,7 @@ export default function Planning() {
                           type="number" 
                           inputMode="decimal"
                           placeholder="0"
-                          className="text-2xl h-11 font-bold border-0 bg-white dark:bg-background rounded-xl text-center shadow-sm"
+                          className="text-2xl h-12 font-bold border-0 bg-white/80 dark:bg-slate-800/80 rounded-xl text-center shadow-sm focus:ring-2 focus:ring-primary/30"
                           onFocus={(e) => e.target.select()}
                           {...field} 
                         />
@@ -1120,18 +1131,18 @@ export default function Planning() {
                     </FormItem>
                   )}
                 />
-                <span className="text-base font-bold text-emerald-600 dark:text-emerald-400">DH</span>
+                <span className="text-base font-bold gradient-text">DH</span>
                 <FormField
                   control={form.control}
                   name="paid"
                   render={({ field }) => (
-                    <FormItem className="flex items-center gap-1.5 space-y-0 bg-white dark:bg-background rounded-xl px-2 py-1.5 shadow-sm">
+                    <FormItem className="flex items-center gap-2 space-y-0 bg-white/80 dark:bg-slate-800/80 rounded-xl px-3 py-2 shadow-sm">
                       <FormControl>
                         <input
                           type="checkbox"
                           checked={field.value}
                           onChange={field.onChange}
-                          className="w-4 h-4 accent-emerald-500 rounded"
+                          className="w-4 h-4 accent-primary rounded"
                         />
                       </FormControl>
                       <FormLabel className="!mt-0 text-xs font-medium">{t("common.paid")}</FormLabel>
@@ -1140,15 +1151,15 @@ export default function Planning() {
                 />
               </div>
 
-              {/* Compact Fields */}
-              <div className="grid grid-cols-3 gap-2">
+              {/* Compact Fields - Glass Style */}
+              <div className="grid grid-cols-3 gap-2.5">
                 <FormField
                   control={form.control}
                   name="client"
                   render={({ field }) => (
                     <FormItem className="col-span-3 space-y-0">
                       <FormControl>
-                        <Input placeholder={t("planning.client")} className="h-10 rounded-xl text-sm border-2 border-muted focus:border-orange-400 transition-colors" {...field} />
+                        <Input placeholder={t("planning.client")} className="h-11 rounded-xl text-sm border-0 bg-secondary/50 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary/30 transition-all" {...field} />
                       </FormControl>
                     </FormItem>
                   )}
@@ -1161,11 +1172,11 @@ export default function Planning() {
                     <FormItem className="space-y-0">
                       <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                         <FormControl>
-                          <SelectTrigger className="h-10 rounded-xl text-xs border-2 border-muted">
+                          <SelectTrigger className="h-11 rounded-xl text-xs border-0 bg-secondary/50">
                             <SelectValue placeholder={t("planning.staff")} />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent className="rounded-xl">
+                        <SelectContent className="rounded-2xl glass-card shadow-xl">
                           {staffList.map(s => (
                             <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
                           ))}
@@ -1182,11 +1193,11 @@ export default function Planning() {
                     <FormItem className="space-y-0">
                       <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                         <FormControl>
-                          <SelectTrigger className="h-10 rounded-xl text-xs border-2 border-muted">
+                          <SelectTrigger className="h-11 rounded-xl text-xs border-0 bg-secondary/50">
                             <SelectValue />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent className="max-h-60 rounded-xl">
+                        <SelectContent className="max-h-60 rounded-2xl glass-card shadow-xl">
                           {hours.map(h => (
                             <SelectItem key={h} value={h}>{h}</SelectItem>
                           ))}
@@ -1202,13 +1213,13 @@ export default function Planning() {
                   render={({ field }) => (
                     <FormItem className="space-y-0">
                       <FormControl>
-                        <Input type="number" inputMode="numeric" placeholder={t("common.duration")} className="h-10 rounded-xl text-xs border-2 border-muted" {...field} />
+                        <Input type="number" inputMode="numeric" placeholder={t("common.duration")} className="h-11 rounded-xl text-xs border-0 bg-secondary/50" {...field} />
                       </FormControl>
                     </FormItem>
                   )}
                 />
 
-                {/* Service */}
+                {/* Service - Glass Popover */}
                 <FormField
                   control={form.control}
                   name="service"
@@ -1220,7 +1231,7 @@ export default function Planning() {
                             <Button
                               variant="outline"
                               role="combobox"
-                              className="h-10 w-full justify-between rounded-xl text-xs border-2 border-muted hover:border-orange-400 transition-colors"
+                              className="h-11 w-full justify-between rounded-xl text-xs border-0 bg-secondary/50 hover:bg-secondary/70 transition-colors"
                             >
                               <span className="truncate">{field.value || t("planning.selectService")}</span>
                               <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -1228,18 +1239,18 @@ export default function Planning() {
                           </FormControl>
                         </PopoverTrigger>
                         <PopoverContent 
-                          className="w-[calc(100vw-48px)] max-w-[396px] p-0 rounded-2xl border-2 shadow-xl" 
+                          className="w-[calc(100vw-48px)] max-w-[396px] p-0 rounded-2xl glass-card shadow-2xl" 
                           align="center" 
                           side="top" 
                           sideOffset={4}
                           onWheel={(e) => e.stopPropagation()}
                         >
-                          <div className="p-3 border-b bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30 rounded-t-2xl">
+                          <div className="p-3 border-b border-white/20 liquid-gradient-subtle rounded-t-2xl">
                             <Input
                               placeholder={t("planning.searchService")}
                               value={serviceSearch}
                               onChange={(e) => setServiceSearch(e.target.value)}
-                              className="h-9 text-sm rounded-xl border-2"
+                              className="h-10 text-sm rounded-xl border-0 bg-white/80 dark:bg-slate-800/80"
                             />
                           </div>
                           <div 
@@ -1254,16 +1265,16 @@ export default function Planning() {
                           >
                             {Object.entries(groupedServices).map(([category, categoryServices]) => (
                               <div key={category}>
-                                <div className="px-2 py-1.5 text-[10px] font-bold text-orange-600 dark:text-orange-400 uppercase bg-orange-50 dark:bg-orange-950/30 rounded-lg mb-1 sticky top-0">
+                                <div className="px-2 py-1.5 text-[10px] font-bold gradient-text uppercase glass-subtle rounded-lg mb-1 sticky top-0">
                                   {category}
                                 </div>
                                 {categoryServices.map(s => (
                                   <div
                                     key={s.id}
                                     className={cn(
-                                      "flex items-center justify-between p-2.5 rounded-xl cursor-pointer text-sm mb-1 transition-all",
-                                      "hover:bg-gradient-to-r hover:from-orange-50 hover:to-amber-50 dark:hover:from-orange-950/30 dark:hover:to-amber-950/30",
-                                      field.value === s.name && "bg-gradient-to-r from-orange-100 to-amber-100 dark:from-orange-900/40 dark:to-amber-900/40 font-medium"
+                                      "flex items-center justify-between p-3 rounded-xl cursor-pointer text-sm mb-1 transition-all",
+                                      "hover:bg-primary/5 dark:hover:bg-primary/10",
+                                      field.value === s.name && "bg-primary/10 dark:bg-primary/20 font-medium"
                                     )}
                                     onClick={() => {
                                       handleServiceChange(s.name);
@@ -1272,7 +1283,7 @@ export default function Planning() {
                                     }}
                                   >
                                     <span className="truncate">{s.name}</span>
-                                    <span className="text-xs font-bold text-orange-600 dark:text-orange-400">{s.price} DH</span>
+                                    <span className="text-xs font-bold gradient-text">{s.price} DH</span>
                                   </div>
                                 ))}
                               </div>
@@ -1284,7 +1295,7 @@ export default function Planning() {
                   )}
                 />
 
-                {/* Quick Favorites - compact */}
+                {/* Quick Favorites - Glass Pills */}
                 {!editingAppointment && (
                   <div className="col-span-3 flex items-center gap-1.5">
                     {favoriteServices.slice(0, 4).map((s: any) => (
@@ -1294,10 +1305,10 @@ export default function Planning() {
                         variant={form.watch("service") === s.name ? "default" : "outline"}
                         size="sm"
                         className={cn(
-                          "h-7 text-[9px] px-2 rounded-full font-medium transition-all whitespace-nowrap",
+                          "h-8 text-[10px] px-3 rounded-full font-medium transition-all whitespace-nowrap",
                           form.watch("service") === s.name 
-                            ? "bg-gradient-to-r from-orange-500 to-amber-500 border-0 text-white shadow-md" 
-                            : "border-2 hover:border-orange-300"
+                            ? "liquid-gradient border-0 text-white shadow-md" 
+                            : "border-0 bg-secondary/50 hover:bg-secondary/70"
                         )}
                         onClick={() => handleServiceChange(s.name)}
                       >
@@ -1308,7 +1319,7 @@ export default function Planning() {
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="h-7 w-7 p-0 rounded-full hover:bg-orange-100 dark:hover:bg-orange-900/30"
+                      className="h-8 w-8 p-0 rounded-full hover:bg-primary/10"
                       onClick={() => setIsEditFavoritesOpen(!isEditFavoritesOpen)}
                     >
                       <Settings2 className="w-3.5 h-3.5" />
@@ -1317,9 +1328,9 @@ export default function Planning() {
                 )}
                 
                 {isEditFavoritesOpen && (
-                  <div className="col-span-3 border-2 border-dashed border-orange-200 dark:border-orange-800 rounded-xl p-2 bg-orange-50/50 dark:bg-orange-950/20">
+                  <div className="col-span-3 border border-dashed border-primary/30 rounded-xl p-2.5 glass-subtle">
                     <ScrollArea className="h-[80px]">
-                      <div className="flex flex-wrap gap-1">
+                      <div className="flex flex-wrap gap-1.5">
                         {services.map((s) => (
                           <Button
                             key={s.id}
@@ -1327,8 +1338,8 @@ export default function Planning() {
                             variant={favoriteIds.includes(s.id) ? "default" : "outline"}
                             size="sm"
                             className={cn(
-                              "h-6 text-[9px] px-2 rounded-full",
-                              favoriteIds.includes(s.id) && "bg-gradient-to-r from-orange-500 to-amber-500 border-0"
+                              "h-7 text-[9px] px-2.5 rounded-full transition-all",
+                              favoriteIds.includes(s.id) ? "liquid-gradient border-0 text-white" : "border-0 bg-white/50 dark:bg-slate-800/50"
                             )}
                             onClick={() => toggleFavorite(s.id)}
                           >
@@ -1341,13 +1352,13 @@ export default function Planning() {
                 )}
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex gap-2 pt-2">
+              {/* Action Buttons - Glass Style */}
+              <div className="flex gap-3 pt-3">
                 {editingAppointment && (
                   <Button
                     type="button"
                     variant="destructive"
-                    className="h-11 px-4 rounded-xl font-bold text-sm shadow-md"
+                    className="h-12 px-5 rounded-2xl font-semibold text-sm shadow-lg hover:shadow-xl transition-all"
                     onClick={() => {
                       if (confirm(t("planning.deleteConfirm"))) {
                         deleteMutation.mutate(editingAppointment.id);
@@ -1360,7 +1371,7 @@ export default function Planning() {
                 )}
                 <Button 
                   type="submit" 
-                  className="flex-1 h-11 text-sm font-black rounded-xl bg-gradient-to-r from-orange-500 via-orange-600 to-amber-500 hover:from-orange-600 hover:via-orange-700 hover:to-amber-600 shadow-lg hover:shadow-xl transition-all" 
+                  className="flex-1 h-12 text-sm font-semibold rounded-2xl liquid-gradient shadow-lg hover:shadow-xl transition-all active:scale-[0.98]" 
                   disabled={createMutation.isPending || updateMutation.isPending}
                 >
                   <Sparkles className="w-4 h-4 ml-2" />
@@ -1372,17 +1383,17 @@ export default function Planning() {
         </DialogContent>
       </Dialog>
       
-      {/* Floating "Go to Now" button for PWA - always visible when viewing today */}
+      {/* Floating "Go to Now" button - iOS Liquid Glass Style */}
       {isToday && getCurrentTimePosition() >= 0 && (
         <button
           onClick={() => scrollToLiveLine(true)}
           className={cn(
-            "fixed bottom-20 z-50 w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 shadow-lg flex items-center justify-center text-white hover:from-orange-600 hover:to-amber-600 transition-all active:scale-95",
+            "fixed bottom-20 z-50 w-14 h-14 rounded-full liquid-gradient shadow-xl flex items-center justify-center text-white transition-all active:scale-95 live-indicator",
             isRtl ? "left-4" : "right-4"
           )}
           aria-label="Go to current time"
         >
-          <Clock className="w-5 h-5" />
+          <Clock className="w-6 h-6" />
         </button>
       )}
     </div>

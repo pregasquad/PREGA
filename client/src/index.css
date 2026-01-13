@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=SF+Pro+Display:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -18,95 +18,106 @@
 }
 
 :root {
-  --font-sans: 'DM Sans', sans-serif;
-  --font-display: 'Playfair Display', serif;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+  --font-display: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
 
-  /* Salon Theme: Black and Orange */
-  --background: 0 0% 100%;
-  --foreground: 0 0% 9%;
+  /* iOS Liquid Glass Theme - Light Mode */
+  --background: 220 20% 97%;
+  --foreground: 222 47% 11%;
   
-  /* Card: Solid white background */
+  /* Card: Frosted glass effect base */
   --card: 0 0% 100%;
-  --card-foreground: 0 0% 9%;
+  --card-foreground: 222 47% 11%;
   
-  /* Popover/Dropdown: Solid white background */
+  /* Popover/Dropdown: Glass effect */
   --popover: 0 0% 100%;
-  --popover-foreground: 0 0% 9%;
+  --popover-foreground: 222 47% 11%;
   
-  /* Primary: Vibrant Orange */
-  --primary: 24 95% 53%;
+  /* Primary: Elegant Blue (iOS style) */
+  --primary: 211 100% 50%;
   --primary-foreground: 0 0% 100%;
   
-  /* Secondary: Light Gray */
-  --secondary: 0 0% 96%;
-  --secondary-foreground: 0 0% 9%;
+  /* Secondary: Soft Gray */
+  --secondary: 220 14% 96%;
+  --secondary-foreground: 222 47% 11%;
   
-  --muted: 0 0% 96%;
-  --muted-foreground: 0 0% 45%;
+  --muted: 220 14% 96%;
+  --muted-foreground: 220 9% 46%;
   
-  --accent: 24 95% 95%;
-  --accent-foreground: 0 0% 9%;
+  --accent: 211 100% 95%;
+  --accent-foreground: 211 100% 35%;
   
-  --destructive: 0 84.2% 60.2%;
+  --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
   
-  --border: 0 0% 90%;
-  --input: 0 0% 90%;
-  --ring: 24 95% 53%;
+  --border: 220 13% 91%;
+  --input: 220 13% 91%;
+  --ring: 211 100% 50%;
   
-  /* Sidebar: Dark/Black */
-  --sidebar-background: 0 0% 7%;
-  --sidebar-foreground: 0 0% 98%;
-  --sidebar-primary: 24 95% 53%;
+  /* Sidebar: Dark elegant */
+  --sidebar-background: 222 47% 11%;
+  --sidebar-foreground: 210 40% 98%;
+  --sidebar-primary: 211 100% 50%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 0 0% 15%;
-  --sidebar-accent-foreground: 0 0% 98%;
-  --sidebar-border: 0 0% 20%;
-  --sidebar-ring: 24 95% 53%;
+  --sidebar-accent: 222 47% 18%;
+  --sidebar-accent-foreground: 210 40% 98%;
+  --sidebar-border: 222 47% 20%;
+  --sidebar-ring: 211 100% 50%;
   
-  --radius: 0.75rem;
+  --radius: 1rem;
+
+  /* Liquid Glass Effect Variables */
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.5);
+  --glass-shadow: 0 8px 32px rgba(31, 38, 135, 0.08);
+  --glass-blur: 20px;
 }
 
 .dark {
-  --background: 0 0% 7%;
-  --foreground: 0 0% 98%;
+  --background: 222 47% 6%;
+  --foreground: 210 40% 98%;
   
-  /* Card: Solid dark background */
-  --card: 0 0% 10%;
-  --card-foreground: 0 0% 98%;
+  /* Card: Dark glass effect */
+  --card: 222 47% 10%;
+  --card-foreground: 210 40% 98%;
   
-  /* Popover/Dropdown: Solid dark background */
-  --popover: 0 0% 10%;
-  --popover-foreground: 0 0% 98%;
+  /* Popover/Dropdown: Dark glass */
+  --popover: 222 47% 10%;
+  --popover-foreground: 210 40% 98%;
   
-  --primary: 24 95% 53%;
+  --primary: 211 100% 55%;
   --primary-foreground: 0 0% 100%;
   
-  --secondary: 0 0% 15%;
-  --secondary-foreground: 0 0% 98%;
+  --secondary: 222 47% 15%;
+  --secondary-foreground: 210 40% 98%;
   
-  --muted: 0 0% 15%;
-  --muted-foreground: 0 0% 65%;
+  --muted: 222 47% 15%;
+  --muted-foreground: 215 20% 65%;
   
-  --accent: 0 0% 15%;
-  --accent-foreground: 0 0% 98%;
+  --accent: 222 47% 18%;
+  --accent-foreground: 211 100% 70%;
   
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 0 0% 98%;
+  --destructive: 0 62% 50%;
+  --destructive-foreground: 0 0% 100%;
   
-  --border: 0 0% 20%;
-  --input: 0 0% 20%;
-  --ring: 24 95% 53%;
+  --border: 222 47% 18%;
+  --input: 222 47% 18%;
+  --ring: 211 100% 55%;
   
-  /* Sidebar: Dark/Black */
-  --sidebar-background: 0 0% 5%;
-  --sidebar-foreground: 0 0% 98%;
-  --sidebar-primary: 24 95% 53%;
+  /* Sidebar: Darker elegant */
+  --sidebar-background: 222 47% 4%;
+  --sidebar-foreground: 210 40% 98%;
+  --sidebar-primary: 211 100% 55%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 0 0% 12%;
-  --sidebar-accent-foreground: 0 0% 98%;
-  --sidebar-border: 0 0% 15%;
-  --sidebar-ring: 24 95% 53%;
+  --sidebar-accent: 222 47% 12%;
+  --sidebar-accent-foreground: 210 40% 98%;
+  --sidebar-border: 222 47% 15%;
+  --sidebar-ring: 211 100% 55%;
+
+  /* Dark Glass Variables */
+  --glass-bg: rgba(30, 41, 59, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 @layer base {
@@ -116,11 +127,14 @@
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
     -webkit-overflow-scrolling: touch;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    letter-spacing: -0.01em;
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
-    @apply font-bold tracking-tight text-foreground;
+    @apply font-semibold tracking-tight text-foreground;
+    letter-spacing: -0.02em;
   }
 }
 
@@ -133,7 +147,132 @@
   }
 }
 
-/* Custom Scrollbar for Calendar */
+/* iOS Liquid Glass Effects */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow), 
+              inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius);
+}
+
+.glass-subtle {
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.dark .glass-subtle {
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Water/Liquid Gradients */
+.liquid-gradient {
+  background: linear-gradient(135deg, 
+    hsl(211, 100%, 50%) 0%, 
+    hsl(199, 100%, 55%) 25%,
+    hsl(187, 100%, 55%) 50%,
+    hsl(175, 100%, 50%) 75%,
+    hsl(163, 100%, 45%) 100%
+  );
+}
+
+.liquid-gradient-subtle {
+  background: linear-gradient(135deg, 
+    hsl(211, 100%, 95%) 0%, 
+    hsl(199, 100%, 96%) 50%,
+    hsl(187, 100%, 97%) 100%
+  );
+}
+
+.dark .liquid-gradient-subtle {
+  background: linear-gradient(135deg, 
+    hsl(211, 50%, 15%) 0%, 
+    hsl(199, 50%, 12%) 50%,
+    hsl(222, 47%, 10%) 100%
+  );
+}
+
+/* Animated Water Shimmer */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.water-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+/* Liquid Flow Animation */
+@keyframes liquidFlow {
+  0%, 100% {
+    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+  }
+  50% {
+    border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%;
+  }
+}
+
+.liquid-blob {
+  animation: liquidFlow 8s ease-in-out infinite;
+}
+
+/* Subtle Float Animation */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.float-subtle {
+  animation: float 4s ease-in-out infinite;
+}
+
+/* iOS Style Pill Button */
+.pill-button {
+  @apply rounded-full px-4 py-2 font-medium transition-all duration-200;
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+}
+
+.pill-button:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 20px rgba(31, 38, 135, 0.15);
+}
+
+.pill-button:active {
+  transform: scale(0.98);
+}
+
+/* Custom Scrollbar for Calendar - iOS style */
 .calendar-scroll::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -142,17 +281,45 @@
   background: transparent;
 }
 .calendar-scroll::-webkit-scrollbar-thumb {
-  @apply bg-border rounded-full hover:bg-muted-foreground/30 transition-colors;
+  @apply bg-primary/20 rounded-full;
+  transition: background 0.2s;
+}
+.calendar-scroll::-webkit-scrollbar-thumb:hover {
+  @apply bg-primary/40;
 }
 
-/* Smooth page transitions - prevent flashing */
+/* Planning Board Scrollbar */
+.planning-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.planning-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.planning-scroll::-webkit-scrollbar-thumb {
+  @apply bg-muted-foreground/20 rounded-full;
+}
+.planning-scroll::-webkit-scrollbar-thumb:hover {
+  @apply bg-muted-foreground/30;
+}
+
+/* Smooth page transitions */
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInScale {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.1s ease-out forwards;
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+.animate-fade-in-scale {
+  animation: fadeInScale 0.25s ease-out forwards;
 }
 
 /* Prevent layout shift during loading */
@@ -166,4 +333,97 @@
 /* Smooth content swap */
 .content-ready {
   animation: fadeIn 0.2s ease-out;
+}
+
+/* Appointment Card Styles - iOS Liquid Glass */
+.appointment-card {
+  @apply rounded-2xl p-3 transition-all duration-200;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.appointment-card:hover {
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.appointment-card:active {
+  transform: scale(0.98);
+}
+
+/* iOS Style Input */
+.ios-input {
+  @apply rounded-xl border-0 bg-secondary/50 px-4 py-3 text-base transition-all duration-200;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.ios-input:focus {
+  @apply ring-2 ring-primary/30 bg-background;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+/* Live Time Indicator */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(59, 130, 246, 0.6);
+  }
+}
+
+.live-indicator {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Water Ripple Effect */
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+.ripple-effect::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  pointer-events: none;
+}
+
+.ripple-effect:active::after {
+  animation: ripple 0.6s ease-out;
+}
+
+/* Gradient Text */
+.gradient-text {
+  background: linear-gradient(135deg, hsl(211, 100%, 50%), hsl(187, 100%, 50%));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Status Badge Styles */
+.status-paid {
+  @apply bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20;
+}
+
+.status-unpaid {
+  @apply bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20;
 }
