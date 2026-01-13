@@ -197,3 +197,14 @@ Preferred communication style: Simple, everyday language.
   - `.loading-container` class provides consistent centered layout during loading states
   - All pages (Planning, Clients, Inventory, Reports, Salaries, Services, Charges, Home, StaffPerformance, AdminSettings, Booking) now fade in smoothly
   - Loading states in App.tsx PageLoader use `loading-container` for stable layout
+- **Planning Page UX Improvements**:
+  - "Today" button added next to date picker - highlights orange when viewing a different date
+  - Swipe left/right gesture on mobile for quick date navigation (RTL-aware for Arabic)
+  - Uses workday logic (10am-2am spans two calendar days)
+- **Home Dashboard Quick Stats**:
+  - Today's revenue prominently displayed with green highlight
+  - Appointments count, paid amount, and unpaid amount cards
+  - Revenue calculated from current workday appointments
+  - Responsive 2x2 grid on mobile, 4-column on desktop
+- **Bug Fixes**:
+  - Fixed appointment update validation error ("Expected date, received string") by omitting createdAt from update schema
