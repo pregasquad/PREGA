@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
@@ -25,19 +25,6 @@ const ROLE_COLORS: Record<string, string> = {
   owner: "from-red-400 to-red-600",
   manager: "from-blue-400 to-blue-600",
   receptionist: "from-green-400 to-green-600"
-};
-
-// User photos mapping - add photo paths for users here
-const USER_PHOTOS: Record<string, string> = {
-  "Mehdi": "/mehdi_avatar.jpg"
-};
-
-// Permanent owner that always appears
-const PERMANENT_OWNER: AdminRole = {
-  id: -1,
-  name: "Mehdi",
-  role: "owner",
-  pin: "****"
 };
 
 export function FirstLogin({ children }: FirstLoginProps) {
@@ -104,7 +91,7 @@ export function FirstLogin({ children }: FirstLoginProps) {
     }
   }, [isAuthenticated]);
 
-  const { data: fetchedRoles = [] } = useQuery<AdminRole[]>({
+  const { data: adminRoles = [] } = useQuery<AdminRole[]>({
     queryKey: ["/api/admin-roles"],
     queryFn: async () => {
       const res = await fetch("/api/admin-roles");
@@ -113,18 +100,6 @@ export function FirstLogin({ children }: FirstLoginProps) {
     },
     enabled: !isAuthenticated,
   });
-
-  // Merge permanent owner with fetched roles (avoid duplicates)
-  const adminRoles = React.useMemo(() => {
-    const existingMehdi = fetchedRoles.find(r => r.name.toLowerCase() === "mehdi");
-    if (existingMehdi) {
-      // If Mehdi exists in DB, update their role to owner and keep at top
-      const otherRoles = fetchedRoles.filter(r => r.name.toLowerCase() !== "mehdi");
-      return [{ ...existingMehdi, role: "owner" }, ...otherRoles];
-    }
-    // Otherwise add permanent owner at the beginning
-    return [PERMANENT_OWNER, ...fetchedRoles];
-  }, [fetchedRoles]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -252,20 +227,12 @@ export function FirstLogin({ children }: FirstLoginProps) {
                     onClick={() => setSelectedUser(role)}
                     className="group flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-muted/50 transition-all duration-200"
                   >
-                    {USER_PHOTOS[role.name] ? (
-                      <img 
-                        src={USER_PHOTOS[role.name]} 
-                        alt={role.name}
-                        className="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover shadow-lg transition-transform group-hover:scale-110 ring-4 ring-red-400/50"
-                      />
-                    ) : (
-                      <div className={cn(
-                        "w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center text-white text-2xl md:text-3xl font-bold shadow-lg transition-transform group-hover:scale-110 bg-gradient-to-br",
-                        ROLE_COLORS[role.role] || "from-gray-400 to-gray-600"
-                      )}>
-                        {role.name.charAt(0).toUpperCase()}
-                      </div>
-                    )}
+                    <div className={cn(
+                      "w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center text-white text-2xl md:text-3xl font-bold shadow-lg transition-transform group-hover:scale-110 bg-gradient-to-br",
+                      ROLE_COLORS[role.role] || "from-gray-400 to-gray-600"
+                    )}>
+                      {role.name.charAt(0).toUpperCase()}
+                    </div>
                     <span className="text-sm font-medium text-foreground">{role.name}</span>
                     <span className="text-xs text-muted-foreground capitalize">{role.role}</span>
                   </button>
@@ -393,20 +360,12 @@ export function FirstLogin({ children }: FirstLoginProps) {
               </Button>
 
               <div className="flex flex-col items-center gap-2">
-                {USER_PHOTOS[selectedUser.name] ? (
-                  <img 
-                    src={USER_PHOTOS[selectedUser.name]} 
-                    alt={selectedUser.name}
-                    className="w-20 h-20 rounded-full object-cover shadow-lg ring-4 ring-primary/30"
-                  />
-                ) : (
-                  <div className={cn(
-                    "w-20 h-20 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-lg ring-4 ring-primary/30 bg-gradient-to-br",
-                    ROLE_COLORS[selectedUser.role] || "from-gray-400 to-gray-600"
-                  )}>
-                    {selectedUser.name.charAt(0).toUpperCase()}
-                  </div>
-                )}
+                <div className={cn(
+                  "w-20 h-20 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-lg ring-4 ring-primary/30 bg-gradient-to-br",
+                  ROLE_COLORS[selectedUser.role] || "from-gray-400 to-gray-600"
+                )}>
+                  {selectedUser.name.charAt(0).toUpperCase()}
+                </div>
                 <span className="text-lg font-semibold text-foreground">{selectedUser.name}</span>
                 <span className="text-xs text-muted-foreground capitalize">{selectedUser.role}</span>
               </div>
