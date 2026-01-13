@@ -61,6 +61,163 @@ export async function registerRoutes(
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
+  // === PUBLIC BOOKING API ROUTES ===
+  // These routes are accessible without authentication for the public booking page
+  // Sanitized responses - only expose fields needed for booking
+
+  // Simple in-memory rate limiting for public endpoints
+  const publicRateLimits = new Map<string, { count: number; resetAt: number }>();
+  const PUBLIC_RATE_LIMIT = 10; // requests per minute
+  const PUBLIC_RATE_WINDOW = 60000; // 1 minute
+
+  const checkPublicRateLimit = (ip: string): boolean => {
+    const now = Date.now();
+    const record = publicRateLimits.get(ip);
+    
+    if (!record || now > record.resetAt) {
+      publicRateLimits.set(ip, { count: 1, resetAt: now + PUBLIC_RATE_WINDOW });
+      return true;
+    }
+    
+    if (record.count >= PUBLIC_RATE_LIMIT) {
+      return false;
+    }
+    
+    record.count++;
+    return true;
+  };
+
+  // Public rate limiting middleware
+  const publicRateLimitMiddleware: RequestHandler = (req, res, next) => {
+    const clientIp = req.ip || req.socket.remoteAddress || "unknown";
+    if (!checkPublicRateLimit(clientIp)) {
+      return res.status(429).json({ message: "Too many requests. Please try again later." });
+    }
+    next();
+  };
+
+  // Public: Get services list for booking (sanitized - only booking-safe fields)
+  app.get("/api/public/services", publicRateLimitMiddleware, async (_req, res) => {
+    const items = await storage.getServices();
+    const sanitizedItems = items.map(s => ({
+      id: s.id,
+      name: s.name,
+      category: s.category,
+      duration: s.duration,
+      price: s.price
+    }));
+    res.json(sanitizedItems);
+  });
+
+  // Public: Get staff list for booking (sanitized - only name and color)
+  app.get("/api/public/staff", publicRateLimitMiddleware, async (_req, res) => {
+    const items = await storage.getStaff();
+    const sanitizedItems = items.map(s => ({
+      id: s.id,
+      name: s.name,
+      color: s.color
+    }));
+    res.json(sanitizedItems);
+  });
+
+  // Public: Get appointments for a date (for availability checking - minimal info only)
+  app.get("/api/public/appointments", publicRateLimitMiddleware, async (req, res) => {
+    const { date } = z.object({ date: z.string().optional() }).parse(req.query);
+    const items = await storage.getAppointments(date);
+    const minimalItems = items.map(a => ({
+      staff: a.staff,
+      startTime: a.startTime,
+      duration: a.duration,
+      date: a.date
+    }));
+    res.json(minimalItems);
+  });
+
+  // Schema for public booking - strict whitelist of allowed fields
+  const publicBookingSchema = z.object({
+    client: z.string().min(1).max(100),
+    service: z.string().min(1).max(100),
+    staff: z.string().min(1).max(50),
+    duration: z.number().min(5).max(480),
+    price: z.number().min(0).max(100000),
+    total: z.number().min(0).max(100000),
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    startTime: z.string().regex(/^\d{2}:\d{2}$/),
+    phone: z.string().max(20).optional(),
+  });
+
+  // Public: Create appointment from booking page (rate limited, sanitized input)
+  app.post("/api/public/appointments", publicRateLimitMiddleware, async (req, res) => {
+    try {
+      const input = publicBookingSchema.parse(req.body);
+      
+      // Force paid to false for public bookings - never trust client
+      const appointmentData = {
+        client: input.client,
+        service: input.service,
+        staff: input.staff,
+        duration: input.duration,
+        price: input.price,
+        total: input.total,
+        date: input.date,
+        startTime: input.startTime,
+        paid: false // Always unpaid for public bookings
+      };
+      
+      const item = await storage.createAppointment(appointmentData);
+      
+      // Emit real-time notification for new booking
+      io.emit("booking:created", item);
+      
+      // Send push notification for new appointment
+      const clientName = item.client || "Client";
+      const serviceName = item.service || "RDV";
+      sendPushNotification(
+        "Nouveau RDV (En ligne)",
+        `${clientName} - ${serviceName} (${item.startTime}) - ${item.staff}`,
+        `/planning?date=${item.date}`
+      ).catch(console.error);
+      
+      // If phone was provided, send WhatsApp confirmation (server-side only)
+      if (input.phone) {
+        try {
+          const { sendBookingConfirmation } = await import("./sendzen");
+          let formattedPhone = input.phone.replace(/[^0-9]/g, "");
+          if (formattedPhone.startsWith("0")) {
+            formattedPhone = "212" + formattedPhone.substring(1);
+          } else if (!formattedPhone.startsWith("212")) {
+            formattedPhone = "212" + formattedPhone;
+          }
+          
+          await sendBookingConfirmation(
+            formattedPhone,
+            input.client.split(" (")[0], // Extract name without phone
+            item.date,
+            item.startTime,
+            item.service
+          );
+        } catch (err) {
+          console.log("WhatsApp notification failed:", err);
+        }
+      }
+      
+      // Return only confirmation info, not full internal record
+      res.status(201).json({
+        success: true,
+        id: item.id,
+        date: item.date,
+        startTime: item.startTime,
+        service: item.service,
+        staff: item.staff
+      });
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      throw err;
+    }
+  });
+
   // Appointments - protected routes
   app.get(api.appointments.list.path, isPinAuthenticated, async (req, res) => {
     const { date } = z.object({ date: z.string().optional() }).parse(req.query);
