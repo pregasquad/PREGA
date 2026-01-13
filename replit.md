@@ -114,6 +114,18 @@ Preferred communication style: Simple, everyday language.
 - `npm run db:push` - Push schema changes to database
 
 ## Recent Changes (January 2026)
+- **iOS Liquid Glass Theme Redesign** (Planning page):
+  - Complete UI overhaul with modern glassmorphism effects
+  - New color palette: soft blues, elegant grays replacing orange theme
+  - Glass morphism utilities: .glass, .glass-card, .glass-subtle with backdrop blur
+  - Liquid gradient effects with blue/cyan/teal spectrum
+  - Water shimmer animations on appointment cards
+  - Frosted glass header with staff revenue pills
+  - iOS-style dialog modal with blur effects
+  - Updated form inputs with subtle glass styling
+  - Floating action button with glow animation
+  - Full dark mode compatibility preserved
+  - Uses Inter font for iOS-like typography
 - **First Login Interface**: Users must login before accessing the application
   - Welcome screen with PREGA SQUAD branding
   - User selection dropdown with all configured admin users
