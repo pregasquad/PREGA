@@ -209,13 +209,13 @@ export default function Planning() {
     return true;
   }, []);
 
-  // INITIAL SCROLL: Attempt once after short delay, retry if data not ready
+  // INITIAL SCROLL: Smooth scroll once after short delay
   useLayoutEffect(() => {
     if (!isToday || hasInitialScrolled.current) return;
     
     const timer = setTimeout(() => {
       if (!hasInitialScrolled.current) {
-        const success = scrollToLiveLine(false, true);
+        const success = scrollToLiveLine(true, true); // smooth=true for nice animation
         if (success) {
           hasInitialScrolled.current = true;
         }
@@ -357,7 +357,7 @@ export default function Planning() {
       // Retry scroll if initial scroll didn't succeed yet
       if (!hasInitialScrolled.current) {
         requestAnimationFrame(() => {
-          const success = scrollToLiveLine(false, true);
+          const success = scrollToLiveLine(true, true); // smooth=true for nice animation
           if (success) {
             hasInitialScrolled.current = true;
           }
