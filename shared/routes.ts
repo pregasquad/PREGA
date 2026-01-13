@@ -31,7 +31,7 @@ export const api = {
     update: {
       method: 'PUT' as const,
       path: '/api/appointments/:id',
-      input: insertAppointmentSchema.partial(),
+      input: insertAppointmentSchema.partial().omit({ createdAt: true } as any),
       responses: { 200: z.custom<typeof appointments.$inferSelect>(), 404: errorSchemas.notFound },
     },
     delete: {
