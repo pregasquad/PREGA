@@ -2,7 +2,7 @@
 
 ## Overview
 
-A full-stack beauty salon appointment management application built with React, Express, and PostgreSQL. The system provides scheduling capabilities with a visual calendar interface, service management, staff tracking, and business analytics/reporting. Authentication is handled via Replit Auth (OpenID Connect).
+PREGASQUAD MANAGER is a full-stack beauty salon appointment management application. It offers comprehensive features for scheduling, service and staff management, client tracking, and business analytics. The system provides a visual calendar interface, secure authentication via Replit Auth, and multi-language support. Its core purpose is to streamline salon operations, enhance client experience, and provide valuable business insights.
 
 ## User Preferences
 
@@ -10,232 +10,65 @@ Preferred communication style: Simple, everyday language.
 
 ## System Architecture
 
-### Frontend Architecture
+### Frontend
 - **Framework**: React 18 with TypeScript
-- **Routing**: Wouter (lightweight React router)
-- **State Management**: TanStack Query (React Query) for server state caching and synchronization
-- **UI Components**: shadcn/ui component library built on Radix UI primitives
-- **Styling**: Tailwind CSS with CSS variables for theming
+- **Routing**: Wouter
+- **State Management**: TanStack Query for server state
+- **UI Components**: shadcn/ui built on Radix UI
+- **Styling**: Tailwind CSS with CSS variables
 - **Forms**: React Hook Form with Zod validation
-- **Charts**: Recharts for analytics dashboards
-- **Internationalization**: react-i18next with French (default), English, and Arabic languages
+- **Charts**: Recharts
+- **Internationalization**: react-i18next (French, English, Arabic)
+- **Design Philosophy**: Modern glassmorphism with an iOS liquid glass aesthetic, featuring a warm orange color palette and full dark mode support. Includes responsive design for various devices and smooth page transitions with CSS animations.
+- **Key Features**: Elegant login screen, "First Login" setup for new users, comprehensive admin settings (business info, user management, data export), quick booking from client profiles, live time indicator, and a home dashboard with quick stats.
 
-### Backend Architecture
+### Backend
 - **Runtime**: Node.js with Express
 - **Language**: TypeScript with ESM modules
-- **Build Tool**: esbuild for server bundling, Vite for client
-- **API Design**: RESTful endpoints defined in `shared/routes.ts` with Zod schemas for type-safe request/response validation
+- **Build Tool**: esbuild for server, Vite for client
+- **API Design**: RESTful endpoints with Zod schemas for type-safe validation.
 
 ### Data Storage
-- **Database**: Dual-dialect architecture with Drizzle ORM
-  - **PostgreSQL (Replit)**: Uses `DATABASE_URL` for Replit development
-  - **MySQL (Koyeb/TiDB)**: Uses `MYSQL_URL` with `DB_DIALECT=mysql` for production
-- **Schema Location**: 
-  - `shared/schema-postgres.ts` - PostgreSQL schema (pg-core)
-  - `shared/schema-mysql.ts` - MySQL schema (mysql-core)  
-  - `shared/schema.ts` - Auto-selects schema based on DB_DIALECT
-- **Migrations**: Drizzle Kit for schema management (`db:push` command)
-- **MySQL Fix**: All create/update methods in `server/storage.ts` handle drizzle-orm's ResultSetHeader object format for proper insertId extraction
+- **Database**: Dual-dialect architecture using Drizzle ORM
+  - **PostgreSQL**: For Replit development (via `DATABASE_URL`)
+  - **MySQL**: For production (via `MYSQL_URL` and `DB_DIALECT=mysql`)
+- **Schema**: Defined in `shared/schema-postgres.ts` and `shared/schema-mysql.ts`, with `shared/schema.ts` for dialect selection.
+- **Migrations**: Drizzle Kit (`db:push` command).
+- **Key Models**: Appointments, Services, Categories, Staff, Clients, Charges, Users/Sessions, BusinessSettings.
 
 ### Authentication
-- **Provider**: Replit Auth (OpenID Connect)
-- **Session Management**: Express-session with memory store
-- **Implementation**: Located in `server/replit_integrations/auth/`
-- **User Storage**: Users table with profile information synced from Replit
+- **Provider**: Replit Auth (OpenID Connect).
+- **Session Management**: Express-session.
+- **Security**: bcryptjs for PIN hashing, role-based access control with `admin_roles` table (Owner, Manager, Receptionist tiers), and an `AdminLock` component for sensitive pages.
 
 ### Project Structure
-```
-├── client/src/          # React frontend
-│   ├── components/      # UI components (shadcn/ui)
-│   ├── hooks/           # Custom React hooks
-│   ├── pages/           # Route components
-│   ├── i18n/            # Internationalization config and translations
-│   │   ├── config.ts    # i18next configuration
-│   │   └── locales/     # Translation files (en.json, fr.json, ar.json)
-│   └── lib/             # Utilities and query client
-├── server/              # Express backend
-│   ├── routes.ts        # API route definitions
-│   ├── storage.ts       # Database operations
-│   └── replit_integrations/  # Auth integration
-├── shared/              # Shared code between client/server
-│   ├── schema.ts        # Drizzle database schema (PostgreSQL)
-│   └── routes.ts        # API route contracts with Zod
-└── migrations/          # Database migrations
-```
-
-### Key Data Models
-- **Appointments**: Date, time, duration, client, service, staff, pricing, payment status
-- **Services**: Name, price, duration, category, commission percent
-- **Categories**: Service groupings
-- **Staff**: Name, display color, phone, email, base salary
-- **Clients**: Name, phone, email, birthday, loyalty points
-- **Charges**: Expenses and charges tracking
-- **Users/Sessions**: Replit Auth user profiles and session data
-- **BusinessSettings**: Business name, logo, address, contact info, currency, working hours/days
+- `client/`: React frontend (components, hooks, pages, i18n, lib)
+- `server/`: Express backend (routes, storage, Replit integrations)
+- `shared/`: Code shared between client/server (schema, API route contracts)
+- `migrations/`: Database migrations
 
 ## External Dependencies
 
 ### Database
-- **Dual-dialect support**: PostgreSQL (Replit) and MySQL (TiDB Cloud/Koyeb)
-- **Environment variables**: 
-  - `DATABASE_URL` - PostgreSQL connection for Replit
-  - `MYSQL_URL` - MySQL connection for TiDB Cloud production
-  - `DB_DIALECT` - Set to "mysql" for MySQL mode
-- **Drizzle ORM**: Type-safe database queries with dialect-specific drivers
+- **Drizzle ORM**: Type-safe database queries.
+- **PostgreSQL**: Primary development database.
+- **MySQL (TiDB Cloud/Koyeb)**: Production database.
 
 ### Authentication
-- **Replit Auth**: OpenID Connect provider (requires `REPL_ID`, `SESSION_SECRET`)
-- **Passport.js**: Authentication middleware with OpenID Connect strategy
+- **Replit Auth**: OpenID Connect provider.
+- **Passport.js**: Authentication middleware.
 
 ### UI Libraries
-- **Radix UI**: Headless accessible component primitives
-- **Tailwind CSS**: Utility-first CSS framework
-- **Recharts**: Charting library for reports
-- **date-fns**: Date manipulation utilities
+- **Radix UI**: Headless accessible component primitives.
+- **Tailwind CSS**: Utility-first CSS framework.
+- **Recharts**: Charting library.
+- **date-fns**: Date manipulation utilities.
 
-### Notifications (SendZen)
-- **WhatsApp**: Appointment reminders and booking confirmations via SendZen API
-- **Endpoints**:
-  - `POST /api/notifications/send` - Send custom WhatsApp message
-  - `POST /api/notifications/appointment-reminder` - Send appointment reminder
-  - `POST /api/notifications/booking-confirmation` - Send booking confirmation
-- **Implementation**: `server/sendzen.ts`
-- **Required Secrets**: `SENDZEN_API_KEY`, `SENDZEN_FROM_NUMBER`
+### Notifications
+- **SendZen API**: For WhatsApp appointment reminders and booking confirmations.
+  - Endpoints: `/api/notifications/send`, `/api/notifications/appointment-reminder`, `/api/notifications/booking-confirmation`.
 
 ### Development Tools
-- **Vite**: Frontend dev server and bundler
-- **esbuild**: Server bundling for production
-- **TypeScript**: Type checking across the stack
-
-## Development Commands
-- `npm run dev` - Start development server on port 5000
-- `npm run build` - Build for production
-- `npm run start` - Start production server
-- `npm run db:push` - Push schema changes to database
-
-## Recent Changes (January 2026)
-- **Elegant Login Screen Redesign**:
-  - Modern glassmorphism card with frosted blur effect
-  - Beautiful gradient background with animated floating orbs
-  - Sleek rounded square logo with gradient and sparkle accent
-  - User avatars displayed in elegant rounded squares with shadows
-  - Green online indicator dots for active users
-  - Refined typography with gradient text for branding
-  - Smooth input fields with focus ring animations
-  - Gradient action buttons with hover effects
-  - Decorative gradient accent line at bottom
-  - Full dark mode support
-- **Admin User Photo Upload Feature**:
-  - Users can now upload profile photos in Admin Settings
-  - Photos are displayed on the First Login screen in circular avatars
-  - Falls back to role-colored initials when no photo is uploaded
-  - Photo upload API endpoint at POST /api/admin-roles/:id/photo
-  - Photos stored in client/public/uploads/admin-photos/
-  - Supports JPEG, PNG, WebP with 5MB max size
-  - photoUrl column added to admin_roles database table
-- **iOS Liquid Glass Theme Redesign** (Planning page):
-  - Complete UI overhaul with modern glassmorphism effects
-  - New color palette: soft blues, elegant grays replacing orange theme
-  - Glass morphism utilities: .glass, .glass-card, .glass-subtle with backdrop blur
-  - Liquid gradient effects with blue/cyan/teal spectrum
-  - Water shimmer animations on appointment cards
-  - Frosted glass header with staff revenue pills
-  - iOS-style dialog modal with blur effects
-  - Updated form inputs with subtle glass styling
-  - Floating action button with glow animation
-  - Full dark mode compatibility preserved
-  - Uses Inter font for iOS-like typography
-- **First Login Interface**: Users must login before accessing the application
-  - Welcome screen with PREGA SQUAD branding
-  - User selection dropdown with all configured admin users
-  - PIN authentication using bcrypt-secured PINs from admin_roles table
-  - "Setup First User" button when no users exist (for initial setup)
-  - Public booking page (/booking) accessible without login
-  - Session stored in sessionStorage for persistence during browser session
-- **Business Settings Feature**: Configurable salon settings (business name, address, contact, currency, working hours/days)
-  - Admin Settings page now has Business tab as the first tab
-  - API endpoints: GET/PATCH /api/business-settings
-  - Default values: "PREGA SQUAD", MAD currency (DH symbol), 09:00-19:00 hours, Mon-Sat working days
-  - Working days stored as JSON array of day numbers (0=Sunday through 6=Saturday)
-- **Dual-dialect Database Architecture**: Supports both PostgreSQL (Replit) and MySQL (TiDB/Koyeb)
-- **MySQL Compatibility Fix**: All storage.ts methods correctly extract insertId from drizzle-orm ResultSetHeader
-- **Error Handling**: All create/update operations validate results and throw descriptive errors
-- **WhatsApp SendZen**: Fixed template language code from ar_SA to ar for Arabic templates
-- Added multi-language support (French, English, Arabic) with RTL handling for Arabic
-- Created LanguageSwitcher component with flag icons and persistent language preference
-- Translations organized in client/src/i18n/locales/ with keys following {feature}.{key} pattern
-- Added language switcher and full i18n support to Home page
-- Schedule times now run from 00:00 to 23:30 (full 24-hour day)
-- Added Quick Booking feature from client profiles:
-  - One-click "Quick Book" button in client table
-  - Shows client's frequent/past services for quick selection
-  - Pre-fills client info (name, phone) automatically
-  - Available from both client list and client detail dialog
-- **Comprehensive Responsive Design Overhaul**:
-  - Progressive padding using Tailwind breakpoints (p-2 → md:p-4 → lg:p-6)
-  - Tiered typography scaling (text-xl → md:text-2xl → lg:text-3xl)
-  - Breakpoint-aware grid layouts for mobile/tablet/desktop
-  - Updated pages: Services, Clients, Inventory, Charges, Salaries, Reports, StaffPerformance
-  - Smart scrolling in AppLayout: locked for Planning page, native scroll for other pages
-  - Live time indicator updates every 30 seconds with smooth scrolling animation
-- **Live Time Indicator Redesign**:
-  - Added paintbrush icon in orange gradient circle at the start of the live line
-  - Icon stays sticky in time column when horizontally scrolling
-  - Full RTL support for Arabic language (icon on right, gradient reversed)
-  - Pulsing animation for visual emphasis
-- **Database Connection Performance**:
-  - Added connection pool warmup on server startup (5 pre-established connections)
-  - First request response time improved from ~964ms to ~142ms (7x faster)
-  - Configured pool limits (10 max connections) for optimal performance
-  - Works on both Replit and Koyeb deployment platforms
-- **Mobile UI Improvements**:
-  - Logo now visible in mobile header (appears alongside hamburger menu)
-  - Uses `md:hidden` class to only show on mobile devices
-- **Currency Display Precision**:
-  - Added `formatCurrency()` helper function for consistent currency display
-  - All monetary values display with up to 2 decimal places
-  - Removed Math.round() from commission calculations to preserve precision
-  - Updated Salaries, Reports, and StaffPerformance pages
-- **Admin Roles & Permissions System**:
-  - Three-tier role system: Owner (full access), Manager (most features), Receptionist (appointments/clients only)
-  - `admin_roles` table with bcrypt-hashed PINs for secure authentication
-  - Predefined permission sets per role with customization support
-  - AdminLock component protects sensitive pages requiring PIN authentication
-  - PINs never exposed in API responses (masked as "****")
-- **Admin Settings Page** (`/admin-settings`):
-  - User management: Create, edit, delete admin users with role assignments
-  - Data export functionality: CSV export for appointments, clients, services, staff, inventory, expenses
-  - Export files compatible with Excel/Google Sheets for backup and analysis
-- **Security Enhancements**:
-  - bcryptjs for secure PIN hashing and comparison
-  - All admin API endpoints validate and sanitize input
-  - Role-based navigation: sidebar only shows permitted sections
-- **Custom Spinning Logo Loading Indicator**:
-  - SpinningLogo component (`client/src/components/ui/spinning-logo.tsx`) displays PREGA SQUAD logo with spin animation
-  - Replaces all Loader2 icons across the app (Planning, Clients, Inventory, StaffPerformance, AdminSettings, App.tsx)
-  - Logo stored at `client/public/prega_logo.png`
-  - Sizes: sm (8), md (12), lg (16), xl (24) with 1.5s animation duration
-- **Mobile/iPhone Performance Optimizations**:
-  - Code splitting with React.lazy() for admin pages (Home, Services, Reports, Inventory, Salaries, Clients, StaffPerformance, AdminSettings)
-  - Smart data caching with staleTime: Services/Staff/Categories (5 min), Clients/Products (1 min), Appointments (30 sec)
-  - Reduced polling intervals - relies on Socket.IO for real-time updates with 2-3 minute fallback
-  - Vite bundle optimization with manual chunks for vendor libraries (react, radix-ui, recharts)
-  - Throttled visibility change handlers to prevent excessive refetches
-  - refetchOnWindowFocus disabled for Socket-managed data
-- **Smooth Page Transitions (Anti-Flash)**:
-  - CSS animations defined in `client/src/index.css`: fadeIn, fadeInUp keyframes
-  - `.animate-fade-in` class (0.2s ease-out) applied to all page content wrappers
-  - `.loading-container` class provides consistent centered layout during loading states
-  - All pages (Planning, Clients, Inventory, Reports, Salaries, Services, Charges, Home, StaffPerformance, AdminSettings, Booking) now fade in smoothly
-  - Loading states in App.tsx PageLoader use `loading-container` for stable layout
-- **Planning Page UX Improvements**:
-  - "Today" button added next to date picker - highlights orange when viewing a different date
-  - Swipe left/right gesture on mobile for quick date navigation (RTL-aware for Arabic)
-  - Uses workday logic (10am-2am spans two calendar days)
-- **Home Dashboard Quick Stats**:
-  - Today's revenue prominently displayed with green highlight
-  - Appointments count, paid amount, and unpaid amount cards
-  - Revenue calculated from current workday appointments
-  - Responsive 2x2 grid on mobile, 4-column on desktop
-- **Bug Fixes**:
-  - Fixed appointment update validation error ("Expected date, received string") by omitting createdAt from update schema
+- **Vite**: Frontend dev server and bundler.
+- **esbuild**: Server bundling.
+- **TypeScript**: Type checking.

@@ -264,13 +264,13 @@ export default function Reports() {
               <div>
                 <p className="text-muted-foreground font-medium text-sm">{t("reports.activeStaff")}</p>
                 <h3 className="text-4xl font-bold mt-2 text-foreground">{staffList.length}</h3>
-                <div className="mt-4 flex items-center text-blue-600 text-sm font-medium">
+                <div className="mt-4 flex items-center text-orange-600 text-sm font-medium">
                   <Users className="w-4 h-4 ml-1" />
                   <span>{t("reports.members")}</span>
                 </div>
               </div>
-              <div className="p-3 bg-blue-100 rounded-xl">
-                <Users className="w-6 h-6 text-blue-600" />
+              <div className="p-3 bg-orange-100 rounded-xl">
+                <Users className="w-6 h-6 text-orange-600" />
               </div>
             </div>
           </CardContent>

@@ -23,13 +23,13 @@ interface FirstLoginProps {
 
 const ROLE_COLORS: Record<string, string> = {
   owner: "from-rose-400 via-pink-500 to-purple-500",
-  manager: "from-blue-400 via-cyan-500 to-teal-500",
+  manager: "from-orange-400 via-amber-500 to-yellow-500",
   receptionist: "from-emerald-400 via-green-500 to-teal-500"
 };
 
 const ROLE_GLOW: Record<string, string> = {
   owner: "shadow-rose-500/30",
-  manager: "shadow-blue-500/30",
+  manager: "shadow-orange-500/30",
   receptionist: "shadow-emerald-500/30"
 };
 
@@ -205,12 +205,12 @@ export function FirstLogin({ children }: FirstLoginProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden">
       {/* Elegant gradient background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950" />
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-orange-50 to-amber-100 dark:from-slate-950 dark:via-slate-900 dark:to-amber-950" />
       
       {/* Animated gradient orbs */}
-      <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] rounded-full bg-gradient-to-br from-blue-400/20 to-cyan-400/20 blur-3xl animate-pulse" />
+      <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] rounded-full bg-gradient-to-br from-orange-400/20 to-amber-400/20 blur-3xl animate-pulse" />
       <div className="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] rounded-full bg-gradient-to-br from-purple-400/20 to-pink-400/20 blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-      <div className="absolute top-[40%] right-[20%] w-[300px] h-[300px] rounded-full bg-gradient-to-br from-teal-400/15 to-emerald-400/15 blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
+      <div className="absolute top-[40%] right-[20%] w-[300px] h-[300px] rounded-full bg-gradient-to-br from-yellow-400/15 to-amber-400/15 blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
       
       {/* Glass card */}
       <div className="relative w-full max-w-md mx-4 p-8 rounded-3xl bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-2xl shadow-black/5 dark:shadow-black/20 animate-fade-in">
@@ -218,7 +218,7 @@ export function FirstLogin({ children }: FirstLoginProps) {
           {/* Logo section */}
           <div className="flex flex-col items-center gap-3">
             <div className="relative">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 via-cyan-500 to-teal-500 flex items-center justify-center shadow-lg shadow-blue-500/25 rotate-3 transition-transform hover:rotate-0">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-500 flex items-center justify-center shadow-lg shadow-orange-500/25 rotate-3 transition-transform hover:rotate-0">
                 <span className="text-3xl font-black text-white">P</span>
               </div>
               <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg">
@@ -284,7 +284,7 @@ export function FirstLogin({ children }: FirstLoginProps) {
                     {t("auth.noUsersConfigured")}
                   </p>
                   <Button 
-                    className="w-full h-12 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-medium shadow-lg shadow-blue-500/25 transition-all"
+                    className="w-full h-12 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-medium shadow-lg shadow-orange-500/25 transition-all"
                     onClick={() => {
                       sessionStorage.setItem("user_authenticated", "true");
                       sessionStorage.setItem("current_user", "Setup");
@@ -340,7 +340,7 @@ export function FirstLogin({ children }: FirstLoginProps) {
                   placeholder={t("auth.businessPhone")}
                   value={businessPhone}
                   onChange={(e) => setBusinessPhone(e.target.value)}
-                  className="h-14 pl-12 rounded-xl border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                  className="h-14 pl-12 rounded-xl border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
                   autoFocus
                 />
               </div>
@@ -352,7 +352,7 @@ export function FirstLogin({ children }: FirstLoginProps) {
                   placeholder={t("auth.newPin")}
                   value={newPin}
                   onChange={(e) => setNewPin(e.target.value)}
-                  className="h-14 pl-12 rounded-xl border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 text-center text-lg tracking-[0.5em] font-mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                  className="h-14 pl-12 rounded-xl border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 text-center text-lg tracking-[0.5em] font-mono focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
                 />
               </div>
 
@@ -363,7 +363,7 @@ export function FirstLogin({ children }: FirstLoginProps) {
                   placeholder={t("auth.confirmPin")}
                   value={confirmPin}
                   onChange={(e) => setConfirmPin(e.target.value)}
-                  className="h-14 pl-12 rounded-xl border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 text-center text-lg tracking-[0.5em] font-mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                  className="h-14 pl-12 rounded-xl border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 text-center text-lg tracking-[0.5em] font-mono focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
                 />
               </div>
 
@@ -373,7 +373,7 @@ export function FirstLogin({ children }: FirstLoginProps) {
 
               <Button 
                 type="submit" 
-                className="w-full h-14 text-base font-semibold rounded-xl bg-gradient-to-r from-blue-500 via-cyan-500 to-teal-500 hover:from-blue-600 hover:via-cyan-600 hover:to-teal-600 text-white shadow-lg shadow-blue-500/25 transition-all active:scale-[0.98]"
+                className="w-full h-14 text-base font-semibold rounded-xl bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 hover:from-orange-600 hover:via-amber-600 hover:to-yellow-600 text-white shadow-lg shadow-orange-500/25 transition-all active:scale-[0.98]"
                 disabled={resetLoading || !businessPhone || !newPin || !confirmPin}
               >
                 {resetLoading ? t("common.loading") : t("auth.resetPin")}
@@ -429,7 +429,7 @@ export function FirstLogin({ children }: FirstLoginProps) {
                   value={pin}
                   onChange={(e) => setPin(e.target.value)}
                   className={cn(
-                    "h-14 pl-12 rounded-xl border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 text-center text-xl tracking-[0.5em] font-mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all",
+                    "h-14 pl-12 rounded-xl border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 text-center text-xl tracking-[0.5em] font-mono focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all",
                     error && "border-rose-500 focus:ring-rose-500/20 focus:border-rose-500"
                   )}
                   autoComplete="current-password"
@@ -443,7 +443,7 @@ export function FirstLogin({ children }: FirstLoginProps) {
 
               <Button 
                 type="submit" 
-                className="w-full h-14 text-base font-semibold rounded-xl bg-gradient-to-r from-blue-500 via-cyan-500 to-teal-500 hover:from-blue-600 hover:via-cyan-600 hover:to-teal-600 text-white shadow-lg shadow-blue-500/25 transition-all active:scale-[0.98]"
+                className="w-full h-14 text-base font-semibold rounded-xl bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 hover:from-orange-600 hover:via-amber-600 hover:to-yellow-600 text-white shadow-lg shadow-orange-500/25 transition-all active:scale-[0.98]"
                 disabled={isLoading}
               >
                 {isLoading ? t("common.loading") : t("auth.login")}
@@ -452,7 +452,7 @@ export function FirstLogin({ children }: FirstLoginProps) {
               <Button
                 type="button"
                 variant="ghost"
-                className="w-full text-sm text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                className="w-full text-sm text-slate-500 hover:text-orange-600 dark:hover:text-orange-400 transition-colors"
                 onClick={() => {
                   setShowForgotPin(true);
                   setPin("");
@@ -466,7 +466,7 @@ export function FirstLogin({ children }: FirstLoginProps) {
         </div>
         
         {/* Bottom decorative line */}
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-24 h-1 rounded-full bg-gradient-to-r from-blue-500 via-cyan-500 to-teal-500 opacity-50" />
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-24 h-1 rounded-full bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 opacity-50" />
       </div>
     </div>
   );

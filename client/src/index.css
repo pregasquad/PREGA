@@ -33,86 +33,86 @@
   --popover: 0 0% 100%;
   --popover-foreground: 222 47% 11%;
   
-  /* Primary: Elegant Blue (iOS style) */
-  --primary: 211 100% 50%;
+  /* Primary: Elegant Orange (iOS style) */
+  --primary: 24 100% 50%;
   --primary-foreground: 0 0% 100%;
   
-  /* Secondary: Soft Gray */
-  --secondary: 220 14% 96%;
-  --secondary-foreground: 222 47% 11%;
+  /* Secondary: Soft Warm Gray */
+  --secondary: 30 14% 96%;
+  --secondary-foreground: 20 47% 11%;
   
-  --muted: 220 14% 96%;
-  --muted-foreground: 220 9% 46%;
+  --muted: 30 14% 96%;
+  --muted-foreground: 24 9% 46%;
   
-  --accent: 211 100% 95%;
-  --accent-foreground: 211 100% 35%;
+  --accent: 24 100% 95%;
+  --accent-foreground: 24 100% 35%;
   
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
   
-  --border: 220 13% 91%;
-  --input: 220 13% 91%;
-  --ring: 211 100% 50%;
+  --border: 30 13% 91%;
+  --input: 30 13% 91%;
+  --ring: 24 100% 50%;
   
   /* Sidebar: Dark elegant */
-  --sidebar-background: 222 47% 11%;
-  --sidebar-foreground: 210 40% 98%;
-  --sidebar-primary: 211 100% 50%;
+  --sidebar-background: 20 47% 11%;
+  --sidebar-foreground: 30 40% 98%;
+  --sidebar-primary: 24 100% 50%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 222 47% 18%;
-  --sidebar-accent-foreground: 210 40% 98%;
-  --sidebar-border: 222 47% 20%;
-  --sidebar-ring: 211 100% 50%;
+  --sidebar-accent: 20 47% 18%;
+  --sidebar-accent-foreground: 30 40% 98%;
+  --sidebar-border: 20 47% 20%;
+  --sidebar-ring: 24 100% 50%;
   
   --radius: 1rem;
 
   /* Liquid Glass Effect Variables */
   --glass-bg: rgba(255, 255, 255, 0.72);
   --glass-border: rgba(255, 255, 255, 0.5);
-  --glass-shadow: 0 8px 32px rgba(31, 38, 135, 0.08);
+  --glass-shadow: 0 8px 32px rgba(135, 90, 31, 0.08);
   --glass-blur: 20px;
 }
 
 .dark {
-  --background: 222 47% 6%;
-  --foreground: 210 40% 98%;
+  --background: 20 47% 6%;
+  --foreground: 30 40% 98%;
   
   /* Card: Dark glass effect */
-  --card: 222 47% 10%;
-  --card-foreground: 210 40% 98%;
+  --card: 20 47% 10%;
+  --card-foreground: 30 40% 98%;
   
   /* Popover/Dropdown: Dark glass */
-  --popover: 222 47% 10%;
-  --popover-foreground: 210 40% 98%;
+  --popover: 20 47% 10%;
+  --popover-foreground: 30 40% 98%;
   
-  --primary: 211 100% 55%;
+  --primary: 24 100% 55%;
   --primary-foreground: 0 0% 100%;
   
-  --secondary: 222 47% 15%;
-  --secondary-foreground: 210 40% 98%;
+  --secondary: 20 47% 15%;
+  --secondary-foreground: 30 40% 98%;
   
-  --muted: 222 47% 15%;
-  --muted-foreground: 215 20% 65%;
+  --muted: 20 47% 15%;
+  --muted-foreground: 24 20% 65%;
   
-  --accent: 222 47% 18%;
-  --accent-foreground: 211 100% 70%;
+  --accent: 20 47% 18%;
+  --accent-foreground: 24 100% 70%;
   
   --destructive: 0 62% 50%;
   --destructive-foreground: 0 0% 100%;
   
-  --border: 222 47% 18%;
-  --input: 222 47% 18%;
-  --ring: 211 100% 55%;
+  --border: 20 47% 18%;
+  --input: 20 47% 18%;
+  --ring: 24 100% 55%;
   
   /* Sidebar: Darker elegant */
-  --sidebar-background: 222 47% 4%;
-  --sidebar-foreground: 210 40% 98%;
-  --sidebar-primary: 211 100% 55%;
+  --sidebar-background: 20 47% 4%;
+  --sidebar-foreground: 30 40% 98%;
+  --sidebar-primary: 24 100% 55%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 222 47% 12%;
-  --sidebar-accent-foreground: 210 40% 98%;
-  --sidebar-border: 222 47% 15%;
-  --sidebar-ring: 211 100% 55%;
+  --sidebar-accent: 20 47% 12%;
+  --sidebar-accent-foreground: 30 40% 98%;
+  --sidebar-border: 20 47% 15%;
+  --sidebar-ring: 24 100% 55%;
 
   /* Dark Glass Variables */
   --glass-bg: rgba(30, 41, 59, 0.72);
@@ -178,30 +178,30 @@
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-/* Water/Liquid Gradients */
+/* Warm/Liquid Gradients */
 .liquid-gradient {
   background: linear-gradient(135deg, 
-    hsl(211, 100%, 50%) 0%, 
-    hsl(199, 100%, 55%) 25%,
-    hsl(187, 100%, 55%) 50%,
-    hsl(175, 100%, 50%) 75%,
-    hsl(163, 100%, 45%) 100%
+    hsl(24, 100%, 50%) 0%, 
+    hsl(32, 100%, 55%) 25%,
+    hsl(40, 100%, 55%) 50%,
+    hsl(45, 100%, 50%) 75%,
+    hsl(50, 100%, 45%) 100%
   );
 }
 
 .liquid-gradient-subtle {
   background: linear-gradient(135deg, 
-    hsl(211, 100%, 95%) 0%, 
-    hsl(199, 100%, 96%) 50%,
-    hsl(187, 100%, 97%) 100%
+    hsl(24, 100%, 95%) 0%, 
+    hsl(32, 100%, 96%) 50%,
+    hsl(40, 100%, 97%) 100%
   );
 }
 
 .dark .liquid-gradient-subtle {
   background: linear-gradient(135deg, 
-    hsl(211, 50%, 15%) 0%, 
-    hsl(199, 50%, 12%) 50%,
-    hsl(222, 47%, 10%) 100%
+    hsl(24, 50%, 15%) 0%, 
+    hsl(32, 50%, 12%) 50%,
+    hsl(20, 47%, 10%) 100%
   );
 }
 
@@ -265,7 +265,7 @@
 
 .pill-button:hover {
   transform: scale(1.02);
-  box-shadow: 0 4px 20px rgba(31, 38, 135, 0.15);
+  box-shadow: 0 4px 20px rgba(135, 90, 31, 0.15);
 }
 
 .pill-button:active {
@@ -365,16 +365,16 @@
 
 .ios-input:focus {
   @apply ring-2 ring-primary/30 bg-background;
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.1);
 }
 
 /* Live Time Indicator */
 @keyframes pulse-glow {
   0%, 100% {
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+    box-shadow: 0 0 20px rgba(249, 115, 22, 0.4);
   }
   50% {
-    box-shadow: 0 0 40px rgba(59, 130, 246, 0.6);
+    box-shadow: 0 0 40px rgba(249, 115, 22, 0.6);
   }
 }
 
@@ -413,7 +413,7 @@
 
 /* Gradient Text */
 .gradient-text {
-  background: linear-gradient(135deg, hsl(211, 100%, 50%), hsl(187, 100%, 50%));
+  background: linear-gradient(135deg, hsl(24, 100%, 50%), hsl(40, 100%, 50%));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

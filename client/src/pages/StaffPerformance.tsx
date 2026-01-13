@@ -172,8 +172,8 @@ export default function StaffPerformance() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Users className="w-5 h-5 text-blue-600" />
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <Users className="w-5 h-5 text-orange-600" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">{t("staffPerformance.staffCount")}</p>
@@ -300,7 +300,7 @@ export default function StaffPerformance() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">{t("staffPerformance.commission")}</span>
-                      <span className="font-bold text-blue-600">{formatCurrency(stats.totalCommission)} {t("common.currency")}</span>
+                      <span className="font-bold text-orange-600">{formatCurrency(stats.totalCommission)} {t("common.currency")}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">{t("staffPerformance.avgPerAppointment")}</span>
