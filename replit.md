@@ -114,6 +114,14 @@ Preferred communication style: Simple, everyday language.
 - `npm run db:push` - Push schema changes to database
 
 ## Recent Changes (January 2026)
+- **Admin User Photo Upload Feature**:
+  - Users can now upload profile photos in Admin Settings
+  - Photos are displayed on the First Login screen in circular avatars
+  - Falls back to role-colored initials when no photo is uploaded
+  - Photo upload API endpoint at POST /api/admin-roles/:id/photo
+  - Photos stored in client/public/uploads/admin-photos/
+  - Supports JPEG, PNG, WebP with 5MB max size
+  - photoUrl column added to admin_roles database table
 - **iOS Liquid Glass Theme Redesign** (Planning page):
   - Complete UI overhaul with modern glassmorphism effects
   - New color palette: soft blues, elegant grays replacing orange theme
