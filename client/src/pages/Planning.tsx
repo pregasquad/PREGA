@@ -281,6 +281,47 @@ export default function Planning() {
   const [draggedAppointment, setDraggedAppointment] = useState<any>(null);
   const [dragOverSlot, setDragOverSlot] = useState<{staff: string, time: string} | null>(null);
   const pageRef = useRef<HTMLDivElement>(null);
+  
+  // Swipe gesture state for mobile date navigation
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+  const swipeThreshold = 80; // minimum px to trigger swipe
+  
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  }, []);
+  
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
+    const deltaX = touchEndX - touchStartX.current;
+    const deltaY = touchEndY - touchStartY.current;
+    
+    // Only trigger if horizontal swipe is greater than vertical (avoid scroll conflicts)
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > swipeThreshold) {
+      if (isRtl) {
+        // RTL: swipe left = previous day, swipe right = next day
+        if (deltaX < 0) {
+          setDate(d => addDays(d, -1));
+        } else {
+          setDate(d => addDays(d, 1));
+        }
+      } else {
+        // LTR: swipe right = previous day, swipe left = next day  
+        if (deltaX > 0) {
+          setDate(d => addDays(d, -1));
+        } else {
+          setDate(d => addDays(d, 1));
+        }
+      }
+    }
+    
+    touchStartX.current = null;
+    touchStartY.current = null;
+  }, [isRtl]);
   const [favoriteIds, setFavoriteIds] = useState<number[]>(() => {
     try {
       const stored = localStorage.getItem('favoriteServiceIds');
@@ -664,6 +705,8 @@ export default function Planning() {
       ref={pageRef}
       className="h-full overflow-hidden bg-background px-1.5 pt-0.5 pb-1 md:px-3 md:pt-1 md:pb-2 flex flex-col animate-fade-in"
       dir={isRtl ? "rtl" : "ltr"}
+      onTouchStart={isMobile ? handleTouchStart : undefined}
+      onTouchEnd={isMobile ? handleTouchEnd : undefined}
     >
       {/* Header */}
       <div className="mb-0.5 flex flex-col md:flex-row justify-between items-start md:items-center gap-0.5 shrink-0">
@@ -809,6 +852,17 @@ export default function Planning() {
               <ChevronLeft className="w-4 h-4" />
             </Button>
             <Button 
+              variant={isToday ? "ghost" : "default"}
+              size="sm" 
+              className={cn(
+                "h-7 px-2 text-xs font-medium",
+                !isToday && "bg-orange-500 hover:bg-orange-600 text-white"
+              )}
+              onClick={() => setDate(getWorkDayDate())}
+            >
+              {t("common.today")}
+            </Button>
+            <Button 
               variant="ghost" 
               size="icon" 
               className="h-7 w-7"
@@ -816,7 +870,6 @@ export default function Planning() {
                 queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
                 queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
                 queryClient.invalidateQueries({ queryKey: ["/api/services"] });
-                // Scroll to top
                 if (boardRef.current) {
                   boardRef.current.scrollTop = 0;
                 }
