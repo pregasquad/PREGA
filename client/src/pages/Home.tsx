@@ -157,29 +157,17 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
           {stats.map((stat, i) => (
-            <div 
-              key={i} 
-              className={`relative overflow-hidden rounded-2xl border p-4 md:p-5 transition-all duration-200 hover:shadow-elevated hover:-translate-y-0.5 ${
-                stat.highlight 
-                  ? 'bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 dark:from-emerald-950/40 dark:via-green-950/30 dark:to-teal-950/20 border-emerald-200/60 dark:border-emerald-800/60' 
-                  : 'bg-card border-border/50'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs md:text-sm font-medium text-muted-foreground">{stat.label}</span>
-                <div className={`p-2 rounded-xl ${stat.highlight ? 'bg-emerald-500/10' : 'bg-muted'}`}>
-                  <stat.icon className={`h-4 w-4 ${stat.color}`} />
-                </div>
-              </div>
-              <div className={`text-xl md:text-2xl font-bold tracking-tight ${stat.highlight ? 'text-emerald-700 dark:text-emerald-400' : 'text-foreground'}`}>
-                {stat.value}
-              </div>
-              {stat.highlight && (
-                <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-emerald-400/20 to-transparent rounded-bl-full"></div>
-              )}
-            </div>
+            <Card key={i} className={`hover-elevate ${stat.highlight ? 'bg-gradient-to-br from-emerald-50 to-green-100 dark:from-emerald-950/50 dark:to-green-900/30 border-emerald-200 dark:border-emerald-800' : ''}`}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2 gap-2 p-3 md:p-6">
+                <CardTitle className="text-xs md:text-sm font-medium">{stat.label}</CardTitle>
+                <stat.icon className={`h-4 w-4 md:h-5 md:w-5 ${stat.color}`} />
+              </CardHeader>
+              <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+                <div className={`text-lg md:text-2xl font-bold ${stat.highlight ? 'text-emerald-700 dark:text-emerald-400' : ''}`}>{stat.value}</div>
+              </CardContent>
+            </Card>
           ))}
         </div>
 

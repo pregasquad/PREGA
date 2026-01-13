@@ -6,18 +6,9 @@ export default {
   theme: {
     extend: {
       borderRadius: {
-        '3xl': '1.5rem',
-        '2xl': '1rem',
-        xl: '.875rem',
-        lg: '.75rem',
-        md: '.5rem',
-        sm: '.25rem',
-      },
-      boxShadow: {
-        'soft': '0 2px 8px rgba(0,0,0,0.04)',
-        'medium': '0 4px 16px rgba(0,0,0,0.06)',
-        'elevated': '0 8px 30px rgba(0,0,0,0.08)',
-        'glow': '0 0 20px rgba(234, 88, 12, 0.15)',
+        lg: ".5625rem", /* 9px */
+        md: ".375rem", /* 6px */
+        sm: ".1875rem", /* 3px */
       },
       colors: {
         // Flat / base colors (regular buttons)
