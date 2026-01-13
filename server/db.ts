@@ -286,3 +286,38 @@ export async function ensureForeignKeyConstraints(): Promise<void> {
     console.error("Failed to add foreign key constraints:", error);
   }
 }
+
+// Auto-migration: Add photo_url column to admin_roles table
+export async function ensureAdminRolesPhotoColumn(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      
+      // Check if photo_url column exists
+      const [rows] = await connection.query(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_NAME = 'admin_roles' AND COLUMN_NAME = 'photo_url'
+      `);
+      
+      if ((rows as any[]).length === 0) {
+        await connection.query(`ALTER TABLE admin_roles ADD COLUMN photo_url VARCHAR(500)`);
+        console.log("Added photo_url column to admin_roles table");
+      }
+      
+      connection.release();
+    } else {
+      // PostgreSQL version
+      await pool.query(`
+        DO $$ 
+        BEGIN 
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'admin_roles' AND column_name = 'photo_url') THEN
+            ALTER TABLE admin_roles ADD COLUMN photo_url VARCHAR(500);
+          END IF;
+        END $$;
+      `);
+    }
+    console.log("Admin roles photo column ready");
+  } catch (error) {
+    console.error("Failed to ensure admin_roles photo_url column:", error);
+  }
+}
