@@ -155,8 +155,20 @@ export default function Planning() {
     return format(date, "yyyy-MM-dd") === format(workDayDate, "yyyy-MM-dd");
   }, [date, currentTime]);
 
-  // BULLETPROOF SCROLL TO LIVE LINE - uses scrollIntoView on the actual element
-  const scrollToLiveLine = useCallback((smooth = false) => {
+  // Track if initial scroll has happened to prevent multiple scrolls on load
+  const hasInitialScrolled = useRef(false);
+  const lastScrollTime = useRef(0);
+  const lastFollowedMinute = useRef(-1);
+
+  // SCROLL TO LIVE LINE - uses scrollIntoView on the actual element
+  const scrollToLiveLine = useCallback((smooth = false, force = false) => {
+    // Debounce: prevent scrolls within 500ms of each other (unless forced)
+    const now = Date.now();
+    if (!force && now - lastScrollTime.current < 500) {
+      return false;
+    }
+    lastScrollTime.current = now;
+
     // Method 1: Use the actual live line element
     if (liveLineRef.current) {
       liveLineRef.current.scrollIntoView({ 
@@ -171,9 +183,9 @@ export default function Planning() {
     const board = boardRef.current;
     if (!board || board.scrollHeight <= board.clientHeight) return false;
     
-    const now = new Date();
-    const currentHour = now.getHours();
-    const currentMinutes = now.getMinutes();
+    const currentNow = new Date();
+    const currentHour = currentNow.getHours();
+    const currentMinutes = currentNow.getMinutes();
     
     let adjustedHour;
     if (currentHour >= 10) {
@@ -197,62 +209,46 @@ export default function Planning() {
     return true;
   }, []);
 
-  // AGGRESSIVE AUTO-SCROLL: Try many times with different delays
+  // INITIAL SCROLL: Attempt once after short delay, retry if data not ready
   useLayoutEffect(() => {
-    if (!isToday) return;
+    if (!isToday || hasInitialScrolled.current) return;
     
-    // Try scrolling multiple times
-    const attempts = [0, 50, 100, 200, 300, 500, 800, 1000, 1500, 2000, 3000];
-    const timers: NodeJS.Timeout[] = [];
+    const timer = setTimeout(() => {
+      if (!hasInitialScrolled.current) {
+        const success = scrollToLiveLine(false, true);
+        if (success) {
+          hasInitialScrolled.current = true;
+        }
+      }
+    }, 300);
     
-    attempts.forEach(delay => {
-      const timer = setTimeout(() => {
-        scrollToLiveLine();
-      }, delay);
-      timers.push(timer);
-    });
-    
-    return () => timers.forEach(t => clearTimeout(t));
+    return () => clearTimeout(timer);
   }, [isToday, scrollToLiveLine]);
 
-  // ResizeObserver: scroll when content loads
+  // FOLLOW LIVE LINE: Scroll smoothly when minute changes (throttled to once per minute)
   useEffect(() => {
-    if (!isToday) return;
+    if (!isToday || !hasInitialScrolled.current) return;
     
-    const board = boardRef.current;
-    if (!board) return;
-    
-    const observer = new ResizeObserver(() => {
-      scrollToLiveLine();
-    });
-    observer.observe(board);
-    
-    return () => observer.disconnect();
-  }, [isToday, scrollToLiveLine]);
-
-  // FOLLOW LIVE LINE every 30 seconds when currentTime updates
-  useEffect(() => {
-    if (!isToday) return;
-    scrollToLiveLine();
+    const currentMinute = currentTime.getMinutes();
+    if (lastFollowedMinute.current !== -1 && currentMinute !== lastFollowedMinute.current) {
+      scrollToLiveLine(true, false);
+    }
+    lastFollowedMinute.current = currentMinute;
   }, [isToday, currentTime, scrollToLiveLine]);
 
   // Scroll when visibility changes (returning from background in PWA)
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === 'visible' && isToday) {
-        setTimeout(scrollToLiveLine, 100);
-        setTimeout(scrollToLiveLine, 300);
-        setTimeout(scrollToLiveLine, 500);
+        setTimeout(() => scrollToLiveLine(true, true), 200);
       }
     };
     
     document.addEventListener('visibilitychange', handleVisibility);
-    window.addEventListener('focus', handleVisibility);
     window.addEventListener('pageshow', handleVisibility);
     
     return () => {
       document.removeEventListener('visibilitychange', handleVisibility);
-      window.removeEventListener('focus', handleVisibility);
       window.removeEventListener('pageshow', handleVisibility);
     };
   }, [isToday, scrollToLiveLine]);
@@ -354,16 +350,19 @@ export default function Planning() {
     }
   }, [hasAuthError]);
 
-  // Scroll when data loads (staff or appointments)
+  // Retry initial scroll when staff data loads (fallback if first attempt failed)
   useEffect(() => {
     if (staffList.length > 0 && !dataLoadedRef.current && isToday) {
       dataLoadedRef.current = true;
-      // Use double rAF to ensure layout is complete
-      requestAnimationFrame(() => {
+      // Retry scroll if initial scroll didn't succeed yet
+      if (!hasInitialScrolled.current) {
         requestAnimationFrame(() => {
-          scrollToLiveLine();
+          const success = scrollToLiveLine(false, true);
+          if (success) {
+            hasInitialScrolled.current = true;
+          }
         });
-      });
+      }
     }
   }, [staffList, isToday, scrollToLiveLine]);
 
