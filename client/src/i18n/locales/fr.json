@@ -506,7 +506,10 @@
   "home": {
     "dashboard": "Tableau de Bord",
     "overview": "Aperçu de l'activité du salon aujourd'hui",
-    "todayAppointments": "Rendez-vous du Jour",
+    "todayAppointments": "RDV",
+    "todayRevenue": "Chiffre du Jour",
+    "paidToday": "Payé",
+    "unpaidToday": "Non Payé",
     "totalClients": "Total Clients",
     "availableServices": "Services Disponibles",
     "teamMembers": "Membres de l'Équipe",

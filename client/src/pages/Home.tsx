@@ -1,9 +1,9 @@
 import { useAppointments, useStaff, useServices, useClients } from "@/hooks/use-salon-data";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Scissors, CalendarCheck, TrendingUp, Clock, Package, UserPlus, Pencil, Trash2, LogOut, AlertTriangle } from "lucide-react";
-import { format, startOfToday } from "date-fns";
-import { useState } from "react";
+import { Users, Scissors, CalendarCheck, TrendingUp, Clock, Package, UserPlus, Pencil, Trash2, LogOut, AlertTriangle, Banknote, CreditCard } from "lucide-react";
+import { format, startOfToday, subDays } from "date-fns";
+import { useState, useMemo } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -18,10 +18,20 @@ import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
+function getWorkDayDate(): Date {
+  const now = new Date();
+  const hour = now.getHours();
+  if (hour < 2) {
+    return subDays(startOfToday(), 1);
+  }
+  return startOfToday();
+}
+
 export default function Home() {
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === "ar";
-  const { data: appointments = [] } = useAppointments(format(startOfToday(), "yyyy-MM-dd"));
+  const todayDate = useMemo(() => format(getWorkDayDate(), "yyyy-MM-dd"), []);
+  const { data: appointments = [] } = useAppointments(todayDate);
   const { data: staff = [] } = useStaff();
   const { data: services = [] } = useServices();
   const { data: clients = [] } = useClients();
@@ -85,11 +95,18 @@ export default function Home() {
     }
   });
 
+  const todayStats = useMemo(() => {
+    const totalRevenue = appointments.reduce((sum, app: any) => sum + (app.total || 0), 0);
+    const paidRevenue = appointments.filter((app: any) => app.paid).reduce((sum, app: any) => sum + (app.total || 0), 0);
+    const unpaidRevenue = totalRevenue - paidRevenue;
+    return { totalRevenue, paidRevenue, unpaidRevenue, count: appointments.length };
+  }, [appointments]);
+
   const stats = [
-    { label: t("home.todayAppointments"), value: appointments.length, icon: CalendarCheck, color: "text-blue-500" },
-    { label: t("home.totalClients"), value: clients.length, icon: Users, color: "text-green-500" },
-    { label: t("home.availableServices"), value: services.length, icon: Scissors, color: "text-orange-500" },
-    { label: t("home.teamMembers"), value: staff.length, icon: Clock, color: "text-orange-500" },
+    { label: t("home.todayRevenue"), value: `${todayStats.totalRevenue} DH`, icon: Banknote, color: "text-emerald-500", highlight: true },
+    { label: t("home.todayAppointments"), value: todayStats.count, icon: CalendarCheck, color: "text-blue-500" },
+    { label: t("home.paidToday"), value: `${todayStats.paidRevenue} DH`, icon: CreditCard, color: "text-green-500" },
+    { label: t("home.unpaidToday"), value: `${todayStats.unpaidRevenue} DH`, icon: TrendingUp, color: todayStats.unpaidRevenue > 0 ? "text-amber-500" : "text-muted-foreground" },
   ];
 
   return (
@@ -140,15 +157,15 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
           {stats.map((stat, i) => (
-            <Card key={i} className="hover-elevate">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
-                <CardTitle className="text-sm font-medium">{stat.label}</CardTitle>
-                <stat.icon className={`h-4 w-4 ${stat.color}`} />
+            <Card key={i} className={`hover-elevate ${stat.highlight ? 'bg-gradient-to-br from-emerald-50 to-green-100 dark:from-emerald-950/50 dark:to-green-900/30 border-emerald-200 dark:border-emerald-800' : ''}`}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2 gap-2 p-3 md:p-6">
+                <CardTitle className="text-xs md:text-sm font-medium">{stat.label}</CardTitle>
+                <stat.icon className={`h-4 w-4 md:h-5 md:w-5 ${stat.color}`} />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
+              <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+                <div className={`text-lg md:text-2xl font-bold ${stat.highlight ? 'text-emerald-700 dark:text-emerald-400' : ''}`}>{stat.value}</div>
               </CardContent>
             </Card>
           ))}

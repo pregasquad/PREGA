@@ -506,7 +506,10 @@
   "home": {
     "dashboard": "لوحة التحكم",
     "overview": "نظرة عامة على نشاط الصالون اليوم",
-    "todayAppointments": "مواعيد اليوم",
+    "todayAppointments": "المواعيد",
+    "todayRevenue": "إيرادات اليوم",
+    "paidToday": "مدفوع",
+    "unpaidToday": "غير مدفوع",
     "totalClients": "إجمالي العملاء",
     "availableServices": "الخدمات المتاحة",
     "teamMembers": "فريق العمل",

@@ -506,7 +506,10 @@
   "home": {
     "dashboard": "Dashboard",
     "overview": "Overview of today's salon activity",
-    "todayAppointments": "Today's Appointments",
+    "todayAppointments": "Appointments",
+    "todayRevenue": "Today's Revenue",
+    "paidToday": "Paid",
+    "unpaidToday": "Unpaid",
     "totalClients": "Total Clients",
     "availableServices": "Available Services",
     "teamMembers": "Team Members",
