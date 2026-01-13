@@ -21,98 +21,146 @@
   --font-sans: 'DM Sans', sans-serif;
   --font-display: 'Playfair Display', serif;
 
-  /* Salon Theme: Black and Orange */
-  --background: 0 0% 100%;
-  --foreground: 0 0% 9%;
+  /* Elegant Salon Theme: Warm Ivory & Rose Gold */
+  --background: 30 50% 99%;
+  --foreground: 20 20% 15%;
   
-  /* Card: Solid white background */
-  --card: 0 0% 100%;
-  --card-foreground: 0 0% 9%;
+  /* Card: Soft white with warmth */
+  --card: 30 30% 99%;
+  --card-foreground: 20 20% 15%;
+  --card-border: 30 20% 90%;
   
-  /* Popover/Dropdown: Solid white background */
+  /* Popover/Dropdown */
   --popover: 0 0% 100%;
-  --popover-foreground: 0 0% 9%;
+  --popover-foreground: 20 20% 15%;
+  --popover-border: 30 20% 88%;
   
-  /* Primary: Vibrant Orange */
-  --primary: 24 95% 53%;
+  /* Primary: Elegant Coral/Rose */
+  --primary: 15 85% 55%;
   --primary-foreground: 0 0% 100%;
+  --primary-border: transparent;
   
-  /* Secondary: Light Gray */
-  --secondary: 0 0% 96%;
-  --secondary-foreground: 0 0% 9%;
+  /* Secondary: Warm Beige */
+  --secondary: 30 20% 95%;
+  --secondary-foreground: 20 20% 25%;
+  --secondary-border: 30 20% 88%;
   
-  --muted: 0 0% 96%;
-  --muted-foreground: 0 0% 45%;
+  --muted: 30 15% 94%;
+  --muted-foreground: 20 10% 45%;
+  --muted-border: 30 15% 90%;
   
-  --accent: 24 95% 95%;
-  --accent-foreground: 0 0% 9%;
+  /* Accent: Soft Blush Pink */
+  --accent: 15 40% 95%;
+  --accent-foreground: 20 20% 20%;
+  --accent-border: 15 40% 88%;
   
-  --destructive: 0 84.2% 60.2%;
+  --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
+  --destructive-border: transparent;
   
-  --border: 0 0% 90%;
-  --input: 0 0% 90%;
-  --ring: 24 95% 53%;
+  --border: 30 20% 88%;
+  --input: 30 20% 90%;
+  --ring: 15 85% 55%;
   
-  /* Sidebar: Dark/Black */
-  --sidebar-background: 0 0% 7%;
-  --sidebar-foreground: 0 0% 98%;
-  --sidebar-primary: 24 95% 53%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 0 0% 15%;
-  --sidebar-accent-foreground: 0 0% 98%;
-  --sidebar-border: 0 0% 20%;
-  --sidebar-ring: 24 95% 53%;
+  /* Sidebar: Rich Charcoal with Gold accent */
+  --sidebar: 20 15% 12%;
+  --sidebar-background: 20 15% 12%;
+  --sidebar-foreground: 30 20% 95%;
+  --sidebar-primary: 35 70% 55%;
+  --sidebar-primary-foreground: 20 15% 10%;
+  --sidebar-primary-border: transparent;
+  --sidebar-accent: 20 12% 18%;
+  --sidebar-accent-foreground: 30 20% 95%;
+  --sidebar-accent-border: 20 10% 25%;
+  --sidebar-border: 20 10% 22%;
+  --sidebar-ring: 35 70% 55%;
   
-  --radius: 0.75rem;
+  /* Chart colors */
+  --chart-1: 15 85% 55%;
+  --chart-2: 35 70% 55%;
+  --chart-3: 150 60% 45%;
+  --chart-4: 200 70% 50%;
+  --chart-5: 280 60% 55%;
+  
+  --radius: 0.875rem;
+  
+  /* Professional shadows */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
+  --shadow-lg: 0 12px 32px rgba(0,0,0,0.08);
+  --shadow-xl: 0 20px 40px rgba(0,0,0,0.1);
 }
 
 .dark {
-  --background: 0 0% 7%;
-  --foreground: 0 0% 98%;
+  --background: 20 15% 8%;
+  --foreground: 30 15% 95%;
   
-  /* Card: Solid dark background */
-  --card: 0 0% 10%;
-  --card-foreground: 0 0% 98%;
+  /* Card: Rich dark with warmth */
+  --card: 20 12% 12%;
+  --card-foreground: 30 15% 95%;
+  --card-border: 20 10% 18%;
   
-  /* Popover/Dropdown: Solid dark background */
-  --popover: 0 0% 10%;
-  --popover-foreground: 0 0% 98%;
+  /* Popover/Dropdown */
+  --popover: 20 12% 14%;
+  --popover-foreground: 30 15% 95%;
+  --popover-border: 20 10% 20%;
   
-  --primary: 24 95% 53%;
+  --primary: 20 80% 58%;
   --primary-foreground: 0 0% 100%;
+  --primary-border: transparent;
   
-  --secondary: 0 0% 15%;
-  --secondary-foreground: 0 0% 98%;
+  --secondary: 20 10% 18%;
+  --secondary-foreground: 30 15% 90%;
+  --secondary-border: 20 10% 25%;
   
-  --muted: 0 0% 15%;
-  --muted-foreground: 0 0% 65%;
+  --muted: 20 10% 16%;
+  --muted-foreground: 30 10% 60%;
+  --muted-border: 20 10% 22%;
   
-  --accent: 0 0% 15%;
-  --accent-foreground: 0 0% 98%;
+  --accent: 20 15% 20%;
+  --accent-foreground: 30 15% 95%;
+  --accent-border: 20 15% 28%;
   
-  --destructive: 0 62.8% 30.6%;
+  --destructive: 0 62% 35%;
   --destructive-foreground: 0 0% 98%;
+  --destructive-border: transparent;
   
-  --border: 0 0% 20%;
-  --input: 0 0% 20%;
-  --ring: 24 95% 53%;
+  --border: 20 10% 20%;
+  --input: 20 10% 22%;
+  --ring: 20 80% 58%;
   
-  /* Sidebar: Dark/Black */
-  --sidebar-background: 0 0% 5%;
-  --sidebar-foreground: 0 0% 98%;
-  --sidebar-primary: 24 95% 53%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 0 0% 12%;
-  --sidebar-accent-foreground: 0 0% 98%;
-  --sidebar-border: 0 0% 15%;
-  --sidebar-ring: 24 95% 53%;
+  /* Sidebar: Deep charcoal with bronze */
+  --sidebar: 20 15% 6%;
+  --sidebar-background: 20 15% 6%;
+  --sidebar-foreground: 30 15% 95%;
+  --sidebar-primary: 30 65% 50%;
+  --sidebar-primary-foreground: 20 15% 5%;
+  --sidebar-primary-border: transparent;
+  --sidebar-accent: 20 12% 14%;
+  --sidebar-accent-foreground: 30 15% 95%;
+  --sidebar-accent-border: 20 10% 20%;
+  --sidebar-border: 20 10% 16%;
+  --sidebar-ring: 30 65% 50%;
+  
+  /* Chart colors */
+  --chart-1: 20 80% 58%;
+  --chart-2: 30 65% 50%;
+  --chart-3: 150 50% 40%;
+  --chart-4: 200 60% 45%;
+  --chart-5: 280 50% 50%;
+  
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
+  --shadow-lg: 0 12px 32px rgba(0,0,0,0.4);
+  --shadow-xl: 0 20px 40px rgba(0,0,0,0.5);
 }
 
 @layer base {
   body {
     @apply bg-background text-foreground antialiased selection:bg-primary/20 selection:text-primary overflow-x-hidden;
     font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.6;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
     -webkit-overflow-scrolling: touch;
@@ -121,6 +169,73 @@
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
     @apply font-bold tracking-tight text-foreground;
+  }
+  
+  h1 { @apply text-2xl md:text-3xl; }
+  h2 { @apply text-xl md:text-2xl; }
+  h3 { @apply text-lg md:text-xl; }
+}
+
+@layer components {
+  /* Professional card styling */
+  .card-elevated {
+    @apply bg-card rounded-2xl border border-border/60;
+    box-shadow: var(--shadow-md);
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+  }
+  
+  .card-elevated:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-1px);
+  }
+  
+  /* Glassmorphism effect */
+  .glass {
+    @apply bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border border-white/20 dark:border-gray-700/30;
+  }
+  
+  /* Gradient backgrounds */
+  .bg-gradient-warm {
+    @apply bg-gradient-to-br from-orange-50 via-rose-50 to-amber-50 dark:from-orange-950/20 dark:via-rose-950/20 dark:to-amber-950/20;
+  }
+  
+  .bg-gradient-sidebar {
+    background: linear-gradient(180deg, hsl(var(--sidebar-background)) 0%, hsl(20 15% 8%) 100%);
+  }
+  
+  /* Professional button styles */
+  .btn-gradient {
+    @apply bg-gradient-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-500/90 text-white font-medium;
+    box-shadow: 0 4px 14px rgba(234, 88, 12, 0.25);
+  }
+  
+  .btn-gradient:hover {
+    box-shadow: 0 6px 20px rgba(234, 88, 12, 0.35);
+    transform: translateY(-1px);
+  }
+  
+  /* Hover elevate effect */
+  .hover-elevate {
+    @apply transition-all duration-200;
+  }
+  
+  .hover-elevate:hover {
+    @apply shadow-lg -translate-y-0.5;
+  }
+  
+  /* Accent border top */
+  .accent-border-top {
+    @apply border-t-2 border-t-primary/30;
+  }
+  
+  /* Stats card highlight */
+  .stat-card {
+    @apply bg-card rounded-2xl border border-border/60 p-4 md:p-6;
+    box-shadow: var(--shadow-sm);
+  }
+  
+  .stat-card-primary {
+    @apply bg-gradient-to-br from-primary/10 via-orange-50 to-amber-50 dark:from-primary/20 dark:via-orange-950/30 dark:to-amber-950/20 border-primary/20;
   }
 }
 
@@ -133,29 +248,51 @@
   }
 }
 
-/* Custom Scrollbar for Calendar */
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-border/60 rounded-full hover:bg-muted-foreground/30 transition-colors;
+}
+
 .calendar-scroll::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
-.calendar-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-.calendar-scroll::-webkit-scrollbar-thumb {
-  @apply bg-border rounded-full hover:bg-muted-foreground/30 transition-colors;
-}
 
-/* Smooth page transitions - prevent flashing */
+/* Smooth page transitions */
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
-.animate-fade-in {
-  animation: fadeIn 0.1s ease-out forwards;
+@keyframes fadeInUp {
+  from { 
+    opacity: 0; 
+    transform: translateY(8px);
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0);
+  }
 }
 
-/* Prevent layout shift during loading */
+.animate-fade-in {
+  animation: fadeIn 0.15s ease-out forwards;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.25s ease-out forwards;
+}
+
+/* Loading container */
 .loading-container {
   min-height: 200px;
   display: flex;
@@ -163,7 +300,18 @@
   justify-content: center;
 }
 
-/* Smooth content swap */
 .content-ready {
   animation: fadeIn 0.2s ease-out;
+}
+
+/* Subtle shimmer for loading states */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.shimmer {
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
 }

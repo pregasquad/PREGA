@@ -208,3 +208,13 @@ Preferred communication style: Simple, everyday language.
   - Responsive 2x2 grid on mobile, 4-column on desktop
 - **Bug Fixes**:
   - Fixed appointment update validation error ("Expected date, received string") by omitting createdAt from update schema
+- **Professional Salon UI Theme Overhaul**:
+  - Warm ivory background (#FFF8F3-like) with blush/coral accents and gold highlights
+  - DM Sans for UI text, Playfair Display for headings (15px base font size)
+  - Complete CSS variable system in `client/src/index.css` for light and dark modes
+  - All border tokens defined (--card-border, --primary-border, --muted-border, --accent-border, etc.)
+  - Professional shadow utilities: shadow-soft, shadow-medium, shadow-elevated, shadow-glow
+  - Card component: rounded-2xl corners, soft shadows, hover effects
+  - Button component: theme-consistent colors, hover elevations, smooth transitions
+  - Sidebar: elegant dark charcoal theme with gradient branding and gold accent borders
+  - Chart colors defined for both light and dark modes

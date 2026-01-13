@@ -221,13 +221,16 @@ export function Sidebar() {
 
   return (
     <ShadcnSidebar side={isRtl ? "right" : "left"} dir={isRtl ? "rtl" : "ltr"} className="hidden md:flex">
-      <SidebarHeader className="p-4">
+      <SidebarHeader className="p-4 border-b border-sidebar-border/50">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="PREGA SQUAD" className="w-12 h-12 rounded-full object-cover" />
+            <div className="relative">
+              <img src="/logo.png" alt="PREGA SQUAD" className="w-12 h-12 rounded-xl object-cover ring-2 ring-sidebar-primary/30" />
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-sidebar-background"></div>
+            </div>
             <div>
-              <h1 className="text-lg font-display font-bold text-orange-500">PREGA SQUAD</h1>
-              <p className="text-[10px] text-muted-foreground tracking-wide">Be Humble</p>
+              <h1 className="text-lg font-display font-bold bg-gradient-to-r from-sidebar-primary to-amber-400 bg-clip-text text-transparent">PREGA SQUAD</h1>
+              <p className="text-[10px] text-sidebar-foreground/50 tracking-widest uppercase">Be Humble</p>
             </div>
           </div>
           
@@ -237,13 +240,13 @@ export function Sidebar() {
                 variant="ghost" 
                 size="icon" 
                 className={cn(
-                  "relative h-10 w-10 transition-all duration-300",
+                  "relative h-10 w-10 transition-all duration-300 hover:bg-sidebar-accent rounded-xl",
                   newBookingFlash && "bg-red-500/20 ring-2 ring-red-500 animate-bounce"
                 )}
               >
-                <Bell className={cn("w-5 h-5 text-black fill-black", newBookingFlash && "text-red-500 fill-red-500")} />
+                <Bell className={cn("w-5 h-5 text-sidebar-foreground/80", newBookingFlash && "text-red-500 fill-red-500")} />
                 {notifications.length > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-br from-red-500 to-rose-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-lg">
                     {notifications.length > 9 ? "9+" : notifications.length}
                   </span>
                 )}
@@ -341,8 +344,8 @@ export function Sidebar() {
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="px-2">
-        <SidebarMenu>
+      <SidebarContent className="px-3 py-2">
+        <SidebarMenu className="space-y-1">
           {filteredNavItems.map((item) => {
             const isActive = location === item.href;
             const label = t(item.labelKey);
@@ -354,21 +357,21 @@ export function Sidebar() {
                   tooltip={label}
                   onClick={handleNavClick}
                   className={cn(
-                    "h-12 rounded-xl transition-all duration-200 px-4",
+                    "h-11 rounded-xl transition-all duration-200 px-4 group",
                     isActive 
-                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary/90 hover:text-primary-foreground" 
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      ? "bg-gradient-to-r from-sidebar-primary to-amber-500 text-sidebar-primary-foreground shadow-lg shadow-sidebar-primary/30" 
+                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                   )}
                 >
                   {item.external ? (
                     <a href={item.href} target="_blank" rel="noopener noreferrer">
-                      <item.icon className={cn("w-5 h-5", isActive ? "stroke-[2.5]" : "stroke-[2]")} />
-                      <span className="font-medium text-base">{label}</span>
+                      <item.icon className={cn("w-5 h-5 transition-transform group-hover:scale-110", isActive ? "stroke-[2.5]" : "stroke-[1.5]")} />
+                      <span className="font-medium">{label}</span>
                     </a>
                   ) : (
                     <Link href={item.href}>
-                      <item.icon className={cn("w-5 h-5", isActive ? "stroke-[2.5]" : "stroke-[2]")} />
-                      <span className="font-medium text-base">{label}</span>
+                      <item.icon className={cn("w-5 h-5 transition-transform group-hover:scale-110", isActive ? "stroke-[2.5]" : "stroke-[1.5]")} />
+                      <span className="font-medium">{label}</span>
                     </Link>
                   )}
                 </SidebarMenuButton>
@@ -378,24 +381,24 @@ export function Sidebar() {
         </SidebarMenu>
       </SidebarContent>
 
-      <SidebarFooter className="p-4 border-t border-border bg-muted/20">
-        <div className="flex items-center gap-3 px-2 py-3">
+      <SidebarFooter className="p-3 border-t border-sidebar-border/50">
+        <div className="flex items-center gap-3 px-2 py-2 rounded-xl bg-sidebar-accent/50">
           <div className={cn(
-            "w-10 h-10 rounded-full flex items-center justify-center",
-            isAdmin ? "bg-emerald-500/10 text-emerald-500" : "bg-primary/10 text-primary"
+            "w-10 h-10 rounded-xl flex items-center justify-center",
+            isAdmin ? "bg-emerald-500/20 text-emerald-400" : "bg-sidebar-primary/20 text-sidebar-primary"
           )}>
-            {isAdmin ? <ShieldCheck className="w-6 h-6" /> : <UserCircle className="w-6 h-6" />}
+            {isAdmin ? <ShieldCheck className="w-5 h-5" /> : <UserCircle className="w-5 h-5" />}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold truncate text-foreground">
+            <p className="text-sm font-semibold truncate text-sidebar-foreground">
               {currentUserName || t("sidebar.user")}
             </p>
-            <p className="text-[10px] text-emerald-500">{t("sidebar.fullAccess")}</p>
+            <p className="text-[10px] text-emerald-400 font-medium">{t("sidebar.fullAccess")}</p>
           </div>
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            className="h-8 w-8 rounded-lg text-red-400 hover:bg-red-500/20 hover:text-red-300"
             onClick={handleLogout}
             title={t("auth.logout")}
           >
