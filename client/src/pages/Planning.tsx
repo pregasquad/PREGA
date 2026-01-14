@@ -611,14 +611,14 @@ export default function Planning() {
     const selectedClient = clients.find(c => c.name === data.client);
     const clientId = selectedClient?.id || (data as any).clientId || null;
 
-    // Strip internal IDs and use current input values for prices
-    const servicesToSave = selectedServices.map(s => {
-      const inputPrice = priceInputs[s.id];
-      const finalPrice = inputPrice !== undefined 
-        ? (parseFloat(inputPrice.replace(',', '.')) || 0) 
-        : s.price;
-      return { name: s.name, price: finalPrice, duration: s.duration };
-    });
+    // Strip internal IDs - use the prices directly from selectedServices (already updated by handlePriceInputChange)
+    const servicesToSave = selectedServices.map(s => ({ 
+      name: s.name, 
+      price: s.price, 
+      duration: s.duration 
+    }));
+    
+    console.log('Saving services:', JSON.stringify(servicesToSave));
     
     const submitData = {
       ...data,
@@ -678,22 +678,22 @@ export default function Planning() {
   };
 
   const handlePriceInputChange = (serviceId: string, value: string) => {
-    setPriceInputs(prev => {
-      const newInputs = { ...prev, [serviceId]: value };
-      // Calculate total from all inputs immediately
-      const totalPrice = selectedServices.reduce((sum, s) => {
-        const inputVal = s.id === serviceId ? value : (newInputs[s.id] ?? String(s.price));
-        return sum + (parseFloat(inputVal.replace(',', '.')) || 0);
-      }, 0);
+    const newPrice = parseFloat(value.replace(',', '.')) || 0;
+    console.log('Price change:', serviceId, value, '->', newPrice);
+    
+    setPriceInputs(prev => ({ ...prev, [serviceId]: value }));
+    
+    setSelectedServices(prev => {
+      const updated = prev.map(s => 
+        s.id === serviceId ? { ...s, price: newPrice } : s
+      );
+      // Update form totals
+      const totalPrice = updated.reduce((sum, s) => sum + s.price, 0);
       form.setValue("price", totalPrice);
       form.setValue("total", totalPrice);
-      return newInputs;
+      console.log('Updated services:', JSON.stringify(updated.map(s => ({ name: s.name, price: s.price }))));
+      return updated;
     });
-    // Also update the service price immediately
-    const newPrice = parseFloat(value.replace(',', '.')) || 0;
-    setSelectedServices(prev => prev.map(s => 
-      s.id === serviceId ? { ...s, price: newPrice } : s
-    ));
   };
 
   const handleServiceChange = (serviceName: string) => {
