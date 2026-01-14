@@ -123,27 +123,54 @@ export class DatabaseStorage implements IStorage {
 
   async createAppointment(appointment: InsertAppointment): Promise<Appointment> {
     const s = schema();
+    
+    const processedAppointment = this.processAppointmentServices(appointment);
+    
     if (isMySQL()) {
-      const result = await db().insert(s.appointments).values(appointment);
+      const result = await db().insert(s.appointments).values(processedAppointment);
       const insertId = (result as any).insertId ?? (result as any)[0]?.insertId;
       if (!insertId) throw new Error("Failed to get insert ID");
       const [created] = await db().select().from(s.appointments).where(eq(s.appointments.id, insertId));
       if (!created) throw new Error("Failed to retrieve created appointment");
       return created;
     }
-    const [created] = await db().insert(s.appointments).values(appointment).returning();
+    const [created] = await db().insert(s.appointments).values(processedAppointment).returning();
     return created;
+  }
+  
+  private processAppointmentServices(appointment: InsertAppointment): any {
+    const servicesArray = (appointment as any).servicesJson;
+    
+    if (servicesArray && Array.isArray(servicesArray) && servicesArray.length > 0) {
+      const totalDuration = servicesArray.reduce((sum: number, svc: any) => sum + (svc.duration || 0), 0);
+      const totalPrice = servicesArray.reduce((sum: number, svc: any) => sum + (svc.price || 0), 0);
+      const serviceNames = servicesArray.map((svc: any) => svc.name).join(', ');
+      
+      return {
+        ...appointment,
+        servicesJson: JSON.stringify(servicesArray),
+        service: appointment.service || serviceNames,
+        duration: totalDuration,
+        price: totalPrice,
+        total: totalPrice,
+      };
+    }
+    
+    return appointment;
   }
 
   async updateAppointment(id: number, appointment: Partial<InsertAppointment>): Promise<Appointment> {
     const s = schema();
+    
+    const processedAppointment = this.processAppointmentServices(appointment as InsertAppointment);
+    
     if (isMySQL()) {
-      await db().update(s.appointments).set(appointment).where(eq(s.appointments.id, id));
+      await db().update(s.appointments).set(processedAppointment).where(eq(s.appointments.id, id));
       const [updated] = await db().select().from(s.appointments).where(eq(s.appointments.id, id));
       if (!updated) throw new Error("Appointment not found");
       return updated;
     }
-    const [updated] = await db().update(s.appointments).set(appointment).where(eq(s.appointments.id, id)).returning();
+    const [updated] = await db().update(s.appointments).set(processedAppointment).where(eq(s.appointments.id, id)).returning();
     return updated;
   }
 

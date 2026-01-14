@@ -73,7 +73,8 @@ export const appointments = mysqlTable("appointments", {
   duration: int("duration").notNull(),
   client: text("client").notNull(),
   clientId: int("client_id"),
-  service: text("service").notNull(),
+  service: text("service"),
+  servicesJson: text("services_json"),
   staff: text("staff").notNull(),
   price: double("price").notNull(),
   total: double("total").notNull(),
@@ -172,7 +173,16 @@ export const insertLoyaltyRedemptionSchema = createInsertSchema(loyaltyRedemptio
 export type LoyaltyRedemption = typeof loyaltyRedemptions.$inferSelect;
 export type InsertLoyaltyRedemption = z.infer<typeof insertLoyaltyRedemptionSchema>;
 
-export const insertAppointmentSchema = createInsertSchema(appointments).omit({ id: true });
+const serviceItemSchema = z.object({
+  name: z.string().min(1),
+  price: z.number().min(0),
+  duration: z.number().int().min(1),
+});
+
+export const insertAppointmentSchema = createInsertSchema(appointments).omit({ id: true }).extend({
+  service: z.string().optional().nullable(),
+  servicesJson: z.array(serviceItemSchema).optional(),
+});
 export const insertServiceSchema = createInsertSchema(services).omit({ id: true });
 export const insertCategorySchema = createInsertSchema(categories).omit({ id: true });
 export const insertExpenseCategorySchema = createInsertSchema(expenseCategories).omit({ id: true });
