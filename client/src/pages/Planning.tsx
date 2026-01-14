@@ -510,12 +510,13 @@ export default function Planning() {
         parsedServices = [];
       }
     }
-    // Fall back to single service if no servicesJson
+    // Fall back to single service if no servicesJson - use stored appointment price, not catalog price
     if (parsedServices.length === 0 && app.service) {
-      const svc = services.find(s => s.name === app.service);
-      if (svc) {
-        parsedServices = [{ name: svc.name, price: svc.price, duration: svc.duration }];
-      }
+      parsedServices = [{ 
+        name: app.service, 
+        price: app.price || 0, 
+        duration: app.duration || 60 
+      }];
     }
     setSelectedServices(parsedServices);
     
@@ -642,6 +643,16 @@ export default function Planning() {
     const totalPrice = updated.reduce((sum, s) => sum + s.price, 0);
     form.setValue("service", updated.map(s => s.name).join(', '));
     form.setValue("duration", totalDuration);
+    form.setValue("price", totalPrice);
+    form.setValue("total", totalPrice);
+  };
+
+  const handleUpdateServicePrice = (index: number, newPrice: number) => {
+    const updated = selectedServices.map((s, i) => 
+      i === index ? { ...s, price: newPrice } : s
+    );
+    setSelectedServices(updated);
+    const totalPrice = updated.reduce((sum, s) => sum + s.price, 0);
     form.setValue("price", totalPrice);
     form.setValue("total", totalPrice);
   };
@@ -1413,7 +1424,14 @@ export default function Planning() {
                           className="flex items-center gap-1.5 px-2.5 py-1.5 bg-primary/10 dark:bg-primary/20 rounded-full text-xs"
                         >
                           <span className="font-medium">{s.name}</span>
-                          <span className="text-muted-foreground">{s.price} DH</span>
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            value={s.price}
+                            onChange={(e) => handleUpdateServicePrice(index, parseFloat(e.target.value) || 0)}
+                            className="w-14 h-5 text-xs text-center font-bold rounded bg-white/50 dark:bg-slate-800/50 border-0 focus:ring-1 focus:ring-primary"
+                          />
+                          <span className="text-muted-foreground text-[10px]">DH</span>
                           <button
                             type="button"
                             onClick={() => handleRemoveService(index)}
