@@ -332,7 +332,7 @@ export default function Planning() {
       return [];
     }
   });
-  const [selectedServices, setSelectedServices] = useState<Array<{name: string, price: number, duration: number}>>([]);
+  const [selectedServices, setSelectedServices] = useState<Array<{id: string, name: string, price: number, duration: number}>>([]);
   const { toast } = useToast();
 
   const formattedDate = format(date, "yyyy-MM-dd");
@@ -466,8 +466,8 @@ export default function Planning() {
   }, [allAppointments, appointmentSearch]);
 
   // Helper function to parse services from an appointment
-  const parseAppointmentServices = (app: any): Array<{name: string, price: number, duration: number}> => {
-    let parsedServices: Array<{name: string, price: number, duration: number}> = [];
+  const parseAppointmentServices = (app: any): Array<{id: string, name: string, price: number, duration: number}> => {
+    let parsedServices: Array<{id?: string, name: string, price: number, duration: number}> = [];
     if (app.servicesJson) {
       try {
         parsedServices = typeof app.servicesJson === 'string' 
@@ -485,7 +485,11 @@ export default function Planning() {
         duration: app.duration || 60 
       }];
     }
-    return parsedServices;
+    // Ensure each service has a unique ID
+    return parsedServices.map((s, i) => ({
+      ...s,
+      id: s.id || `svc-${Date.now()}-${i}`
+    }));
   };
 
   // Helper function to open an appointment for editing
@@ -600,14 +604,17 @@ export default function Planning() {
     const selectedClient = clients.find(c => c.name === data.client);
     const clientId = selectedClient?.id || (data as any).clientId || null;
 
+    // Strip internal IDs before saving - only save name, price, duration
+    const servicesToSave = selectedServices.map(({ name, price, duration }) => ({ name, price, duration }));
+    
     const submitData = {
       ...data,
       clientId,
-      servicesJson: selectedServices.length > 0 ? selectedServices : undefined,
-      service: selectedServices.length > 0 ? selectedServices.map(s => s.name).join(', ') : data.service,
-      duration: selectedServices.length > 0 ? selectedServices.reduce((sum, s) => sum + s.duration, 0) : data.duration,
-      price: selectedServices.length > 0 ? selectedServices.reduce((sum, s) => sum + s.price, 0) : data.price,
-      total: selectedServices.length > 0 ? selectedServices.reduce((sum, s) => sum + s.price, 0) : data.total,
+      servicesJson: servicesToSave.length > 0 ? servicesToSave : undefined,
+      service: servicesToSave.length > 0 ? servicesToSave.map(s => s.name).join(', ') : data.service,
+      duration: servicesToSave.length > 0 ? servicesToSave.reduce((sum, s) => sum + s.duration, 0) : data.duration,
+      price: servicesToSave.length > 0 ? servicesToSave.reduce((sum, s) => sum + s.price, 0) : data.price,
+      total: servicesToSave.length > 0 ? servicesToSave.reduce((sum, s) => sum + s.price, 0) : data.total,
     };
 
     if (editingAppointment) {
@@ -622,7 +629,11 @@ export default function Planning() {
   };
 
   const handleAddService = (service: {name: string, price: number, duration: number}) => {
-    const updated = [...selectedServices, service];
+    const newService = {
+      ...service,
+      id: `svc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    };
+    const updated = [...selectedServices, newService];
     setSelectedServices(updated);
     const totalDuration = updated.reduce((sum, s) => sum + s.duration, 0);
     const totalPrice = updated.reduce((sum, s) => sum + s.price, 0);
@@ -1404,7 +1415,7 @@ export default function Planning() {
                     <div className="flex flex-wrap gap-1.5 p-2 bg-secondary/30 rounded-xl">
                       {selectedServices.map((s, index) => (
                         <div
-                          key={index}
+                          key={s.id}
                           className="flex items-center gap-1.5 px-2.5 py-1.5 bg-primary/10 dark:bg-primary/20 rounded-full text-xs"
                         >
                           <span className="font-medium">{s.name}</span>
@@ -1413,9 +1424,8 @@ export default function Planning() {
                             inputMode="decimal"
                             step="any"
                             min="0"
-                            defaultValue={s.price}
-                            key={`price-${index}-${s.name}`}
-                            onBlur={(e) => {
+                            value={s.price}
+                            onChange={(e) => {
                               const val = parseFloat(e.target.value.replace(',', '.'));
                               handleUpdateServicePrice(index, isNaN(val) ? 0 : val);
                             }}
