@@ -1210,7 +1210,9 @@ export default function Planning() {
                           <div className="flex items-center gap-1.5">
                             <span className="font-bold text-xs">{booking.total} DH</span>
                             {booking.paid && (
-                              <span className="text-xs" title="Paid">✅</span>
+                              <span className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center" title="Paid">
+                                <Check className="w-2.5 h-2.5 text-white" />
+                              </span>
                             )}
                             {!booking.paid && (
                               <button
