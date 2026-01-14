@@ -1400,7 +1400,7 @@ export default function Planning() {
                   name="staff"
                   render={({ field }) => (
                     <FormItem className="space-y-0">
-                      <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger className="h-11 rounded-xl text-xs border-0 bg-secondary/50">
                             <SelectValue placeholder={t("planning.staff")} />
@@ -1421,10 +1421,10 @@ export default function Planning() {
                   name="startTime"
                   render={({ field }) => (
                     <FormItem className="space-y-0">
-                      <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger className="h-11 rounded-xl text-xs border-0 bg-secondary/50">
-                            <SelectValue />
+                            <SelectValue placeholder={t("planning.time")} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent className="max-h-60 rounded-2xl glass-card shadow-xl">
