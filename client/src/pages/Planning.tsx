@@ -1209,9 +1209,10 @@ export default function Planning() {
                           <span className="text-[10px] opacity-80 font-medium">{booking.duration}′</span>
                           <div className="flex items-center gap-1.5">
                             <span className="font-bold text-xs">{booking.total} DH</span>
-                            {booking.paid ? (
-                              <span className="text-base" title="Paid">✅</span>
-                            ) : (
+                            {booking.paid && (
+                              <span className="text-xs" title="Paid">✅</span>
+                            )}
+                            {!booking.paid && (
                               <button
                                 onClick={(e) => handleMarkAsPaid(e, booking)}
                                 className="bg-white/25 hover:bg-white/40 rounded-full p-1 flex items-center gap-0.5 transition-colors"
