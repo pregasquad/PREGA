@@ -1210,9 +1210,7 @@ export default function Planning() {
                           <div className="flex items-center gap-1.5">
                             <span className="font-bold text-xs">{booking.total} DH</span>
                             {booking.paid ? (
-                              <div className="bg-white/20 rounded-full p-1">
-                                <CreditCard className="w-3 h-3 text-white" />
-                              </div>
+                              <span className="text-base" title="Paid">✅</span>
                             ) : (
                               <button
                                 onClick={(e) => handleMarkAsPaid(e, booking)}
