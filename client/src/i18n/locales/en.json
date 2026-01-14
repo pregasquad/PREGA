@@ -56,7 +56,8 @@
     "created": "Created",
     "updated": "Updated",
     "deleted": "Deleted",
-    "back": "Back"
+    "back": "Back",
+    "services": "services"
   },
   "planning": {
     "title": "PREGA SQUAD - Planning",
@@ -88,7 +89,8 @@
     "moveError": "Failed to move appointment",
     "createdBy": "Created by",
     "noStaff": "No staff configured. Please add staff in Admin Settings.",
-    "sessionExpired": "Session expired. Please log in again."
+    "sessionExpired": "Session expired. Please log in again.",
+    "addService": "Add Service"
   },
   "services": {
     "title": "Services",

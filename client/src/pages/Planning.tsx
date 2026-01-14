@@ -330,6 +330,7 @@ export default function Planning() {
       return [];
     }
   });
+  const [selectedServices, setSelectedServices] = useState<Array<{name: string, price: number, duration: number}>>([]);
   const { toast } = useToast();
 
   const formattedDate = format(date, "yyyy-MM-dd");
@@ -484,6 +485,7 @@ export default function Planning() {
       total: 0,
       paid: true,
     });
+    setSelectedServices([]);
     setEditingAppointment(null);
     setIsDialogOpen(true);
   };
@@ -491,12 +493,33 @@ export default function Planning() {
   const handleAppointmentClick = (e: React.MouseEvent, app: any) => {
     e.stopPropagation();
     if (!canEditCardboard) return;
+    
+    // Parse servicesJson or fall back to single service
+    let parsedServices: Array<{name: string, price: number, duration: number}> = [];
+    if (app.servicesJson) {
+      try {
+        parsedServices = typeof app.servicesJson === 'string' 
+          ? JSON.parse(app.servicesJson) 
+          : app.servicesJson;
+      } catch {
+        parsedServices = [];
+      }
+    }
+    // Fall back to single service if no servicesJson
+    if (parsedServices.length === 0 && app.service) {
+      const svc = services.find(s => s.name === app.service);
+      if (svc) {
+        parsedServices = [{ name: svc.name, price: svc.price, duration: svc.duration }];
+      }
+    }
+    setSelectedServices(parsedServices);
+    
     form.reset({
       date: app.date,
       startTime: app.startTime,
       duration: app.duration,
       client: app.client,
-      service: app.service,
+      service: app.service || "",
       staff: app.staff,
       price: app.price,
       total: app.total,
@@ -507,48 +530,116 @@ export default function Planning() {
   };
 
   const onSubmit = async (data: AppointmentFormValues) => {
+    // Track most used services for quick access
     const stored = localStorage.getItem('mostUsedServices');
     const mostUsed = stored ? JSON.parse(stored) : {};
-    mostUsed[data.service] = (mostUsed[data.service] || 0) + 1;
+    
+    // Handle multi-service or single service tracking
+    if (selectedServices.length > 0) {
+      // Track each selected service individually
+      selectedServices.forEach(svc => {
+        mostUsed[svc.name] = (mostUsed[svc.name] || 0) + 1;
+      });
+    } else if (data.service) {
+      mostUsed[data.service] = (mostUsed[data.service] || 0) + 1;
+    }
     localStorage.setItem('mostUsedServices', JSON.stringify(mostUsed));
 
-    const selectedService = services.find(s => s.name === data.service);
+    // Handle stock validation for multi-service or single service
+    const servicesToCheck = selectedServices.length > 0 
+      ? selectedServices.map(s => services.find(svc => svc.name === s.name)).filter(Boolean)
+      : [services.find(s => s.name === data.service)].filter(Boolean);
     
-    if (selectedService?.linkedProductId) {
-      try {
-        const res = await apiRequest("GET", `/api/products/${selectedService.linkedProductId}`);
-        const product = await res.json();
-        if (product.quantity <= 0) {
-          alert(`⚠️ المخزون غير كافٍ لـ ${product.name}`);
-          return;
+    // First pass: check ALL stock availability before decrementing any
+    const stockDecrements: Array<{productId: number, newQuantity: number, productName: string}> = [];
+    const productQuantities: Record<number, {current: number, name: string}> = {};
+    
+    for (const selectedService of servicesToCheck) {
+      if (selectedService?.linkedProductId) {
+        try {
+          // Get current stock if we haven't already
+          if (!productQuantities[selectedService.linkedProductId]) {
+            const res = await apiRequest("GET", `/api/products/${selectedService.linkedProductId}`);
+            const product = await res.json();
+            productQuantities[selectedService.linkedProductId] = { current: product.quantity, name: product.name };
+          }
+          
+          // Track the decrement needed
+          const productInfo = productQuantities[selectedService.linkedProductId];
+          const newQuantity = productInfo.current - 1;
+          
+          if (newQuantity < 0) {
+            alert(`⚠️ المخزون غير كافٍ لـ ${productInfo.name}`);
+            return;
+          }
+          
+          // Update local tracking and queue the decrement
+          productQuantities[selectedService.linkedProductId].current = newQuantity;
+          stockDecrements.push({ productId: selectedService.linkedProductId, newQuantity, productName: productInfo.name });
+        } catch (e) {
+          console.error("Stock check failed:", e);
         }
-        await apiRequest("PATCH", `/api/products/${product.id}/quantity`, {
-          quantity: product.quantity - 1
-        });
-        queryClient.invalidateQueries({ queryKey: ["/api/products"] });
-      } catch (e) {
-        console.error("Stock check failed:", e);
       }
     }
+    
+    // Second pass: all checks passed, now apply all decrements
+    for (const decrement of stockDecrements) {
+      try {
+        await apiRequest("PATCH", `/api/products/${decrement.productId}/quantity`, {
+          quantity: decrement.newQuantity
+        });
+      } catch (e) {
+        console.error("Stock decrement failed:", e);
+      }
+    }
+    queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+
+    const submitData = {
+      ...data,
+      servicesJson: selectedServices.length > 0 ? selectedServices : undefined,
+      service: selectedServices.length > 0 ? selectedServices.map(s => s.name).join(', ') : data.service,
+      duration: selectedServices.length > 0 ? selectedServices.reduce((sum, s) => sum + s.duration, 0) : data.duration,
+      price: selectedServices.length > 0 ? selectedServices.reduce((sum, s) => sum + s.price, 0) : data.price,
+      total: selectedServices.length > 0 ? selectedServices.reduce((sum, s) => sum + s.price, 0) : data.total,
+    };
 
     if (editingAppointment) {
-      updateMutation.mutate({ id: editingAppointment.id, ...data });
+      updateMutation.mutate({ id: editingAppointment.id, ...submitData });
     } else {
-      // Add createdBy from current logged-in user
       const currentUser = sessionStorage.getItem("current_user") || "Unknown";
-      createMutation.mutate({ ...data, createdBy: currentUser });
+      createMutation.mutate({ ...submitData, createdBy: currentUser });
       playSuccessSound();
     }
+    setSelectedServices([]);
     setIsDialogOpen(false);
+  };
+
+  const handleAddService = (service: {name: string, price: number, duration: number}) => {
+    const updated = [...selectedServices, service];
+    setSelectedServices(updated);
+    const totalDuration = updated.reduce((sum, s) => sum + s.duration, 0);
+    const totalPrice = updated.reduce((sum, s) => sum + s.price, 0);
+    form.setValue("service", updated.map(s => s.name).join(', '));
+    form.setValue("duration", totalDuration);
+    form.setValue("price", totalPrice);
+    form.setValue("total", totalPrice);
+  };
+
+  const handleRemoveService = (index: number) => {
+    const updated = selectedServices.filter((_, i) => i !== index);
+    setSelectedServices(updated);
+    const totalDuration = updated.reduce((sum, s) => sum + s.duration, 0);
+    const totalPrice = updated.reduce((sum, s) => sum + s.price, 0);
+    form.setValue("service", updated.map(s => s.name).join(', '));
+    form.setValue("duration", totalDuration);
+    form.setValue("price", totalPrice);
+    form.setValue("total", totalPrice);
   };
 
   const handleServiceChange = (serviceName: string) => {
     const service = services.find(s => s.name === serviceName);
     if (service) {
-      form.setValue("service", serviceName);
-      form.setValue("duration", service.duration);
-      form.setValue("price", service.price);
-      form.setValue("total", service.price);
+      handleAddService({ name: service.name, price: service.price, duration: service.duration });
     }
   };
 
@@ -1084,7 +1175,10 @@ export default function Planning() {
       {/* Appointment Dialog - iOS Liquid Glass */}
       <Dialog open={isDialogOpen} onOpenChange={(open) => {
         setIsDialogOpen(open);
-        if (!open) setIsEditFavoritesOpen(false);
+        if (!open) {
+          setIsEditFavoritesOpen(false);
+          setSelectedServices([]);
+        }
       }}>
         <DialogContent 
           className="w-[calc(100vw-24px)] max-w-[420px] p-0 border-0 shadow-2xl glass-card rounded-3xl overflow-hidden animate-fade-in-scale" 
@@ -1219,81 +1313,123 @@ export default function Planning() {
                   )}
                 />
 
-                {/* Service - Glass Popover */}
-                <FormField
-                  control={form.control}
-                  name="service"
-                  render={({ field }) => (
-                    <FormItem className="col-span-3 space-y-0">
-                      <Popover open={servicePopoverOpen} onOpenChange={setServicePopoverOpen}>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              role="combobox"
-                              className="h-11 w-full justify-between rounded-xl text-xs border-0 bg-secondary/50 hover:bg-secondary/70 transition-colors"
-                            >
-                              <span className="truncate">{field.value || t("planning.selectService")}</span>
-                              <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent 
-                          className="w-[calc(100vw-48px)] max-w-[396px] p-0 rounded-2xl glass-card shadow-2xl" 
-                          align="center" 
-                          side="top" 
-                          sideOffset={4}
-                          onWheel={(e) => e.stopPropagation()}
+                {/* Service - Multi-select with Pills */}
+                <div className="col-span-3 space-y-2">
+                  {/* Selected Services Pills */}
+                  {selectedServices.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 p-2 bg-secondary/30 rounded-xl">
+                      {selectedServices.map((s, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 bg-primary/10 dark:bg-primary/20 rounded-full text-xs"
                         >
-                          <div className="p-3 border-b border-white/20 liquid-gradient-subtle rounded-t-2xl">
-                            <Input
-                              placeholder={t("planning.searchService")}
-                              value={serviceSearch}
-                              onChange={(e) => setServiceSearch(e.target.value)}
-                              className="h-10 text-sm rounded-xl border-0 bg-white/80 dark:bg-slate-800/80"
-                            />
-                          </div>
-                          <div 
-                            className="max-h-[200px] overflow-y-auto p-2"
-                            style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
-                            onWheel={(e) => {
-                              e.stopPropagation();
-                              const target = e.currentTarget;
-                              target.scrollTop += e.deltaY;
-                            }}
-                            onTouchMove={(e) => e.stopPropagation()}
+                          <span className="font-medium">{s.name}</span>
+                          <span className="text-muted-foreground">{s.price} DH</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveService(index)}
+                            className="w-4 h-4 rounded-full bg-destructive/20 hover:bg-destructive/40 flex items-center justify-center transition-colors"
                           >
-                            {Object.entries(groupedServices).map(([category, categoryServices]) => (
-                              <div key={category}>
-                                <div className="px-2 py-1.5 text-[10px] font-bold gradient-text uppercase glass-subtle rounded-lg mb-1 sticky top-0">
-                                  {category}
-                                </div>
-                                {categoryServices.map(s => (
-                                  <div
-                                    key={s.id}
-                                    className={cn(
-                                      "flex items-center justify-between p-3 rounded-xl cursor-pointer text-sm mb-1 transition-all",
-                                      "hover:bg-primary/5 dark:hover:bg-primary/10",
-                                      field.value === s.name && "bg-primary/10 dark:bg-primary/20 font-medium"
-                                    )}
-                                    onClick={() => {
-                                      handleServiceChange(s.name);
-                                      setServiceSearch("");
-                                      setServicePopoverOpen(false);
-                                    }}
-                                  >
-                                    <span className="truncate">{s.name}</span>
-                                    <span className="text-xs font-bold gradient-text">{s.price} DH</span>
-                                  </div>
-                                ))}
-                              </div>
-                            ))}
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                    </FormItem>
+                            <X className="w-2.5 h-2.5 text-destructive" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   )}
-                />
+                  
+                  {/* Summary Row */}
+                  {selectedServices.length > 0 && (
+                    <div className="flex items-center justify-between px-3 py-2 bg-primary/5 dark:bg-primary/10 rounded-xl text-xs">
+                      <div className="flex items-center gap-3">
+                        <span className="text-muted-foreground">{selectedServices.length} {t("common.services")}</span>
+                        <span className="font-medium">{selectedServices.reduce((sum, s) => sum + s.duration, 0)}′</span>
+                      </div>
+                      <span className="font-bold gradient-text">{selectedServices.reduce((sum, s) => sum + s.price, 0)} DH</span>
+                    </div>
+                  )}
+
+                  {/* Add Service Popover */}
+                  <FormField
+                    control={form.control}
+                    name="service"
+                    render={({ field }) => (
+                      <FormItem className="space-y-0">
+                        <Popover open={servicePopoverOpen} onOpenChange={setServicePopoverOpen}>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                className="h-11 w-full justify-between rounded-xl text-xs border-0 bg-secondary/50 hover:bg-secondary/70 transition-colors"
+                              >
+                                <span className="flex items-center gap-2">
+                                  <Plus className="w-4 h-4" />
+                                  {t("planning.addService")}
+                                </span>
+                                <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent 
+                            className="w-[calc(100vw-48px)] max-w-[396px] p-0 rounded-2xl glass-card shadow-2xl" 
+                            align="center" 
+                            side="top" 
+                            sideOffset={4}
+                            onWheel={(e) => e.stopPropagation()}
+                          >
+                            <div className="p-3 border-b border-white/20 liquid-gradient-subtle rounded-t-2xl">
+                              <Input
+                                placeholder={t("planning.searchService")}
+                                value={serviceSearch}
+                                onChange={(e) => setServiceSearch(e.target.value)}
+                                className="h-10 text-sm rounded-xl border-0 bg-white/80 dark:bg-slate-800/80"
+                              />
+                            </div>
+                            <div 
+                              className="max-h-[200px] overflow-y-auto p-2"
+                              style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
+                              onWheel={(e) => {
+                                e.stopPropagation();
+                                const target = e.currentTarget;
+                                target.scrollTop += e.deltaY;
+                              }}
+                              onTouchMove={(e) => e.stopPropagation()}
+                            >
+                              {Object.entries(groupedServices).map(([category, categoryServices]) => (
+                                <div key={category}>
+                                  <div className="px-2 py-1.5 text-[10px] font-bold gradient-text uppercase glass-subtle rounded-lg mb-1 sticky top-0">
+                                    {category}
+                                  </div>
+                                  {categoryServices.map(s => (
+                                    <div
+                                      key={s.id}
+                                      className={cn(
+                                        "flex items-center justify-between p-3 rounded-xl cursor-pointer text-sm mb-1 transition-all",
+                                        "hover:bg-primary/5 dark:hover:bg-primary/10",
+                                        selectedServices.some(sel => sel.name === s.name) && "bg-primary/10 dark:bg-primary/20"
+                                      )}
+                                      onClick={() => {
+                                        handleServiceChange(s.name);
+                                        setServiceSearch("");
+                                        setServicePopoverOpen(false);
+                                      }}
+                                    >
+                                      <span className="truncate">{s.name}</span>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xs font-bold gradient-text">{s.price} DH</span>
+                                        <Plus className="w-4 h-4 text-primary" />
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              ))}
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 {/* Quick Favorites - Glass Pills */}
                 {!editingAppointment && (
