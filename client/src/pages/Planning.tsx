@@ -1203,7 +1203,19 @@ export default function Planning() {
                         <div className="flex items-center justify-between mt-auto relative z-10">
                           <span className="text-[10px] opacity-80 font-medium">{booking.duration}′</span>
                           <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-xs">{booking.total} DH</span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const newPrice = prompt(t("planning.enterNewPrice") || "Enter new price:", String(booking.total));
+                                if (newPrice !== null) {
+                                  const price = parseFloat(newPrice) || booking.total;
+                                  updateMutation.mutate({ id: booking.id, price, total: price });
+                                }
+                              }}
+                              className="font-bold text-xs bg-white/20 hover:bg-white/40 px-2 py-0.5 rounded transition-colors"
+                            >
+                              {booking.total} DH
+                            </button>
                             {booking.paid ? (
                               <div className="bg-white/20 rounded-full p-1">
                                 <CreditCard className="w-3 h-3 text-white" />

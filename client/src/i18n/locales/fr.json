@@ -92,7 +92,8 @@
     "createdBy": "Créé par",
     "noStaff": "Aucun personnel configuré. Veuillez ajouter du personnel dans les Paramètres Admin.",
     "sessionExpired": "Session expirée. Veuillez vous reconnecter.",
-    "addService": "Ajouter Service"
+    "addService": "Ajouter Service",
+    "enterNewPrice": "Entrer le nouveau prix:"
   },
   "services": {
     "title": "Services",

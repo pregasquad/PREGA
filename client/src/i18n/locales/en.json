@@ -92,7 +92,8 @@
     "createdBy": "Created by",
     "noStaff": "No staff configured. Please add staff in Admin Settings.",
     "sessionExpired": "Session expired. Please log in again.",
-    "addService": "Add Service"
+    "addService": "Add Service",
+    "enterNewPrice": "Enter new price:"
   },
   "services": {
     "title": "Services",
