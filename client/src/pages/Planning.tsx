@@ -1171,7 +1171,7 @@ export default function Planning() {
                   return (
                     <div
                       key={`${s.id}-${hour}`}
-                      className="p-1 z-10"
+                      className="p-0.5 z-10"
                       style={{ 
                         gridColumn: colNum,
                         gridRow: `${rowNum} / span ${span}`
@@ -1179,11 +1179,11 @@ export default function Planning() {
                     >
                       <div 
                         className={cn(
-                          "appointment-card h-full p-2.5 text-white cursor-grab active:cursor-grabbing flex flex-col justify-between relative overflow-hidden",
+                          "appointment-card h-full rounded-xl text-white cursor-grab active:cursor-grabbing flex flex-col relative overflow-hidden shadow-lg",
                           isDragging && "opacity-50 scale-95"
                         )}
                         style={{ 
-                          background: `linear-gradient(135deg, ${s.color}ee, ${s.color}cc)`,
+                          background: `linear-gradient(145deg, ${s.color}, ${s.color}dd)`,
                           cursor: canEditCardboard ? 'grab' : 'default'
                         }}
                         draggable={canEditCardboard}
@@ -1191,32 +1191,43 @@ export default function Planning() {
                         onDragEnd={handleDragEnd}
                         onClick={(e) => handleAppointmentClick(e, booking)}
                       >
-                        <div className="water-shimmer absolute inset-0 opacity-30" />
-                        <div className="relative z-10">
-                          <div className="font-semibold text-xs md:text-sm truncate">{booking.client || "—"}</div>
-                          <div className="text-[10px] md:text-xs opacity-90">
-                            {booking.service?.includes(',') ? (
-                              booking.service.split(',').map((svc: string, idx: number) => (
-                                <div key={idx} className="truncate">- {svc.trim()}</div>
-                              ))
-                            ) : (
-                              <div className="truncate">{booking.service}</div>
-                            )}
+                        <div className="water-shimmer absolute inset-0 opacity-20" />
+                        
+                        <div className="flex-1 p-2 relative z-10 flex flex-col min-h-0">
+                          <div className="font-bold text-sm truncate drop-shadow-sm">{booking.client || "—"}</div>
+                          <div className="flex-1 overflow-hidden mt-0.5">
+                            <div className="text-[11px] opacity-95 leading-tight">
+                              {booking.service?.includes(',') ? (
+                                booking.service?.split(',').slice(0, 3).map((svc: string, idx: number) => (
+                                  <div key={idx} className="truncate">• {svc.trim()}</div>
+                                ))
+                              ) : (
+                                <div className="truncate">{booking.service || ''}</div>
+                              )}
+                              {(booking.service?.split(',').length ?? 0) > 3 && (
+                                <div className="text-[10px] opacity-70">+{(booking.service?.split(',').length ?? 0) - 3} more</div>
+                              )}
+                            </div>
                           </div>
-                          <div className="text-[9px] opacity-70 font-medium">{booking.startTime}</div>
                         </div>
-                        <div className="flex items-center justify-between mt-auto relative z-10">
-                          <span className="text-[10px] opacity-80 font-medium">{booking.duration}′</span>
+                        
+                        <div className="bg-black/20 backdrop-blur-sm px-2 py-1.5 flex items-center justify-between relative z-10">
+                          <div className="flex items-center gap-1.5 text-[10px] opacity-90">
+                            <Clock className="w-3 h-3" />
+                            <span>{booking.startTime}</span>
+                            <span className="opacity-60">•</span>
+                            <span>{booking.duration}′</span>
+                          </div>
                           <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-xs">{booking.total} DH</span>
+                            <span className="font-bold text-sm drop-shadow-sm">{booking.total} DH</span>
                             {booking.paid ? (
-                              <span className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center shadow-sm" title="Paid">
+                              <span className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center shadow-md" title="Paid">
                                 <Check className="w-3 h-3 text-white" />
                               </span>
                             ) : (
                               <button
                                 onClick={(e) => handleMarkAsPaid(e, booking)}
-                                className="w-5 h-5 bg-white/25 hover:bg-white/40 rounded-full flex items-center justify-center transition-colors"
+                                className="w-5 h-5 bg-white/30 hover:bg-white/50 rounded-full flex items-center justify-center transition-colors shadow-sm"
                                 title="Mark as paid"
                               >
                                 <CreditCard className="w-3 h-3" />
