@@ -903,7 +903,15 @@ export default function Planning() {
                           />
                           <div className="min-w-0">
                             <p className="text-sm font-medium truncate">{app.client || "-"}</p>
-                            <p className="text-xs text-muted-foreground truncate">{app.service}</p>
+                            <div className="text-xs text-muted-foreground">
+                              {app.service?.includes(',') ? (
+                                app.service.split(',').map((svc: string, idx: number) => (
+                                  <div key={idx} className="truncate">- {svc.trim()}</div>
+                                ))
+                              ) : (
+                                <div className="truncate">{app.service}</div>
+                              )}
+                            </div>
                           </div>
                         </div>
                         <div className="text-right shrink-0">
@@ -1119,7 +1127,15 @@ export default function Planning() {
                         <div className="water-shimmer absolute inset-0 opacity-30" />
                         <div className="relative z-10">
                           <div className="font-semibold text-xs md:text-sm truncate">{booking.client || "—"}</div>
-                          <div className="text-[10px] md:text-xs opacity-90 truncate">{booking.service}</div>
+                          <div className="text-[10px] md:text-xs opacity-90">
+                            {booking.service?.includes(',') ? (
+                              booking.service.split(',').map((svc: string, idx: number) => (
+                                <div key={idx} className="truncate">- {svc.trim()}</div>
+                              ))
+                            ) : (
+                              <div className="truncate">{booking.service}</div>
+                            )}
+                          </div>
                           <div className="text-[9px] opacity-70 font-medium">{booking.startTime}</div>
                         </div>
                         <div className="flex items-center justify-between mt-auto relative z-10">
