@@ -621,7 +621,14 @@ export default function Planning() {
       return { name: s.name, price, duration: s.duration };
     });
     
+    // Read total price from DOM (user can override the calculated total)
+    const totalInputEl = document.getElementById('total-price-input') as HTMLInputElement;
+    const customTotal = totalInputEl?.value ? parseFloat(totalInputEl.value) : null;
+    const calculatedTotal = servicesToSave.reduce((sum, s) => sum + s.price, 0);
+    const finalTotal = customTotal !== null ? customTotal : calculatedTotal;
+    
     console.log('Saving services:', JSON.stringify(servicesToSave));
+    console.log('Total - custom:', customTotal, 'calculated:', calculatedTotal, 'final:', finalTotal);
     
     const submitData = {
       ...data,
@@ -629,8 +636,8 @@ export default function Planning() {
       servicesJson: servicesToSave.length > 0 ? servicesToSave : undefined,
       service: servicesToSave.length > 0 ? servicesToSave.map(s => s.name).join(', ') : data.service,
       duration: servicesToSave.length > 0 ? servicesToSave.reduce((sum, s) => sum + s.duration, 0) : data.duration,
-      price: servicesToSave.length > 0 ? servicesToSave.reduce((sum, s) => sum + s.price, 0) : data.price,
-      total: servicesToSave.length > 0 ? servicesToSave.reduce((sum, s) => sum + s.price, 0) : data.total,
+      price: finalTotal,
+      total: finalTotal,
     };
 
     if (editingAppointment) {
@@ -658,8 +665,9 @@ export default function Planning() {
     const totalPrice = updated.reduce((sum, s) => sum + s.price, 0);
     form.setValue("service", updated.map(s => s.name).join(', '));
     form.setValue("duration", totalDuration);
-    form.setValue("price", totalPrice);
-    form.setValue("total", totalPrice);
+    // Update total input in DOM
+    const totalInput = document.getElementById('total-price-input') as HTMLInputElement;
+    if (totalInput) totalInput.value = String(totalPrice);
   };
 
   const handleRemoveService = (index: number) => {
@@ -676,8 +684,9 @@ export default function Planning() {
     const totalPrice = updated.reduce((sum, s) => sum + s.price, 0);
     form.setValue("service", updated.map(s => s.name).join(', '));
     form.setValue("duration", totalDuration);
-    form.setValue("price", totalPrice);
-    form.setValue("total", totalPrice);
+    // Update total input in DOM
+    const totalInput = document.getElementById('total-price-input') as HTMLInputElement;
+    if (totalInput) totalInput.value = String(totalPrice);
   };
 
   const handlePriceInputChange = (serviceId: string, value: string) => {
@@ -1286,24 +1295,20 @@ export default function Planning() {
                 <div className="w-11 h-11 rounded-2xl liquid-gradient flex items-center justify-center shadow-lg">
                   <CreditCard className="w-5 h-5 text-white" />
                 </div>
-                <FormField
-                  control={form.control}
-                  name="total"
-                  render={({ field }) => (
-                    <FormItem className="flex-1 space-y-0">
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          inputMode="decimal"
-                          placeholder="0"
-                          className="text-2xl h-12 font-bold border-0 bg-white/80 dark:bg-slate-800/80 rounded-xl text-center shadow-sm focus:ring-2 focus:ring-primary/30"
-                          onFocus={(e) => e.target.select()}
-                          {...field} 
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
+                <div className="flex-1">
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    id="total-price-input"
+                    defaultValue={form.getValues("total") || 0}
+                    key={editingAppointment?.id || 'new'}
+                    placeholder="0"
+                    onClick={(e) => e.stopPropagation()}
+                    onFocus={(e) => e.target.select()}
+                    className="w-full text-2xl h-12 font-bold border-2 border-primary/50 bg-white dark:bg-slate-800 rounded-xl text-center shadow-sm focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none"
+                    style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
+                  />
+                </div>
                 <span className="text-base font-bold gradient-text">DH</span>
                 <FormField
                   control={form.control}
