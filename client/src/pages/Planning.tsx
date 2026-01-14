@@ -629,6 +629,7 @@ export default function Planning() {
     
     console.log('Saving services:', JSON.stringify(servicesToSave));
     console.log('Total - custom:', customTotal, 'calculated:', calculatedTotal, 'final:', finalTotal);
+    console.log('data.price:', data.price, 'data.total:', data.total);
     
     const submitData = {
       ...data,
@@ -639,6 +640,8 @@ export default function Planning() {
       price: finalTotal,
       total: finalTotal,
     };
+    
+    console.log('submitData.price:', submitData.price, 'submitData.total:', submitData.total);
 
     if (editingAppointment) {
       updateMutation.mutate({ id: editingAppointment.id, ...submitData });

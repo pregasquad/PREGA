@@ -143,16 +143,20 @@ export class DatabaseStorage implements IStorage {
     
     if (servicesArray && Array.isArray(servicesArray) && servicesArray.length > 0) {
       const totalDuration = servicesArray.reduce((sum: number, svc: any) => sum + (svc.duration || 0), 0);
-      const totalPrice = servicesArray.reduce((sum: number, svc: any) => sum + (svc.price || 0), 0);
+      const calculatedPrice = servicesArray.reduce((sum: number, svc: any) => sum + (svc.price || 0), 0);
       const serviceNames = servicesArray.map((svc: any) => svc.name).join(', ');
+      
+      // Use the user's custom price/total if provided, otherwise use calculated values
+      const finalPrice = (appointment as any).price !== undefined ? (appointment as any).price : calculatedPrice;
+      const finalTotal = (appointment as any).total !== undefined ? (appointment as any).total : calculatedPrice;
       
       return {
         ...appointment,
         servicesJson: JSON.stringify(servicesArray),
         service: appointment.service || serviceNames,
         duration: totalDuration,
-        price: totalPrice,
-        total: totalPrice,
+        price: finalPrice,
+        total: finalTotal,
       };
     }
     
