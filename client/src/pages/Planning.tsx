@@ -1267,7 +1267,15 @@ export default function Planning() {
                           placeholder="0"
                           className="text-2xl h-12 font-bold border-0 bg-white/80 dark:bg-slate-800/80 rounded-xl text-center shadow-sm focus:ring-2 focus:ring-primary/30"
                           onFocus={(e) => e.target.select()}
-                          {...field} 
+                          value={field.value}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value) || 0;
+                            field.onChange(val);
+                            form.setValue("price", val);
+                          }}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
                         />
                       </FormControl>
                     </FormItem>
