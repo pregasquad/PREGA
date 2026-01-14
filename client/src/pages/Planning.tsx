@@ -608,6 +608,11 @@ export default function Planning() {
     const selectedClient = clients.find(c => c.name === data.client);
     const clientId = selectedClient?.id || (data as any).clientId || null;
 
+    // Get the actual form values for price/total to ensure manual edits are captured
+    const formTotal = form.getValues("total");
+    const formPrice = form.getValues("price");
+    const finalPrice = typeof formTotal === 'number' ? formTotal : (typeof formPrice === 'number' ? formPrice : data.total);
+
     const submitData = {
       ...data,
       clientId,
@@ -615,8 +620,8 @@ export default function Planning() {
       service: selectedServices.length > 0 ? selectedServices.map(s => s.name).join(', ') : data.service,
       duration: selectedServices.length > 0 ? selectedServices.reduce((sum, s) => sum + s.duration, 0) : data.duration,
       // Use form values for price/total to allow manual override
-      price: data.price,
-      total: data.total,
+      price: finalPrice,
+      total: finalPrice,
     };
 
     if (editingAppointment) {
