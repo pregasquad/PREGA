@@ -244,13 +244,14 @@ export default function Clients() {
       c.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const ClientForm = ({ onSubmit, submitLabel }: { onSubmit: () => void; submitLabel: string }) => (
-    <div className="space-y-4">
+  // Render form fields inline to prevent focus loss on re-render
+  const renderFormFields = () => (
+    <>
       <div>
         <Label>{t("clients.name")} *</Label>
         <Input
           value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
           placeholder={t("clients.clientName")}
         />
       </div>
@@ -258,7 +259,7 @@ export default function Clients() {
         <Label>{t("clients.phone")}</Label>
         <Input
           value={formData.phone}
-          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+          onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
           placeholder="0612345678"
           dir="ltr"
         />
@@ -268,7 +269,7 @@ export default function Clients() {
         <Input
           type="email"
           value={formData.email}
-          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+          onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
           placeholder="email@example.com"
           dir="ltr"
         />
@@ -278,21 +279,18 @@ export default function Clients() {
         <Input
           type="date"
           value={formData.birthday}
-          onChange={(e) => setFormData({ ...formData, birthday: e.target.value })}
+          onChange={(e) => setFormData(prev => ({ ...prev, birthday: e.target.value }))}
         />
       </div>
       <div>
         <Label>{t("clients.notes")}</Label>
         <Input
           value={formData.notes}
-          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+          onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
           placeholder={t("clients.additionalNotes")}
         />
       </div>
-      <Button onClick={onSubmit} className="w-full">
-        {submitLabel}
-      </Button>
-    </div>
+    </>
   );
 
   if (isLoading) {
@@ -317,10 +315,12 @@ export default function Clients() {
             <DialogHeader>
               <DialogTitle>{t("clients.newClient")}</DialogTitle>
             </DialogHeader>
-            <ClientForm
-              onSubmit={() => createMutation.mutate(formData)}
-              submitLabel={t("common.add")}
-            />
+            <div className="space-y-4">
+              {renderFormFields()}
+              <Button onClick={() => createMutation.mutate(formData)} className="w-full">
+                {t("common.add")}
+              </Button>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
@@ -472,12 +472,15 @@ export default function Clients() {
           <DialogHeader>
             <DialogTitle>{t("clients.editClient")}</DialogTitle>
           </DialogHeader>
-          <ClientForm
-            onSubmit={() =>
-              selectedClient && updateMutation.mutate({ id: selectedClient.id, data: formData })
-            }
-            submitLabel={t("common.save")}
-          />
+          <div className="space-y-4">
+            {renderFormFields()}
+            <Button 
+              onClick={() => selectedClient && updateMutation.mutate({ id: selectedClient.id, data: formData })} 
+              className="w-full"
+            >
+              {t("common.save")}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
