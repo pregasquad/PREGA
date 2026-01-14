@@ -612,10 +612,12 @@ export default function Planning() {
     const selectedClient = clients.find(c => c.name === data.client);
     const clientId = selectedClient?.id || (data as any).clientId || null;
 
-    // Read prices from priceInputs state
+    // Read prices directly from DOM inputs (completely bypasses React state)
     const servicesToSave = selectedServices.map(s => {
-      const inputValue = priceInputs[s.id];
-      const price = inputValue ? (parseFloat(inputValue.replace(',', '.')) || s.price) : s.price;
+      const inputEl = document.getElementById(`price-input-${s.id}`) as HTMLInputElement;
+      const inputValue = inputEl?.value;
+      console.log(`Service ${s.name}: DOM input value = "${inputValue}"`);
+      const price = inputValue ? (parseFloat(inputValue) || s.price) : s.price;
       return { name: s.name, price, duration: s.duration };
     });
     
@@ -1454,29 +1456,14 @@ export default function Planning() {
                         >
                           <span className="font-medium">{s.name}</span>
                           <input
-                            type="text"
+                            type="number"
                             inputMode="decimal"
-                            data-service-id={s.id}
-                            value={priceInputs[s.id] ?? String(s.price)}
-                            onChange={(e) => {
-                              e.stopPropagation();
-                              const val = e.target.value;
-                              setPriceInputs(prev => ({ ...prev, [s.id]: val }));
-                            }}
-                            onBlur={(e) => {
-                              const val = e.target.value;
-                              const newPrice = parseFloat(val.replace(',', '.')) || 0;
-                              setSelectedServices(prev => {
-                                const updated = prev.map(svc => 
-                                  svc.id === s.id ? { ...svc, price: newPrice } : svc
-                                );
-                                const totalPrice = updated.reduce((sum, svc) => sum + svc.price, 0);
-                                form.setValue("price", totalPrice);
-                                form.setValue("total", totalPrice);
-                                return updated;
-                              });
-                            }}
-                            className="w-16 h-6 text-xs text-center font-bold rounded border border-primary/30 bg-white/80 dark:bg-slate-800/80 focus:ring-2 focus:ring-primary/50 focus:border-primary"
+                            id={`price-input-${s.id}`}
+                            defaultValue={s.price}
+                            onClick={(e) => e.stopPropagation()}
+                            onFocus={(e) => e.target.select()}
+                            className="w-20 h-7 px-2 text-sm text-center font-bold rounded-lg border-2 border-primary/50 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none"
+                            style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
                           />
                           <span className="text-muted-foreground text-[10px]">DH</span>
                           <button
