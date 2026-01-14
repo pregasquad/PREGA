@@ -612,11 +612,9 @@ export default function Planning() {
     const selectedClient = clients.find(c => c.name === data.client);
     const clientId = selectedClient?.id || (data as any).clientId || null;
 
-    // Read prices directly from DOM using data attributes
+    // Read prices from priceInputs state
     const servicesToSave = selectedServices.map(s => {
-      const inputEl = document.querySelector(`input[data-service-id="${s.id}"]`) as HTMLInputElement;
-      const inputValue = inputEl?.value;
-      console.log('Service ID:', s.id, 'Input found:', !!inputEl, 'Value:', inputValue);
+      const inputValue = priceInputs[s.id];
       const price = inputValue ? (parseFloat(inputValue.replace(',', '.')) || s.price) : s.price;
       return { name: s.name, price, duration: s.duration };
     });
@@ -1459,7 +1457,25 @@ export default function Planning() {
                             type="text"
                             inputMode="decimal"
                             data-service-id={s.id}
-                            defaultValue={s.price}
+                            value={priceInputs[s.id] ?? String(s.price)}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              const val = e.target.value;
+                              setPriceInputs(prev => ({ ...prev, [s.id]: val }));
+                            }}
+                            onBlur={(e) => {
+                              const val = e.target.value;
+                              const newPrice = parseFloat(val.replace(',', '.')) || 0;
+                              setSelectedServices(prev => {
+                                const updated = prev.map(svc => 
+                                  svc.id === s.id ? { ...svc, price: newPrice } : svc
+                                );
+                                const totalPrice = updated.reduce((sum, svc) => sum + svc.price, 0);
+                                form.setValue("price", totalPrice);
+                                form.setValue("total", totalPrice);
+                                return updated;
+                              });
+                            }}
                             className="w-16 h-6 text-xs text-center font-bold rounded border border-primary/30 bg-white/80 dark:bg-slate-800/80 focus:ring-2 focus:ring-primary/50 focus:border-primary"
                           />
                           <span className="text-muted-foreground text-[10px]">DH</span>
