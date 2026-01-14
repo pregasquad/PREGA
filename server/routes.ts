@@ -203,7 +203,7 @@ export async function registerRoutes(
             input.client.split(" (")[0], // Extract name without phone
             item.date,
             item.startTime,
-            item.service
+            item.service || ""
           );
         } catch (err) {
           console.log("WhatsApp notification failed:", err);
@@ -270,14 +270,11 @@ export async function registerRoutes(
 
   app.put(api.appointments.update.path, isPinAuthenticated, requirePermission("manage_appointments"), async (req, res) => {
     try {
-      console.log('PUT /appointments - req.body:', JSON.stringify({ price: (req.body as any).price, total: (req.body as any).total }));
       const input = api.appointments.update.input.parse(req.body);
-      console.log('PUT /appointments - parsed input:', JSON.stringify({ price: (input as any).price, total: (input as any).total }));
-      
       const oldAppointment = await storage.getAppointment(Number(req.params.id));
       const item = await storage.updateAppointment(Number(req.params.id), input);
       
-      if (item.paid && oldAppointment && !oldAppointment.paid) {
+      if (item.paid && oldAppointment && !oldAppointment.paid && item.service) {
         const service = await storage.getServiceByName(item.service);
         if (service?.linkedProductId) {
           const product = await storage.getProducts().then(prods => prods.find(p => p.id === service.linkedProductId));

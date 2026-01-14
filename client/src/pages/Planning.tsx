@@ -616,7 +616,6 @@ export default function Planning() {
     const servicesToSave = selectedServices.map(s => {
       const inputEl = document.getElementById(`price-input-${s.id}`) as HTMLInputElement;
       const inputValue = inputEl?.value;
-      console.log(`Service ${s.name}: DOM input value = "${inputValue}"`);
       const price = inputValue ? (parseFloat(inputValue) || s.price) : s.price;
       return { name: s.name, price, duration: s.duration };
     });
@@ -627,10 +626,6 @@ export default function Planning() {
     const calculatedTotal = servicesToSave.reduce((sum, s) => sum + s.price, 0);
     const finalTotal = customTotal !== null ? customTotal : calculatedTotal;
     
-    console.log('Saving services:', JSON.stringify(servicesToSave));
-    console.log('Total - custom:', customTotal, 'calculated:', calculatedTotal, 'final:', finalTotal);
-    console.log('data.price:', data.price, 'data.total:', data.total);
-    
     const submitData = {
       ...data,
       clientId,
@@ -640,8 +635,6 @@ export default function Planning() {
       price: finalTotal,
       total: finalTotal,
     };
-    
-    console.log('submitData.price:', submitData.price, 'submitData.total:', submitData.total);
 
     if (editingAppointment) {
       updateMutation.mutate({ id: editingAppointment.id, ...submitData });
