@@ -430,24 +430,12 @@ export default function Planning() {
     
     const targetApp = appointments.find(app => app.id === parseInt(pendingAppointmentId.current!));
     if (targetApp) {
-      form.reset({
-        date: targetApp.date,
-        startTime: targetApp.startTime,
-        duration: targetApp.duration,
-        client: targetApp.client,
-        service: targetApp.service,
-        staff: targetApp.staff,
-        price: targetApp.price,
-        total: targetApp.total,
-        paid: targetApp.paid,
-      });
-      setEditingAppointment(targetApp);
-      setIsDialogOpen(true);
+      openAppointmentForEdit(targetApp);
       pendingAppointmentId.current = null;
     } else if (appointments.length > 0) {
       pendingAppointmentId.current = null;
     }
-  }, [loadingApps, appointments, form]);
+  }, [loadingApps, appointments]);
 
   const stats = useMemo(() => {
     const paidAppointments = appointments.filter(app => app.paid);
@@ -477,6 +465,48 @@ export default function Planning() {
     return { matches, total, count: matches.length };
   }, [allAppointments, appointmentSearch]);
 
+  // Helper function to parse services from an appointment
+  const parseAppointmentServices = (app: any): Array<{name: string, price: number, duration: number}> => {
+    let parsedServices: Array<{name: string, price: number, duration: number}> = [];
+    if (app.servicesJson) {
+      try {
+        parsedServices = typeof app.servicesJson === 'string' 
+          ? JSON.parse(app.servicesJson) 
+          : app.servicesJson;
+      } catch {
+        parsedServices = [];
+      }
+    }
+    // Fall back to single service if no servicesJson - use stored appointment price, not catalog price
+    if (parsedServices.length === 0 && app.service) {
+      parsedServices = [{ 
+        name: app.service, 
+        price: app.price || 0, 
+        duration: app.duration || 60 
+      }];
+    }
+    return parsedServices;
+  };
+
+  // Helper function to open an appointment for editing
+  const openAppointmentForEdit = (app: any) => {
+    const parsedServices = parseAppointmentServices(app);
+    setSelectedServices(parsedServices);
+    form.reset({
+      date: app.date,
+      startTime: app.startTime,
+      duration: app.duration,
+      client: app.client,
+      service: app.service || "",
+      staff: app.staff,
+      price: app.price,
+      total: app.total,
+      paid: app.paid,
+    });
+    setEditingAppointment(app);
+    setIsDialogOpen(true);
+  };
+
   const handleSlotClick = (staffName: string, time: string) => {
     if (!canEditCardboard) return;
     form.reset({
@@ -498,41 +528,7 @@ export default function Planning() {
   const handleAppointmentClick = (e: React.MouseEvent, app: any) => {
     e.stopPropagation();
     if (!canEditCardboard) return;
-    
-    // Parse servicesJson or fall back to single service
-    let parsedServices: Array<{name: string, price: number, duration: number}> = [];
-    if (app.servicesJson) {
-      try {
-        parsedServices = typeof app.servicesJson === 'string' 
-          ? JSON.parse(app.servicesJson) 
-          : app.servicesJson;
-      } catch {
-        parsedServices = [];
-      }
-    }
-    // Fall back to single service if no servicesJson - use stored appointment price, not catalog price
-    if (parsedServices.length === 0 && app.service) {
-      parsedServices = [{ 
-        name: app.service, 
-        price: app.price || 0, 
-        duration: app.duration || 60 
-      }];
-    }
-    setSelectedServices(parsedServices);
-    
-    form.reset({
-      date: app.date,
-      startTime: app.startTime,
-      duration: app.duration,
-      client: app.client,
-      service: app.service || "",
-      staff: app.staff,
-      price: app.price,
-      total: app.total,
-      paid: app.paid,
-    });
-    setEditingAppointment(app);
-    setIsDialogOpen(true);
+    openAppointmentForEdit(app);
   };
 
   const onSubmit = async (data: AppointmentFormValues) => {
@@ -912,19 +908,7 @@ export default function Planning() {
                       className="p-2 border-b last:border-b-0 hover:bg-muted/50 cursor-pointer"
                       onClick={() => {
                         setDate(parseISO(app.date));
-                        setEditingAppointment(app);
-                        form.reset({
-                          date: app.date,
-                          startTime: app.startTime,
-                          duration: app.duration,
-                          client: app.client,
-                          service: app.service,
-                          staff: app.staff,
-                          price: app.price,
-                          total: app.total,
-                          paid: app.paid,
-                        });
-                        setIsDialogOpen(true);
+                        openAppointmentForEdit(app);
                       }}
                     >
                       <div className="flex items-center justify-between gap-2">
