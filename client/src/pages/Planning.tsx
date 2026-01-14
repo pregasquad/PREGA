@@ -333,6 +333,7 @@ export default function Planning() {
     }
   });
   const [selectedServices, setSelectedServices] = useState<Array<{id: string, name: string, price: number, duration: number}>>([]);
+  const [priceInputs, setPriceInputs] = useState<Record<string, string>>({});
   const { toast } = useToast();
 
   const formattedDate = format(date, "yyyy-MM-dd");
@@ -496,6 +497,11 @@ export default function Planning() {
   const openAppointmentForEdit = (app: any) => {
     const parsedServices = parseAppointmentServices(app);
     setSelectedServices(parsedServices);
+    const newPriceInputs: Record<string, string> = {};
+    parsedServices.forEach(s => {
+      newPriceInputs[s.id] = String(s.price);
+    });
+    setPriceInputs(newPriceInputs);
     form.reset({
       date: app.date,
       startTime: app.startTime,
@@ -525,6 +531,7 @@ export default function Planning() {
       paid: true,
     });
     setSelectedServices([]);
+    setPriceInputs({});
     setEditingAppointment(null);
     setIsDialogOpen(true);
   };
@@ -604,8 +611,14 @@ export default function Planning() {
     const selectedClient = clients.find(c => c.name === data.client);
     const clientId = selectedClient?.id || (data as any).clientId || null;
 
-    // Strip internal IDs before saving - only save name, price, duration
-    const servicesToSave = selectedServices.map(({ name, price, duration }) => ({ name, price, duration }));
+    // Strip internal IDs and use current input values for prices
+    const servicesToSave = selectedServices.map(s => {
+      const inputPrice = priceInputs[s.id];
+      const finalPrice = inputPrice !== undefined 
+        ? (parseFloat(inputPrice.replace(',', '.')) || 0) 
+        : s.price;
+      return { name: s.name, price: finalPrice, duration: s.duration };
+    });
     
     const submitData = {
       ...data,
@@ -625,16 +638,19 @@ export default function Planning() {
       playSuccessSound();
     }
     setSelectedServices([]);
+    setPriceInputs({});
     setIsDialogOpen(false);
   };
 
   const handleAddService = (service: {name: string, price: number, duration: number}) => {
+    const serviceId = `svc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const newService = {
       ...service,
-      id: `svc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+      id: serviceId
     };
     const updated = [...selectedServices, newService];
     setSelectedServices(updated);
+    setPriceInputs(prev => ({ ...prev, [serviceId]: String(service.price) }));
     const totalDuration = updated.reduce((sum, s) => sum + s.duration, 0);
     const totalPrice = updated.reduce((sum, s) => sum + s.price, 0);
     form.setValue("service", updated.map(s => s.name).join(', '));
@@ -644,8 +660,15 @@ export default function Planning() {
   };
 
   const handleRemoveService = (index: number) => {
+    const removedService = selectedServices[index];
     const updated = selectedServices.filter((_, i) => i !== index);
     setSelectedServices(updated);
+    if (removedService) {
+      setPriceInputs(prev => {
+        const { [removedService.id]: _, ...rest } = prev;
+        return rest;
+      });
+    }
     const totalDuration = updated.reduce((sum, s) => sum + s.duration, 0);
     const totalPrice = updated.reduce((sum, s) => sum + s.price, 0);
     form.setValue("service", updated.map(s => s.name).join(', '));
@@ -654,9 +677,15 @@ export default function Planning() {
     form.setValue("total", totalPrice);
   };
 
-  const handleUpdateServicePrice = (index: number, newPrice: number) => {
-    const updated = selectedServices.map((s, i) => 
-      i === index ? { ...s, price: newPrice } : s
+  const handlePriceInputChange = (serviceId: string, value: string) => {
+    setPriceInputs(prev => ({ ...prev, [serviceId]: value }));
+  };
+  
+  const handlePriceInputBlur = (serviceId: string) => {
+    const inputValue = priceInputs[serviceId] || "0";
+    const newPrice = parseFloat(inputValue.replace(',', '.')) || 0;
+    const updated = selectedServices.map(s => 
+      s.id === serviceId ? { ...s, price: newPrice } : s
     );
     setSelectedServices(updated);
     const totalPrice = updated.reduce((sum, s) => sum + s.price, 0);
@@ -1221,6 +1250,7 @@ export default function Planning() {
         if (!open) {
           setIsEditFavoritesOpen(false);
           setSelectedServices([]);
+          setPriceInputs({});
         }
       }}>
         <DialogContent 
@@ -1420,15 +1450,11 @@ export default function Planning() {
                         >
                           <span className="font-medium">{s.name}</span>
                           <input
-                            type="number"
+                            type="text"
                             inputMode="decimal"
-                            step="any"
-                            min="0"
-                            value={s.price}
-                            onChange={(e) => {
-                              const val = parseFloat(e.target.value.replace(',', '.'));
-                              handleUpdateServicePrice(index, isNaN(val) ? 0 : val);
-                            }}
+                            value={priceInputs[s.id] ?? String(s.price)}
+                            onChange={(e) => handlePriceInputChange(s.id, e.target.value)}
+                            onBlur={() => handlePriceInputBlur(s.id)}
                             className="w-16 h-6 text-xs text-center font-bold rounded border border-primary/30 bg-white/80 dark:bg-slate-800/80 focus:ring-2 focus:ring-primary/50 focus:border-primary"
                           />
                           <span className="text-muted-foreground text-[10px]">DH</span>
@@ -1451,7 +1477,13 @@ export default function Planning() {
                         <span className="text-muted-foreground">{selectedServices.length} {t("common.services")}</span>
                         <span className="font-medium">{selectedServices.reduce((sum, s) => sum + s.duration, 0)}′</span>
                       </div>
-                      <span className="font-bold gradient-text">{selectedServices.reduce((sum, s) => sum + s.price, 0)} DH</span>
+                      <span className="font-bold gradient-text">
+                        {selectedServices.reduce((sum, s) => {
+                          const inputVal = priceInputs[s.id];
+                          const price = inputVal !== undefined ? (parseFloat(inputVal.replace(',', '.')) || 0) : s.price;
+                          return sum + price;
+                        }, 0)} DH
+                      </span>
                     </div>
                   )}
 
