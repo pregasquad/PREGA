@@ -629,22 +629,27 @@ export default function Planning() {
     const updated = [...selectedServices, service];
     setSelectedServices(updated);
     const totalDuration = updated.reduce((sum, s) => sum + s.duration, 0);
-    const totalPrice = updated.reduce((sum, s) => sum + s.price, 0);
+    // Add the new service price to current total (preserves manual adjustments)
+    const currentTotal = form.getValues("total") || 0;
+    const newTotal = currentTotal + service.price;
     form.setValue("service", updated.map(s => s.name).join(', '));
     form.setValue("duration", totalDuration);
-    form.setValue("price", totalPrice);
-    form.setValue("total", totalPrice);
+    form.setValue("price", newTotal);
+    form.setValue("total", newTotal);
   };
 
   const handleRemoveService = (index: number) => {
+    const removedService = selectedServices[index];
     const updated = selectedServices.filter((_, i) => i !== index);
     setSelectedServices(updated);
     const totalDuration = updated.reduce((sum, s) => sum + s.duration, 0);
-    const totalPrice = updated.reduce((sum, s) => sum + s.price, 0);
+    // Subtract the removed service price from current total (preserves manual adjustments)
+    const currentTotal = form.getValues("total") || 0;
+    const newTotal = Math.max(0, currentTotal - (removedService?.price || 0));
     form.setValue("service", updated.map(s => s.name).join(', '));
     form.setValue("duration", totalDuration);
-    form.setValue("price", totalPrice);
-    form.setValue("total", totalPrice);
+    form.setValue("price", newTotal);
+    form.setValue("total", newTotal);
   };
 
   const handleServiceChange = (serviceName: string) => {
