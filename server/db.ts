@@ -147,6 +147,17 @@ export async function ensureAppointmentsAuditColumns(): Promise<void> {
         console.log("Added created_at column to appointments table");
       }
       
+      // Check if services_json column exists (for multi-service appointments)
+      const [servicesJsonRows] = await connection.query(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_NAME = 'appointments' AND COLUMN_NAME = 'services_json'
+      `);
+      
+      if ((servicesJsonRows as any[]).length === 0) {
+        await connection.query(`ALTER TABLE appointments ADD COLUMN services_json TEXT`);
+        console.log("Added services_json column to appointments table");
+      }
+      
       connection.release();
     } else {
       // PostgreSQL version
@@ -158,6 +169,9 @@ export async function ensureAppointmentsAuditColumns(): Promise<void> {
           END IF;
           IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'appointments' AND column_name = 'created_at') THEN
             ALTER TABLE appointments ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'appointments' AND column_name = 'services_json') THEN
+            ALTER TABLE appointments ADD COLUMN services_json TEXT;
           END IF;
         END $$;
       `);
