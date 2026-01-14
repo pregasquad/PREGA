@@ -64,14 +64,22 @@ Preferred communication style: Simple, everyday language.
 - **Recharts**: Charting library.
 - **date-fns**: Date manipulation utilities.
 
+### Multi-Service Appointments
+- **Feature**: Appointments can now have multiple services in a single booking
+- **Storage**: `servicesJson` column stores array of service objects (name, price, duration)
+- **Computed Fields**: Total duration, price, and service names are calculated from the array
+- **Backward Compatibility**: Existing single-service appointments continue to work via the `service` field
+- **Stock Validation**: All services are checked for linked product availability before booking
+
 ### Public Booking Page
 - **Route**: `/booking` - Public-facing appointment booking page
 - **Design**: iOS liquid glass aesthetic with glassmorphism effects, gradient backgrounds, and smooth animations
+- **Multi-Service Support**: Clients can select multiple services, shown as removable pills with total calculation
 - **Public API Endpoints** (rate-limited, sanitized responses):
   - `GET /api/public/services` - Service list (id, name, category, duration, price only)
   - `GET /api/public/staff` - Staff list (id, name, color only)
   - `GET /api/public/appointments` - Availability check (minimal appointment data)
-  - `POST /api/public/appointments` - Create booking (strict input validation, forced unpaid status)
+  - `POST /api/public/appointments` - Create booking (strict input validation, forced unpaid status, multi-service support)
 - **Security**: Rate limiting (10 req/min per IP), input validation with Zod, sanitized responses
 
 ### Notifications
