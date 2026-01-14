@@ -1284,7 +1284,19 @@ export default function Planning() {
           </div>
           
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="p-5 space-y-4">
+            <form 
+              onSubmit={form.handleSubmit(onSubmit)} 
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  const target = e.target as HTMLElement;
+                  if (target.tagName !== 'TEXTAREA') {
+                    e.preventDefault();
+                    form.handleSubmit(onSubmit)();
+                  }
+                }
+              }}
+              className="p-5 space-y-4"
+            >
               
               {/* Price Row - FIRST - Glass Card */}
               <div className="flex items-center gap-3 glass-subtle rounded-2xl p-4">
