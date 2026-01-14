@@ -1209,6 +1209,9 @@ export default function Planning() {
                           <span className="text-[10px] opacity-80 font-medium">{booking.duration}′</span>
                           <div className="flex items-center gap-1.5">
                             <span className="font-bold text-xs">{booking.total} DH</span>
+                            <div className="bg-white/20 rounded-full p-1">
+                              <CreditCard className="w-3 h-3 text-white" />
+                            </div>
                             {booking.paid && (
                               <span className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center" title="Paid">
                                 <Check className="w-2.5 h-2.5 text-white" />
