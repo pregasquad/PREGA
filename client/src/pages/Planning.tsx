@@ -1410,10 +1410,16 @@ export default function Planning() {
                           <span className="font-medium">{s.name}</span>
                           <input
                             type="number"
-                            inputMode="numeric"
-                            value={s.price}
-                            onChange={(e) => handleUpdateServicePrice(index, parseFloat(e.target.value) || 0)}
-                            className="w-14 h-5 text-xs text-center font-bold rounded bg-white/50 dark:bg-slate-800/50 border-0 focus:ring-1 focus:ring-primary"
+                            inputMode="decimal"
+                            step="any"
+                            min="0"
+                            defaultValue={s.price}
+                            key={`price-${index}-${s.name}`}
+                            onBlur={(e) => {
+                              const val = parseFloat(e.target.value.replace(',', '.'));
+                              handleUpdateServicePrice(index, isNaN(val) ? 0 : val);
+                            }}
+                            className="w-16 h-6 text-xs text-center font-bold rounded border border-primary/30 bg-white/80 dark:bg-slate-800/80 focus:ring-2 focus:ring-primary/50 focus:border-primary"
                           />
                           <span className="text-muted-foreground text-[10px]">DH</span>
                           <button
