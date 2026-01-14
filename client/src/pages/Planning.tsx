@@ -334,6 +334,7 @@ export default function Planning() {
   });
   const [selectedServices, setSelectedServices] = useState<Array<{name: string, price: number, duration: number}>>([]);
   const [manualPriceInput, setManualPriceInput] = useState<string>("");
+  const manualPriceRef = useRef<string>("");
   const { toast } = useToast();
 
   const formattedDate = format(date, "yyyy-MM-dd");
@@ -493,6 +494,7 @@ export default function Planning() {
     });
     setSelectedServices([]);
     setManualPriceInput("0");
+    manualPriceRef.current = "0";
     setEditingAppointment(null);
     setIsDialogOpen(true);
   };
@@ -525,7 +527,9 @@ export default function Planning() {
       }
     }
     setSelectedServices(parsedServices);
-    setManualPriceInput(String(app.total || app.price || 0));
+    const priceStr = String(app.total || app.price || 0);
+    setManualPriceInput(priceStr);
+    manualPriceRef.current = priceStr;
     
     form.reset({
       date: app.date,
@@ -611,8 +615,8 @@ export default function Planning() {
     const selectedClient = clients.find(c => c.name === data.client);
     const clientId = selectedClient?.id || (data as any).clientId || null;
 
-    // Use the manually tracked price input to ensure user edits are captured
-    const finalPrice = parseFloat(manualPriceInput) || 0;
+    // Use the ref to ensure current price value is captured (avoids stale closure)
+    const finalPrice = parseFloat(manualPriceRef.current) || 0;
 
     const submitData = {
       ...data,
@@ -641,9 +645,10 @@ export default function Planning() {
     setSelectedServices(updated);
     const totalDuration = updated.reduce((sum, s) => sum + s.duration, 0);
     // Add the new service price to current total (preserves manual adjustments)
-    const currentTotal = parseFloat(manualPriceInput) || 0;
+    const currentTotal = parseFloat(manualPriceRef.current) || 0;
     const newTotal = currentTotal + service.price;
     setManualPriceInput(String(newTotal));
+    manualPriceRef.current = String(newTotal);
     form.setValue("service", updated.map(s => s.name).join(', '));
     form.setValue("duration", totalDuration);
     form.setValue("price", newTotal);
@@ -656,9 +661,10 @@ export default function Planning() {
     setSelectedServices(updated);
     const totalDuration = updated.reduce((sum, s) => sum + s.duration, 0);
     // Subtract the removed service price from current total (preserves manual adjustments)
-    const currentTotal = parseFloat(manualPriceInput) || 0;
+    const currentTotal = parseFloat(manualPriceRef.current) || 0;
     const newTotal = Math.max(0, currentTotal - (removedService?.price || 0));
     setManualPriceInput(String(newTotal));
+    manualPriceRef.current = String(newTotal);
     form.setValue("service", updated.map(s => s.name).join(', '));
     form.setValue("duration", totalDuration);
     form.setValue("price", newTotal);
@@ -1280,6 +1286,7 @@ export default function Planning() {
                           onChange={(e) => {
                             const inputVal = e.target.value.replace(/[^0-9.]/g, '');
                             setManualPriceInput(inputVal);
+                            manualPriceRef.current = inputVal;
                           }}
                         />
                       </FormControl>
