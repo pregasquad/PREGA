@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useLayoutEffect, useRef, useCallback } from "react";
-import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { format, addDays, startOfToday, parseISO, subDays } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { useAppointments, useStaff, useServices, useCreateAppointment, useUpdateAppointment, useDeleteAppointment } from "@/hooks/use-salon-data";
@@ -14,7 +14,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CalendarIcon, ChevronLeft, ChevronRight, Plus, Trash2, Check, X, Search, Star, RefreshCw, Sparkles, CreditCard, Settings2, Scissors, Clock } from "lucide-react";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { CalendarIcon, ChevronLeft, ChevronRight, Plus, Trash2, Check, X, Search, Star, RefreshCw, Sparkles, CreditCard, Settings2, Scissors, Clock, User, ChevronsUpDown } from "lucide-react";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
@@ -276,6 +277,7 @@ export default function Planning() {
   const dataLoadedRef = useRef(false);
   const [isEditFavoritesOpen, setIsEditFavoritesOpen] = useState(false);
   const [servicePopoverOpen, setServicePopoverOpen] = useState(false);
+  const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
   const [appointmentSearch, setAppointmentSearch] = useState("");
   const [showSearchInput, setShowSearchInput] = useState(false);
   const [draggedAppointment, setDraggedAppointment] = useState<any>(null);
@@ -339,6 +341,9 @@ export default function Planning() {
   const { data: allAppointments = [] } = useAppointments();
   const { data: staffList = [], isLoading: loadingStaff, isError: staffError } = useStaff();
   const { data: services = [], isLoading: loadingServices, isError: servicesError } = useServices();
+  const { data: clients = [] } = useQuery<Array<{id: number, name: string, phone: string | null}>>({
+    queryKey: ["/api/clients"],
+  });
   
   // Show loading state while essential data loads
   const isDataLoading = loadingStaff || loadingServices;
@@ -594,8 +599,13 @@ export default function Planning() {
     }
     queryClient.invalidateQueries({ queryKey: ["/api/products"] });
 
+    // Find the client ID from the clients list
+    const selectedClient = clients.find(c => c.name === data.client);
+    const clientId = selectedClient?.id || (data as any).clientId || null;
+
     const submitData = {
       ...data,
+      clientId,
       servicesJson: selectedServices.length > 0 ? selectedServices : undefined,
       service: selectedServices.length > 0 ? selectedServices.map(s => s.name).join(', ') : data.service,
       duration: selectedServices.length > 0 ? selectedServices.reduce((sum, s) => sum + s.duration, 0) : data.duration,
@@ -1279,9 +1289,61 @@ export default function Planning() {
                   name="client"
                   render={({ field }) => (
                     <FormItem className="col-span-3 space-y-0">
-                      <FormControl>
-                        <Input placeholder={t("planning.client")} className="h-11 rounded-xl text-sm border-0 bg-secondary/50 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary/30 transition-all" {...field} />
-                      </FormControl>
+                      <Popover open={clientPopoverOpen} onOpenChange={setClientPopoverOpen}>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={clientPopoverOpen}
+                              className={cn(
+                                "w-full h-11 justify-between rounded-xl text-sm border-0 bg-secondary/50 hover:bg-secondary/70 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary/30 transition-all",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              <span className="flex items-center gap-2 truncate">
+                                <User className="w-4 h-4 shrink-0 opacity-50" />
+                                {field.value || t("planning.client")}
+                              </span>
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[300px] p-0 rounded-2xl glass-card shadow-xl" align="start">
+                          <Command>
+                            <CommandInput placeholder={t("planning.searchClient")} />
+                            <CommandList>
+                              <CommandEmpty>{t("planning.noClientFound")}</CommandEmpty>
+                              <CommandGroup>
+                                {clients.map((client) => (
+                                  <CommandItem
+                                    key={client.id}
+                                    value={client.name}
+                                    onSelect={() => {
+                                      field.onChange(client.name);
+                                      form.setValue("clientId" as any, client.id);
+                                      setClientPopoverOpen(false);
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        field.value === client.name ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    <div className="flex flex-col">
+                                      <span>{client.name}</span>
+                                      {client.phone && (
+                                        <span className="text-xs text-muted-foreground">{client.phone}</span>
+                                      )}
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                     </FormItem>
                   )}
                 />

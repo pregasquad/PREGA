@@ -87,6 +87,8 @@
     "bookingDeleted": "Réservation supprimée avec succès",
     "appointmentMoved": "Rendez-vous déplacé",
     "moveError": "Échec du déplacement du rendez-vous",
+    "searchClient": "Rechercher un client...",
+    "noClientFound": "Aucun client trouvé",
     "createdBy": "Créé par",
     "noStaff": "Aucun personnel configuré. Veuillez ajouter du personnel dans les Paramètres Admin.",
     "sessionExpired": "Session expirée. Veuillez vous reconnecter.",

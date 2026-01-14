@@ -87,6 +87,8 @@
     "bookingDeleted": "Booking deleted successfully",
     "appointmentMoved": "Appointment moved",
     "moveError": "Failed to move appointment",
+    "searchClient": "Search for a client...",
+    "noClientFound": "No client found",
     "createdBy": "Created by",
     "noStaff": "No staff configured. Please add staff in Admin Settings.",
     "sessionExpired": "Session expired. Please log in again.",
