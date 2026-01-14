@@ -334,6 +334,7 @@ export default function Planning() {
   });
   const [selectedServices, setSelectedServices] = useState<Array<{id: string, name: string, price: number, duration: number}>>([]);
   const [priceInputs, setPriceInputs] = useState<Record<string, string>>({});
+  const priceInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const { toast } = useToast();
 
   const formattedDate = format(date, "yyyy-MM-dd");
@@ -611,12 +612,13 @@ export default function Planning() {
     const selectedClient = clients.find(c => c.name === data.client);
     const clientId = selectedClient?.id || (data as any).clientId || null;
 
-    // Strip internal IDs - use the prices directly from selectedServices (already updated by handlePriceInputChange)
-    const servicesToSave = selectedServices.map(s => ({ 
-      name: s.name, 
-      price: s.price, 
-      duration: s.duration 
-    }));
+    // Read prices directly from input refs (bypasses React state issues)
+    const servicesToSave = selectedServices.map(s => {
+      const inputEl = priceInputRefs.current[s.id];
+      const inputValue = inputEl?.value || String(s.price);
+      const price = parseFloat(inputValue.replace(',', '.')) || s.price;
+      return { name: s.name, price, duration: s.duration };
+    });
     
     console.log('Saving services:', JSON.stringify(servicesToSave));
     
@@ -1455,8 +1457,8 @@ export default function Planning() {
                           <input
                             type="text"
                             inputMode="decimal"
-                            value={priceInputs[s.id] ?? String(s.price)}
-                            onChange={(e) => handlePriceInputChange(s.id, e.target.value)}
+                            ref={(el) => { priceInputRefs.current[s.id] = el; }}
+                            defaultValue={priceInputs[s.id] ?? String(s.price)}
                             className="w-16 h-6 text-xs text-center font-bold rounded border border-primary/30 bg-white/80 dark:bg-slate-800/80 focus:ring-2 focus:ring-primary/50 focus:border-primary"
                           />
                           <span className="text-muted-foreground text-[10px]">DH</span>
