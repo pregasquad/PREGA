@@ -1261,15 +1261,17 @@ export default function Planning() {
                   render={({ field }) => (
                     <FormItem className="flex-1 space-y-0">
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          inputMode="decimal"
+                        <input 
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
                           placeholder="0"
-                          className="text-2xl h-12 font-bold border-0 bg-white/80 dark:bg-slate-800/80 rounded-xl text-center shadow-sm focus:ring-2 focus:ring-primary/30"
+                          className="w-full text-2xl h-12 font-bold border-0 bg-white/80 dark:bg-slate-800/80 rounded-xl text-center shadow-sm focus:ring-2 focus:ring-primary/30 focus:outline-none"
                           onFocus={(e) => e.target.select()}
-                          value={field.value}
+                          value={field.value ?? ""}
                           onChange={(e) => {
-                            const val = parseFloat(e.target.value) || 0;
+                            const inputVal = e.target.value.replace(/[^0-9.]/g, '');
+                            const val = parseFloat(inputVal) || 0;
                             field.onChange(val);
                             form.setValue("price", val);
                           }}
