@@ -133,10 +133,17 @@ export async function registerRoutes(
     res.json(minimalItems);
   });
 
+  // Schema for service item in multi-service bookings
+  const serviceItemSchema = z.object({
+    name: z.string().min(1).max(100),
+    price: z.number().min(0).max(100000),
+    duration: z.number().min(5).max(480),
+  });
+  
   // Schema for public booking - strict whitelist of allowed fields
   const publicBookingSchema = z.object({
     client: z.string().min(1).max(100),
-    service: z.string().min(1).max(100),
+    service: z.string().min(1).max(500), // Can be comma-separated list for multi-service
     staff: z.string().min(1).max(50),
     duration: z.number().min(5).max(480),
     price: z.number().min(0).max(100000),
@@ -144,6 +151,7 @@ export async function registerRoutes(
     date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     startTime: z.string().regex(/^\d{2}:\d{2}$/),
     phone: z.string().max(20).optional(),
+    servicesJson: z.array(serviceItemSchema).optional(), // Multi-service support
   });
 
   // Public: Create appointment from booking page (rate limited, sanitized input)
@@ -152,7 +160,7 @@ export async function registerRoutes(
       const input = publicBookingSchema.parse(req.body);
       
       // Force paid to false for public bookings - never trust client
-      const appointmentData = {
+      const appointmentData: any = {
         client: input.client,
         service: input.service,
         staff: input.staff,
@@ -161,7 +169,8 @@ export async function registerRoutes(
         total: input.total,
         date: input.date,
         startTime: input.startTime,
-        paid: false // Always unpaid for public bookings
+        paid: false, // Always unpaid for public bookings
+        servicesJson: input.servicesJson, // Multi-service array (processed by storage layer)
       };
       
       const item = await storage.createAppointment(appointmentData);

@@ -10,19 +10,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { ar, enUS, fr } from "date-fns/locale";
-import { Clock, CheckCircle2, Scissors, User, Phone, CalendarDays, Sparkles } from "lucide-react";
+import { Clock, CheckCircle2, Scissors, User, Phone, CalendarDays, Sparkles, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
 
 const bookingSchema = z.object({
   client: z.string().min(1),
-  service: z.string().min(1),
+  service: z.string().optional(),
   staff: z.string().min(1),
   duration: z.coerce.number(),
   price: z.coerce.number(),
   total: z.coerce.number(),
   phone: z.string().optional(),
 });
+
+interface SelectedService {
+  name: string;
+  price: number;
+  duration: number;
+}
 
 type BookingFormValues = z.infer<typeof bookingSchema>;
 
@@ -65,6 +71,7 @@ export default function Booking() {
   const [staffList, setStaffList] = useState<Staff[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [appointments, setAppointments] = useState<MinimalAppointment[]>([]);
+  const [selectedServices, setSelectedServices] = useState<SelectedService[]>([]);
 
   useEffect(() => {
     fetch("/api/public/staff")
@@ -143,21 +150,25 @@ export default function Booking() {
   }, [selectedStaff, date, appointments, serviceDuration]);
 
   const onSubmit = async (data: BookingFormValues) => {
-    if (!date || !selectedTime) return;
+    if (!date || !selectedTime || selectedServices.length === 0) return;
     setIsSubmitting(true);
     
     const clientName = data.phone ? `${data.client} (${data.phone})` : data.client;
+    const serviceNames = selectedServices.map(s => s.name).join(", ");
+    const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration, 0);
+    const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
     
     const appointmentData = {
       client: clientName,
-      service: data.service,
+      service: serviceNames,
       staff: data.staff,
-      duration: data.duration,
-      price: data.price,
-      total: data.total,
+      duration: totalDuration,
+      price: totalPrice,
+      total: totalPrice,
       date: formattedDate, 
       startTime: selectedTime,
       phone: data.phone || undefined,
+      servicesJson: selectedServices,
     };
     
     try {
@@ -173,6 +184,7 @@ export default function Booking() {
       }
       
       setIsSuccess(true);
+      setSelectedServices([]);
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
     } catch (error) {
       console.error("Booking failed:", error);
@@ -181,17 +193,32 @@ export default function Booking() {
     }
   };
 
-  const handleServiceChange = (serviceName: string) => {
+  const handleAddService = (serviceName: string) => {
     const service = services.find(s => s.name === serviceName);
-    if (service) {
-      form.setValue("service", serviceName);
-      form.setValue("duration", service.duration);
-      form.setValue("price", service.price);
-      form.setValue("total", service.price);
+    if (service && !selectedServices.some(s => s.name === serviceName)) {
+      const newSelectedServices = [...selectedServices, { name: service.name, price: service.price, duration: service.duration }];
+      setSelectedServices(newSelectedServices);
+      const totalDuration = newSelectedServices.reduce((sum, s) => sum + s.duration, 0);
+      const totalPrice = newSelectedServices.reduce((sum, s) => sum + s.price, 0);
+      form.setValue("service", newSelectedServices.map(s => s.name).join(", "));
+      form.setValue("duration", totalDuration);
+      form.setValue("price", totalPrice);
+      form.setValue("total", totalPrice);
     }
   };
 
-  const canSubmit = selectedService && selectedStaff && date && selectedTime && form.watch("client");
+  const handleRemoveService = (index: number) => {
+    const newSelectedServices = selectedServices.filter((_, i) => i !== index);
+    setSelectedServices(newSelectedServices);
+    const totalDuration = newSelectedServices.reduce((sum, s) => sum + s.duration, 0);
+    const totalPrice = newSelectedServices.reduce((sum, s) => sum + s.price, 0);
+    form.setValue("service", newSelectedServices.map(s => s.name).join(", "));
+    form.setValue("duration", totalDuration);
+    form.setValue("price", totalPrice);
+    form.setValue("total", totalPrice);
+  };
+
+  const canSubmit = selectedServices.length > 0 && selectedStaff && date && selectedTime && form.watch("client");
 
   if (isSuccess) {
     return (
@@ -225,12 +252,12 @@ export default function Booking() {
               </span>
               <span className="font-semibold">{selectedTime}</span>
             </div>
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-start">
               <span className="text-muted-foreground flex items-center gap-2">
                 <Scissors className="w-4 h-4" />
                 {t("booking.service")}
               </span>
-              <span className="font-semibold">{selectedService}</span>
+              <span className="font-semibold text-right max-w-[180px]">{form.getValues("service")}</span>
             </div>
             <div className="flex justify-between items-center border-t border-border/50 pt-3 mt-3">
               <span className="text-muted-foreground">{t("common.price")}</span>
@@ -315,13 +342,13 @@ export default function Booking() {
                   <FormField
                     control={form.control}
                     name="service"
-                    render={({ field }) => (
+                    render={() => (
                       <FormItem>
                         <FormLabel className="flex items-center gap-2 text-sm font-medium">
                           <Scissors className="w-4 h-4 text-primary" />
                           {t("booking.requiredService")}
                         </FormLabel>
-                        <Select onValueChange={handleServiceChange} value={field.value}>
+                        <Select onValueChange={handleAddService} value="">
                           <FormControl>
                             <SelectTrigger className="h-12 rounded-xl bg-background/50 backdrop-blur-sm border-border/50">
                               <SelectValue placeholder={t("booking.selectService")} />
@@ -333,25 +360,57 @@ export default function Booking() {
                                 <div className="px-3 py-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">
                                   {cat}
                                 </div>
-                                {services.filter(s => s.category === cat).map(s => (
-                                  <SelectItem key={s.id} value={s.name} className="rounded-lg">
-                                    <div className="flex justify-between items-center w-full gap-4">
-                                      <span>{s.name}</span>
-                                      <span className="text-primary font-bold">{s.price} {t("common.currency")}</span>
-                                    </div>
-                                  </SelectItem>
-                                ))}
+                                {services.filter(s => s.category === cat).map(s => {
+                                  const isSelected = selectedServices.some(sel => sel.name === s.name);
+                                  return (
+                                    <SelectItem 
+                                      key={s.id} 
+                                      value={s.name} 
+                                      className={cn("rounded-lg", isSelected && "opacity-50")}
+                                      disabled={isSelected}
+                                    >
+                                      <div className="flex justify-between items-center w-full gap-4">
+                                        <span>{s.name}</span>
+                                        <span className="text-primary font-bold">{s.price} {t("common.currency")}</span>
+                                      </div>
+                                    </SelectItem>
+                                  );
+                                })}
                               </div>
                             ))}
                           </SelectContent>
                         </Select>
-                        {selectedService && (
-                          <div className="glass-subtle rounded-xl p-3 mt-2">
-                            <p className="text-sm text-muted-foreground">
-                              <span className="font-medium text-foreground">{t("common.duration")}:</span> {form.getValues("duration")} {t("common.minutes")} 
-                              <span className="mx-2">•</span>
-                              <span className="font-medium text-foreground">{t("common.price")}:</span> <span className="text-primary font-bold">{form.getValues("total")} {t("common.currency")}</span>
-                            </p>
+                        
+                        {selectedServices.length > 0 && (
+                          <div className="space-y-3 mt-3">
+                            <div className="flex flex-wrap gap-2">
+                              {selectedServices.map((service, index) => (
+                                <div 
+                                  key={index}
+                                  className="glass-subtle rounded-xl px-3 py-2 flex items-center gap-2 group animate-fade-in"
+                                >
+                                  <span className="text-sm font-medium">{service.name}</span>
+                                  <span className="text-xs text-primary font-bold">{service.price} {t("common.currency")}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveService(index)}
+                                    className="w-5 h-5 rounded-full bg-destructive/10 hover:bg-destructive/20 flex items-center justify-center transition-colors"
+                                  >
+                                    <X className="w-3 h-3 text-destructive" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="glass-subtle rounded-xl p-3">
+                              <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">{t("common.duration")}:</span>
+                                <span className="font-medium">{form.getValues("duration")} {t("common.minutes")}</span>
+                              </div>
+                              <div className="flex justify-between text-sm mt-1">
+                                <span className="text-muted-foreground">{t("common.price")}:</span>
+                                <span className="text-primary font-bold text-lg">{form.getValues("total")} {t("common.currency")}</span>
+                              </div>
+                            </div>
                           </div>
                         )}
                         <FormMessage />
