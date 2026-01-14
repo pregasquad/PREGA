@@ -678,19 +678,22 @@ export default function Planning() {
   };
 
   const handlePriceInputChange = (serviceId: string, value: string) => {
-    setPriceInputs(prev => ({ ...prev, [serviceId]: value }));
-  };
-  
-  const handlePriceInputBlur = (serviceId: string) => {
-    const inputValue = priceInputs[serviceId] || "0";
-    const newPrice = parseFloat(inputValue.replace(',', '.')) || 0;
-    const updated = selectedServices.map(s => 
+    setPriceInputs(prev => {
+      const newInputs = { ...prev, [serviceId]: value };
+      // Calculate total from all inputs immediately
+      const totalPrice = selectedServices.reduce((sum, s) => {
+        const inputVal = s.id === serviceId ? value : (newInputs[s.id] ?? String(s.price));
+        return sum + (parseFloat(inputVal.replace(',', '.')) || 0);
+      }, 0);
+      form.setValue("price", totalPrice);
+      form.setValue("total", totalPrice);
+      return newInputs;
+    });
+    // Also update the service price immediately
+    const newPrice = parseFloat(value.replace(',', '.')) || 0;
+    setSelectedServices(prev => prev.map(s => 
       s.id === serviceId ? { ...s, price: newPrice } : s
-    );
-    setSelectedServices(updated);
-    const totalPrice = updated.reduce((sum, s) => sum + s.price, 0);
-    form.setValue("price", totalPrice);
-    form.setValue("total", totalPrice);
+    ));
   };
 
   const handleServiceChange = (serviceName: string) => {
@@ -1454,7 +1457,6 @@ export default function Planning() {
                             inputMode="decimal"
                             value={priceInputs[s.id] ?? String(s.price)}
                             onChange={(e) => handlePriceInputChange(s.id, e.target.value)}
-                            onBlur={() => handlePriceInputBlur(s.id)}
                             className="w-16 h-6 text-xs text-center font-bold rounded border border-primary/30 bg-white/80 dark:bg-slate-800/80 focus:ring-2 focus:ring-primary/50 focus:border-primary"
                           />
                           <span className="text-muted-foreground text-[10px]">DH</span>
