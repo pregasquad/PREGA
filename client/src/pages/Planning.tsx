@@ -609,8 +609,9 @@ export default function Planning() {
       servicesJson: selectedServices.length > 0 ? selectedServices : undefined,
       service: selectedServices.length > 0 ? selectedServices.map(s => s.name).join(', ') : data.service,
       duration: selectedServices.length > 0 ? selectedServices.reduce((sum, s) => sum + s.duration, 0) : data.duration,
-      price: selectedServices.length > 0 ? selectedServices.reduce((sum, s) => sum + s.price, 0) : data.price,
-      total: selectedServices.length > 0 ? selectedServices.reduce((sum, s) => sum + s.price, 0) : data.total,
+      // Use form values for price/total to allow manual override
+      price: data.price,
+      total: data.total,
     };
 
     if (editingAppointment) {
