@@ -511,10 +511,15 @@ export default function Planning() {
       }
     }
     // Fall back to single service if no servicesJson
+    // Use saved appointment price/duration, not the service definition
     if (parsedServices.length === 0 && app.service) {
       const svc = services.find(s => s.name === app.service);
       if (svc) {
-        parsedServices = [{ name: svc.name, price: svc.price, duration: svc.duration }];
+        parsedServices = [{ 
+          name: svc.name, 
+          price: app.price || svc.price, 
+          duration: app.duration || svc.duration 
+        }];
       }
     }
     setSelectedServices(parsedServices);
