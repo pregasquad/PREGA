@@ -691,9 +691,20 @@ export default function Planning() {
     const staffMember = staffList.find(s => s.name === staffName);
     if (!staffMember) return;
 
+    // Parse servicesJson if it's a string (from API response)
+    let parsedServicesJson = draggedAppointment.servicesJson;
+    if (typeof parsedServicesJson === 'string') {
+      try {
+        parsedServicesJson = JSON.parse(parsedServicesJson);
+      } catch {
+        parsedServicesJson = null;
+      }
+    }
+
     try {
       await apiRequest("PUT", `/api/appointments/${draggedAppointment.id}`, {
         ...draggedAppointment,
+        servicesJson: parsedServicesJson,
         staff: staffName,
         startTime: newTime,
       });
