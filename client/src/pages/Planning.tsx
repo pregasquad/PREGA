@@ -1179,7 +1179,7 @@ export default function Planning() {
                     >
                       <div 
                         className={cn(
-                          "appointment-card h-full p-2.5 text-white cursor-grab active:cursor-grabbing flex flex-col justify-between relative overflow-hidden",
+                          "appointment-card h-full p-1.5 text-white cursor-grab active:cursor-grabbing flex flex-col relative overflow-hidden",
                           isDragging && "opacity-50 scale-95"
                         )}
                         style={{ 
@@ -1192,36 +1192,30 @@ export default function Planning() {
                         onClick={(e) => handleAppointmentClick(e, booking)}
                       >
                         <div className="water-shimmer absolute inset-0 opacity-30" />
-                        <div className="relative z-10">
-                          <div className="font-semibold text-xs md:text-sm truncate">{booking.client || "—"}</div>
-                          <div className="text-[10px] md:text-xs opacity-90">
-                            {booking.service?.includes(',') ? (
-                              booking.service.split(',').map((svc: string, idx: number) => (
-                                <div key={idx} className="truncate">- {svc.trim()}</div>
-                              ))
-                            ) : (
-                              <div className="truncate">{booking.service}</div>
-                            )}
+                        <div className="relative z-10 flex-1 min-h-0 flex flex-col">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="font-semibold text-[11px] truncate flex-1">{booking.client || "—"}</span>
+                            <span className="text-[9px] opacity-70 shrink-0">{booking.startTime}</span>
                           </div>
-                          <div className="text-[9px] opacity-70 font-medium">{booking.startTime}</div>
-                        </div>
-                        <div className="flex items-center justify-between mt-auto relative z-10">
-                          <span className="text-[10px] opacity-80 font-medium">{booking.duration}′</span>
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-xs">{booking.total} DH</span>
-                            {booking.paid ? (
-                              <span className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center shadow-sm" title="Paid">
-                                <Check className="w-3 h-3 text-white" />
-                              </span>
-                            ) : (
-                              <button
-                                onClick={(e) => handleMarkAsPaid(e, booking)}
-                                className="w-5 h-5 bg-white/25 hover:bg-white/40 rounded-full flex items-center justify-center transition-colors"
-                                title="Mark as paid"
-                              >
-                                <CreditCard className="w-3 h-3" />
-                              </button>
-                            )}
+                          <div className="text-[9px] opacity-90 truncate leading-tight">{booking.service}</div>
+                          <div className="flex items-center justify-between mt-auto pt-0.5">
+                            <span className="text-[9px] opacity-70">{booking.duration}′</span>
+                            <div className="flex items-center gap-1">
+                              <span className="font-bold text-[10px]">{booking.total} DH</span>
+                              {booking.paid ? (
+                                <span className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center" title="Paid">
+                                  <Check className="w-2.5 h-2.5 text-white" />
+                                </span>
+                              ) : (
+                                <button
+                                  onClick={(e) => handleMarkAsPaid(e, booking)}
+                                  className="w-4 h-4 bg-white/25 hover:bg-white/40 rounded-full flex items-center justify-center transition-colors"
+                                  title="Mark as paid"
+                                >
+                                  <CreditCard className="w-2.5 h-2.5" />
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
