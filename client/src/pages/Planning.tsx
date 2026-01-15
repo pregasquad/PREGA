@@ -1179,7 +1179,7 @@ export default function Planning() {
                     >
                       <div 
                         className={cn(
-                          "appointment-card h-full p-1.5 text-white cursor-grab active:cursor-grabbing flex flex-col relative overflow-hidden",
+                          "appointment-card h-full px-1.5 py-1 text-white cursor-grab active:cursor-grabbing flex flex-col justify-center relative overflow-hidden",
                           isDragging && "opacity-50 scale-95"
                         )}
                         style={{ 
@@ -1192,27 +1192,24 @@ export default function Planning() {
                         onClick={(e) => handleAppointmentClick(e, booking)}
                       >
                         <div className="water-shimmer absolute inset-0 opacity-30" />
-                        <div className="relative z-10 flex-1 min-h-0 flex flex-col">
-                          <div className="flex items-center justify-between gap-1">
-                            <span className="font-semibold text-[11px] truncate flex-1">{booking.client || "—"}</span>
-                            <span className="text-[9px] opacity-70 shrink-0">{booking.startTime}</span>
-                          </div>
-                          <div className="text-[9px] opacity-90 truncate leading-tight">{booking.service}</div>
-                          <div className="flex items-center justify-between mt-auto pt-0.5">
-                            <span className="text-[9px] opacity-70">{booking.duration}′</span>
-                            <div className="flex items-center gap-1">
-                              <span className="font-bold text-[10px]">{booking.total} DH</span>
+                        <div className="relative z-10 space-y-0.5">
+                          <div className="font-bold text-[11px] truncate">{booking.client || "—"}</div>
+                          <div className="text-[10px] opacity-95 truncate font-medium">{booking.service}</div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-[9px] opacity-80">{booking.startTime} · {booking.duration}′</span>
+                            <div className="flex items-center gap-0.5">
+                              <span className="font-bold text-[9px]">{booking.total}</span>
                               {booking.paid ? (
-                                <span className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center" title="Paid">
-                                  <Check className="w-2.5 h-2.5 text-white" />
+                                <span className="w-3.5 h-3.5 bg-green-500 rounded-full flex items-center justify-center" title="Paid">
+                                  <Check className="w-2 h-2 text-white" />
                                 </span>
                               ) : (
                                 <button
                                   onClick={(e) => handleMarkAsPaid(e, booking)}
-                                  className="w-4 h-4 bg-white/25 hover:bg-white/40 rounded-full flex items-center justify-center transition-colors"
+                                  className="w-3.5 h-3.5 bg-white/25 hover:bg-white/40 rounded-full flex items-center justify-center transition-colors"
                                   title="Mark as paid"
                                 >
-                                  <CreditCard className="w-2.5 h-2.5" />
+                                  <CreditCard className="w-2 h-2" />
                                 </button>
                               )}
                             </div>
