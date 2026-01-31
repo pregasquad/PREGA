@@ -380,6 +380,7 @@
     "adminLogin": "Admin Login",
     "password": "Password",
     "wrongPassword": "Wrong password",
+    "offlineNoCredentials": "You must login online first to use offline mode",
     "protectedArea": "Protected Area",
     "enterPasswordPrompt": "Please enter the password to access this page",
     "welcome": "Welcome",

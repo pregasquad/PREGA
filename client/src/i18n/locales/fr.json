@@ -380,6 +380,7 @@
     "adminLogin": "Connexion Admin",
     "password": "Mot de passe",
     "wrongPassword": "Mot de passe incorrect",
+    "offlineNoCredentials": "Vous devez vous connecter en ligne d'abord pour utiliser le mode hors ligne",
     "protectedArea": "Zone Protégée",
     "enterPasswordPrompt": "Veuillez entrer le mot de passe pour accéder à cette page",
     "welcome": "Bienvenue",

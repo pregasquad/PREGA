@@ -380,6 +380,7 @@
     "adminLogin": "دخول المدير",
     "password": "كلمة المرور",
     "wrongPassword": "كلمة المرور خاطئة",
+    "offlineNoCredentials": "يجب عليك تسجيل الدخول عبر الإنترنت أولاً لاستخدام وضع عدم الاتصال",
     "protectedArea": "منطقة محمية",
     "enterPasswordPrompt": "يرجى إدخال كلمة المرور للوصول إلى هذه الصفحة",
     "welcome": "مرحباً",

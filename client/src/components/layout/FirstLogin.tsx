@@ -9,6 +9,29 @@ import { apiRequest } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
+async function hashPin(pin: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(pin + "pregasquad_salt_2024");
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function getOfflineCredentials(): Record<string, { hash: string; role: string; permissions: string[] }> {
+  try {
+    const stored = localStorage.getItem("offline_credentials");
+    return stored ? JSON.parse(stored) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveOfflineCredential(name: string, pinHash: string, role: string, permissions: string[]) {
+  const credentials = getOfflineCredentials();
+  credentials[name] = { hash: pinHash, role, permissions };
+  localStorage.setItem("offline_credentials", JSON.stringify(credentials));
+}
+
 interface AdminRole {
   id: number;
   name: string;
@@ -133,6 +156,45 @@ export function FirstLogin({ children }: FirstLoginProps) {
 
     setIsLoading(true);
 
+    const isOffline = !navigator.onLine;
+    
+    if (isOffline) {
+      const credentials = getOfflineCredentials();
+      const userCreds = credentials[selectedUser.name];
+      
+      if (!userCreds) {
+        setError(t("auth.offlineNoCredentials"));
+        setPin("");
+        setIsLoading(false);
+        return;
+      }
+      
+      const enteredHash = await hashPin(pin);
+      
+      if (enteredHash === userCreds.hash) {
+        sessionStorage.removeItem("explicit_logout");
+        localStorage.removeItem("explicit_logout");
+        
+        const perms = JSON.stringify(userCreds.permissions || []);
+        sessionStorage.setItem("user_authenticated", "true");
+        sessionStorage.setItem("current_user", selectedUser.name);
+        sessionStorage.setItem("current_user_role", userCreds.role || "");
+        sessionStorage.setItem("current_user_permissions", perms);
+        
+        localStorage.setItem("user_authenticated", "true");
+        localStorage.setItem("current_user", selectedUser.name);
+        localStorage.setItem("current_user_role", userCreds.role || "");
+        localStorage.setItem("current_user_permissions", perms);
+        
+        setIsAuthenticated(true);
+      } else {
+        setError(t("auth.wrongPassword"));
+        setPin("");
+      }
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const response = await apiRequest("POST", "/api/admin-roles/verify-pin", {
         name: selectedUser.name,
@@ -156,12 +218,42 @@ export function FirstLogin({ children }: FirstLoginProps) {
         localStorage.setItem("current_user_role", data.role || "");
         localStorage.setItem("current_user_permissions", perms);
         
+        const pinHash = await hashPin(pin);
+        saveOfflineCredential(selectedUser.name, pinHash, data.role || "", data.permissions || []);
+        
         setIsAuthenticated(true);
       } else {
         setError(t("auth.wrongPassword"));
         setPin("");
       }
     } catch (err) {
+      const credentials = getOfflineCredentials();
+      const userCreds = credentials[selectedUser.name];
+      
+      if (userCreds) {
+        const enteredHash = await hashPin(pin);
+        
+        if (enteredHash === userCreds.hash) {
+          sessionStorage.removeItem("explicit_logout");
+          localStorage.removeItem("explicit_logout");
+          
+          const perms = JSON.stringify(userCreds.permissions || []);
+          sessionStorage.setItem("user_authenticated", "true");
+          sessionStorage.setItem("current_user", selectedUser.name);
+          sessionStorage.setItem("current_user_role", userCreds.role || "");
+          sessionStorage.setItem("current_user_permissions", perms);
+          
+          localStorage.setItem("user_authenticated", "true");
+          localStorage.setItem("current_user", selectedUser.name);
+          localStorage.setItem("current_user_role", userCreds.role || "");
+          localStorage.setItem("current_user_permissions", perms);
+          
+          setIsAuthenticated(true);
+          setIsLoading(false);
+          return;
+        }
+      }
+      
       setError(t("auth.wrongPassword"));
       setPin("");
     } finally {
