@@ -11,6 +11,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { ar, enUS, fr } from "date-fns/locale";
 import { Clock, CheckCircle2, Scissors, User, Phone, CalendarDays, Sparkles, X } from "lucide-react";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
 
@@ -72,6 +73,10 @@ export default function Booking() {
   const [services, setServices] = useState<Service[]>([]);
   const [appointments, setAppointments] = useState<MinimalAppointment[]>([]);
   const [selectedServices, setSelectedServices] = useState<SelectedService[]>([]);
+
+  useEffect(() => {
+    i18n.changeLanguage("fr");
+  }, []);
 
   useEffect(() => {
     fetch("/api/public/staff")
@@ -280,6 +285,9 @@ export default function Booking() {
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl opacity-40" />
       
       <div className="max-w-4xl mx-auto space-y-6 relative z-10 animate-fade-in">
+        <div className="flex justify-end mb-2">
+          <LanguageSwitcher />
+        </div>
         <div className="text-center space-y-3 py-4">
           <div className="flex justify-center mb-4">
             <div className="glass-card p-4 rounded-3xl">
