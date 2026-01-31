@@ -193,6 +193,7 @@ export const insertStaffSchema = createInsertSchema(staff).omit({ id: true }).ex
   phone: z.string().optional(),
   email: z.string().email().optional().or(z.literal("")),
   baseSalary: z.number().min(0).optional(),
+  category: z.string().optional(),
 });
 
 export type Appointment = typeof appointments.$inferSelect;

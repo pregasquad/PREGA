@@ -37,6 +37,7 @@ interface Staff {
   id: number;
   name: string;
   color: string;
+  category: string | null;
 }
 
 interface Service {
@@ -129,6 +130,21 @@ export default function Booking() {
   const categories = useMemo(() => {
     return Array.from(new Set(services.map(s => s.category)));
   }, [services]);
+
+  const filteredStaffList = useMemo(() => {
+    if (selectedServices.length === 0) {
+      return staffList;
+    }
+    const selectedCategories = new Set(
+      selectedServices.map(s => {
+        const service = services.find(svc => svc.name === s.name);
+        return service?.category;
+      }).filter(Boolean)
+    );
+    return staffList.filter(staff => 
+      !staff.category || selectedCategories.has(staff.category)
+    );
+  }, [staffList, selectedServices, services]);
 
   const getAvailableSlots = useMemo(() => {
     if (!selectedStaff || !date) return [];
@@ -431,7 +447,7 @@ export default function Booking() {
                       <FormItem>
                         <FormLabel className="text-sm font-medium">{t("booking.preferredStaff")}</FormLabel>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                          {staffList.map(s => (
+                          {filteredStaffList.map(s => (
                             <Button
                               key={s.id}
                               type="button"

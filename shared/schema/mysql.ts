@@ -107,6 +107,7 @@ export const staff = mysqlTable("staff", {
   phone: text("phone"),
   email: text("email"),
   baseSalary: double("base_salary").notNull().default(0),
+  category: text("category"),
 });
 
 export const expenseCategories = mysqlTable("expense_categories", {
@@ -192,6 +193,7 @@ export const insertStaffSchema = createInsertSchema(staff).omit({ id: true }).ex
   phone: z.string().optional(),
   email: z.string().email().optional().or(z.literal("")),
   baseSalary: z.number().min(0).optional(),
+  category: z.string().optional(),
 });
 
 export type Appointment = typeof appointments.$inferSelect;
