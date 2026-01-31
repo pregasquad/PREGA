@@ -385,7 +385,7 @@ export function Sidebar() {
                         )} />
                       </SidebarMenuButton>
                     </CollapsibleTrigger>
-                    <CollapsibleContent className="pl-4 space-y-1 mt-1">
+                    <CollapsibleContent className="pl-4 space-y-1 mt-1 overflow-hidden data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">
                       {filteredStaffItems.map((staffItem) => {
                         const staffIsActive = location === staffItem.href;
                         const staffLabel = t(staffItem.labelKey);
