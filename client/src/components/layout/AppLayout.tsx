@@ -1,10 +1,13 @@
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Sidebar } from "./Sidebar";
 import { SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { PushNotifications } from "@/components/PushNotifications";
+import { OfflineIndicator } from "@/components/OfflineIndicator";
+import { initOfflineDb } from "@/lib/offlineDb";
+import { startAutoSync, refreshAndCacheData } from "@/lib/syncService";
 
 function SwipeableContent({ children, isRtl }: { children: React.ReactNode; isRtl: boolean }) {
   const { openMobile, setOpenMobile, isMobile } = useSidebar();
@@ -82,6 +85,18 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const isRtl = i18n.language === "ar";
   const [location] = useLocation();
   
+  // Initialize offline database and sync service
+  useEffect(() => {
+    const initOffline = async () => {
+      await initOfflineDb();
+      startAutoSync(30000); // Sync every 30 seconds
+      if (navigator.onLine) {
+        refreshAndCacheData(); // Cache all data on first load
+      }
+    };
+    initOffline();
+  }, []);
+  
   // Planning page handles its own scrolling - disable outer scroll
   const isPlanning = location === "/" || location === "/planning";
 
@@ -114,6 +129,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
           </main>
         </SwipeableContent>
+        <OfflineIndicator />
       </div>
     </SidebarProvider>
   );
