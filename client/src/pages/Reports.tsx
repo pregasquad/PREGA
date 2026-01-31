@@ -92,7 +92,8 @@ export default function Reports() {
     }).filter(item => item.value > 0);
 
     const serviceCounts = filteredAppointments.reduce((acc, app) => {
-      acc[app.service] = (acc[app.service] || 0) + 1;
+      const serviceName = app.service || "Unknown";
+      acc[serviceName] = (acc[serviceName] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
@@ -111,11 +112,12 @@ export default function Reports() {
       const paidEarnings = staffApps.filter(app => app.paid).reduce((sum, app) => sum + Number(app.total || 0), 0);
       
       const serviceBreakdown = staffApps.reduce((acc, app) => {
-        if (!acc[app.service]) {
-          acc[app.service] = { count: 0, revenue: 0 };
+        const serviceName = app.service || "Unknown";
+        if (!acc[serviceName]) {
+          acc[serviceName] = { count: 0, revenue: 0 };
         }
-        acc[app.service].count += 1;
-        acc[app.service].revenue += Number(app.total || 0);
+        acc[serviceName].count += 1;
+        acc[serviceName].revenue += Number(app.total || 0);
         return acc;
       }, {} as Record<string, { count: number; revenue: number }>);
 
