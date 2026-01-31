@@ -107,6 +107,7 @@ export const staff = pgTable("staff", {
   phone: text("phone"),
   email: text("email"),
   baseSalary: doublePrecision("base_salary").notNull().default(0),
+  category: text("category"),
 });
 
 export const expenseCategories = pgTable("expense_categories", {
