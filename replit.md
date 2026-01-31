@@ -95,11 +95,14 @@ Preferred communication style: Simple, everyday language.
 - **Route**: `/booking` - Public-facing appointment booking page
 - **Design**: iOS liquid glass aesthetic with glassmorphism effects, gradient backgrounds, and smooth animations
 - **Multi-Service Support**: Clients can select multiple services, shown as removable pills with total calculation
+- **Visitor Counter**: Displays total visitor count on the booking page, tracked via `page_views` table with atomic upserts
 - **Public API Endpoints** (rate-limited, sanitized responses):
   - `GET /api/public/services` - Service list (id, name, category, duration, price only)
   - `GET /api/public/staff` - Staff list (id, name, color only)
   - `GET /api/public/appointments` - Availability check (minimal appointment data)
   - `POST /api/public/appointments` - Create booking (strict input validation, forced unpaid status, multi-service support)
+  - `GET /api/public/page-views` - Get visitor count for a page
+  - `POST /api/public/page-views` - Increment and return visitor count for a page
 - **Security**: Rate limiting (10 req/min per IP), input validation with Zod, sanitized responses
 
 ### Notifications
