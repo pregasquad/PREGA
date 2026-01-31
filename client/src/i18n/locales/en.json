@@ -550,7 +550,9 @@
     "lowStockAlert": "Low Stock Alert",
     "noAppointmentsToday": "No appointments scheduled for today",
     "teamStatus": "Team Status",
-    "appointmentsToday": "appointments today"
+    "appointmentsToday": "appointments today",
+    "category": "Category",
+    "selectCategory": "Select Category"
   },
   "login": {
     "welcomeBack": "Welcome Back",

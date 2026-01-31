@@ -550,7 +550,9 @@
     "lowStockAlert": "تنبيه المخزون المنخفض",
     "noAppointmentsToday": "لا توجد مواعيد مجدولة لليوم",
     "teamStatus": "حالة الفريق",
-    "appointmentsToday": "مواعيد اليوم"
+    "appointmentsToday": "مواعيد اليوم",
+    "category": "الفئة",
+    "selectCategory": "اختر الفئة"
   },
   "login": {
     "welcomeBack": "مرحباً بعودتك",

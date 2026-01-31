@@ -1,4 +1,4 @@
-import { useAppointments, useStaff, useServices, useClients } from "@/hooks/use-salon-data";
+import { useAppointments, useStaff, useServices, useClients, useCategories } from "@/hooks/use-salon-data";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Scissors, CalendarCheck, TrendingUp, Clock, Package, UserPlus, Pencil, Trash2, LogOut, AlertTriangle, Banknote, CreditCard, RefreshCw } from "lucide-react";
@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -35,6 +36,7 @@ export default function Home() {
   const { data: staff = [] } = useStaff();
   const { data: services = [] } = useServices();
   const { data: clients = [] } = useClients();
+  const { data: categories = [] } = useCategories();
   const { data: lowStockProducts = [] } = useQuery({
     queryKey: ["/api/products/low-stock"],
     queryFn: async () => {
@@ -57,7 +59,7 @@ export default function Home() {
 
   const staffForm = useForm({
     resolver: zodResolver(insertStaffSchema),
-    defaultValues: { name: "", color: "#" + Math.floor(Math.random()*16777215).toString(16) }
+    defaultValues: { name: "", color: "#" + Math.floor(Math.random()*16777215).toString(16), category: "" }
   });
 
   const createStaffMutation = useMutation({
@@ -68,7 +70,7 @@ export default function Home() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
       setIsStaffDialogOpen(false);
-      staffForm.reset({ name: "", color: "#" + Math.floor(Math.random()*16777215).toString(16) });
+      staffForm.reset({ name: "", color: "#" + Math.floor(Math.random()*16777215).toString(16), category: "" });
       toast({ title: t("home.staffAdded") });
     }
   });
@@ -156,6 +158,23 @@ export default function Home() {
                   )} />
                   <FormField control={staffForm.control} name="color" render={({ field }) => (
                     <FormItem><FormLabel>{t("home.color")}</FormLabel><FormControl><Input type="color" {...field} /></FormControl></FormItem>
+                  )} />
+                  <FormField control={staffForm.control} name="category" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("home.category")}</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || ""}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder={t("home.selectCategory")} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {categories.map((cat: any) => (
+                            <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
                   )} />
                   <Button type="submit" className="w-full" disabled={createStaffMutation.isPending}>
                     {createStaffMutation.isPending ? t("home.adding") : t("home.add")}
@@ -279,7 +298,8 @@ export default function Home() {
                                 const formData = new FormData(e.currentTarget);
                                 updateStaffMutation.mutate({
                                   name: formData.get("name"),
-                                  color: formData.get("color")
+                                  color: formData.get("color"),
+                                  category: formData.get("category")
                                 });
                               }} 
                               className="space-y-4"
@@ -291,6 +311,15 @@ export default function Home() {
                               <div className="space-y-2">
                                 <label className="text-sm font-medium">{t("home.color")}</label>
                                 <Input name="color" type="color" defaultValue={s.color} required />
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-sm font-medium">{t("home.category")}</label>
+                                <select name="category" defaultValue={s.category || ""} className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm">
+                                  <option value="">{t("home.selectCategory")}</option>
+                                  {categories.map((cat: any) => (
+                                    <option key={cat.id} value={cat.name}>{cat.name}</option>
+                                  ))}
+                                </select>
                               </div>
                               <Button type="submit" className="w-full" disabled={updateStaffMutation.isPending}>
                                 {updateStaffMutation.isPending ? t("home.updating") : t("home.update")}

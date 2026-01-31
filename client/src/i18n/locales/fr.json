@@ -550,7 +550,9 @@
     "lowStockAlert": "Alerte Stock Bas",
     "noAppointmentsToday": "Aucun rendez-vous prévu pour aujourd'hui",
     "teamStatus": "État de l'Équipe",
-    "appointmentsToday": "rendez-vous aujourd'hui"
+    "appointmentsToday": "rendez-vous aujourd'hui",
+    "category": "Catégorie",
+    "selectCategory": "Sélectionner Catégorie"
   },
   "login": {
     "welcomeBack": "Bienvenue",
