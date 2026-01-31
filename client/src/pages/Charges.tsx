@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth, parseISO, isWithinInterval, subMonths, addMonths } from "date-fns";
+import { fr, enUS, ar } from "date-fns/locale";
 import { useTranslation } from "react-i18next";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, TrendingDown, FolderPlus, RefreshCw } from "lucide-react";
+import { Plus, Trash2, TrendingDown, FolderPlus, RefreshCw, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 
 const DEFAULT_CHARGE_TYPES_KEYS = [
   { id: 0, key: "expenses.product", value: "Produit" },
@@ -27,9 +28,22 @@ export default function Charges() {
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState(new Date());
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isAdmin = sessionStorage.getItem("admin_authenticated") === "true";
+
+  const getLocale = () => {
+    switch (i18n.language) {
+      case "fr": return fr;
+      case "ar": return ar;
+      default: return enUS;
+    }
+  };
+
+  const goToPreviousMonth = () => setSelectedMonth(subMonths(selectedMonth, 1));
+  const goToNextMonth = () => setSelectedMonth(addMonths(selectedMonth, 1));
+  const goToCurrentMonth = () => setSelectedMonth(new Date());
 
   const { data: charges = [] } = useQuery({
     queryKey: ["/api/charges"],
@@ -106,20 +120,47 @@ export default function Charges() {
     });
   };
 
-  const totalCharges = charges.reduce((sum: number, c: any) => sum + c.amount, 0);
+  const monthStart = startOfMonth(selectedMonth);
+  const monthEnd = endOfMonth(selectedMonth);
+  
+  const filteredCharges = charges.filter((charge: any) => {
+    try {
+      const chargeDate = parseISO(charge.date);
+      return isWithinInterval(chargeDate, { start: monthStart, end: monthEnd });
+    } catch {
+      return false;
+    }
+  });
+
+  const totalCharges = filteredCharges.reduce((sum: number, c: any) => sum + c.amount, 0);
 
   return (
     <div className="h-full flex flex-col gap-4 md:gap-6 p-2 md:p-4 animate-fade-in" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <h1 className="text-xl md:text-2xl lg:text-3xl font-display font-bold">{t("expenses.title")}</h1>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => queryClient.invalidateQueries()}
-          title={t("common.refresh")}
-        >
-          <RefreshCw className="h-4 w-4" />
-        </Button>
+        
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goToPreviousMonth}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="sm" className="h-8 px-3 min-w-[140px]" onClick={goToCurrentMonth}>
+              <Calendar className="h-4 w-4 mr-2" />
+              <span className="capitalize">{format(selectedMonth, "MMMM yyyy", { locale: getLocale() })}</span>
+            </Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goToNextMonth}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => queryClient.invalidateQueries()}
+            title={t("common.refresh")}
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
@@ -201,7 +242,7 @@ export default function Charges() {
           <CardTitle>{t("expenses.expenseList")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {charges.map((charge: any) => (
+          {filteredCharges.map((charge: any) => (
             <div key={charge.id} className="p-3 bg-red-50 dark:bg-red-950/20 rounded-lg flex justify-between items-center">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -227,9 +268,9 @@ export default function Charges() {
               )}
             </div>
           ))}
-          {charges.length === 0 && (
+          {filteredCharges.length === 0 && (
             <p className="text-center text-muted-foreground py-8">
-              {t("expenses.noExpenses")}
+              {t("expenses.noExpensesForPeriod")}
             </p>
           )}
         </CardContent>
