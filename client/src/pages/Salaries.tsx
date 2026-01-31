@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { DollarSign, Users, CalendarIcon, TrendingUp, Building2, Edit2, Check, X, RefreshCw, Plus, Trash2, Receipt, UserMinus, ChevronDown } from "lucide-react";
+import { DollarSign, Users, CalendarIcon, TrendingUp, Building2, RefreshCw, Plus, Trash2, Receipt, UserMinus, ChevronDown } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { io, Socket } from "socket.io-client";
@@ -30,12 +30,9 @@ export default function Salaries() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [period, setPeriod] = useState<PeriodType>("month");
   const [selectedStaff, setSelectedStaff] = useState<string>("all");
-  const [editingServiceId, setEditingServiceId] = useState<number | null>(null);
-  const [editValue, setEditValue] = useState<string>("");
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [showChargeDialog, setShowChargeDialog] = useState(false);
   const [showDeductionDialog, setShowDeductionDialog] = useState(false);
-  const [commissionRatesOpen, setCommissionRatesOpen] = useState(false);
   const [expensesOpen, setExpensesOpen] = useState(false);
   const [deductionsOpen, setDeductionsOpen] = useState(false);
   const [newCharge, setNewCharge] = useState({ type: "rent", name: "", amount: 0, date: format(new Date(), "yyyy-MM-dd") });
@@ -144,35 +141,6 @@ export default function Salaries() {
       queryClient.invalidateQueries({ queryKey: ["/api/staff-deductions"] });
     },
   });
-
-  const updateCommissionMutation = useMutation({
-    mutationFn: async ({ id, commissionPercent }: { id: number; commissionPercent: number }) => {
-      const res = await apiRequest("PATCH", `/api/services/${id}`, { commissionPercent });
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/services"] });
-      setEditingServiceId(null);
-      setEditValue("");
-    },
-  });
-
-  const startEditing = (service: Service) => {
-    setEditingServiceId(service.id);
-    setEditValue(String(service.commissionPercent ?? 50));
-  };
-
-  const saveCommission = (id: number) => {
-    const value = parseInt(editValue);
-    if (!isNaN(value) && value >= 0 && value <= 100) {
-      updateCommissionMutation.mutate({ id, commissionPercent: value });
-    }
-  };
-
-  const cancelEditing = () => {
-    setEditingServiceId(null);
-    setEditValue("");
-  };
 
   const getDateRange = () => {
     switch (period) {
@@ -505,95 +473,6 @@ export default function Salaries() {
           </CardContent>
         </Card>
       )}
-
-      <Collapsible open={commissionRatesOpen} onOpenChange={setCommissionRatesOpen}>
-        <Card>
-          <CollapsibleTrigger asChild>
-            <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors p-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">{t("salaries.commissionRatesByService")}</CardTitle>
-                <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${commissionRatesOpen ? 'rotate-180' : ''}`} />
-              </div>
-            </CardHeader>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <CardContent className="p-3 pt-0 space-y-2">
-              {services.map((service) => {
-                const commissionPercent = service.commissionPercent ?? 50;
-                const staffAmount = (service.price * commissionPercent) / 100;
-                const salonAmount = service.price - staffAmount;
-                const isEditing = editingServiceId === service.id;
-
-                return (
-                  <div key={service.id} className="p-3 bg-muted/50 rounded-lg">
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium text-base">{service.name}</span>
-                      <div className="flex items-center gap-1">
-                        {isEditing ? (
-                          <>
-                            <Input
-                              type="number"
-                              min={0}
-                              max={100}
-                              value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
-                              className="w-16 h-8 text-sm"
-                            />
-                            <span className="text-sm">%</span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={() => saveCommission(service.id)}
-                              disabled={updateCommissionMutation.isPending}
-                            >
-                              <Check className="h-4 w-4 text-green-600" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={cancelEditing}
-                            >
-                              <X className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </>
-                        ) : (
-                          <>
-                            <span className="text-sm bg-primary/10 px-2 py-0.5 rounded">{commissionPercent}%</span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={() => startEditing(service)}
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 mt-1 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">{t("salaries.price")}:</span>
-                        <span>{formatCurrency(service.price)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Staff:</span>
-                        <span className="text-green-600">{formatCurrency(staffAmount)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Salon:</span>
-                        <span className="text-primary">{formatCurrency(salonAmount)}</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </CardContent>
-          </CollapsibleContent>
-        </Card>
-      </Collapsible>
 
       <Collapsible open={expensesOpen} onOpenChange={setExpensesOpen}>
         <Card>
