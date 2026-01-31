@@ -32,6 +32,18 @@ function saveOfflineCredential(name: string, pinHash: string, role: string, perm
   localStorage.setItem("offline_credentials", JSON.stringify(credentials));
 }
 
+function getOfflineUsersAsAdminRoles(): AdminRole[] {
+  const credentials = getOfflineCredentials();
+  return Object.entries(credentials).map(([name, data], index) => ({
+    id: -(index + 1),
+    name,
+    role: data.role,
+    pin: null,
+    photoUrl: null,
+    isOffline: true
+  }));
+}
+
 interface AdminRole {
   id: number;
   name: string;
@@ -133,9 +145,9 @@ export function FirstLogin({ children }: FirstLoginProps) {
     enabled: !isAuthenticated,
   });
 
-  const isOfflineMode = dbStatus?.mode === "offline";
+  const isOfflineMode = dbStatus?.mode === "offline" || !navigator.onLine;
 
-  const { data: adminRoles = [] } = useQuery<AdminRole[]>({
+  const { data: serverAdminRoles = [] } = useQuery<AdminRole[]>({
     queryKey: ["/api/admin-roles"],
     queryFn: async () => {
       const res = await fetch("/api/admin-roles");
@@ -144,6 +156,10 @@ export function FirstLogin({ children }: FirstLoginProps) {
     },
     enabled: !isAuthenticated,
   });
+
+  const offlineUsers = getOfflineUsersAsAdminRoles();
+  const adminRoles = serverAdminRoles.length > 0 ? serverAdminRoles : offlineUsers;
+  const hasNoUsersAnywhere = serverAdminRoles.length === 0 && offlineUsers.length === 0;
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -397,7 +413,7 @@ export function FirstLogin({ children }: FirstLoginProps) {
                 ))}
               </div>
 
-              {adminRoles.length === 0 && (
+              {hasNoUsersAnywhere && navigator.onLine && (
                 <div className="space-y-4 py-6">
                   <div className="w-20 h-20 mx-auto rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
                     <User className="w-10 h-10 text-slate-400" />
@@ -419,6 +435,17 @@ export function FirstLogin({ children }: FirstLoginProps) {
                     <Settings className="w-4 h-4 mr-2" />
                     {t("auth.setupFirstUser")}
                   </Button>
+                </div>
+              )}
+              
+              {hasNoUsersAnywhere && !navigator.onLine && (
+                <div className="space-y-4 py-6">
+                  <div className="w-20 h-20 mx-auto rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                    <WifiOff className="w-10 h-10 text-slate-400" />
+                  </div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    {t("auth.offlineNoCredentials")}
+                  </p>
                 </div>
               )}
             </div>
