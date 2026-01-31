@@ -3,6 +3,9 @@ import { registerSW } from 'virtual:pwa-register';
 import App from "./App";
 import "./index.css";
 import "./i18n/config";
+import { initDatabaseStatusCheck } from "./lib/databaseStatus";
+
+initDatabaseStatusCheck();
 
 // Restore session from local storage before app render to prevent 401s
 if (typeof window !== 'undefined') {

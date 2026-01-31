@@ -8,6 +8,7 @@ import { Lock, User, Settings, ArrowLeft, Phone, KeyRound, Sparkles, WifiOff, Wi
 import { apiRequest } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { setDatabaseOffline, isEffectivelyOffline } from "@/lib/databaseStatus";
 
 async function hashPin(pin: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -142,21 +143,35 @@ export function FirstLogin({ children }: FirstLoginProps) {
     queryKey: ["/api/status/database"],
     queryFn: async () => {
       const res = await fetch("/api/status/database");
-      if (!res.ok) return { online: true, mode: "online" as const, hasPendingSync: false };
-      return res.json();
+      if (!res.ok) {
+        setDatabaseOffline(true);
+        return { online: false, mode: "offline" as const, hasPendingSync: false };
+      }
+      const data = await res.json();
+      setDatabaseOffline(data.mode === "offline" || !data.online);
+      return data;
     },
     refetchInterval: 30000,
     enabled: !isAuthenticated,
   });
 
-  const isOfflineMode = dbStatus?.mode === "offline" || !navigator.onLine;
+  const isOfflineMode = dbStatus?.mode === "offline" || isEffectivelyOffline();
 
   const { data: serverAdminRoles = [] } = useQuery<AdminRole[]>({
     queryKey: ["/api/admin-roles"],
     queryFn: async () => {
-      const res = await fetch("/api/admin-roles");
-      if (!res.ok) return [];
-      return res.json();
+      try {
+        const res = await fetch("/api/admin-roles");
+        if (res.status >= 500) {
+          setDatabaseOffline(true);
+          return [];
+        }
+        if (!res.ok) return [];
+        return res.json();
+      } catch (err) {
+        setDatabaseOffline(true);
+        return [];
+      }
     },
     enabled: !isAuthenticated,
   });
@@ -176,7 +191,7 @@ export function FirstLogin({ children }: FirstLoginProps) {
 
     setIsLoading(true);
 
-    const isOffline = !navigator.onLine;
+    const isOffline = isEffectivelyOffline();
     
     if (isOffline) {
       const credentials = getOfflineCredentials();
@@ -247,6 +262,7 @@ export function FirstLogin({ children }: FirstLoginProps) {
         setPin("");
       }
     } catch (err) {
+      setDatabaseOffline(true);
       const credentials = getOfflineCredentials();
       const userCreds = credentials[selectedUser.name];
       

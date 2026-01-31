@@ -1,5 +1,6 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 import { getFromOfflineStore, saveToOfflineStore, addToSyncQueue, addItemToOfflineStore, updateItemInOfflineStore, deleteItemFromOfflineStore } from "./offlineDb";
+import { isEffectivelyOffline, setDatabaseOffline } from "./databaseStatus";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -98,7 +99,8 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  if (!navigator.onLine && method !== 'GET') {
+  if (isEffectivelyOffline() && method !== 'GET') {
+    console.log(`[Offline] Queueing ${method} ${url} for later sync`);
     await addToSyncQueue({
       method: method as 'POST' | 'PUT' | 'DELETE',
       url,
@@ -113,15 +115,56 @@ export async function apiRequest(
     });
   }
 
-  const res = await fetch(url, {
-    method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
+  try {
+    const res = await fetch(url, {
+      method,
+      headers: data ? { "Content-Type": "application/json" } : {},
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: "include",
+    });
 
-  await throwIfResNotOk(res);
-  return res;
+    if (res.status >= 500 || res.status === 0) {
+      setDatabaseOffline(true);
+      
+      if (method !== 'GET') {
+        console.log(`[Offline] Server error, queueing ${method} ${url} for later sync`);
+        await addToSyncQueue({
+          method: method as 'POST' | 'PUT' | 'DELETE',
+          url,
+          body: data,
+        });
+        
+        await updateLocalCacheForOfflineMutation(method, url, data);
+        
+        return new Response(JSON.stringify({ queued: true, _offline: true }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
+    await throwIfResNotOk(res);
+    return res;
+  } catch (error) {
+    if (method !== 'GET') {
+      console.log(`[Offline] Network error, queueing ${method} ${url} for later sync`);
+      setDatabaseOffline(true);
+      
+      await addToSyncQueue({
+        method: method as 'POST' | 'PUT' | 'DELETE',
+        url,
+        body: data,
+      });
+      
+      await updateLocalCacheForOfflineMutation(method, url, data);
+      
+      return new Response(JSON.stringify({ queued: true, _offline: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    throw error;
+  }
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
@@ -133,7 +176,7 @@ export const getQueryFn: <T>(options: {
     const url = queryKey.join("/") as string;
     const storeName = getStoreNameFromUrl(url);
 
-    if (!navigator.onLine && storeName) {
+    if (isEffectivelyOffline() && storeName) {
       try {
         const offlineData = await getFromOfflineStore(storeName as any);
         if (offlineData && offlineData.length > 0) {
@@ -150,6 +193,17 @@ export const getQueryFn: <T>(options: {
         credentials: "include",
       });
 
+      if (res.status >= 500) {
+        setDatabaseOffline(true);
+        if (storeName) {
+          const offlineData = await getFromOfflineStore(storeName as any);
+          if (offlineData && offlineData.length > 0) {
+            console.log(`[Offline] Server error, returning cached data for ${storeName}`);
+            return offlineData as unknown;
+          }
+        }
+      }
+
       if (unauthorizedBehavior === "returnNull" && res.status === 401) {
         return null;
       }
@@ -165,7 +219,8 @@ export const getQueryFn: <T>(options: {
 
       return data;
     } catch (error) {
-      if (!navigator.onLine && storeName) {
+      setDatabaseOffline(true);
+      if (storeName) {
         try {
           const offlineData = await getFromOfflineStore(storeName as any);
           if (offlineData && offlineData.length > 0) {

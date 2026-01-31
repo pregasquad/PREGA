@@ -46,8 +46,12 @@ Preferred communication style: Simple, everyday language.
 - **Implementation**: 
   - `server/offline-storage.ts`: JSON-based local storage for admin roles
   - `server/db.ts`: Database connection status tracking with `isDatabaseOffline()`, `checkDatabaseConnection()`
+  - `client/src/lib/databaseStatus.ts`: Centralized database status tracking module with `isEffectivelyOffline()`, `setDatabaseOffline()`, `initDatabaseStatusCheck()`
 - **Features**:
   - Automatic offline mode detection when DATABASE_URL is not set or database is unreachable
+  - Database status initialized at app startup and polled every 10 seconds
+  - Detects database unavailability even when internet is available (e.g., DB down but network up)
+  - Auth-critical fetch failures (5xx errors, network errors) automatically trigger offline mode
   - First user can create account via `/api/admin-roles/offline-setup` endpoint when no users exist
   - PIN-based authentication works in offline mode using locally stored credentials
   - Offline mode indicator shown in login screen

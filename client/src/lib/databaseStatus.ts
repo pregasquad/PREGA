@@ -1,0 +1,61 @@
+let isDatabaseOffline = false;
+let lastStatusCheck = 0;
+const STATUS_CHECK_INTERVAL = 10000;
+
+export function setDatabaseOffline(offline: boolean): void {
+  if (isDatabaseOffline !== offline) {
+    isDatabaseOffline = offline;
+    console.log(`[DatabaseStatus] Mode changed to: ${offline ? 'OFFLINE' : 'ONLINE'}`);
+  }
+}
+
+export function getDatabaseOffline(): boolean {
+  return isDatabaseOffline;
+}
+
+export function isEffectivelyOffline(): boolean {
+  return !navigator.onLine || isDatabaseOffline;
+}
+
+export async function checkDatabaseStatus(): Promise<boolean> {
+  const now = Date.now();
+  if (now - lastStatusCheck < STATUS_CHECK_INTERVAL) {
+    return !isDatabaseOffline;
+  }
+  
+  lastStatusCheck = now;
+  
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    
+    const res = await fetch('/api/status/database', {
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (!res.ok) {
+      setDatabaseOffline(true);
+      return false;
+    }
+    
+    const data = await res.json();
+    const isOnline = data.online === true && data.mode === 'online';
+    setDatabaseOffline(!isOnline);
+    return isOnline;
+  } catch (error) {
+    setDatabaseOffline(true);
+    return false;
+  }
+}
+
+export async function initDatabaseStatusCheck(): Promise<void> {
+  await checkDatabaseStatus();
+  
+  setInterval(() => {
+    if (navigator.onLine) {
+      checkDatabaseStatus();
+    }
+  }, STATUS_CHECK_INTERVAL);
+}
