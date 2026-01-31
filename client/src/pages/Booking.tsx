@@ -314,7 +314,14 @@ export default function Booking() {
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl opacity-40" />
       
       <div className="max-w-4xl mx-auto space-y-6 relative z-10 animate-fade-in">
-        <div className="flex justify-end mb-2">
+        <div className="flex justify-between items-center mb-2">
+          {visitorCount > 0 && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground/80">
+              <Eye className="w-4 h-4" />
+              <span>{visitorCount.toLocaleString()} {t("booking.visitors", { defaultValue: "visiteurs" })}</span>
+            </div>
+          )}
+          {visitorCount === 0 && <div />}
           <LanguageSwitcher />
         </div>
         <div className="text-center space-y-3 py-4">
@@ -325,12 +332,6 @@ export default function Booking() {
             {t("booking.title")}
           </h1>
           <p className="text-muted-foreground">{t("booking.subtitle")}</p>
-          {visitorCount > 0 && (
-            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground/80 mt-2">
-              <Eye className="w-4 h-4" />
-              <span>{visitorCount.toLocaleString()} {t("booking.visitors", { defaultValue: "visiteurs" })}</span>
-            </div>
-          )}
         </div>
 
         <div className="glass-card p-6 md:p-8">
