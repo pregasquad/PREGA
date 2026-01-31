@@ -176,8 +176,16 @@ export default function Booking() {
     const staffAppointments = appointments.filter(a => a.staff === selectedStaff);
     const duration = serviceDuration || 30;
     
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    
     return TIME_SLOTS.filter(slot => {
       const slotMinutes = parseInt(slot.split(":")[0]) * 60 + parseInt(slot.split(":")[1]);
+      
+      if (isToday && slotMinutes <= currentMinutes) {
+        return false;
+      }
       
       for (const app of staffAppointments) {
         const appStart = parseInt(app.startTime.split(":")[0]) * 60 + parseInt(app.startTime.split(":")[1]);
