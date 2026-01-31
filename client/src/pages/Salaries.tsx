@@ -202,7 +202,11 @@ export default function Salaries() {
       services: Record<string, { count: number; revenue: number; commission: number }>;
     }> = {};
 
-    staff.forEach((s) => {
+    const staffToShow = selectedStaff === "all" 
+      ? staff 
+      : staff.filter(s => s.name === selectedStaff);
+
+    staffToShow.forEach((s) => {
       earnings[s.name] = { 
         name: s.name, 
         totalRevenue: 0, 
@@ -241,7 +245,11 @@ export default function Salaries() {
       earnings[staffName].services[serviceName].commission += commission;
     });
 
-    return Object.values(earnings).filter(e => e.appointmentsCount > 0 || staff.some(s => s.name === e.name));
+    if (selectedStaff === "all") {
+      return Object.values(earnings).filter(e => e.appointmentsCount > 0 || staff.some(s => s.name === e.name));
+    } else {
+      return Object.values(earnings).filter(e => e.name === selectedStaff);
+    }
   };
 
   const staffEarnings = calculateStaffEarnings();
