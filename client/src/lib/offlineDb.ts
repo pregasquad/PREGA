@@ -68,23 +68,88 @@ export async function saveToOfflineStore<T extends { id?: any }>(
   storeName: keyof OfflineStore,
   data: T[]
 ): Promise<void> {
-  const database = await initOfflineDb();
-  
-  return new Promise((resolve, reject) => {
-    const transaction = database.transaction(storeName, 'readwrite');
-    const store = transaction.objectStore(storeName);
+  try {
+    const database = await initOfflineDb();
     
-    store.clear();
+    return new Promise((resolve, reject) => {
+      const transaction = database.transaction(storeName, 'readwrite');
+      const store = transaction.objectStore(storeName);
+      
+      store.clear();
+      
+      data.forEach(item => {
+        if (item && item.id !== undefined && item.id !== null) {
+          store.put(item);
+        }
+      });
+      
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+  } catch (error) {
+    console.warn(`[OfflineDB] Error saving to ${storeName}:`, error);
+  }
+}
+
+export async function addItemToOfflineStore<T extends { id?: any }>(
+  storeName: keyof OfflineStore,
+  item: T
+): Promise<void> {
+  try {
+    const database = await initOfflineDb();
     
-    data.forEach(item => {
-      if (item.id !== undefined) {
+    return new Promise((resolve, reject) => {
+      const transaction = database.transaction(storeName, 'readwrite');
+      const store = transaction.objectStore(storeName);
+      
+      if (item && item.id !== undefined && item.id !== null) {
         store.put(item);
       }
+      
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
     });
+  } catch (error) {
+    console.warn(`[OfflineDB] Error adding item to ${storeName}:`, error);
+  }
+}
+
+export async function updateItemInOfflineStore<T extends { id?: any }>(
+  storeName: keyof OfflineStore,
+  id: any,
+  updates: Partial<T>
+): Promise<void> {
+  try {
+    const database = await initOfflineDb();
+    const existing = await getFromOfflineStore<T>(storeName);
+    const updated = existing.map(item => 
+      item.id === id ? { ...item, ...updates } : item
+    );
+    await saveToOfflineStore(storeName, updated);
+  } catch (error) {
+    console.warn(`[OfflineDB] Error updating item in ${storeName}:`, error);
+  }
+}
+
+export async function deleteItemFromOfflineStore(
+  storeName: keyof OfflineStore,
+  id: any
+): Promise<void> {
+  try {
+    const database = await initOfflineDb();
     
-    transaction.oncomplete = () => resolve();
-    transaction.onerror = () => reject(transaction.error);
-  });
+    return new Promise((resolve, reject) => {
+      const transaction = database.transaction(storeName, 'readwrite');
+      const store = transaction.objectStore(storeName);
+      
+      store.delete(id);
+      
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+  } catch (error) {
+    console.warn(`[OfflineDB] Error deleting from ${storeName}:`, error);
+  }
 }
 
 export async function getFromOfflineStore<T>(

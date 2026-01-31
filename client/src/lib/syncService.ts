@@ -6,6 +6,7 @@ import {
   saveToOfflineStore,
   getFromOfflineStore,
   addToSyncQueue,
+  initOfflineDb,
 } from './offlineDb';
 
 const MAX_RETRIES = 3;
@@ -92,6 +93,8 @@ export async function syncPendingChanges(): Promise<{ success: number; failed: n
 export async function refreshAndCacheData(): Promise<void> {
   if (!navigator.onLine) return;
 
+  await initOfflineDb();
+
   const endpoints = [
     { url: '/api/appointments/all', store: 'appointments' as const },
     { url: '/api/services', store: 'services' as const },
@@ -109,17 +112,19 @@ export async function refreshAndCacheData(): Promise<void> {
       const response = await fetch(url, { credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
-        if (Array.isArray(data)) {
+        if (Array.isArray(data) && data.length > 0) {
           await saveToOfflineStore(store, data);
+          console.log(`[Sync] Cached ${data.length} items for ${store}`);
         }
       }
     } catch (error) {
-      console.warn(`Failed to cache ${store}:`, error);
+      console.warn(`[Sync] Failed to cache ${store}:`, error);
     }
   });
 
   await Promise.all(promises);
   await setLastSyncTime(Date.now());
+  console.log('[Sync] Data refresh complete');
 }
 
 export async function getOfflineData<T>(store: string): Promise<T[]> {

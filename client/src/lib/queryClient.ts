@@ -1,5 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
-import { getFromOfflineStore, saveToOfflineStore, addToSyncQueue } from "./offlineDb";
+import { getFromOfflineStore, saveToOfflineStore, addToSyncQueue, addItemToOfflineStore, updateItemInOfflineStore, deleteItemFromOfflineStore } from "./offlineDb";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -30,6 +30,69 @@ function getStoreNameFromUrl(url: string): string | null {
   return null;
 }
 
+function getStoreAndIdFromMutationUrl(url: string): { store: string | null; id: number | null } {
+  const patterns = [
+    { pattern: /^\/api\/appointments\/(\d+)$/, store: 'appointments' },
+    { pattern: /^\/api\/services\/(\d+)$/, store: 'services' },
+    { pattern: /^\/api\/categories\/(\d+)$/, store: 'categories' },
+    { pattern: /^\/api\/staff\/(\d+)$/, store: 'staff' },
+    { pattern: /^\/api\/clients\/(\d+)$/, store: 'clients' },
+    { pattern: /^\/api\/charges\/(\d+)$/, store: 'charges' },
+    { pattern: /^\/api\/staff-deductions\/(\d+)$/, store: 'staffDeductions' },
+    { pattern: /^\/api\/staff-commissions\/(\d+)$/, store: 'staffCommissions' },
+    { pattern: /^\/api\/products\/(\d+)$/, store: 'products' },
+  ];
+
+  for (const { pattern, store } of patterns) {
+    const match = url.match(pattern);
+    if (match) {
+      return { store, id: parseInt(match[1], 10) };
+    }
+  }
+
+  const createPatterns = [
+    { pattern: /^\/api\/appointments$/, store: 'appointments' },
+    { pattern: /^\/api\/services$/, store: 'services' },
+    { pattern: /^\/api\/categories$/, store: 'categories' },
+    { pattern: /^\/api\/staff$/, store: 'staff' },
+    { pattern: /^\/api\/clients$/, store: 'clients' },
+    { pattern: /^\/api\/charges$/, store: 'charges' },
+    { pattern: /^\/api\/staff-deductions$/, store: 'staffDeductions' },
+    { pattern: /^\/api\/staff-commissions$/, store: 'staffCommissions' },
+    { pattern: /^\/api\/products$/, store: 'products' },
+  ];
+
+  for (const { pattern, store } of createPatterns) {
+    if (pattern.test(url)) {
+      return { store, id: null };
+    }
+  }
+
+  return { store: null, id: null };
+}
+
+async function updateLocalCacheForOfflineMutation(
+  method: string,
+  url: string,
+  data: any
+): Promise<void> {
+  const { store, id } = getStoreAndIdFromMutationUrl(url);
+  if (!store) return;
+
+  try {
+    if (method === 'POST' && data) {
+      const tempId = Date.now();
+      await addItemToOfflineStore(store as any, { ...data, id: tempId, _offline: true });
+    } else if (method === 'PUT' && id && data) {
+      await updateItemInOfflineStore(store as any, id, data);
+    } else if (method === 'DELETE' && id) {
+      await deleteItemFromOfflineStore(store as any, id);
+    }
+  } catch (error) {
+    console.warn(`[Offline] Failed to update local cache for ${method} ${url}:`, error);
+  }
+}
+
 export async function apiRequest(
   method: string,
   url: string,
@@ -41,7 +104,10 @@ export async function apiRequest(
       url,
       body: data,
     });
-    return new Response(JSON.stringify({ queued: true }), {
+    
+    await updateLocalCacheForOfflineMutation(method, url, data);
+    
+    return new Response(JSON.stringify({ queued: true, _offline: true }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
