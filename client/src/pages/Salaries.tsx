@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { DollarSign, Users, CalendarIcon, TrendingUp, Building2, RefreshCw, Plus, Trash2, Receipt, UserMinus, ChevronDown } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import { io, Socket } from "socket.io-client";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay, parseISO, isAfter, isBefore, isEqual } from "date-fns";
@@ -27,6 +28,7 @@ const formatCurrency = (value: number): string => {
 export default function Salaries() {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [period, setPeriod] = useState<PeriodType>("month");
   const [selectedStaff, setSelectedStaff] = useState<string>("all");
@@ -35,6 +37,7 @@ export default function Salaries() {
   const [showDeductionDialog, setShowDeductionDialog] = useState(false);
   const [expensesOpen, setExpensesOpen] = useState(false);
   const [deductionsOpen, setDeductionsOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [newCharge, setNewCharge] = useState({ type: "rent", name: "", amount: 0, date: format(new Date(), "yyyy-MM-dd") });
   const [newDeduction, setNewDeduction] = useState<{ staffName: string; type: "advance" | "loan" | "penalty" | "other"; description: string; amount: number; date: string }>({ staffName: "", type: "advance", description: "", amount: 0, date: format(new Date(), "yyyy-MM-dd") });
 
@@ -289,12 +292,23 @@ export default function Salaries() {
           variant="outline"
           size="sm"
           className="h-8"
-          onClick={() => {
-            refetchAppointments();
+          disabled={isRefreshing}
+          onClick={async () => {
+            setIsRefreshing(true);
+            await Promise.all([
+              queryClient.invalidateQueries({ queryKey: ["/api/appointments/all"] }),
+              queryClient.invalidateQueries({ queryKey: ["/api/staff"] }),
+              queryClient.invalidateQueries({ queryKey: ["/api/services"] }),
+              queryClient.invalidateQueries({ queryKey: ["/api/charges"] }),
+              queryClient.invalidateQueries({ queryKey: ["/api/staff-deductions"] }),
+              queryClient.invalidateQueries({ queryKey: ["/api/staff-commissions"] }),
+            ]);
             setLastUpdate(new Date());
+            setIsRefreshing(false);
+            toast({ title: t("common.refreshed"), description: t("common.dataUpdated") });
           }}
         >
-          <RefreshCw className="h-4 w-4" />
+          <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
         </Button>
       </div>
 
