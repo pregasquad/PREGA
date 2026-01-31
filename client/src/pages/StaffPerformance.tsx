@@ -1,13 +1,14 @@
 import { useState, useMemo, useCallback } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
-import { Users, DollarSign, Calendar, TrendingUp, Award } from "lucide-react";
+import { Users, DollarSign, Calendar, TrendingUp, Award, RefreshCw } from "lucide-react";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import type { Staff, Appointment, Service } from "@shared/schema";
@@ -18,6 +19,7 @@ const formatCurrency = (value: number): string => {
 
 export default function StaffPerformance() {
   const { t, i18n } = useTranslation();
+  const queryClient = useQueryClient();
   const [selectedMonth, setSelectedMonth] = useState(() => format(new Date(), "yyyy-MM"));
   const [selectedStaff, setSelectedStaff] = useState<string>("all");
 
@@ -133,7 +135,15 @@ export default function StaffPerformance() {
           <h1 className="text-xl md:text-2xl font-bold">{t("staffPerformance.pageTitle")}</h1>
           <p className="text-sm md:text-base text-muted-foreground">{t("staffPerformance.pageDesc")}</p>
         </div>
-        <div className="flex flex-wrap gap-2 md:gap-4">
+        <div className="flex flex-wrap items-end gap-2 md:gap-4">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => queryClient.invalidateQueries()}
+            title={t("common.refresh")}
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
           <div>
             <Label className="text-xs md:text-sm">{t("staffPerformance.month")}</Label>
             <Select value={selectedMonth} onValueChange={setSelectedMonth}>

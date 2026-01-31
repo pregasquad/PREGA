@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { 
   UserPlus, Users, Shield, Download, FileSpreadsheet, 
   Trash2, Edit, Calendar, User, Briefcase, Package, 
-  CreditCard, Building2, Clock, Save, Camera, Loader2
+  CreditCard, Building2, Clock, Save, Camera, Loader2, RefreshCw
 } from "lucide-react";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
 
@@ -302,12 +302,22 @@ export default function AdminSettings() {
 
   return (
     <div className="space-y-6 p-2 md:p-4 animate-fade-in">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl md:text-3xl font-bold font-display flex items-center gap-2">
-          <Shield className="w-6 h-6 md:w-8 md:h-8" />
-          {t("admin.title")}
-        </h1>
-        <p className="text-muted-foreground">{t("admin.description")}</p>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-2xl md:text-3xl font-bold font-display flex items-center gap-2">
+            <Shield className="w-6 h-6 md:w-8 md:h-8" />
+            {t("admin.title")}
+          </h1>
+          <p className="text-muted-foreground">{t("admin.description")}</p>
+        </div>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => queryClient.invalidateQueries()}
+          title={t("common.refresh")}
+        >
+          <RefreshCw className="h-4 w-4" />
+        </Button>
       </div>
 
       <Tabs defaultValue="business" className="w-full">

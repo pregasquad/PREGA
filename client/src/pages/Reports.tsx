@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAppointments, useStaff } from "@/hooks/use-salon-data";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from "recharts";
-import { TrendingUp, Users, CalendarCheck, Calendar as CalendarIcon, ChevronRight, ChevronLeft } from "lucide-react";
+import { TrendingUp, Users, CalendarCheck, Calendar as CalendarIcon, ChevronRight, ChevronLeft, RefreshCw } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -22,6 +23,7 @@ type ViewMode = "weekly" | "monthly" | "custom";
 
 export default function Reports() {
   const { t, i18n } = useTranslation();
+  const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<ViewMode>("weekly");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [customRange, setCustomRange] = useState<DateRange | undefined>({
@@ -161,6 +163,14 @@ export default function Reports() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => queryClient.invalidateQueries()}
+            title={t("common.refresh")}
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
           <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
             <TabsList>
               <TabsTrigger value="weekly">{t("reports.weekly")}</TabsTrigger>

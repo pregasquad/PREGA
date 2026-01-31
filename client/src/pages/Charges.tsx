@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, TrendingDown, FolderPlus } from "lucide-react";
+import { Plus, Trash2, TrendingDown, FolderPlus, RefreshCw } from "lucide-react";
 
 const DEFAULT_CHARGE_TYPES_KEYS = [
   { id: 0, key: "expenses.product", value: "Produit" },
@@ -112,6 +112,14 @@ export default function Charges() {
     <div className="h-full flex flex-col gap-4 md:gap-6 p-2 md:p-4 animate-fade-in" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
       <div className="flex justify-between items-center">
         <h1 className="text-xl md:text-2xl lg:text-3xl font-display font-bold">{t("expenses.title")}</h1>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => queryClient.invalidateQueries()}
+          title={t("common.refresh")}
+        >
+          <RefreshCw className="h-4 w-4" />
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">

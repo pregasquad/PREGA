@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, Percent, Save, Check } from "lucide-react";
+import { Users, Percent, Save, Check, RefreshCw } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { apiRequest } from "@/lib/queryClient";
@@ -134,6 +134,14 @@ export default function StaffCommissions() {
             {t("salaries.staffCommissionsDescription", "Définir le pourcentage de commission pour chaque employé par service")}
           </p>
         </div>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => queryClient.invalidateQueries()}
+          title={t("common.refresh")}
+        >
+          <RefreshCw className="h-4 w-4" />
+        </Button>
       </div>
 
       <Card>

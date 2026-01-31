@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit2, Trash2, User, Phone, Mail, Gift, Calendar as CalendarIcon, Star, Crown, Award, Zap, Clock } from "lucide-react";
+import { Plus, Edit2, Trash2, User, Phone, Mail, Gift, Calendar as CalendarIcon, Star, Crown, Award, Zap, Clock, RefreshCw } from "lucide-react";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
 import { format, startOfToday } from "date-fns";
 import { ar, enUS, fr } from "date-fns/locale";
@@ -304,25 +304,35 @@ export default function Clients() {
           <h1 className="text-xl md:text-2xl font-bold">{t("clients.title")}</h1>
           <p className="text-sm md:text-base text-muted-foreground">{t("clients.pageDesc")}</p>
         </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={resetForm}>
-              <Plus className="w-4 h-4 ml-2" />
-              {t("clients.addClient")}
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{t("clients.newClient")}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              {renderFormFields()}
-              <Button onClick={() => createMutation.mutate(formData)} className="w-full">
-                {t("common.add")}
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => queryClient.invalidateQueries()}
+            title={t("common.refresh")}
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={resetForm}>
+                <Plus className="w-4 h-4 ml-2" />
+                {t("clients.addClient")}
               </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{t("clients.newClient")}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                {renderFormFields()}
+                <Button onClick={() => createMutation.mutate(formData)} className="w-full">
+                  {t("common.add")}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

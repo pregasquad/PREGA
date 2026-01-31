@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Minus, Package, Trash2, Edit2, UserPlus } from "lucide-react";
+import { Plus, Minus, Package, Trash2, Edit2, UserPlus, RefreshCw } from "lucide-react";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -102,6 +102,14 @@ export default function Inventory() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 md:gap-4">
         <h1 className="text-xl md:text-2xl lg:text-3xl font-bold">{t("inventory.title")}</h1>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => queryClient.invalidateQueries()}
+            title={t("common.refresh")}
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
           <Dialog open={isStaffDialogOpen} onOpenChange={setIsStaffDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" className="gap-2">

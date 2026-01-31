@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Tag, Scissors, Edit2, Package } from "lucide-react";
+import { Plus, Trash2, Tag, Scissors, Edit2, Package, RefreshCw } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormMessage, FormLabel } from "@/components/ui/form";
@@ -99,9 +99,19 @@ export default function Services() {
 
   return (
     <div className="space-y-4 md:space-y-6 max-w-5xl mx-auto px-2 md:px-0 animate-fade-in" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
-      <div>
-        <h1 className="text-xl md:text-2xl lg:text-3xl font-display font-bold">{t("services.pageTitle")}</h1>
-        <p className="text-sm md:text-base text-muted-foreground">{t("services.pageDesc")}</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl md:text-2xl lg:text-3xl font-display font-bold">{t("services.pageTitle")}</h1>
+          <p className="text-sm md:text-base text-muted-foreground">{t("services.pageDesc")}</p>
+        </div>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => queryClient.invalidateQueries()}
+          title={t("common.refresh")}
+        >
+          <RefreshCw className="h-4 w-4" />
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
