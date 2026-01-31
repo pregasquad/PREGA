@@ -40,12 +40,58 @@ export function useCreateAppointment() {
       }
       return api.appointments.create.responses[201].parse(await res.json());
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.appointments.list.path] });
+    onMutate: async (newAppointment) => {
+      const dateQueryKey = [api.appointments.list.path, newAppointment.date];
+      const allQueryKey = [api.appointments.list.path, undefined];
+      
+      await queryClient.cancelQueries({ queryKey: dateQueryKey });
+      await queryClient.cancelQueries({ queryKey: allQueryKey });
+      
+      const previousDateData = queryClient.getQueryData(dateQueryKey);
+      const previousAllData = queryClient.getQueryData(allQueryKey);
+      
+      const tempId = -Date.now();
+      const optimisticAppointment = {
+        ...newAppointment,
+        id: tempId,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        createdBy: null,
+        updatedBy: null,
+      };
+      
+      if (previousDateData !== undefined) {
+        queryClient.setQueryData(dateQueryKey, (old: any) => old ? [...old, optimisticAppointment] : [optimisticAppointment]);
+      }
+      if (previousAllData !== undefined) {
+        queryClient.setQueryData(allQueryKey, (old: any) => old ? [...old, optimisticAppointment] : [optimisticAppointment]);
+      }
+      
+      return { previousDateData, previousAllData, dateQueryKey, allQueryKey, tempId };
+    },
+    onSuccess: (data, _variables, context) => {
+      if (context) {
+        queryClient.setQueryData(context.dateQueryKey, (old: any) => old ? old.map((apt: any) => apt.id === context.tempId ? data : apt) : [data]);
+        queryClient.setQueryData(context.allQueryKey, (old: any) => old ? old.map((apt: any) => apt.id === context.tempId ? data : apt) : [data]);
+      }
       toast({ title: "Success", description: "Appointment booked successfully" });
     },
-    onError: (err) => {
+    onError: (err, _variables, context) => {
+      if (context) {
+        if (context.previousDateData !== undefined) {
+          queryClient.setQueryData(context.dateQueryKey, context.previousDateData);
+        }
+        if (context.previousAllData !== undefined) {
+          queryClient.setQueryData(context.allQueryKey, context.previousAllData);
+        }
+      }
       toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+    onSettled: (_data, _error, variables) => {
+      if (variables?.date) {
+        queryClient.invalidateQueries({ queryKey: [api.appointments.list.path, variables.date] });
+      }
+      queryClient.invalidateQueries({ queryKey: [api.appointments.list.path, undefined] });
     },
   });
 }
@@ -66,12 +112,34 @@ export function useUpdateAppointment() {
       if (!res.ok) throw new Error("Failed to update appointment");
       return api.appointments.update.responses[200].parse(await res.json());
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.appointments.list.path] });
+    onMutate: async ({ id, ...data }) => {
+      await queryClient.cancelQueries({ queryKey: [api.appointments.list.path] });
+      const previousAppointments = queryClient.getQueriesData({ queryKey: [api.appointments.list.path] });
+      
+      queryClient.setQueriesData(
+        { queryKey: [api.appointments.list.path] },
+        (old: any) => old ? old.map((apt: any) => apt.id === id ? { ...apt, ...data, updatedAt: new Date().toISOString() } : apt) : old
+      );
+      
+      return { previousAppointments };
+    },
+    onSuccess: (data) => {
+      queryClient.setQueriesData(
+        { queryKey: [api.appointments.list.path] },
+        (old: any) => old ? old.map((apt: any) => apt.id === data.id ? data : apt) : old
+      );
       toast({ title: "Success", description: "Appointment updated" });
     },
-    onError: (err) => {
+    onError: (err, _variables, context) => {
+      if (context?.previousAppointments) {
+        context.previousAppointments.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
       toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: [api.appointments.list.path] });
     },
   });
 }
@@ -88,13 +156,32 @@ export function useDeleteAppointment() {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to delete appointment");
+      return id;
+    },
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: [api.appointments.list.path] });
+      const previousAppointments = queryClient.getQueriesData({ queryKey: [api.appointments.list.path] });
+      
+      queryClient.setQueriesData(
+        { queryKey: [api.appointments.list.path] },
+        (old: any) => old ? old.filter((apt: any) => apt.id !== id) : old
+      );
+      
+      return { previousAppointments };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.appointments.list.path] });
       toast({ title: "Deleted", description: "Appointment removed" });
     },
-    onError: (err) => {
+    onError: (err, _variables, context) => {
+      if (context?.previousAppointments) {
+        context.previousAppointments.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
       toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: [api.appointments.list.path] });
     },
   });
 }
