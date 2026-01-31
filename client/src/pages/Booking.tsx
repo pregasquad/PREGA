@@ -127,26 +127,23 @@ export default function Booking() {
   const selectedService = form.watch("service");
   const serviceDuration = form.watch("duration");
 
-  const categories = useMemo(() => {
-    return Array.from(new Set(services.map(s => s.category)));
-  }, [services]);
+  const selectedStaffData = useMemo(() => {
+    return staffList.find(s => s.name === selectedStaff);
+  }, [staffList, selectedStaff]);
 
-  const filteredStaffList = useMemo(() => {
-    if (selectedServices.length === 0) {
-      return staffList;
+  const filteredServices = useMemo(() => {
+    if (!selectedStaffData || !selectedStaffData.categories) {
+      return services;
     }
-    const selectedCategories = new Set(
-      selectedServices.map(s => {
-        const service = services.find(svc => svc.name === s.name);
-        return service?.category;
-      }).filter(Boolean)
+    const staffCategories = new Set(
+      selectedStaffData.categories.split(",").map(c => c.trim())
     );
-    return staffList.filter(staff => {
-      if (!staff.categories) return true;
-      const staffCategories = staff.categories.split(",").map(c => c.trim());
-      return staffCategories.some(cat => selectedCategories.has(cat));
-    });
-  }, [staffList, selectedServices, services]);
+    return services.filter(s => staffCategories.has(s.category));
+  }, [services, selectedStaffData]);
+
+  const filteredCategories = useMemo(() => {
+    return Array.from(new Set(filteredServices.map(s => s.category)));
+  }, [filteredServices]);
 
   const getAvailableSlots = useMemo(() => {
     if (!selectedStaff || !date) return [];
@@ -217,7 +214,7 @@ export default function Booking() {
   };
 
   const handleAddService = (serviceName: string) => {
-    const service = services.find(s => s.name === serviceName);
+    const service = filteredServices.find(s => s.name === serviceName);
     if (service && !selectedServices.some(s => s.name === serviceName)) {
       const newSelectedServices = [...selectedServices, { name: service.name, price: service.price, duration: service.duration }];
       setSelectedServices(newSelectedServices);
@@ -365,78 +362,52 @@ export default function Booking() {
 
                   <FormField
                     control={form.control}
-                    name="service"
-                    render={() => (
+                    name="staff"
+                    render={({ field }) => (
                       <FormItem>
                         <FormLabel className="flex items-center gap-2 text-sm font-medium">
-                          <Scissors className="w-4 h-4 text-primary" />
-                          {t("booking.requiredService")}
+                          <User className="w-4 h-4 text-primary" />
+                          {t("booking.preferredStaff")}
                         </FormLabel>
-                        <Select onValueChange={handleAddService} value="">
-                          <FormControl>
-                            <SelectTrigger className="h-12 rounded-xl bg-background/50 backdrop-blur-sm border-border/50">
-                              <SelectValue placeholder={t("booking.selectService")} />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent className="glass max-h-[300px] rounded-xl">
-                            {categories.map(cat => (
-                              <div key={cat}>
-                                <div className="px-3 py-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                  {cat}
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          {staffList.map(s => (
+                            <Button
+                              key={s.id}
+                              type="button"
+                              variant="outline"
+                              className={cn(
+                                "h-20 flex-col gap-2 rounded-2xl transition-all border-2 relative overflow-hidden",
+                                "bg-background/50 backdrop-blur-sm hover:bg-background/80",
+                                field.value === s.name 
+                                  ? "border-primary ring-2 ring-primary/20 shadow-lg bg-primary/5" 
+                                  : "border-border/50 hover:border-primary/30"
+                              )}
+                              onClick={() => {
+                                if (field.value !== s.name) {
+                                  setSelectedServices([]);
+                                  form.setValue("service", "");
+                                  form.setValue("duration", 30);
+                                  form.setValue("price", 0);
+                                  form.setValue("total", 0);
+                                }
+                                field.onChange(s.name);
+                              }}
+                            >
+                              {field.value === s.name && (
+                                <div className="absolute top-1 right-1">
+                                  <CheckCircle2 className="w-4 h-4 text-primary" />
                                 </div>
-                                {services.filter(s => s.category === cat).map(s => {
-                                  const isSelected = selectedServices.some(sel => sel.name === s.name);
-                                  return (
-                                    <SelectItem 
-                                      key={s.id} 
-                                      value={s.name} 
-                                      className={cn("rounded-lg", isSelected && "opacity-50")}
-                                      disabled={isSelected}
-                                    >
-                                      <div className="flex justify-between items-center w-full gap-4">
-                                        <span>{s.name}</span>
-                                        <span className="text-primary font-bold">{s.price} {t("common.currency")}</span>
-                                      </div>
-                                    </SelectItem>
-                                  );
-                                })}
+                              )}
+                              <div 
+                                className="w-10 h-10 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-white font-bold text-lg"
+                                style={{ backgroundColor: s.color }}
+                              >
+                                {s.name.charAt(0).toUpperCase()}
                               </div>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        
-                        {selectedServices.length > 0 && (
-                          <div className="space-y-3 mt-3">
-                            <div className="flex flex-wrap gap-2">
-                              {selectedServices.map((service, index) => (
-                                <div 
-                                  key={index}
-                                  className="glass-subtle rounded-xl px-3 py-2 flex items-center gap-2 group animate-fade-in"
-                                >
-                                  <span className="text-sm font-medium">{service.name}</span>
-                                  <span className="text-xs text-primary font-bold">{service.price} {t("common.currency")}</span>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleRemoveService(index)}
-                                    className="w-5 h-5 rounded-full bg-destructive/10 hover:bg-destructive/20 flex items-center justify-center transition-colors"
-                                  >
-                                    <X className="w-3 h-3 text-destructive" />
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                            <div className="glass-subtle rounded-xl p-3">
-                              <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">{t("common.duration")}:</span>
-                                <span className="font-medium">{form.getValues("duration")} {t("common.minutes")}</span>
-                              </div>
-                              <div className="flex justify-between text-sm mt-1">
-                                <span className="text-muted-foreground">{t("common.price")}:</span>
-                                <span className="text-primary font-bold text-lg">{form.getValues("total")} {t("common.currency")}</span>
-                              </div>
-                            </div>
-                          </div>
-                        )}
+                              <span className="text-xs font-semibold">{s.name}</span>
+                            </Button>
+                          ))}
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -444,33 +415,86 @@ export default function Booking() {
 
                   <FormField
                     control={form.control}
-                    name="staff"
-                    render={({ field }) => (
+                    name="service"
+                    render={() => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium">{t("booking.preferredStaff")}</FormLabel>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                          {filteredStaffList.map(s => (
-                            <Button
-                              key={s.id}
-                              type="button"
-                              variant="outline"
-                              className={cn(
-                                "h-16 flex-col gap-2 rounded-2xl transition-all border-2",
-                                "bg-background/50 backdrop-blur-sm hover:bg-background/80",
-                                field.value === s.name 
-                                  ? "border-primary ring-2 ring-primary/20 shadow-lg" 
-                                  : "border-border/50 hover:border-border"
-                              )}
-                              onClick={() => field.onChange(s.name)}
-                            >
-                              <div 
-                                className="w-8 h-8 rounded-full border-2 border-white/50 shadow-md"
-                                style={{ backgroundColor: s.color }}
-                              />
-                              <span className="text-xs font-medium">{s.name}</span>
-                            </Button>
-                          ))}
-                        </div>
+                        <FormLabel className="flex items-center gap-2 text-sm font-medium">
+                          <Scissors className="w-4 h-4 text-primary" />
+                          {t("booking.requiredService")}
+                        </FormLabel>
+                        {!selectedStaff ? (
+                          <div className="glass-subtle rounded-xl p-4 text-center text-muted-foreground text-sm">
+                            {t("booking.selectStaffFirst")}
+                          </div>
+                        ) : (
+                          <>
+                            <Select onValueChange={handleAddService} value="">
+                              <FormControl>
+                                <SelectTrigger className="h-12 rounded-xl bg-background/50 backdrop-blur-sm border-border/50">
+                                  <SelectValue placeholder={t("booking.selectService")} />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent className="glass max-h-[300px] rounded-xl">
+                                {filteredCategories.map(cat => (
+                                  <div key={cat}>
+                                    <div className="px-3 py-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                                      {cat}
+                                    </div>
+                                    {filteredServices.filter(s => s.category === cat).map(s => {
+                                      const isSelected = selectedServices.some(sel => sel.name === s.name);
+                                      return (
+                                        <SelectItem 
+                                          key={s.id} 
+                                          value={s.name} 
+                                          className={cn("rounded-lg", isSelected && "opacity-50")}
+                                          disabled={isSelected}
+                                        >
+                                          <div className="flex justify-between items-center w-full gap-4">
+                                            <span>{s.name}</span>
+                                            <span className="text-primary font-bold">{s.price} {t("common.currency")}</span>
+                                          </div>
+                                        </SelectItem>
+                                      );
+                                    })}
+                                  </div>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            
+                            {selectedServices.length > 0 && (
+                              <div className="space-y-3 mt-3">
+                                <div className="flex flex-wrap gap-2">
+                                  {selectedServices.map((service, index) => (
+                                    <div 
+                                      key={index}
+                                      className="glass-subtle rounded-xl px-3 py-2 flex items-center gap-2 group animate-fade-in"
+                                    >
+                                      <span className="text-sm font-medium">{service.name}</span>
+                                      <span className="text-xs text-primary font-bold">{service.price} {t("common.currency")}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRemoveService(index)}
+                                        className="w-5 h-5 rounded-full bg-destructive/10 hover:bg-destructive/20 flex items-center justify-center transition-colors"
+                                      >
+                                        <X className="w-3 h-3 text-destructive" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                                <div className="glass-subtle rounded-xl p-3">
+                                  <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">{t("common.duration")}:</span>
+                                    <span className="font-medium">{form.getValues("duration")} {t("common.minutes")}</span>
+                                  </div>
+                                  <div className="flex justify-between text-sm mt-1">
+                                    <span className="text-muted-foreground">{t("common.price")}:</span>
+                                    <span className="text-primary font-bold text-lg">{form.getValues("total")} {t("common.currency")}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        )}
                         <FormMessage />
                       </FormItem>
                     )}

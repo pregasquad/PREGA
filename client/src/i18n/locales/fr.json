@@ -372,7 +372,8 @@
     "newBooking": "Réserver un Autre Rendez-vous",
     "noTimesAvailable": "Aucun créneau disponible ce jour",
     "time": "Heure",
-    "service": "Service"
+    "service": "Service",
+    "selectStaffFirst": "Veuillez d'abord choisir un membre du personnel"
   },
   "auth": {
     "login": "Connexion",

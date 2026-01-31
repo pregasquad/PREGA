@@ -372,7 +372,8 @@
     "newBooking": "Book Another Appointment",
     "noTimesAvailable": "No times available on this day",
     "time": "Time",
-    "service": "Service"
+    "service": "Service",
+    "selectStaffFirst": "Please select a staff member first"
   },
   "auth": {
     "login": "Login",

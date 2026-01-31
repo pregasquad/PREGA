@@ -372,7 +372,8 @@
     "newBooking": "حجز موعد جديد",
     "noTimesAvailable": "لا توجد أوقات متاحة في هذا اليوم",
     "time": "الوقت",
-    "service": "الخدمة"
+    "service": "الخدمة",
+    "selectStaffFirst": "يرجى اختيار الموظف أولاً"
   },
   "auth": {
     "login": "تسجيل الدخول",
