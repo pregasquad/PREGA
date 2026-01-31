@@ -62,15 +62,16 @@ export default function StaffPerformance() {
 
     for (const appt of staffAppts) {
       totalRevenue += appt.total;
-      const service = serviceMap.get(appt.service);
+      const serviceName = appt.service || "Unknown";
+      const service = serviceMap.get(serviceName);
       const commissionRate = service?.commissionPercent || 50;
       totalCommission += (appt.total * commissionRate) / 100;
 
-      if (!serviceBreakdown[appt.service]) {
-        serviceBreakdown[appt.service] = { count: 0, revenue: 0 };
+      if (!serviceBreakdown[serviceName]) {
+        serviceBreakdown[serviceName] = { count: 0, revenue: 0 };
       }
-      serviceBreakdown[appt.service].count++;
-      serviceBreakdown[appt.service].revenue += appt.total;
+      serviceBreakdown[serviceName].count++;
+      serviceBreakdown[serviceName].revenue += appt.total;
     }
 
     return {
@@ -87,30 +88,37 @@ export default function StaffPerformance() {
     [staffList, calculateStaffStats]
   );
 
+  const filteredStaffStats = useMemo(() => {
+    if (selectedStaff === "all") {
+      return allStaffStats;
+    }
+    return allStaffStats.filter((s) => s.staffName === selectedStaff);
+  }, [allStaffStats, selectedStaff]);
+
   const { totalRevenue, totalAppointments, totalCommissions, topPerformer } = useMemo(() => ({
-    totalRevenue: allStaffStats.reduce((sum, s) => sum + s.totalRevenue, 0),
-    totalAppointments: allStaffStats.reduce((sum, s) => sum + s.totalAppointments, 0),
-    totalCommissions: allStaffStats.reduce((sum, s) => sum + s.totalCommission, 0),
-    topPerformer: allStaffStats.reduce(
+    totalRevenue: filteredStaffStats.reduce((sum, s) => sum + s.totalRevenue, 0),
+    totalAppointments: filteredStaffStats.reduce((sum, s) => sum + s.totalAppointments, 0),
+    totalCommissions: filteredStaffStats.reduce((sum, s) => sum + s.totalCommission, 0),
+    topPerformer: filteredStaffStats.reduce(
       (top, s) => (s.totalRevenue > (top?.totalRevenue || 0) ? s : top),
-      allStaffStats[0]
+      filteredStaffStats[0]
     ),
-  }), [allStaffStats]);
+  }), [filteredStaffStats]);
 
   const COLORS = ["#d63384", "#20c997", "#0d6efd", "#ffc107", "#6610f2"];
 
-  const chartData = useMemo(() => allStaffStats.map((s) => ({
+  const chartData = useMemo(() => filteredStaffStats.map((s) => ({
     name: s.staffName,
     appointments: s.totalAppointments,
     revenue: s.totalRevenue,
     commission: s.totalCommission,
-  })), [allStaffStats]);
+  })), [filteredStaffStats]);
 
-  const pieData = useMemo(() => allStaffStats.map((s, i) => ({
+  const pieData = useMemo(() => filteredStaffStats.map((s, i) => ({
     name: s.staffName,
     value: s.totalRevenue,
     color: COLORS[i % COLORS.length],
-  })), [allStaffStats]);
+  })), [filteredStaffStats]);
 
   const months = useMemo(() => Array.from({ length: 12 }, (_, i) => {
     const date = subMonths(new Date(), i);
