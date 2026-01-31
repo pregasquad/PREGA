@@ -10,11 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { ar, enUS, fr } from "date-fns/locale";
-import { Clock, CheckCircle2, Scissors, User, Phone, CalendarDays, Sparkles, X, Eye } from "lucide-react";
+import { Clock, CheckCircle2, Scissors, User, Phone, CalendarDays, Sparkles, X, Users } from "lucide-react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
 import { trackEvent } from "@/lib/analytics";
+import { io, Socket } from "socket.io-client";
 
 const bookingSchema = z.object({
   client: z.string().min(1),
@@ -82,14 +83,20 @@ export default function Booking() {
   }, []);
 
   useEffect(() => {
-    fetch("/api/public/page-views", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ path: "/booking" }),
-    })
-      .then(res => res.json())
-      .then(data => setVisitorCount(data.count || 0))
-      .catch(console.error);
+    const socket: Socket = io();
+    
+    socket.on("connect", () => {
+      socket.emit("booking:join");
+    });
+
+    socket.on("booking:viewers", (count: number) => {
+      setVisitorCount(count);
+    });
+
+    return () => {
+      socket.emit("booking:leave");
+      socket.disconnect();
+    };
   }, []);
 
   useEffect(() => {
@@ -317,8 +324,8 @@ export default function Booking() {
         <div className="flex justify-between items-center mb-2">
           {visitorCount > 0 && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground/80">
-              <Eye className="w-4 h-4" />
-              <span>{visitorCount.toLocaleString()} {t("booking.visitors", { defaultValue: "visiteurs" })}</span>
+              <Users className="w-4 h-4" />
+              <span>{visitorCount} {t("booking.activeVisitors", { defaultValue: "en ligne" })}</span>
             </div>
           )}
           {visitorCount === 0 && <div />}

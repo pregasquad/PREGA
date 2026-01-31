@@ -44,10 +44,31 @@ export async function registerRoutes(
     }
   });
 
+  // Track active booking page viewers
+  const bookingPageViewers = new Set<string>();
+
   io.on("connection", (socket) => {
     console.log("Client connected:", socket.id);
+
+    // Handle booking page join
+    socket.on("booking:join", () => {
+      bookingPageViewers.add(socket.id);
+      io.emit("booking:viewers", bookingPageViewers.size);
+    });
+
+    // Handle booking page leave
+    socket.on("booking:leave", () => {
+      bookingPageViewers.delete(socket.id);
+      io.emit("booking:viewers", bookingPageViewers.size);
+    });
+
     socket.on("disconnect", () => {
       console.log("Client disconnected:", socket.id);
+      // Remove from booking viewers if they were viewing
+      if (bookingPageViewers.has(socket.id)) {
+        bookingPageViewers.delete(socket.id);
+        io.emit("booking:viewers", bookingPageViewers.size);
+      }
     });
   });
 
