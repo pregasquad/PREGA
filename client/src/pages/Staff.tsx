@@ -1,0 +1,389 @@
+import { useStaff, useCreateStaff, useUpdateStaff, useDeleteStaff, useCategories } from "@/hooks/use-salon-data";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Plus, Trash2, Edit2, User, Phone, Mail, DollarSign, Palette, Tag } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Form, FormControl, FormField, FormItem, FormMessage, FormLabel } from "@/components/ui/form";
+import { insertStaffSchema } from "@shared/schema";
+import { z } from "zod";
+import { useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import type { Staff as StaffType } from "@shared/schema";
+import { useTranslation } from "react-i18next";
+import { Checkbox } from "@/components/ui/checkbox";
+
+const staffFormSchema = insertStaffSchema.extend({
+  baseSalary: z.coerce.number().min(0).optional(),
+});
+
+const STAFF_COLORS = [
+  "#f97316", "#ef4444", "#22c55e", "#3b82f6", "#8b5cf6", 
+  "#ec4899", "#14b8a6", "#f59e0b", "#6366f1", "#10b981"
+];
+
+export default function Staff() {
+  const { t, i18n } = useTranslation();
+  const isRtl = i18n.language === "ar";
+  const { data: staffList = [] } = useStaff();
+  const { data: categories = [] } = useCategories();
+  
+  const [editingStaff, setEditingStaff] = useState<StaffType | null>(null);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+
+  const createStaff = useCreateStaff();
+  const updateStaff = useUpdateStaff();
+  const deleteStaff = useDeleteStaff();
+
+  const form = useForm({
+    resolver: zodResolver(staffFormSchema),
+    defaultValues: { 
+      name: "", 
+      color: "#f97316", 
+      phone: "", 
+      email: "", 
+      baseSalary: 0,
+      categories: ""
+    }
+  });
+
+  const editForm = useForm({
+    resolver: zodResolver(staffFormSchema),
+    defaultValues: { 
+      name: "", 
+      color: "#f97316", 
+      phone: "", 
+      email: "", 
+      baseSalary: 0,
+      categories: ""
+    }
+  });
+
+  const onSubmit = async (data: z.infer<typeof staffFormSchema>) => {
+    await createStaff.mutateAsync(data as any);
+    form.reset();
+    setIsAddDialogOpen(false);
+  };
+
+  const onEditSubmit = async (data: z.infer<typeof staffFormSchema>) => {
+    if (editingStaff) {
+      await updateStaff.mutateAsync({ id: editingStaff.id, ...data } as any);
+      setEditingStaff(null);
+    }
+  };
+
+  const handleEdit = (staff: StaffType) => {
+    setEditingStaff(staff);
+    editForm.reset({
+      name: staff.name,
+      color: staff.color,
+      phone: staff.phone || "",
+      email: staff.email || "",
+      baseSalary: staff.baseSalary || 0,
+      categories: staff.categories || ""
+    });
+  };
+
+  const handleDelete = async (id: number) => {
+    if (confirm(t("staff.confirmDelete", { defaultValue: "Are you sure you want to delete this staff member?" }))) {
+      await deleteStaff.mutateAsync(id);
+    }
+  };
+
+  const getInitial = (name: string) => name.charAt(0).toUpperCase();
+
+  const parseCategories = (cats: string | null | undefined): string[] => {
+    if (!cats) return [];
+    try {
+      return JSON.parse(cats);
+    } catch {
+      return cats.split(",").map(c => c.trim()).filter(Boolean);
+    }
+  };
+
+  const StaffForm = ({ formInstance, onSubmitFn, buttonText }: { 
+    formInstance: typeof form; 
+    onSubmitFn: (data: z.infer<typeof staffFormSchema>) => Promise<void>;
+    buttonText: string;
+  }) => {
+    const selectedCategories = parseCategories(formInstance.watch("categories"));
+    
+    const toggleCategory = (catName: string) => {
+      const current = selectedCategories;
+      const updated = current.includes(catName) 
+        ? current.filter(c => c !== catName)
+        : [...current, catName];
+      formInstance.setValue("categories", JSON.stringify(updated));
+    };
+
+    return (
+      <Form {...formInstance}>
+        <form onSubmit={formInstance.handleSubmit(onSubmitFn)} className="space-y-4">
+          <FormField
+            control={formInstance.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  {t("staff.name", { defaultValue: "Name" })}
+                </FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder={t("staff.namePlaceholder", { defaultValue: "Staff name" })} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={formInstance.control}
+            name="color"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-2">
+                  <Palette className="h-4 w-4" />
+                  {t("staff.color", { defaultValue: "Color" })}
+                </FormLabel>
+                <div className="flex gap-2 flex-wrap">
+                  {STAFF_COLORS.map(color => (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => field.onChange(color)}
+                      className={`w-8 h-8 rounded-full border-2 transition-all ${
+                        field.value === color ? "border-foreground scale-110" : "border-transparent"
+                      }`}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <div className="grid grid-cols-2 gap-4">
+            <FormField
+              control={formInstance.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2">
+                    <Phone className="h-4 w-4" />
+                    {t("staff.phone", { defaultValue: "Phone" })}
+                  </FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="06XXXXXXXX" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={formInstance.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2">
+                    <Mail className="h-4 w-4" />
+                    {t("staff.email", { defaultValue: "Email" })}
+                  </FormLabel>
+                  <FormControl>
+                    <Input {...field} type="email" placeholder="email@example.com" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <FormField
+            control={formInstance.control}
+            name="baseSalary"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  {t("staff.baseSalary", { defaultValue: "Base Salary" })}
+                </FormLabel>
+                <FormControl>
+                  <Input {...field} type="number" min={0} step={100} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Tag className="h-4 w-4" />
+              {t("staff.categories", { defaultValue: "Service Categories" })}
+            </Label>
+            <div className="flex flex-wrap gap-2">
+              {categories.map(cat => (
+                <label 
+                  key={cat.id} 
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full border cursor-pointer transition-colors ${
+                    selectedCategories.includes(cat.name) 
+                      ? "bg-primary text-primary-foreground border-primary" 
+                      : "bg-muted/50 hover:bg-muted"
+                  }`}
+                >
+                  <Checkbox 
+                    checked={selectedCategories.includes(cat.name)}
+                    onCheckedChange={() => toggleCategory(cat.name)}
+                    className="hidden"
+                  />
+                  <span className="text-sm">{cat.name}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <Button type="submit" className="w-full" disabled={createStaff.isPending || updateStaff.isPending}>
+            {buttonText}
+          </Button>
+        </form>
+      </Form>
+    );
+  };
+
+  return (
+    <div className="space-y-6 p-4 md:p-6 animate-fade-in" dir={isRtl ? "rtl" : "ltr"}>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-display font-bold gradient-text">
+            {t("staff.title", { defaultValue: "Staff Management" })}
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            {t("staff.subtitle", { defaultValue: "Manage your team members" })}
+          </p>
+        </div>
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="gap-2">
+              <Plus className="h-4 w-4" />
+              {t("staff.add", { defaultValue: "Add Staff" })}
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>{t("staff.addNew", { defaultValue: "Add New Staff Member" })}</DialogTitle>
+            </DialogHeader>
+            <StaffForm 
+              formInstance={form} 
+              onSubmitFn={onSubmit} 
+              buttonText={t("staff.create", { defaultValue: "Create Staff" })} 
+            />
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {staffList.map((staff) => {
+          const staffCategories = parseCategories(staff.categories);
+          
+          return (
+            <Card key={staff.id} className="glass-card overflow-hidden">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div 
+                      className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg"
+                      style={{ backgroundColor: staff.color }}
+                    >
+                      {getInitial(staff.name)}
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg">{staff.name}</CardTitle>
+                      {staff.baseSalary ? (
+                        <CardDescription className="flex items-center gap-1">
+                          <DollarSign className="h-3 w-3" />
+                          {staff.baseSalary.toLocaleString()} MAD
+                        </CardDescription>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => handleEdit(staff)}
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => handleDelete(staff.id)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {staff.phone && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Phone className="h-4 w-4" />
+                    {staff.phone}
+                  </div>
+                )}
+                {staff.email && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Mail className="h-4 w-4" />
+                    {staff.email}
+                  </div>
+                )}
+                {staffCategories.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {staffCategories.map(cat => (
+                      <span 
+                        key={cat} 
+                        className="px-2 py-0.5 text-xs rounded-full bg-muted"
+                      >
+                        {cat}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      {staffList.length === 0 && (
+        <Card className="glass-card p-8 text-center">
+          <User className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+          <h3 className="text-lg font-medium mb-2">
+            {t("staff.noStaff", { defaultValue: "No staff members yet" })}
+          </h3>
+          <p className="text-muted-foreground mb-4">
+            {t("staff.addFirst", { defaultValue: "Add your first team member to get started" })}
+          </p>
+        </Card>
+      )}
+
+      <Dialog open={!!editingStaff} onOpenChange={(open) => !open && setEditingStaff(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("staff.edit", { defaultValue: "Edit Staff Member" })}</DialogTitle>
+          </DialogHeader>
+          <StaffForm 
+            formInstance={editForm} 
+            onSubmitFn={onEditSubmit} 
+            buttonText={t("staff.save", { defaultValue: "Save Changes" })} 
+          />
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

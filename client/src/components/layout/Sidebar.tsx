@@ -21,8 +21,10 @@ import {
   Users,
   TrendingUp,
   Settings,
-  Percent
+  Percent,
+  ChevronDown
 } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -48,11 +50,15 @@ const NAV_ITEMS = [
   { labelKey: "nav.inventory", href: "/inventory", icon: Package, permission: "view_inventory" },
   { labelKey: "nav.expenses", href: "/charges", icon: Wallet, permission: "view_expenses" },
   { labelKey: "nav.salaries", href: "/salaries", icon: DollarSign, permission: "view_salaries" },
-  { labelKey: "nav.staffCommissions", href: "/staff-commissions", icon: Percent, permission: "manage_salaries" },
-  { labelKey: "nav.staffPerformance", href: "/staff-performance", icon: TrendingUp, permission: "view_staff_performance" },
   { labelKey: "nav.reports", href: "/reports", icon: BarChart3, permission: "view_reports" },
   { labelKey: "nav.adminSettings", href: "/admin-settings", icon: Settings, permission: "admin_settings" },
   { labelKey: "nav.booking", href: "/booking", icon: ExternalLink, external: true, permission: null },
+];
+
+const STAFF_NAV_ITEMS = [
+  { labelKey: "nav.staffManagement", href: "/staff", icon: User, permission: "manage_staff" },
+  { labelKey: "nav.staffCommissions", href: "/staff-commissions", icon: Percent, permission: "manage_salaries" },
+  { labelKey: "nav.staffPerformance", href: "/staff-performance", icon: TrendingUp, permission: "view_staff_performance" },
 ];
 
 interface StoredNotification {
@@ -83,6 +89,10 @@ export function Sidebar() {
   );
   const isAdmin = isAdminState;
   const [newBookingFlash, setNewBookingFlash] = useState(false);
+  const [staffSectionOpen, setStaffSectionOpen] = useState(() => {
+    const path = typeof window !== 'undefined' ? window.location.pathname : '';
+    return path.startsWith('/staff');
+  });
   const [notifications, setNotifications] = useState<StoredNotification[]>(() => {
     const stored = localStorage.getItem("booking_notifications");
     return stored ? JSON.parse(stored) : [];
@@ -111,6 +121,8 @@ export function Sidebar() {
   };
 
   const filteredNavItems = NAV_ITEMS.filter(item => hasPermission(item.permission));
+  const filteredStaffItems = STAFF_NAV_ITEMS.filter(item => hasPermission(item.permission));
+  const hasStaffAccess = filteredStaffItems.length > 0;
 
   const { data: allAppointments = [] } = useQuery<any[]>({
     queryKey: ["/api/appointments/all"],
@@ -348,6 +360,82 @@ export function Sidebar() {
           {filteredNavItems.map((item) => {
             const isActive = location === item.href;
             const label = t(item.labelKey);
+            
+            if (item.href === "/reports" && hasStaffAccess) {
+              const isStaffActive = location.startsWith("/staff");
+              return (
+                <div key="staff-section">
+                  <Collapsible open={staffSectionOpen} onOpenChange={setStaffSectionOpen}>
+                    <CollapsibleTrigger asChild>
+                      <SidebarMenuButton
+                        className={cn(
+                          "h-12 rounded-xl transition-all duration-200 px-4 w-full justify-between",
+                          isStaffActive 
+                            ? "bg-primary/10 text-primary" 
+                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        )}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Users className={cn("w-5 h-5", isStaffActive ? "stroke-[2.5]" : "stroke-[2]")} />
+                          <span className="font-medium text-base">{t("nav.staff", { defaultValue: "Personnel" })}</span>
+                        </div>
+                        <ChevronDown className={cn(
+                          "w-4 h-4 transition-transform duration-200",
+                          staffSectionOpen && "rotate-180"
+                        )} />
+                      </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pl-4 space-y-1 mt-1">
+                      {filteredStaffItems.map((staffItem) => {
+                        const staffIsActive = location === staffItem.href;
+                        const staffLabel = t(staffItem.labelKey);
+                        return (
+                          <SidebarMenuItem key={staffItem.href}>
+                            <SidebarMenuButton
+                              asChild
+                              isActive={staffIsActive}
+                              tooltip={staffLabel}
+                              onClick={handleNavClick}
+                              className={cn(
+                                "h-10 rounded-lg transition-all duration-200 px-3",
+                                staffIsActive 
+                                  ? "bg-primary text-primary-foreground shadow-md shadow-primary/25" 
+                                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                              )}
+                            >
+                              <Link href={staffItem.href}>
+                                <staffItem.icon className={cn("w-4 h-4", staffIsActive ? "stroke-[2.5]" : "stroke-[2]")} />
+                                <span className="font-medium text-sm">{staffLabel}</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        );
+                      })}
+                    </CollapsibleContent>
+                  </Collapsible>
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive}
+                      tooltip={label}
+                      onClick={handleNavClick}
+                      className={cn(
+                        "h-12 rounded-xl transition-all duration-200 px-4",
+                        isActive 
+                          ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary/90 hover:text-primary-foreground" 
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                    >
+                      <Link href={item.href}>
+                        <item.icon className={cn("w-5 h-5", isActive ? "stroke-[2.5]" : "stroke-[2]")} />
+                        <span className="font-medium text-base">{label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </div>
+              );
+            }
+            
             return (
               <SidebarMenuItem key={item.href}>
                 <SidebarMenuButton

@@ -25,6 +25,7 @@ const Salaries = lazy(() => import("@/pages/Salaries"));
 const StaffCommissions = lazy(() => import("@/pages/StaffCommissions"));
 const Clients = lazy(() => import("@/pages/Clients"));
 const StaffPerformance = lazy(() => import("@/pages/StaffPerformance"));
+const Staff = lazy(() => import("@/pages/Staff"));
 const AdminSettings = lazy(() => import("@/pages/AdminSettings"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
@@ -144,6 +145,10 @@ function Router() {
 
       <Route path="/staff-performance">
         <PageRoute component={StaffPerformance} requireAdmin permission="view_staff_performance" lazy />
+      </Route>
+
+      <Route path="/staff">
+        <PageRoute component={Staff} requireAdmin permission="manage_staff" lazy />
       </Route>
 
       <Route path="/admin-settings">
