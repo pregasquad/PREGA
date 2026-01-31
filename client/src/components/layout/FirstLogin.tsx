@@ -413,38 +413,16 @@ export function FirstLogin({ children }: FirstLoginProps) {
                 ))}
               </div>
 
-              {hasNoUsersAnywhere && navigator.onLine && (
+              {hasNoUsersAnywhere && (
                 <div className="space-y-4 py-6">
                   <div className="w-20 h-20 mx-auto rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                    <User className="w-10 h-10 text-slate-400" />
+                    <Lock className="w-10 h-10 text-slate-400" />
                   </div>
                   <p className="text-sm text-slate-500 dark:text-slate-400">
                     {t("auth.noUsersConfigured")}
                   </p>
-                  <Button 
-                    className="w-full h-12 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-medium shadow-lg shadow-orange-500/25 transition-all"
-                    onClick={() => {
-                      sessionStorage.setItem("user_authenticated", "true");
-                      sessionStorage.setItem("current_user", "Setup");
-                      sessionStorage.setItem("current_user_role", "owner");
-                      sessionStorage.setItem("current_user_permissions", JSON.stringify([]));
-                      setIsAuthenticated(true);
-                      window.location.href = "/admin-settings";
-                    }}
-                  >
-                    <Settings className="w-4 h-4 mr-2" />
-                    {t("auth.setupFirstUser")}
-                  </Button>
-                </div>
-              )}
-              
-              {hasNoUsersAnywhere && !navigator.onLine && (
-                <div className="space-y-4 py-6">
-                  <div className="w-20 h-20 mx-auto rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                    <WifiOff className="w-10 h-10 text-slate-400" />
-                  </div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
-                    {t("auth.offlineNoCredentials")}
+                  <p className="text-xs text-slate-400 dark:text-slate-500">
+                    {t("auth.contactAdminForAccess")}
                   </p>
                 </div>
               )}
