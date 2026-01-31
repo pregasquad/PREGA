@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Lock, User, Settings, ArrowLeft, Phone, KeyRound, Sparkles } from "lucide-react";
+import { Lock, User, Settings, ArrowLeft, Phone, KeyRound, Sparkles, WifiOff, Wifi, CloudOff, RefreshCw } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -15,6 +15,13 @@ interface AdminRole {
   role: string;
   pin: string | null;
   photoUrl: string | null;
+  isOffline?: boolean;
+}
+
+interface DatabaseStatus {
+  online: boolean;
+  mode: "online" | "offline";
+  hasPendingSync: boolean;
 }
 
 interface FirstLoginProps {
@@ -91,6 +98,19 @@ export function FirstLogin({ children }: FirstLoginProps) {
       }
     }
   }, [isAuthenticated]);
+
+  const { data: dbStatus } = useQuery<DatabaseStatus>({
+    queryKey: ["/api/status/database"],
+    queryFn: async () => {
+      const res = await fetch("/api/status/database");
+      if (!res.ok) return { online: true, mode: "online" as const, hasPendingSync: false };
+      return res.json();
+    },
+    refetchInterval: 30000,
+    enabled: !isAuthenticated,
+  });
+
+  const isOfflineMode = dbStatus?.mode === "offline";
 
   const { data: adminRoles = [] } = useQuery<AdminRole[]>({
     queryKey: ["/api/admin-roles"],
@@ -229,6 +249,16 @@ export function FirstLogin({ children }: FirstLoginProps) {
               PREGA SQUAD
             </h1>
           </div>
+
+          {/* Offline mode indicator */}
+          {isOfflineMode && (
+            <div className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800">
+              <CloudOff className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              <span className="text-sm font-medium text-amber-700 dark:text-amber-300">
+                Mode hors ligne
+              </span>
+            </div>
+          )}
 
           {/* Welcome text */}
           <div className="space-y-1">

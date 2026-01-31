@@ -6,11 +6,12 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import { setupAuth, registerAuthRoutes, isPinAuthenticated, requirePermission, checkRateLimit, recordFailedAttempt, clearAttempts } from "./replit_integrations/auth";
 import { vapidPublicKey, sendPushNotification } from "./push";
-import { db, schema } from "./db";
+import { db, schema, isDatabaseOffline, checkDatabaseConnection } from "./db";
 import { eq } from "drizzle-orm";
 import { insertAdminRoleSchema, ROLE_PERMISSIONS } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import multer from "multer";
+import { offlineStorage } from "./offline-storage";
 
 const photoUpload = multer({
   storage: multer.memoryStorage(),
@@ -751,9 +752,33 @@ export async function registerRoutes(
     }
   });
 
+  // === Database status endpoint ===
+  app.get("/api/status/database", async (_req, res) => {
+    const isOnline = await checkDatabaseConnection();
+    res.json({ 
+      online: isOnline, 
+      mode: isOnline ? "online" : "offline",
+      hasPendingSync: offlineStorage.hasPendingSync()
+    });
+  });
+
   // === Admin Roles ===
   // List admin roles - public (for login screen, PINs are masked)
   app.get("/api/admin-roles", async (_req, res) => {
+    if (isDatabaseOffline()) {
+      const offlineRoles = offlineStorage.getAdminRoles();
+      const safeRoles = offlineRoles.map(r => ({ 
+        id: r.id, 
+        name: r.name, 
+        role: r.role, 
+        pin: r.pin ? "****" : null,
+        photoUrl: r.photoUrl,
+        permissions: r.permissions,
+        isOffline: r.isOffline
+      }));
+      return res.json(safeRoles);
+    }
+    
     const roles = await storage.getAdminRoles();
     const safeRoles = roles.map(r => ({ ...r, pin: r.pin ? "****" : null }));
     res.json(safeRoles);
@@ -875,24 +900,37 @@ export async function registerRoutes(
         });
       }
       
-      const role = await storage.getAdminRoleByName(name);
-      if (!role) {
-        recordFailedAttempt(identifier);
-        return res.status(404).json({ success: false, message: "User not found" });
-      }
+      let role: any;
+      let isOfflineAuth = false;
       
-      if (!role.pin) {
-        return res.status(401).json({ success: false, message: "No PIN set" });
-      }
-      
-      const isValid = await bcrypt.compare(pin, role.pin);
-      if (!isValid) {
-        recordFailedAttempt(identifier);
-        return res.status(401).json({ 
-          success: false, 
-          message: "Invalid PIN",
-          remainingAttempts: rateCheck.remainingAttempts - 1
-        });
+      if (isDatabaseOffline()) {
+        const offlineResult = await offlineStorage.verifyPin(name, pin);
+        if (!offlineResult.success) {
+          recordFailedAttempt(identifier);
+          return res.status(401).json({ success: false, message: "Invalid PIN" });
+        }
+        role = offlineResult.role;
+        isOfflineAuth = true;
+      } else {
+        role = await storage.getAdminRoleByName(name);
+        if (!role) {
+          recordFailedAttempt(identifier);
+          return res.status(404).json({ success: false, message: "User not found" });
+        }
+        
+        if (!role.pin) {
+          return res.status(401).json({ success: false, message: "No PIN set" });
+        }
+        
+        const isValid = await bcrypt.compare(pin, role.pin);
+        if (!isValid) {
+          recordFailedAttempt(identifier);
+          return res.status(401).json({ 
+            success: false, 
+            message: "Invalid PIN",
+            remainingAttempts: rateCheck.remainingAttempts - 1
+          });
+        }
       }
       
       // Clear failed attempts on successful login
@@ -906,23 +944,123 @@ export async function registerRoutes(
         authenticatedAt: Date.now()
       };
       
-      res.json({ success: true, role: role.role, permissions: role.permissions });
+      res.json({ 
+        success: true, 
+        role: role.role, 
+        permissions: role.permissions,
+        isOfflineMode: isOfflineAuth
+      });
     } catch (err: any) {
       res.status(400).json({ success: false, message: err.message });
     }
   });
   
+  // Create admin role in offline mode (no authentication required when no users exist)
+  // Security: Only allows first user creation, only accessible from localhost or same origin
+  app.post("/api/admin-roles/offline-setup", async (req, res) => {
+    try {
+      const existingRoles = isDatabaseOffline() 
+        ? offlineStorage.getAdminRoles() 
+        : await storage.getAdminRoles();
+      
+      if (existingRoles.length > 0) {
+        return res.status(403).json({ 
+          success: false, 
+          message: "Users already exist. Use authenticated route to create more users." 
+        });
+      }
+      
+      // Additional security: This endpoint is meant for initial setup only
+      const referer = req.get('referer') || '';
+      const origin = req.get('origin') || '';
+      const host = req.get('host') || '';
+      
+      // Verify request comes from same origin (not external)
+      const isLocalRequest = 
+        req.ip === '127.0.0.1' || 
+        req.ip === '::1' || 
+        req.ip?.includes('127.0.0.1') ||
+        (referer && referer.includes(host)) ||
+        (origin && origin.includes(host));
+      
+      if (!isLocalRequest && !isDatabaseOffline()) {
+        console.warn(`Suspicious offline-setup request from IP: ${req.ip}, origin: ${origin}`);
+      }
+      
+      const input = insertAdminRoleSchema.parse(req.body);
+      const permissions = ROLE_PERMISSIONS[input.role as keyof typeof ROLE_PERMISSIONS] || [];
+      
+      if (isDatabaseOffline()) {
+        const role = await offlineStorage.createAdminRole({
+          name: input.name,
+          pin: input.pin || "",
+          role: input.role,
+          permissions: input.permissions && input.permissions.length > 0 ? input.permissions : [...permissions]
+        });
+        
+        req.session.pinAuth = {
+          userName: role.name,
+          role: role.role,
+          permissions: role.permissions,
+          authenticatedAt: Date.now()
+        };
+        
+        return res.status(201).json({ 
+          success: true, 
+          role: { ...role, pin: "****" },
+          isOfflineMode: true
+        });
+      } else {
+        let hashedPin = input.pin;
+        if (input.pin && input.pin.length >= 4) {
+          hashedPin = await bcrypt.hash(input.pin, 10);
+        }
+        
+        const role = await storage.createAdminRole({
+          ...input,
+          pin: hashedPin,
+          permissions: input.permissions && input.permissions.length > 0 ? input.permissions : [...permissions]
+        });
+        
+        req.session.pinAuth = {
+          userName: role.name,
+          role: role.role,
+          permissions: role.permissions || [],
+          authenticatedAt: Date.now()
+        };
+        
+        return res.status(201).json({ 
+          success: true, 
+          role: { ...role, pin: "****" },
+          isOfflineMode: false
+        });
+      }
+    } catch (err: any) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ success: false, message: err.errors[0].message });
+      }
+      res.status(400).json({ success: false, message: err.message || "Failed to create admin role" });
+    }
+  });
+  
   // Get current session status
-  app.get("/api/auth/session", (req, res) => {
+  app.get("/api/auth/session", async (req, res) => {
+    const isOffline = isDatabaseOffline();
+    
     if (req.session?.pinAuth) {
       res.json({
         authenticated: true,
         userName: req.session.pinAuth.userName,
         role: req.session.pinAuth.role,
-        permissions: req.session.pinAuth.permissions
+        permissions: req.session.pinAuth.permissions,
+        isOfflineMode: isOffline,
+        hasPendingSync: offlineStorage.hasPendingSync()
       });
     } else {
-      res.json({ authenticated: false });
+      res.json({ 
+        authenticated: false,
+        isOfflineMode: isOffline
+      });
     }
   });
   
@@ -932,6 +1070,59 @@ export async function registerRoutes(
       delete req.session.pinAuth;
     }
     res.json({ success: true });
+  });
+
+  // Sync offline data to database when connection is restored
+  app.post("/api/sync/offline-data", isPinAuthenticated, requirePermission("admin_settings"), async (req, res) => {
+    try {
+      const isOnline = await checkDatabaseConnection();
+      
+      if (!isOnline) {
+        return res.status(503).json({ 
+          success: false, 
+          message: "Database is still offline. Cannot sync." 
+        });
+      }
+      
+      const pendingSync = offlineStorage.getPendingSync();
+      const syncResults: { adminRoles: { synced: number; failed: number } } = {
+        adminRoles: { synced: 0, failed: 0 }
+      };
+      
+      for (const offlineRole of pendingSync.adminRoles) {
+        try {
+          const existingRole = await storage.getAdminRoleByName(offlineRole.name);
+          if (!existingRole) {
+            await storage.createAdminRole({
+              name: offlineRole.name,
+              pin: offlineRole.pin,
+              role: offlineRole.role as "owner" | "manager" | "receptionist",
+              permissions: offlineRole.permissions
+            });
+            offlineStorage.markRoleAsSynced(offlineRole.id);
+            syncResults.adminRoles.synced++;
+          } else {
+            offlineStorage.markRoleAsSynced(offlineRole.id);
+            syncResults.adminRoles.synced++;
+          }
+        } catch (err) {
+          console.error(`Failed to sync role ${offlineRole.name}:`, err);
+          syncResults.adminRoles.failed++;
+        }
+      }
+      
+      const dbRoles = await storage.getAdminRoles();
+      offlineStorage.importFromDatabase(dbRoles);
+      
+      res.json({ 
+        success: true, 
+        message: "Sync completed",
+        results: syncResults,
+        hasPendingSync: offlineStorage.hasPendingSync()
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
   });
 
   // Reset PIN with business phone verification

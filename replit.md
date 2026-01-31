@@ -41,6 +41,22 @@ Preferred communication style: Simple, everyday language.
 - **Session Management**: Express-session.
 - **Security**: bcryptjs for PIN hashing, role-based access control with `admin_roles` table (Owner, Manager, Receptionist tiers), and an `AdminLock` component for sensitive pages.
 
+### Offline Mode / Database Bypass
+- **Purpose**: Allows the app to function for user authentication even when the database is unavailable
+- **Implementation**: 
+  - `server/offline-storage.ts`: JSON-based local storage for admin roles
+  - `server/db.ts`: Database connection status tracking with `isDatabaseOffline()`, `checkDatabaseConnection()`
+- **Features**:
+  - Automatic offline mode detection when DATABASE_URL is not set or database is unreachable
+  - First user can create account via `/api/admin-roles/offline-setup` endpoint when no users exist
+  - PIN-based authentication works in offline mode using locally stored credentials
+  - Offline mode indicator shown in login screen
+  - Data sync endpoint `/api/sync/offline-data` to transfer offline-created users to database when connection is restored
+- **Limitations**: 
+  - Only admin roles/authentication works in offline mode
+  - Full app features (appointments, services, etc.) require database connection
+- **Security**: Offline setup only allows first user creation; subsequent users require authenticated access
+
 ### Project Structure
 - `client/`: React frontend (components, hooks, pages, i18n, lib)
 - `server/`: Express backend (routes, storage, Replit integrations)

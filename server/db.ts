@@ -2,17 +2,34 @@ import * as postgresSchema from "@shared/schema/postgres";
 
 export const dbDialect = process.env.DB_DIALECT || 'postgres';
 
-function getDatabaseUrl(): string {
+let isOfflineMode = false;
+let lastConnectionCheck = 0;
+const CONNECTION_CHECK_INTERVAL = 30000;
+
+export function isDatabaseOffline(): boolean {
+  return isOfflineMode;
+}
+
+export function setOfflineMode(offline: boolean): void {
+  if (isOfflineMode !== offline) {
+    isOfflineMode = offline;
+    console.log(offline ? "OFFLINE MODE: Database unavailable, using local storage" : "ONLINE MODE: Database connected");
+  }
+}
+
+function getDatabaseUrl(): string | null {
   if (dbDialect === 'mysql') {
     const mysqlUrl = process.env.MYSQL_URL;
     if (!mysqlUrl) {
-      throw new Error("MYSQL_URL must be set for MySQL/TiDB mode.");
+      console.warn("MYSQL_URL not set - running in offline mode");
+      return null;
     }
     return mysqlUrl;
   } else {
     const pgUrl = process.env.DATABASE_URL;
     if (!pgUrl) {
-      throw new Error("DATABASE_URL must be set for PostgreSQL mode.");
+      console.warn("DATABASE_URL not set - running in offline mode");
+      return null;
     }
     return pgUrl;
   }
@@ -22,38 +39,82 @@ let db: any;
 let pool: any;
 let schema: any = postgresSchema;
 
-export async function initializeDatabase() {
+export async function initializeDatabase(): Promise<boolean> {
   const databaseUrl = getDatabaseUrl();
   
-  if (dbDialect === 'mysql') {
-    const { drizzle } = await import("drizzle-orm/mysql2");
-    const mysql = await import("mysql2/promise");
-    const schemaModule = await import("@shared/schema/mysql");
-    schema = schemaModule;
+  if (!databaseUrl) {
+    setOfflineMode(true);
+    console.log("Starting in OFFLINE MODE - no database configured");
+    return false;
+  }
+  
+  try {
+    if (dbDialect === 'mysql') {
+      const { drizzle } = await import("drizzle-orm/mysql2");
+      const mysql = await import("mysql2/promise");
+      const schemaModule = await import("@shared/schema/mysql");
+      schema = schemaModule;
+      
+      pool = mysql.default.createPool({
+        uri: databaseUrl,
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0,
+        enableKeepAlive: true,
+        keepAliveInitialDelay: 0,
+        ssl: {
+          rejectUnauthorized: true,
+        },
+      });
+      
+      db = drizzle(pool, { schema, mode: "default" });
+      console.log("Using MySQL/TiDB database");
+    } else {
+      const { drizzle } = await import("drizzle-orm/neon-serverless");
+      const { Pool, neonConfig } = await import("@neondatabase/serverless");
+      const ws = (await import("ws")).default;
+      
+      neonConfig.webSocketConstructor = ws;
+      pool = new Pool({ connectionString: databaseUrl });
+      db = drizzle(pool, { schema });
+      console.log("Using PostgreSQL database");
+    }
     
-    pool = mysql.default.createPool({
-      uri: databaseUrl,
-      waitForConnections: true,
-      connectionLimit: 10,
-      queueLimit: 0,
-      enableKeepAlive: true,
-      keepAliveInitialDelay: 0,
-      ssl: {
-        rejectUnauthorized: true,
-      },
-    });
-    
-    db = drizzle(pool, { schema, mode: "default" });
-    console.log("Using MySQL/TiDB database");
-  } else {
-    const { drizzle } = await import("drizzle-orm/neon-serverless");
-    const { Pool, neonConfig } = await import("@neondatabase/serverless");
-    const ws = (await import("ws")).default;
-    
-    neonConfig.webSocketConstructor = ws;
-    pool = new Pool({ connectionString: databaseUrl });
-    db = drizzle(pool, { schema });
-    console.log("Using PostgreSQL database");
+    setOfflineMode(false);
+    return true;
+  } catch (error) {
+    console.error("Failed to initialize database:", error);
+    setOfflineMode(true);
+    return false;
+  }
+}
+
+export async function checkDatabaseConnection(): Promise<boolean> {
+  const now = Date.now();
+  if (now - lastConnectionCheck < CONNECTION_CHECK_INTERVAL) {
+    return !isOfflineMode;
+  }
+  lastConnectionCheck = now;
+
+  if (!pool) {
+    const initialized = await initializeDatabase();
+    return initialized;
+  }
+
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      await connection.query("SELECT 1");
+      connection.release();
+    } else {
+      await pool.query("SELECT 1");
+    }
+    setOfflineMode(false);
+    return true;
+  } catch (error) {
+    console.error("Database connection check failed:", error);
+    setOfflineMode(true);
+    return false;
   }
 }
 
@@ -73,7 +134,12 @@ export function getSchema() {
 
 export { getDb as db, getPool as pool, getSchema as schema };
 
-export async function warmupDatabase(): Promise<void> {
+export async function warmupDatabase(): Promise<boolean> {
+  if (isOfflineMode || !pool) {
+    console.log("Skipping database warmup - offline mode");
+    return false;
+  }
+  
   try {
     if (dbDialect === 'mysql') {
       const connection = await pool.getConnection();
@@ -83,8 +149,11 @@ export async function warmupDatabase(): Promise<void> {
       await pool.query("SELECT 1");
     }
     console.log("Database connection ready");
+    return true;
   } catch (error) {
     console.error("Database warmup failed:", error);
+    setOfflineMode(true);
+    return false;
   }
 }
 

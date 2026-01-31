@@ -71,12 +71,20 @@ app.use((req, res, next) => {
 });
 
 const startServer = async () => {
-  await initializeDatabase();
-  await warmupDatabase();
-  await ensurePushSubscriptionsTable();
-  await ensureAppointmentsAuditColumns();
-  await ensureAdminRolesPhotoColumn();
-  await ensureForeignKeyConstraints();
+  const dbConnected = await initializeDatabase();
+  
+  if (dbConnected) {
+    const warmedUp = await warmupDatabase();
+    if (warmedUp) {
+      await ensurePushSubscriptionsTable();
+      await ensureAppointmentsAuditColumns();
+      await ensureAdminRolesPhotoColumn();
+      await ensureForeignKeyConstraints();
+    }
+  } else {
+    console.log("Starting in OFFLINE MODE - database migrations skipped");
+  }
+  
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
