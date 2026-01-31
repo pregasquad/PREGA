@@ -424,7 +424,7 @@ export function FirstLogin({ children }: FirstLoginProps) {
                   
                   <form onSubmit={(e) => {
                     e.preventDefault();
-                    if (masterPassword === MASTER_PASSWORD) {
+                    if (masterPassword.trim() === MASTER_PASSWORD) {
                       sessionStorage.setItem("user_authenticated", "true");
                       sessionStorage.setItem("current_user", "Setup");
                       sessionStorage.setItem("current_user_role", "owner");
