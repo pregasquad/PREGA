@@ -552,7 +552,9 @@
     "teamStatus": "Team Status",
     "appointmentsToday": "appointments today",
     "category": "Category",
-    "selectCategory": "Select Category"
+    "categories": "Categories",
+    "selectCategory": "Select Category",
+    "selectCategoriesHint": "Select the service categories this staff member can perform"
   },
   "login": {
     "welcomeBack": "Welcome Back",

@@ -552,7 +552,9 @@
     "teamStatus": "État de l'Équipe",
     "appointmentsToday": "rendez-vous aujourd'hui",
     "category": "Catégorie",
-    "selectCategory": "Sélectionner Catégorie"
+    "categories": "Catégories",
+    "selectCategory": "Sélectionner Catégorie",
+    "selectCategoriesHint": "Sélectionnez les catégories de services que ce membre peut effectuer"
   },
   "login": {
     "welcomeBack": "Bienvenue",

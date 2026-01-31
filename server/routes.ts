@@ -110,14 +110,14 @@ export async function registerRoutes(
     res.json(sanitizedItems);
   });
 
-  // Public: Get staff list for booking (sanitized - only name, color, and category)
+  // Public: Get staff list for booking (sanitized - only name, color, and categories)
   app.get("/api/public/staff", publicRateLimitMiddleware, async (_req, res) => {
     const items = await storage.getStaff();
     const sanitizedItems = items.map(s => ({
       id: s.id,
       name: s.name,
       color: s.color,
-      category: s.category || null
+      categories: s.categories || null
     }));
     res.json(sanitizedItems);
   });

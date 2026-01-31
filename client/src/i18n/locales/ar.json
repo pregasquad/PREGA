@@ -552,7 +552,9 @@
     "teamStatus": "حالة الفريق",
     "appointmentsToday": "مواعيد اليوم",
     "category": "الفئة",
-    "selectCategory": "اختر الفئة"
+    "categories": "الفئات",
+    "selectCategory": "اختر الفئة",
+    "selectCategoriesHint": "اختر فئات الخدمات التي يمكن لهذا العضو تقديمها"
   },
   "login": {
     "welcomeBack": "مرحباً بعودتك",

@@ -28,6 +28,64 @@ function getWorkDayDate(): Date {
   return startOfToday();
 }
 
+function EditStaffForm({ staff, categories, onSubmit, isPending, t }: { 
+  staff: any; 
+  categories: any[]; 
+  onSubmit: (data: any) => void; 
+  isPending: boolean;
+  t: any;
+}) {
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(
+    staff.categories ? staff.categories.split(",").filter(Boolean) : []
+  );
+  const [name, setName] = useState(staff.name);
+  const [color, setColor] = useState(staff.color);
+
+  const toggleCategory = (catName: string) => {
+    setSelectedCategories(prev => 
+      prev.includes(catName) ? prev.filter(c => c !== catName) : [...prev, catName]
+    );
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit({ name, color, categories: selectedCategories.join(",") });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <label className="text-sm font-medium">{t("home.name")}</label>
+        <Input value={name} onChange={(e) => setName(e.target.value)} required />
+      </div>
+      <div className="space-y-2">
+        <label className="text-sm font-medium">{t("home.color")}</label>
+        <Input type="color" value={color} onChange={(e) => setColor(e.target.value)} required />
+      </div>
+      <div className="space-y-2">
+        <label className="text-sm font-medium">{t("home.categories")}</label>
+        <div className="flex flex-wrap gap-2">
+          {categories.map((cat: any) => (
+            <Button
+              key={cat.id}
+              type="button"
+              variant={selectedCategories.includes(cat.name) ? "default" : "outline"}
+              size="sm"
+              onClick={() => toggleCategory(cat.name)}
+            >
+              {cat.name}
+            </Button>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground">{t("home.selectCategoriesHint")}</p>
+      </div>
+      <Button type="submit" className="w-full" disabled={isPending}>
+        {isPending ? t("home.updating") : t("home.update")}
+      </Button>
+    </form>
+  );
+}
+
 export default function Home() {
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === "ar";
@@ -59,7 +117,7 @@ export default function Home() {
 
   const staffForm = useForm({
     resolver: zodResolver(insertStaffSchema),
-    defaultValues: { name: "", color: "#" + Math.floor(Math.random()*16777215).toString(16), category: "" }
+    defaultValues: { name: "", color: "#" + Math.floor(Math.random()*16777215).toString(16), categories: "" }
   });
 
   const createStaffMutation = useMutation({
@@ -70,7 +128,7 @@ export default function Home() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
       setIsStaffDialogOpen(false);
-      staffForm.reset({ name: "", color: "#" + Math.floor(Math.random()*16777215).toString(16), category: "" });
+      staffForm.reset({ name: "", color: "#" + Math.floor(Math.random()*16777215).toString(16), categories: "" });
       toast({ title: t("home.staffAdded") });
     }
   });
@@ -159,23 +217,34 @@ export default function Home() {
                   <FormField control={staffForm.control} name="color" render={({ field }) => (
                     <FormItem><FormLabel>{t("home.color")}</FormLabel><FormControl><Input type="color" {...field} /></FormControl></FormItem>
                   )} />
-                  <FormField control={staffForm.control} name="category" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("home.category")}</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value || ""}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder={t("home.selectCategory")} />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
+                  <FormField control={staffForm.control} name="categories" render={({ field }) => {
+                    const selectedCategories = field.value ? field.value.split(",").filter(Boolean) : [];
+                    const toggleCategory = (catName: string) => {
+                      const newCategories = selectedCategories.includes(catName)
+                        ? selectedCategories.filter(c => c !== catName)
+                        : [...selectedCategories, catName];
+                      field.onChange(newCategories.join(","));
+                    };
+                    return (
+                      <FormItem>
+                        <FormLabel>{t("home.categories")}</FormLabel>
+                        <div className="flex flex-wrap gap-2">
                           {categories.map((cat: any) => (
-                            <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                            <Button
+                              key={cat.id}
+                              type="button"
+                              variant={selectedCategories.includes(cat.name) ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => toggleCategory(cat.name)}
+                            >
+                              {cat.name}
+                            </Button>
                           ))}
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )} />
+                        </div>
+                        <p className="text-xs text-muted-foreground">{t("home.selectCategoriesHint")}</p>
+                      </FormItem>
+                    );
+                  }} />
                   <Button type="submit" className="w-full" disabled={createStaffMutation.isPending}>
                     {createStaffMutation.isPending ? t("home.adding") : t("home.add")}
                   </Button>
@@ -292,39 +361,13 @@ export default function Home() {
                           </DialogTrigger>
                           <DialogContent>
                             <DialogHeader><DialogTitle>{t("home.editStaffData")}</DialogTitle></DialogHeader>
-                            <form 
-                              onSubmit={(e) => {
-                                e.preventDefault();
-                                const formData = new FormData(e.currentTarget);
-                                updateStaffMutation.mutate({
-                                  name: formData.get("name"),
-                                  color: formData.get("color"),
-                                  category: formData.get("category")
-                                });
-                              }} 
-                              className="space-y-4"
-                            >
-                              <div className="space-y-2">
-                                <label className="text-sm font-medium">{t("home.name")}</label>
-                                <Input name="name" defaultValue={s.name} required />
-                              </div>
-                              <div className="space-y-2">
-                                <label className="text-sm font-medium">{t("home.color")}</label>
-                                <Input name="color" type="color" defaultValue={s.color} required />
-                              </div>
-                              <div className="space-y-2">
-                                <label className="text-sm font-medium">{t("home.category")}</label>
-                                <select name="category" defaultValue={s.category || ""} className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm">
-                                  <option value="">{t("home.selectCategory")}</option>
-                                  {categories.map((cat: any) => (
-                                    <option key={cat.id} value={cat.name}>{cat.name}</option>
-                                  ))}
-                                </select>
-                              </div>
-                              <Button type="submit" className="w-full" disabled={updateStaffMutation.isPending}>
-                                {updateStaffMutation.isPending ? t("home.updating") : t("home.update")}
-                              </Button>
-                            </form>
+                            <EditStaffForm 
+                              staff={s} 
+                              categories={categories} 
+                              onSubmit={(data: any) => updateStaffMutation.mutate(data)} 
+                              isPending={updateStaffMutation.isPending}
+                              t={t}
+                            />
                           </DialogContent>
                         </Dialog>
                         <Button 

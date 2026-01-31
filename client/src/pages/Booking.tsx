@@ -37,7 +37,7 @@ interface Staff {
   id: number;
   name: string;
   color: string;
-  category: string | null;
+  categories: string | null;
 }
 
 interface Service {
@@ -141,9 +141,11 @@ export default function Booking() {
         return service?.category;
       }).filter(Boolean)
     );
-    return staffList.filter(staff => 
-      !staff.category || selectedCategories.has(staff.category)
-    );
+    return staffList.filter(staff => {
+      if (!staff.categories) return true;
+      const staffCategories = staff.categories.split(",").map(c => c.trim());
+      return staffCategories.some(cat => selectedCategories.has(cat));
+    });
   }, [staffList, selectedServices, services]);
 
   const getAvailableSlots = useMemo(() => {
