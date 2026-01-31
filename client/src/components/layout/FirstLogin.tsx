@@ -349,14 +349,7 @@ export function FirstLogin({ children }: FirstLoginProps) {
         <div className="flex flex-col items-center gap-8 text-center">
           {/* Logo section */}
           <div className="flex flex-col items-center gap-3">
-            <div className="relative">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-500 flex items-center justify-center shadow-lg shadow-orange-500/25 rotate-3 transition-transform hover:rotate-0">
-                <span className="text-3xl font-black text-white">P</span>
-              </div>
-              <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg">
-                <Sparkles className="w-3 h-3 text-white" />
-              </div>
-            </div>
+            <img src="/prega_logo.png" alt="PregaSquad" className="w-24 h-24" />
             <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-white dark:via-slate-200 dark:to-slate-400 bg-clip-text text-transparent tracking-tight">
               PREGA SQUAD
             </h1>
