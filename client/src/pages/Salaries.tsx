@@ -99,6 +99,10 @@ export default function Salaries() {
     queryKey: ["/api/staff-deductions"],
   });
 
+  const { data: staffCommissions = [] } = useQuery<{ id: number; staffId: number; serviceId: number; percentage: number }[]>({
+    queryKey: ["/api/staff-commissions"],
+  });
+
   const createChargeMutation = useMutation({
     mutationFn: async (charge: typeof newCharge) => {
       const res = await apiRequest("POST", "/api/charges", charge);
@@ -195,9 +199,23 @@ export default function Salaries() {
     return inRange && staffMatch && apt.paid === true;
   });
 
-  const getServiceCommission = (serviceName: string): number => {
+  const getServiceCommission = (serviceName: string, staffName?: string): number => {
     const service = services.find((s) => s.name === serviceName);
-    return service?.commissionPercent ?? 50;
+    if (!service) return 50;
+    
+    if (staffName) {
+      const staffMember = staff.find(s => s.name === staffName);
+      if (staffMember) {
+        const customCommission = staffCommissions.find(
+          c => c.staffId === staffMember.id && c.serviceId === service.id
+        );
+        if (customCommission) {
+          return customCommission.percentage;
+        }
+      }
+    }
+    
+    return service.commissionPercent ?? 50;
   };
 
   const calculateStaffEarnings = () => {
@@ -230,7 +248,7 @@ export default function Salaries() {
         };
       }
       
-      const commissionPercent = getServiceCommission(apt.service);
+      const commissionPercent = getServiceCommission(apt.service, apt.staff);
       const commission = (apt.total * commissionPercent) / 100;
       
       earnings[apt.staff].totalRevenue += apt.total;

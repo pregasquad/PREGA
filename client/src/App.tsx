@@ -20,6 +20,7 @@ const Services = lazy(() => import("@/pages/Services"));
 const Reports = lazy(() => import("@/pages/Reports"));
 const Inventory = lazy(() => import("@/pages/Inventory"));
 const Salaries = lazy(() => import("@/pages/Salaries"));
+const StaffCommissions = lazy(() => import("@/pages/StaffCommissions"));
 const Clients = lazy(() => import("@/pages/Clients"));
 const StaffPerformance = lazy(() => import("@/pages/StaffPerformance"));
 const AdminSettings = lazy(() => import("@/pages/AdminSettings"));
@@ -127,6 +128,10 @@ function Router() {
 
       <Route path="/salaries">
         <PageRoute component={Salaries} requireAdmin permission="view_salaries" lazy />
+      </Route>
+
+      <Route path="/staff-commissions">
+        <PageRoute component={StaffCommissions} requireAdmin permission="manage_salaries" lazy />
       </Route>
 
       <Route path="/clients">

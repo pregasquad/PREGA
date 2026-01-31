@@ -20,7 +20,8 @@ import {
   DollarSign,
   Users,
   TrendingUp,
-  Settings
+  Settings,
+  Percent
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,7 @@ const NAV_ITEMS = [
   { labelKey: "nav.inventory", href: "/inventory", icon: Package, permission: "view_inventory" },
   { labelKey: "nav.expenses", href: "/charges", icon: Wallet, permission: "view_expenses" },
   { labelKey: "nav.salaries", href: "/salaries", icon: DollarSign, permission: "view_salaries" },
+  { labelKey: "nav.staffCommissions", href: "/staff-commissions", icon: Percent, permission: "manage_salaries" },
   { labelKey: "nav.staffPerformance", href: "/staff-performance", icon: TrendingUp, permission: "view_staff_performance" },
   { labelKey: "nav.reports", href: "/reports", icon: BarChart3, permission: "view_reports" },
   { labelKey: "nav.adminSettings", href: "/admin-settings", icon: Settings, permission: "admin_settings" },

@@ -290,3 +290,20 @@ export const businessSettings = pgTable("business_settings", {
 export const insertBusinessSettingsSchema = createInsertSchema(businessSettings).omit({ id: true, updatedAt: true });
 export type BusinessSettings = typeof businessSettings.$inferSelect;
 export type InsertBusinessSettings = z.infer<typeof insertBusinessSettingsSchema>;
+
+export const staffCommissions = pgTable("staff_commissions", {
+  id: serial("id").primaryKey(),
+  staffId: integer("staff_id").notNull(),
+  serviceId: integer("service_id").notNull(),
+  percentage: doublePrecision("percentage").notNull().default(50),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertStaffCommissionSchema = createInsertSchema(staffCommissions).omit({ id: true, createdAt: true, updatedAt: true }).extend({
+  staffId: z.number().int(),
+  serviceId: z.number().int(),
+  percentage: z.number().min(0).max(100),
+});
+export type StaffCommission = typeof staffCommissions.$inferSelect;
+export type InsertStaffCommission = z.infer<typeof insertStaffCommissionSchema>;

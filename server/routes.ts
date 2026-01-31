@@ -391,6 +391,48 @@ export async function registerRoutes(
     res.status(204).send();
   });
 
+  // Staff Commissions - manage percentage per staff per service
+  app.get("/api/staff-commissions", isPinAuthenticated, async (_req, res) => {
+    const commissions = await storage.getStaffCommissions();
+    res.json(commissions);
+  });
+
+  app.get("/api/staff-commissions/staff/:staffId", isPinAuthenticated, async (req, res) => {
+    const commissions = await storage.getStaffCommissionsByStaff(Number(req.params.staffId));
+    res.json(commissions);
+  });
+
+  app.get("/api/staff-commissions/service/:serviceId", isPinAuthenticated, async (req, res) => {
+    const commissions = await storage.getStaffCommissionsByService(Number(req.params.serviceId));
+    res.json(commissions);
+  });
+
+  app.post("/api/staff-commissions", isPinAuthenticated, requirePermission("manage_salaries"), async (req, res) => {
+    const commission = await storage.upsertStaffCommission(req.body);
+    res.status(201).json(commission);
+  });
+
+  app.patch("/api/staff-commissions/:id", isPinAuthenticated, requirePermission("manage_salaries"), async (req, res) => {
+    const commission = await storage.updateStaffCommission(Number(req.params.id), req.body);
+    res.json(commission);
+  });
+
+  app.delete("/api/staff-commissions/:id", isPinAuthenticated, requirePermission("manage_salaries"), async (req, res) => {
+    await storage.deleteStaffCommission(Number(req.params.id));
+    res.status(204).send();
+  });
+
+  // Bulk update staff commissions for a staff member
+  app.post("/api/staff-commissions/bulk", isPinAuthenticated, requirePermission("manage_salaries"), async (req, res) => {
+    const { staffId, commissions } = req.body as { staffId: number; commissions: { serviceId: number; percentage: number }[] };
+    const results = [];
+    for (const c of commissions) {
+      const result = await storage.upsertStaffCommission({ staffId, serviceId: c.serviceId, percentage: c.percentage });
+      results.push(result);
+    }
+    res.json(results);
+  });
+
   // Products/Inventory - protected routes
   app.get("/api/products", isPinAuthenticated, async (_req, res) => {
     const products = await storage.getProducts();

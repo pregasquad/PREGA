@@ -11,7 +11,8 @@ import {
   type ExpenseCategory, type InsertExpenseCategory,
   type LoyaltyRedemption, type InsertLoyaltyRedemption,
   type AdminRole, type InsertAdminRole,
-  type BusinessSettings, type InsertBusinessSettings
+  type BusinessSettings, type InsertBusinessSettings,
+  type StaffCommission, type InsertStaffCommission
 } from "@shared/schema";
 import { eq, desc, and, gte, lte, sql } from "drizzle-orm";
 import { authStorage, type IAuthStorage } from "./replit_integrations/auth/storage";
@@ -92,6 +93,15 @@ export interface IStorage extends IAuthStorage {
 
   getBusinessSettings(): Promise<BusinessSettings | undefined>;
   updateBusinessSettings(settings: Partial<InsertBusinessSettings>): Promise<BusinessSettings>;
+
+  getStaffCommissions(): Promise<StaffCommission[]>;
+  getStaffCommissionsByStaff(staffId: number): Promise<StaffCommission[]>;
+  getStaffCommissionsByService(serviceId: number): Promise<StaffCommission[]>;
+  getStaffCommission(staffId: number, serviceId: number): Promise<StaffCommission | undefined>;
+  createStaffCommission(commission: InsertStaffCommission): Promise<StaffCommission>;
+  updateStaffCommission(id: number, commission: Partial<InsertStaffCommission>): Promise<StaffCommission>;
+  deleteStaffCommission(id: number): Promise<void>;
+  upsertStaffCommission(commission: InsertStaffCommission): Promise<StaffCommission>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -664,6 +674,67 @@ export class DatabaseStorage implements IStorage {
       const [created] = await db().insert(s.businessSettings).values(settings as InsertBusinessSettings).returning();
       return created;
     }
+  }
+
+  async getStaffCommissions(): Promise<StaffCommission[]> {
+    const s = schema();
+    return await db().select().from(s.staffCommissions);
+  }
+
+  async getStaffCommissionsByStaff(staffId: number): Promise<StaffCommission[]> {
+    const s = schema();
+    return await db().select().from(s.staffCommissions).where(eq(s.staffCommissions.staffId, staffId));
+  }
+
+  async getStaffCommissionsByService(serviceId: number): Promise<StaffCommission[]> {
+    const s = schema();
+    return await db().select().from(s.staffCommissions).where(eq(s.staffCommissions.serviceId, serviceId));
+  }
+
+  async getStaffCommission(staffId: number, serviceId: number): Promise<StaffCommission | undefined> {
+    const s = schema();
+    const [commission] = await db().select().from(s.staffCommissions)
+      .where(and(eq(s.staffCommissions.staffId, staffId), eq(s.staffCommissions.serviceId, serviceId)));
+    return commission;
+  }
+
+  async createStaffCommission(commission: InsertStaffCommission): Promise<StaffCommission> {
+    const s = schema();
+    if (isMySQL()) {
+      const result = await db().insert(s.staffCommissions).values(commission);
+      const insertId = (result as any).insertId ?? (result as any)[0]?.insertId;
+      if (!insertId) throw new Error("Failed to get insert ID");
+      const [created] = await db().select().from(s.staffCommissions).where(eq(s.staffCommissions.id, insertId));
+      if (!created) throw new Error("Failed to retrieve staff commission");
+      return created;
+    }
+    const [created] = await db().insert(s.staffCommissions).values(commission).returning();
+    return created;
+  }
+
+  async updateStaffCommission(id: number, commission: Partial<InsertStaffCommission>): Promise<StaffCommission> {
+    const s = schema();
+    if (isMySQL()) {
+      await db().update(s.staffCommissions).set({ ...commission, updatedAt: new Date() }).where(eq(s.staffCommissions.id, id));
+      const [updated] = await db().select().from(s.staffCommissions).where(eq(s.staffCommissions.id, id));
+      if (!updated) throw new Error("Staff commission not found");
+      return updated;
+    }
+    const [updated] = await db().update(s.staffCommissions).set({ ...commission, updatedAt: new Date() }).where(eq(s.staffCommissions.id, id)).returning();
+    return updated;
+  }
+
+  async deleteStaffCommission(id: number): Promise<void> {
+    const s = schema();
+    await db().delete(s.staffCommissions).where(eq(s.staffCommissions.id, id));
+  }
+
+  async upsertStaffCommission(commission: InsertStaffCommission): Promise<StaffCommission> {
+    const existing = await this.getStaffCommission(commission.staffId, commission.serviceId);
+    if (existing) {
+      return await this.updateStaffCommission(existing.id, { percentage: commission.percentage });
+    }
+    return await this.createStaffCommission(commission);
   }
 }
 
