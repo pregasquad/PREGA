@@ -14,6 +14,7 @@ import { Clock, CheckCircle2, Scissors, User, Phone, CalendarDays, Sparkles, X }
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
+import { trackEvent } from "@/lib/analytics";
 
 const bookingSchema = z.object({
   client: z.string().min(1),
@@ -206,6 +207,7 @@ export default function Booking() {
       setIsSuccess(true);
       setSelectedServices([]);
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+      trackEvent("booking_completed", "booking", serviceNames, totalPrice);
     } catch (error) {
       console.error("Booking failed:", error);
     } finally {

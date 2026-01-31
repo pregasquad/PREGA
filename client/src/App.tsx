@@ -6,8 +6,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { AdminLock } from "@/components/layout/AdminLock";
 import { FirstLogin } from "@/components/layout/FirstLogin";
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
+import { initGA } from "./lib/analytics";
+import { useAnalytics } from "./hooks/use-analytics";
 
 // Core pages - loaded immediately
 import Planning from "@/pages/Planning";
@@ -96,6 +98,8 @@ function PageRoute({ component: Component, requireAdmin = false, permission, laz
 }
 
 function Router() {
+  useAnalytics();
+  
   return (
     <Switch>
       <Route path="/">
@@ -158,6 +162,12 @@ function Router() {
 }
 
 function App() {
+  useEffect(() => {
+    if (import.meta.env.VITE_GA_MEASUREMENT_ID) {
+      initGA();
+    }
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
