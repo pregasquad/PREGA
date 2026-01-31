@@ -1,4 +1,13 @@
 {
+  "offline": {
+    "offline": "Offline Mode",
+    "pending": "pending",
+    "syncing": "Syncing...",
+    "synced": "All synced",
+    "syncComplete": "Sync Complete",
+    "syncedItems": "{{count}} changes synced successfully",
+    "syncFailed": "Some changes failed to sync"
+  },
   "nav": {
     "home": "Home",
     "planning": "Planning",

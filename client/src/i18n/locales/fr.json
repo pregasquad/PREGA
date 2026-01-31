@@ -1,4 +1,13 @@
 {
+  "offline": {
+    "offline": "Mode Hors Ligne",
+    "pending": "en attente",
+    "syncing": "Synchronisation...",
+    "synced": "Tout synchronisé",
+    "syncComplete": "Synchronisation Terminée",
+    "syncedItems": "{{count}} modifications synchronisées",
+    "syncFailed": "Certaines modifications n'ont pas pu être synchronisées"
+  },
   "nav": {
     "home": "Accueil",
     "planning": "Planning",
