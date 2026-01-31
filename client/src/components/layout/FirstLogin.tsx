@@ -410,7 +410,7 @@ export function FirstLogin({ children }: FirstLoginProps) {
                 ))}
               </div>
 
-              {hasNoUsersAnywhere && (
+              {(hasNoUsersAnywhere || serverAdminRoles.length === 0) && (
                 <div className="space-y-4 py-6">
                   <div className="w-20 h-20 mx-auto rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
                     <Lock className="w-10 h-10 text-slate-400" />
