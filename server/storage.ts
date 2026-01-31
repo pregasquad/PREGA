@@ -102,6 +102,9 @@ export interface IStorage extends IAuthStorage {
   updateStaffCommission(id: number, commission: Partial<InsertStaffCommission>): Promise<StaffCommission>;
   deleteStaffCommission(id: number): Promise<void>;
   upsertStaffCommission(commission: InsertStaffCommission): Promise<StaffCommission>;
+
+  getPageViewCount(pagePath: string): Promise<number>;
+  incrementPageView(pagePath: string): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -735,6 +738,33 @@ export class DatabaseStorage implements IStorage {
       return await this.updateStaffCommission(existing.id, { percentage: commission.percentage });
     }
     return await this.createStaffCommission(commission);
+  }
+
+  async getPageViewCount(pagePath: string): Promise<number> {
+    const s = schema();
+    const [result] = await db().select().from(s.pageViews).where(eq(s.pageViews.pagePath, pagePath));
+    return result?.viewCount ?? 0;
+  }
+
+  async incrementPageView(pagePath: string): Promise<number> {
+    const s = schema();
+    
+    if (isMySQL()) {
+      await db().execute(
+        sql`INSERT INTO page_views (page_path, view_count, created_at, updated_at) 
+            VALUES (${pagePath}, 1, NOW(), NOW()) 
+            ON DUPLICATE KEY UPDATE view_count = view_count + 1, updated_at = NOW()`
+      );
+    } else {
+      await db().execute(
+        sql`INSERT INTO page_views (page_path, view_count, created_at, updated_at) 
+            VALUES (${pagePath}, 1, NOW(), NOW()) 
+            ON CONFLICT (page_path) DO UPDATE SET view_count = page_views.view_count + 1, updated_at = NOW()`
+      );
+    }
+    
+    const [result] = await db().select().from(s.pageViews).where(eq(s.pageViews.pagePath, pagePath));
+    return result?.viewCount ?? 1;
   }
 }
 

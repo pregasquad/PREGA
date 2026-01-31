@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { ar, enUS, fr } from "date-fns/locale";
-import { Clock, CheckCircle2, Scissors, User, Phone, CalendarDays, Sparkles, X } from "lucide-react";
+import { Clock, CheckCircle2, Scissors, User, Phone, CalendarDays, Sparkles, X, Eye } from "lucide-react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
@@ -75,9 +75,21 @@ export default function Booking() {
   const [services, setServices] = useState<Service[]>([]);
   const [appointments, setAppointments] = useState<MinimalAppointment[]>([]);
   const [selectedServices, setSelectedServices] = useState<SelectedService[]>([]);
+  const [visitorCount, setVisitorCount] = useState<number>(0);
 
   useEffect(() => {
     i18n.changeLanguage("fr");
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/public/page-views", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path: "/booking" }),
+    })
+      .then(res => res.json())
+      .then(data => setVisitorCount(data.count || 0))
+      .catch(console.error);
   }, []);
 
   useEffect(() => {
@@ -313,6 +325,12 @@ export default function Booking() {
             {t("booking.title")}
           </h1>
           <p className="text-muted-foreground">{t("booking.subtitle")}</p>
+          {visitorCount > 0 && (
+            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground/80 mt-2">
+              <Eye className="w-4 h-4" />
+              <span>{visitorCount.toLocaleString()} {t("booking.visitors", { defaultValue: "visiteurs" })}</span>
+            </div>
+          )}
         </div>
 
         <div className="glass-card p-6 md:p-8">

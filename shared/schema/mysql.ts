@@ -306,3 +306,13 @@ export const insertStaffCommissionSchema = createInsertSchema(staffCommissions).
 });
 export type StaffCommission = typeof staffCommissions.$inferSelect;
 export type InsertStaffCommission = z.infer<typeof insertStaffCommissionSchema>;
+
+export const pageViews = mysqlTable("page_views", {
+  id: serial("id").primaryKey(),
+  pagePath: varchar("page_path", { length: 255 }).notNull().unique(),
+  viewCount: int("view_count").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type PageView = typeof pageViews.$inferSelect;

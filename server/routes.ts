@@ -229,6 +229,34 @@ export async function registerRoutes(
     }
   });
 
+  // Public: Get page view count for booking page
+  app.get("/api/public/page-views", publicRateLimitMiddleware, async (req, res) => {
+    try {
+      const parsed = z.object({ path: z.string().default("/booking") }).safeParse(req.query);
+      if (!parsed.success) {
+        return res.status(400).json({ count: 0, error: "Invalid path parameter" });
+      }
+      const count = await storage.getPageViewCount(parsed.data.path);
+      res.json({ count });
+    } catch (err) {
+      res.status(500).json({ count: 0, error: "Failed to get page views" });
+    }
+  });
+
+  // Public: Increment page view count for booking page
+  app.post("/api/public/page-views", publicRateLimitMiddleware, async (req, res) => {
+    try {
+      const parsed = z.object({ path: z.string().default("/booking") }).safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ count: 0, error: "Invalid path parameter" });
+      }
+      const count = await storage.incrementPageView(parsed.data.path);
+      res.json({ count });
+    } catch (err) {
+      res.status(500).json({ count: 0, error: "Failed to increment page views" });
+    }
+  });
+
   // Appointments - protected routes
   app.get(api.appointments.list.path, isPinAuthenticated, async (req, res) => {
     const { date } = z.object({ date: z.string().optional() }).parse(req.query);
