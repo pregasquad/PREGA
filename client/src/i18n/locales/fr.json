@@ -242,6 +242,7 @@
     "day": "Jour",
     "week": "Semaine",
     "month": "Mois",
+    "custom": "Personnalisé",
     "allStaff": "Tout le Personnel",
     "totalRevenue": "Revenu Total",
     "staffCommissions": "Commissions du Personnel",

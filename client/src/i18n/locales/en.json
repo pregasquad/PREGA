@@ -242,6 +242,7 @@
     "day": "Day",
     "week": "Week",
     "month": "Month",
+    "custom": "Custom",
     "allStaff": "All Staff",
     "totalRevenue": "Total Revenue",
     "staffCommissions": "Staff Commissions",

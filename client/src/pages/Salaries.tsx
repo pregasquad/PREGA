@@ -31,6 +31,8 @@ export default function Salaries() {
   const { toast } = useToast();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [period, setPeriod] = useState<PeriodType>("month");
+  const [customStartDate, setCustomStartDate] = useState<Date>(new Date());
+  const [customEndDate, setCustomEndDate] = useState<Date>(new Date());
   const [selectedStaff, setSelectedStaff] = useState<string>("all");
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [showChargeDialog, setShowChargeDialog] = useState(false);
@@ -153,6 +155,8 @@ export default function Salaries() {
         return { start: startOfWeek(selectedDate, { weekStartsOn: 0 }), end: endOfWeek(selectedDate, { weekStartsOn: 0 }) };
       case "month":
         return { start: startOfMonth(selectedDate), end: endOfMonth(selectedDate) };
+      case "custom":
+        return { start: customStartDate, end: customEndDate };
       default:
         return { start: startOfMonth(selectedDate), end: endOfMonth(selectedDate) };
     }
@@ -209,9 +213,12 @@ export default function Salaries() {
     });
 
     filteredAppointments.forEach((apt) => {
-      if (!earnings[apt.staff]) {
-        earnings[apt.staff] = { 
-          name: apt.staff, 
+      const staffName = apt.staff || "Unknown";
+      const serviceName = apt.service || "Unknown";
+      
+      if (!earnings[staffName]) {
+        earnings[staffName] = { 
+          name: staffName, 
           totalRevenue: 0, 
           totalCommission: 0, 
           appointmentsCount: 0,
@@ -219,19 +226,19 @@ export default function Salaries() {
         };
       }
       
-      const commissionPercent = getServiceCommission(apt.service, apt.staff);
+      const commissionPercent = getServiceCommission(serviceName, staffName);
       const commission = (apt.total * commissionPercent) / 100;
       
-      earnings[apt.staff].totalRevenue += apt.total;
-      earnings[apt.staff].totalCommission += commission;
-      earnings[apt.staff].appointmentsCount += 1;
+      earnings[staffName].totalRevenue += apt.total;
+      earnings[staffName].totalCommission += commission;
+      earnings[staffName].appointmentsCount += 1;
 
-      if (!earnings[apt.staff].services[apt.service]) {
-        earnings[apt.staff].services[apt.service] = { count: 0, revenue: 0, commission: 0 };
+      if (!earnings[staffName].services[serviceName]) {
+        earnings[staffName].services[serviceName] = { count: 0, revenue: 0, commission: 0 };
       }
-      earnings[apt.staff].services[apt.service].count += 1;
-      earnings[apt.staff].services[apt.service].revenue += apt.total;
-      earnings[apt.staff].services[apt.service].commission += commission;
+      earnings[staffName].services[serviceName].count += 1;
+      earnings[staffName].services[serviceName].revenue += apt.total;
+      earnings[staffName].services[serviceName].commission += commission;
     });
 
     return Object.values(earnings).filter(e => e.appointmentsCount > 0 || staff.some(s => s.name === e.name));
@@ -321,25 +328,64 @@ export default function Salaries() {
             <SelectItem value="day">{t("salaries.day")}</SelectItem>
             <SelectItem value="week">{t("salaries.week")}</SelectItem>
             <SelectItem value="month">{t("salaries.month")}</SelectItem>
+            <SelectItem value="custom">{t("salaries.custom")}</SelectItem>
           </SelectContent>
         </Select>
 
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="h-9 text-sm px-3">
-              <CalendarIcon className="h-4 w-4 mr-2" />
-              {format(selectedDate, "d/M/yy")}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar
-              mode="single"
-              selected={selectedDate}
-              onSelect={(date) => date && setSelectedDate(date)}
-              initialFocus
-            />
-          </PopoverContent>
-        </Popover>
+        {period !== "custom" ? (
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9 text-sm px-3">
+                <CalendarIcon className="h-4 w-4 mr-2" />
+                {format(selectedDate, "d/M/yy")}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={(date) => date && setSelectedDate(date)}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+        ) : (
+          <>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9 text-sm px-3">
+                  <CalendarIcon className="h-4 w-4 mr-1" />
+                  {format(customStartDate, "d/M/yy")}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={customStartDate}
+                  onSelect={(date) => date && setCustomStartDate(date)}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+            <span className="text-muted-foreground self-center">→</span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9 text-sm px-3">
+                  <CalendarIcon className="h-4 w-4 mr-1" />
+                  {format(customEndDate, "d/M/yy")}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={customEndDate}
+                  onSelect={(date) => date && setCustomEndDate(date)}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </>
+        )}
 
         <Select value={selectedStaff} onValueChange={setSelectedStaff}>
           <SelectTrigger className="w-28 h-9 text-sm">
