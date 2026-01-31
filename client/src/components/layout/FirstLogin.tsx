@@ -111,6 +111,10 @@ export function FirstLogin({ children }: FirstLoginProps) {
   const [newPin, setNewPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
   const [resetLoading, setResetLoading] = useState(false);
+  
+  const [masterPassword, setMasterPassword] = useState("");
+  const [masterPasswordError, setMasterPasswordError] = useState("");
+  const MASTER_PASSWORD = "5890";
 
   useEffect(() => {
     const wasLoggedOut = sessionStorage.getItem("explicit_logout") === "true" ||
@@ -421,9 +425,46 @@ export function FirstLogin({ children }: FirstLoginProps) {
                   <p className="text-sm text-slate-500 dark:text-slate-400">
                     {t("auth.noUsersConfigured")}
                   </p>
-                  <p className="text-xs text-slate-400 dark:text-slate-500">
-                    {t("auth.contactAdminForAccess")}
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mb-4">
+                    {t("auth.enterMasterPassword")}
                   </p>
+                  
+                  <form onSubmit={(e) => {
+                    e.preventDefault();
+                    if (masterPassword === MASTER_PASSWORD) {
+                      sessionStorage.setItem("user_authenticated", "true");
+                      sessionStorage.setItem("current_user", "Setup");
+                      sessionStorage.setItem("current_user_role", "owner");
+                      sessionStorage.setItem("current_user_permissions", JSON.stringify([]));
+                      setIsAuthenticated(true);
+                      window.location.href = "/admin-settings";
+                    } else {
+                      setMasterPasswordError(t("auth.wrongPassword"));
+                    }
+                  }} className="space-y-3">
+                    <div className="relative">
+                      <Input
+                        type="password"
+                        value={masterPassword}
+                        onChange={(e) => {
+                          setMasterPassword(e.target.value);
+                          setMasterPasswordError("");
+                        }}
+                        placeholder={t("auth.password")}
+                        className="h-12 rounded-xl bg-white/50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 text-center text-lg tracking-widest"
+                      />
+                    </div>
+                    {masterPasswordError && (
+                      <p className="text-sm text-red-500">{masterPasswordError}</p>
+                    )}
+                    <Button 
+                      type="submit"
+                      className="w-full h-12 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-medium shadow-lg shadow-orange-500/25 transition-all"
+                    >
+                      <Settings className="w-4 h-4 mr-2" />
+                      {t("auth.setupFirstUser")}
+                    </Button>
+                  </form>
                 </div>
               )}
             </div>

@@ -389,6 +389,7 @@
     "enterPin": "Entrer le code PIN",
     "noUsersConfigured": "Aucun utilisateur configuré",
     "contactAdminForAccess": "Veuillez contacter l'administrateur pour créer votre compte",
+    "enterMasterPassword": "Entrez le mot de passe principal pour créer le premier utilisateur",
     "setupFirstUser": "Créer le premier utilisateur",
     "selectUserToLogin": "Sélectionnez un utilisateur pour vous connecter",
     "changeUser": "Changer d'utilisateur",
