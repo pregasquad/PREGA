@@ -715,12 +715,12 @@ export default function Planning() {
     e.stopPropagation();
     try {
       await apiRequest("PUT", `/api/appointments/${app.id}`, {
-        ...app,
         paid: true
       });
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
       toast({ title: t("planning.paymentConfirmed"), description: t("planning.paymentConfirmedDesc") });
     } catch (error) {
+      console.error("Payment error:", error);
       toast({ title: t("common.error"), description: t("planning.paymentError"), variant: "destructive" });
     }
   };
