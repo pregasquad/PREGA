@@ -83,7 +83,12 @@ export default function Booking() {
   }, []);
 
   useEffect(() => {
-    const socket: Socket = io();
+    const socket: Socket = io(window.location.origin, {
+      transports: ["websocket", "polling"],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000
+    });
     
     socket.on("connect", () => {
       socket.emit("booking:join");
