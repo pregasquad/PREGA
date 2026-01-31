@@ -293,9 +293,7 @@ export default function Booking() {
         </div>
         <div className="text-center space-y-3 py-4">
           <div className="flex justify-center mb-4">
-            <div className="glass-card p-4 rounded-3xl">
-              <img src="/prega_logo.png" alt="PregaSquad" className="w-12 h-12" />
-            </div>
+            <img src="/prega_logo.png" alt="PregaSquad" className="w-24 h-24" />
           </div>
           <h1 className="text-3xl md:text-4xl font-display font-bold gradient-text">
             {t("booking.title")}
