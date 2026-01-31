@@ -510,7 +510,11 @@
     "manageExpenses": "Gérer Dépenses",
     "viewSalaries": "Voir Salaires",
     "manageSalaries": "Gérer Salaires",
+    "viewStaff": "Voir Personnel",
+    "manageStaff": "Gérer Personnel",
     "viewStaffPerformance": "Voir Performance Staff",
+    "viewUsers": "Voir Utilisateurs",
+    "manageUsers": "Gérer Utilisateurs",
     "viewReports": "Voir Rapports",
     "adminSettings": "Paramètres Admin",
     "exportData": "Exporter Données"

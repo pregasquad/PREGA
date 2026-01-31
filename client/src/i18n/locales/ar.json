@@ -510,7 +510,11 @@
     "manageExpenses": "إدارة المصاريف",
     "viewSalaries": "عرض الرواتب",
     "manageSalaries": "إدارة الرواتب",
+    "viewStaff": "عرض الموظفين",
+    "manageStaff": "إدارة الموظفين",
     "viewStaffPerformance": "عرض أداء الموظفين",
+    "viewUsers": "عرض المستخدمين",
+    "manageUsers": "إدارة المستخدمين",
     "viewReports": "عرض التقارير",
     "adminSettings": "إعدادات المدير",
     "exportData": "تصدير البيانات"
