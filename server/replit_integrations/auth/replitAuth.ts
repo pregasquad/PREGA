@@ -17,6 +17,7 @@ declare module 'express-session' {
       permissions: string[];
       authenticatedAt: number;
     };
+    user_authenticated?: boolean;
   }
 }
 
@@ -115,7 +116,7 @@ export function getSession() {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       maxAge: sessionTtl,
-      sameSite: 'strict', // Prevent CSRF attacks
+      sameSite: process.env.NODE_ENV === "production" ? 'strict' : 'lax', // 'lax' for dev (iframes), 'strict' for production
     },
   });
 }
