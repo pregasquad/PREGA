@@ -430,8 +430,28 @@ export function FirstLogin({ children }: FirstLoginProps) {
                 ))}
               </div>
 
-              {(hasNoUsersAnywhere || serverAdminRoles.length === 0) && (
+              {/* Show master password section when database has no users (even if there are cached offline users) */}
+              {serverAdminRoles.length === 0 && (
                 <div className="space-y-4 py-6">
+                  {offlineUsers.length > 0 && (
+                    <div className="mb-4 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                      <p className="text-xs text-amber-700 dark:text-amber-300 mb-2">
+                        {t("auth.cachedUsersWarning") || "Les utilisateurs ci-dessus sont en cache. Pour créer un nouveau compte, utilisez le mot de passe maître."}
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          localStorage.removeItem("offline_credentials");
+                          window.location.reload();
+                        }}
+                        className="text-xs"
+                      >
+                        {t("auth.clearCachedUsers") || "Effacer le cache"}
+                      </Button>
+                    </div>
+                  )}
                   <div className="w-20 h-20 mx-auto rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
                     <Lock className="w-10 h-10 text-slate-400" />
                   </div>
