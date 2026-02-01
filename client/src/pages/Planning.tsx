@@ -1454,10 +1454,10 @@ export default function Planning() {
         }
       }}>
         <DialogContent 
-          className="w-[calc(100vw-24px)] max-w-[420px] p-0 border-0 shadow-2xl glass-card rounded-3xl overflow-hidden animate-fade-in-scale" 
+          className="w-[calc(100vw-24px)] max-w-[420px] max-h-[90vh] p-0 border-0 shadow-2xl glass-card rounded-3xl overflow-hidden animate-fade-in-scale flex flex-col" 
           dir={isRtl ? "rtl" : "ltr"}
         >
-          <div className="liquid-gradient px-5 py-4 text-white relative overflow-hidden">
+          <div className="liquid-gradient px-5 py-4 text-white relative overflow-hidden shrink-0">
             <div className="water-shimmer absolute inset-0 opacity-20" />
             <DialogHeader className="relative z-10">
               <DialogTitle className="text-lg font-semibold flex items-center gap-2">
@@ -1484,7 +1484,7 @@ export default function Planning() {
                   }
                 }
               }}
-              className="p-5 space-y-4"
+              className="p-5 space-y-4 overflow-y-auto flex-1"
             >
               
               {/* Price Row - FIRST - Glass Card */}

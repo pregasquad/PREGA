@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -119,7 +119,7 @@ export default function LoyaltyRewards() {
     },
   });
 
-  useState(() => {
+  useEffect(() => {
     if (businessSettings) {
       setLoyaltySettings({
         loyaltyEnabled: businessSettings.loyaltyEnabled ?? true,
@@ -129,7 +129,7 @@ export default function LoyaltyRewards() {
         referralBonusReferee: businessSettings.referralBonusReferee ?? 50,
       });
     }
-  });
+  }, [businessSettings]);
 
   const updateSettingsMutation = useMutation({
     mutationFn: async (settings: Partial<BusinessSettings>) => {
