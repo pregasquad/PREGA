@@ -2048,6 +2048,55 @@ export async function registerRoutes(
     }
   });
 
+  // === Message Templates Routes ===
+  app.get("/api/message-templates", isPinAuthenticated, async (_req, res) => {
+    try {
+      const templates = await storage.getMessageTemplates();
+      res.json(templates);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/message-templates/:id", isPinAuthenticated, async (req, res) => {
+    try {
+      const template = await storage.getMessageTemplate(Number(req.params.id));
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      res.json(template);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/message-templates", isPinAuthenticated, async (req, res) => {
+    try {
+      const template = await storage.createMessageTemplate(req.body);
+      res.status(201).json(template);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/message-templates/:id", isPinAuthenticated, async (req, res) => {
+    try {
+      const template = await storage.updateMessageTemplate(Number(req.params.id), req.body);
+      res.json(template);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/message-templates/:id", isPinAuthenticated, async (req, res) => {
+    try {
+      await storage.deleteMessageTemplate(Number(req.params.id));
+      res.status(204).send();
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   // Seed data if empty
   await seedDatabase();
 

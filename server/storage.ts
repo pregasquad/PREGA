@@ -21,7 +21,8 @@ import {
   type StaffSchedule, type InsertStaffSchedule,
   type StaffBreak, type InsertStaffBreak,
   type StaffTimeOff, type InsertStaffTimeOff,
-  type StaffGoal, type InsertStaffGoal
+  type StaffGoal, type InsertStaffGoal,
+  type MessageTemplate, type InsertMessageTemplate
 } from "@shared/schema";
 import { eq, desc, and, gte, lte, sql } from "drizzle-orm";
 import { authStorage, type IAuthStorage } from "./replit_integrations/auth/storage";
@@ -168,6 +169,12 @@ export interface IStorage extends IAuthStorage {
   updateStaffGoal(id: number, goal: Partial<InsertStaffGoal>): Promise<StaffGoal>;
   deleteStaffGoal(id: number): Promise<void>;
   upsertStaffGoal(goal: InsertStaffGoal): Promise<StaffGoal>;
+
+  getMessageTemplates(): Promise<MessageTemplate[]>;
+  getMessageTemplate(id: number): Promise<MessageTemplate | undefined>;
+  createMessageTemplate(template: InsertMessageTemplate): Promise<MessageTemplate>;
+  updateMessageTemplate(id: number, template: Partial<InsertMessageTemplate>): Promise<MessageTemplate>;
+  deleteMessageTemplate(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1246,6 +1253,48 @@ export class DatabaseStorage implements IStorage {
       return await this.updateStaffGoal(existing.id, goal);
     }
     return await this.createStaffGoal(goal);
+  }
+
+  async getMessageTemplates(): Promise<MessageTemplate[]> {
+    const s = schema();
+    return await db().select().from(s.messageTemplates).orderBy(desc(s.messageTemplates.createdAt));
+  }
+
+  async getMessageTemplate(id: number): Promise<MessageTemplate | undefined> {
+    const s = schema();
+    const [template] = await db().select().from(s.messageTemplates).where(eq(s.messageTemplates.id, id));
+    return template;
+  }
+
+  async createMessageTemplate(template: InsertMessageTemplate): Promise<MessageTemplate> {
+    const s = schema();
+    if (isMySQL()) {
+      const result = await db().insert(s.messageTemplates).values(template);
+      const insertId = (result as any).insertId ?? (result as any)[0]?.insertId;
+      if (!insertId) throw new Error("Failed to get insert ID");
+      const [created] = await db().select().from(s.messageTemplates).where(eq(s.messageTemplates.id, insertId));
+      if (!created) throw new Error("Failed to retrieve created message template");
+      return created;
+    }
+    const [created] = await db().insert(s.messageTemplates).values(template).returning();
+    return created;
+  }
+
+  async updateMessageTemplate(id: number, template: Partial<InsertMessageTemplate>): Promise<MessageTemplate> {
+    const s = schema();
+    if (isMySQL()) {
+      await db().update(s.messageTemplates).set({ ...template, updatedAt: new Date() }).where(eq(s.messageTemplates.id, id));
+      const [updated] = await db().select().from(s.messageTemplates).where(eq(s.messageTemplates.id, id));
+      if (!updated) throw new Error("Message template not found");
+      return updated;
+    }
+    const [updated] = await db().update(s.messageTemplates).set({ ...template, updatedAt: new Date() }).where(eq(s.messageTemplates.id, id)).returning();
+    return updated;
+  }
+
+  async deleteMessageTemplate(id: number): Promise<void> {
+    const s = schema();
+    await db().delete(s.messageTemplates).where(eq(s.messageTemplates.id, id));
   }
 }
 
