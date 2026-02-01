@@ -434,7 +434,31 @@ export async function registerRoutes(
   });
 
   app.delete(api.appointments.delete.path, isPinAuthenticated, requirePermission("manage_appointments"), async (req, res) => {
-    await storage.deleteAppointment(Number(req.params.id));
+    const appointmentId = Number(req.params.id);
+    const appointment = await storage.getAppointment(appointmentId);
+    
+    // Remove loyalty points if appointment was paid
+    if (appointment && appointment.paid && appointment.client && appointment.total && appointment.total > 0) {
+      const client = await storage.getClientByName(appointment.client);
+      if (client && client.loyaltyEnrolled) {
+        const settings = await storage.getBusinessSettings();
+        const pointsPerDh = settings?.loyaltyPointsPerDh ?? 1;
+        const pointsToRemove = Math.floor(appointment.total * pointsPerDh);
+        if (pointsToRemove > 0) {
+          const updatedClient = await storage.subtractClientLoyalty(client.id, pointsToRemove);
+          console.log(`Removed ${pointsToRemove} loyalty points from ${client.name} for deleted appointment #${appointmentId}`);
+          // Emit real-time update for loyalty points removal
+          io.emit("client:loyaltyUpdated", { 
+            clientId: client.id, 
+            clientName: client.name,
+            pointsAdded: -pointsToRemove, 
+            newTotal: updatedClient.loyaltyPoints 
+          });
+        }
+      }
+    }
+    
+    await storage.deleteAppointment(appointmentId);
     res.status(204).send();
   });
 

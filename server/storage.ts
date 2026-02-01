@@ -72,6 +72,7 @@ export interface IStorage extends IAuthStorage {
   updateClient(id: number, client: Partial<InsertClient>): Promise<Client>;
   deleteClient(id: number): Promise<void>;
   updateClientLoyalty(id: number, points: number, spent: number): Promise<Client>;
+  subtractClientLoyalty(id: number, points: number): Promise<Client>;
   getClientAppointments(clientId: number): Promise<Appointment[]>;
 
   getCharges(): Promise<Charge[]>;
@@ -524,6 +525,27 @@ export class DatabaseStorage implements IStorage {
       loyaltyPoints: client.loyaltyPoints + pointsToAdd,
       totalVisits: client.totalVisits + 1,
       totalSpent: client.totalSpent + spent,
+    }).where(eq(s.clients.id, id)).returning();
+    return updated;
+  }
+
+  async subtractClientLoyalty(id: number, points: number): Promise<Client> {
+    const s = schema();
+    const [client] = await db().select().from(s.clients).where(eq(s.clients.id, id));
+    if (!client) throw new Error("Client not found");
+    
+    const newPoints = Math.max(0, client.loyaltyPoints - points);
+    
+    if (isMySQL()) {
+      await db().update(s.clients).set({
+        loyaltyPoints: newPoints,
+      }).where(eq(s.clients.id, id));
+      const [updated] = await db().select().from(s.clients).where(eq(s.clients.id, id));
+      if (!updated) throw new Error("Failed to update client loyalty");
+      return updated;
+    }
+    const [updated] = await db().update(s.clients).set({
+      loyaltyPoints: newPoints,
     }).where(eq(s.clients.id, id)).returning();
     return updated;
   }
