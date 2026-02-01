@@ -30,7 +30,7 @@ export default function Salaries() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [period, setPeriod] = useState<PeriodType>("month");
+  const [period, setPeriod] = useState<PeriodType>("day");
   const [customStartDate, setCustomStartDate] = useState<Date>(new Date());
   const [customEndDate, setCustomEndDate] = useState<Date>(new Date());
   const [selectedStaff, setSelectedStaff] = useState<string>("all");
