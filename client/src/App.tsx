@@ -46,6 +46,9 @@ function PermissionGuard({ children, permission }: { children: React.ReactNode, 
   const currentUserName = typeof window !== 'undefined' ? sessionStorage.getItem("current_user") : null;
   if (!currentUserName || currentUserName === "Setup") return <>{children}</>;
   
+  const currentUserRole = typeof window !== 'undefined' ? sessionStorage.getItem("current_user_role") : null;
+  if (currentUserRole === "owner") return <>{children}</>;
+  
   const storedPermissions = typeof window !== 'undefined' ? sessionStorage.getItem("current_user_permissions") : null;
   if (!storedPermissions) return <>{children}</>;
   
