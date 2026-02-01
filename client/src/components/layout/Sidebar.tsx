@@ -120,6 +120,8 @@ export function Sidebar() {
     if (permission === null) return true;
     if (!currentUserName || currentUserName === "Setup") return true;
     if (!currentUser) return true;
+    // Owner always has full access to everything
+    if (currentUser.role === "owner") return true;
     if (currentUser.permissions.length === 0) return true;
     return userPermissions.includes(permission);
   };
