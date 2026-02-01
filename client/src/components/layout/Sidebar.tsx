@@ -54,7 +54,7 @@ const NAV_ITEMS = [
   { labelKey: "nav.expenses", href: "/charges", icon: Wallet, permission: "view_expenses" },
   { labelKey: "nav.salaries", href: "/salaries", icon: DollarSign, permission: "view_salaries" },
   { labelKey: "nav.reports", href: "/reports", icon: BarChart3, permission: "view_reports" },
-  { labelKey: "nav.loyaltyRewards", href: "/loyalty-rewards", icon: Gift, permission: "manage_business_settings" },
+  { labelKey: "nav.loyaltyRewards", href: "/loyalty-rewards", icon: Gift, permission: null },
   { labelKey: "nav.adminSettings", href: "/admin-settings", icon: Settings, permission: "admin_settings" },
   { labelKey: "nav.booking", href: "/booking", icon: ExternalLink, external: true, permission: null },
 ];
