@@ -1,5 +1,27 @@
 const WHAPI_API_URL = 'https://gate.whapi.cloud';
 
+function formatPhoneNumber(phone: string): string {
+  let cleaned = phone.replace(/[^0-9+]/g, '');
+  
+  if (cleaned.startsWith('+')) {
+    cleaned = cleaned.substring(1);
+  }
+  
+  if (cleaned.startsWith('00')) {
+    cleaned = cleaned.substring(2);
+  }
+  
+  if (cleaned.startsWith('0') && cleaned.length === 10) {
+    cleaned = '212' + cleaned.substring(1);
+  }
+  
+  if (!cleaned.startsWith('212') && cleaned.length === 9) {
+    cleaned = '212' + cleaned;
+  }
+  
+  return cleaned;
+}
+
 export async function sendWhatsAppMessage(
   to: string, 
   message: string
@@ -7,11 +29,13 @@ export async function sendWhatsAppMessage(
   const apiToken = process.env.WHAPI_TOKEN;
   
   if (!apiToken) {
+    console.error('WHAPI_TOKEN not set in environment');
     return { success: false, error: 'Whapi token not configured' };
   }
 
   try {
-    const phoneNumber = to.replace(/[^0-9]/g, '');
+    const phoneNumber = formatPhoneNumber(to);
+    console.log('Sending WhatsApp to:', phoneNumber);
     
     const response = await fetch(`${WHAPI_API_URL}/messages/text`, {
       method: 'POST',
@@ -53,7 +77,7 @@ export async function sendWhatsAppImage(
   }
 
   try {
-    const phoneNumber = to.replace(/[^0-9]/g, '');
+    const phoneNumber = formatPhoneNumber(to);
     
     const response = await fetch(`${WHAPI_API_URL}/messages/image`, {
       method: 'POST',
