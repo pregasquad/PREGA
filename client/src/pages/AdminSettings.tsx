@@ -16,8 +16,10 @@ import { useToast } from "@/hooks/use-toast";
 import { 
   UserPlus, Users, Shield, Download, FileSpreadsheet, 
   Trash2, Edit, Calendar, User, Briefcase, Package, 
-  CreditCard, Building2, Clock, Save, Camera, Loader2, RefreshCw
+  CreditCard, Building2, Clock, Save, Camera, Loader2, RefreshCw,
+  MessageCircle, Send
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
 
 interface AdminRole {
@@ -112,6 +114,8 @@ export default function AdminSettings() {
     closingTime: "19:00",
     workingDays: [1, 2, 3, 4, 5, 6]
   });
+  const [broadcastMessage, setBroadcastMessage] = useState("");
+  const [broadcastResult, setBroadcastResult] = useState<{sent: number, failed: number, total: number} | null>(null);
 
   const { data: adminRoles = [], isLoading } = useQuery<AdminRole[]>({
     queryKey: ["/api/admin-roles"],
@@ -220,6 +224,41 @@ export default function AdminSettings() {
       toast({ title: t("common.error"), description: err.message, variant: "destructive" });
     }
   });
+
+  const { data: clients = [] } = useQuery<{id: number, name: string, phone: string | null}[]>({
+    queryKey: ["/api/clients"],
+    queryFn: async () => {
+      const res = await fetch("/api/clients");
+      return res.json();
+    }
+  });
+
+  const clientsWithPhone = clients.filter(c => c.phone && c.phone.trim() !== '');
+
+  const broadcastMutation = useMutation({
+    mutationFn: async (message: string) => {
+      const res = await apiRequest("POST", "/api/notifications/broadcast", { message });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setBroadcastResult({ sent: data.sent, failed: data.failed, total: data.total });
+      toast({ 
+        title: t("admin.broadcastSent"),
+        description: `${data.sent}/${data.total} ${t("admin.messagesSent")}`
+      });
+      setBroadcastMessage("");
+    },
+    onError: (err: any) => {
+      toast({ title: t("common.error"), description: err.message, variant: "destructive" });
+    }
+  });
+
+  const handleBroadcast = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!broadcastMessage.trim()) return;
+    setBroadcastResult(null);
+    broadcastMutation.mutate(broadcastMessage);
+  };
 
   const handleBusinessSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -333,7 +372,7 @@ export default function AdminSettings() {
       </div>
 
       <Tabs defaultValue="business" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 max-w-lg">
+        <TabsList className="grid w-full grid-cols-4 max-w-2xl">
           <TabsTrigger value="business" className="gap-2">
             <Building2 className="w-4 h-4" />
             {t("admin.business")}
@@ -341,6 +380,10 @@ export default function AdminSettings() {
           <TabsTrigger value="users" className="gap-2">
             <Users className="w-4 h-4" />
             {t("admin.users")}
+          </TabsTrigger>
+          <TabsTrigger value="broadcast" className="gap-2">
+            <MessageCircle className="w-4 h-4" />
+            {t("admin.broadcast")}
           </TabsTrigger>
           <TabsTrigger value="export" className="gap-2">
             <Download className="w-4 h-4" />
@@ -714,6 +757,75 @@ export default function AdminSettings() {
                   <p className="text-sm text-muted-foreground">{t("admin.receptionistDesc")}</p>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="broadcast" className="space-y-4 mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageCircle className="w-5 h-5" />
+                {t("admin.whatsappBroadcast")}
+              </CardTitle>
+              <CardDescription>{t("admin.broadcastDesc")}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleBroadcast} className="space-y-4">
+                <div className="p-4 rounded-lg bg-muted/50 border">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                    <Users className="w-4 h-4" />
+                    <span>{t("admin.clientsWithPhone")}: <strong className="text-foreground">{clientsWithPhone.length}</strong></span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {t("admin.broadcastTip")}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="broadcast-message">{t("admin.message")}</Label>
+                  <Textarea
+                    id="broadcast-message"
+                    placeholder={t("admin.broadcastPlaceholder")}
+                    value={broadcastMessage}
+                    onChange={(e) => setBroadcastMessage(e.target.value)}
+                    rows={5}
+                    className="resize-none"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {t("admin.useNameVariable")}
+                  </p>
+                </div>
+
+                {broadcastResult && (
+                  <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20">
+                    <p className="text-sm font-medium text-green-600 dark:text-green-400">
+                      {t("admin.broadcastComplete")}
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {t("admin.sent")}: {broadcastResult.sent} | {t("admin.failed")}: {broadcastResult.failed} | {t("admin.total")}: {broadcastResult.total}
+                    </p>
+                  </div>
+                )}
+
+                <Button 
+                  type="submit" 
+                  disabled={!broadcastMessage.trim() || broadcastMutation.isPending || clientsWithPhone.length === 0}
+                  className="w-full sm:w-auto"
+                >
+                  {broadcastMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      {t("admin.sending")}...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4 mr-2" />
+                      {t("admin.sendToAll")} ({clientsWithPhone.length})
+                    </>
+                  )}
+                </Button>
+              </form>
             </CardContent>
           </Card>
         </TabsContent>
