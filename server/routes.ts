@@ -363,12 +363,30 @@ export async function registerRoutes(
       const oldAppointment = await storage.getAppointment(Number(req.params.id));
       const item = await storage.updateAppointment(Number(req.params.id), input);
       
-      if (item.paid && oldAppointment && !oldAppointment.paid && item.service) {
-        const service = await storage.getServiceByName(item.service);
-        if (service?.linkedProductId) {
-          const product = await storage.getProducts().then(prods => prods.find(p => p.id === service.linkedProductId));
-          if (product && product.quantity > 0) {
-            await storage.updateProductQuantity(product.id, product.quantity - 1);
+      // When appointment becomes paid, handle stock and loyalty points
+      if (item.paid && oldAppointment && !oldAppointment.paid) {
+        // Deduct stock for linked products
+        if (item.service) {
+          const service = await storage.getServiceByName(item.service);
+          if (service?.linkedProductId) {
+            const product = await storage.getProducts().then(prods => prods.find(p => p.id === service.linkedProductId));
+            if (product && product.quantity > 0) {
+              await storage.updateProductQuantity(product.id, product.quantity - 1);
+            }
+          }
+        }
+        
+        // Award loyalty points to client
+        if (item.client && item.total && item.total > 0) {
+          const client = await storage.getClientByName(item.client);
+          if (client && client.loyaltyEnrolled) {
+            const settings = await storage.getBusinessSettings();
+            const pointsPerDh = settings?.loyaltyPointsPerDh ?? 1;
+            const pointsToAdd = Math.floor(item.total * pointsPerDh);
+            if (pointsToAdd > 0) {
+              await storage.updateClientLoyalty(client.id, pointsToAdd, item.total);
+              console.log(`Awarded ${pointsToAdd} loyalty points to ${client.name} for appointment #${item.id}`);
+            }
           }
         }
       }

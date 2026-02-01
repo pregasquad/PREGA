@@ -67,6 +67,7 @@ export interface IStorage extends IAuthStorage {
 
   getClients(): Promise<Client[]>;
   getClient(id: number): Promise<Client | undefined>;
+  getClientByName(name: string): Promise<Client | undefined>;
   createClient(client: InsertClient): Promise<Client>;
   updateClient(id: number, client: Partial<InsertClient>): Promise<Client>;
   deleteClient(id: number): Promise<void>;
@@ -461,6 +462,12 @@ export class DatabaseStorage implements IStorage {
   async getClient(id: number): Promise<Client | undefined> {
     const s = schema();
     const [client] = await db().select().from(s.clients).where(eq(s.clients.id, id));
+    return client;
+  }
+
+  async getClientByName(name: string): Promise<Client | undefined> {
+    const s = schema();
+    const [client] = await db().select().from(s.clients).where(eq(s.clients.name, name));
     return client;
   }
 
