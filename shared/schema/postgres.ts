@@ -1,4 +1,4 @@
-import { pgTable, text, integer, boolean, timestamp, varchar, serial, doublePrecision, index, json } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, boolean, timestamp, varchar, serial, doublePrecision, index, json, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -91,6 +91,7 @@ export const services = pgTable("services", {
   duration: integer("duration").notNull(),
   category: text("category").notNull(),
   linkedProductId: integer("linked_product_id"),
+  linkedProductIds: jsonb("linked_product_ids").$type<number[]>().default([]),
   commissionPercent: doublePrecision("commission_percent").notNull().default(50),
   loyaltyPointsMultiplier: integer("loyalty_points_multiplier").notNull().default(1),
 });

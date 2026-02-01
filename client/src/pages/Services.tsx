@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Tag, Scissors, Edit2, Package, RefreshCw } from "lucide-react";
+import { Plus, Trash2, Tag, Scissors, Edit2, Package, RefreshCw, X } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormMessage, FormLabel } from "@/components/ui/form";
@@ -22,6 +23,7 @@ const serviceFormSchema = insertServiceSchema.extend({
   price: z.coerce.number(),
   duration: z.coerce.number(),
   linkedProductId: z.coerce.number().optional().nullable(),
+  linkedProductIds: z.array(z.number()).default([]),
   commissionPercent: z.coerce.number().min(0).max(100).default(50),
 });
 
@@ -73,7 +75,7 @@ export default function Services() {
 
   const sForm = useForm({
     resolver: zodResolver(serviceFormSchema),
-    defaultValues: { name: "", price: 0, duration: 30, category: "", linkedProductId: null, commissionPercent: 50 }
+    defaultValues: { name: "", price: 0, duration: 30, category: "", linkedProductId: null, linkedProductIds: [] as number[], commissionPercent: 50 }
   });
 
   const cForm = useForm({
@@ -214,29 +216,38 @@ export default function Services() {
                   />
                   <FormField
                     control={sForm.control}
-                    name="linkedProductId"
+                    name="linkedProductIds"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="flex items-center gap-2">
                           <Package className="w-4 h-4" />
-                          {t("services.linkedProduct")} ({t("services.optional")})
+                          {t("services.linkedProducts")} ({t("services.optional")})
                         </FormLabel>
-                        <Select 
-                          onValueChange={(val) => field.onChange(val === "none" ? null : Number(val))} 
-                          value={field.value ? String(field.value) : "none"}
-                        >
-                          <FormControl>
-                            <SelectTrigger><SelectValue placeholder={t("services.selectProduct")} /></SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="none">{t("services.noProduct")}</SelectItem>
-                            {products?.map((p) => (
-                              <SelectItem key={p.id} value={p.id.toString()}>
-                                {p.name} ({p.quantity} {t("services.inStock")})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <div className="space-y-2 max-h-32 overflow-y-auto border rounded-md p-2">
+                          {products?.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">{t("services.noProductsAvailable")}</p>
+                          ) : (
+                            products?.map((p) => (
+                              <div key={p.id} className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`product-${p.id}`}
+                                  checked={(field.value || []).includes(p.id)}
+                                  onCheckedChange={(checked) => {
+                                    const current = field.value || [];
+                                    if (checked) {
+                                      field.onChange([...current, p.id]);
+                                    } else {
+                                      field.onChange(current.filter((id: number) => id !== p.id));
+                                    }
+                                  }}
+                                />
+                                <label htmlFor={`product-${p.id}`} className="text-sm cursor-pointer">
+                                  {p.name} ({p.quantity} {t("services.inStock")})
+                                </label>
+                              </div>
+                            ))
+                          )}
+                        </div>
                         <p className="text-xs text-muted-foreground">{t("services.autoDeductNote")}</p>
                       </FormItem>
                     )}
@@ -280,11 +291,14 @@ export default function Services() {
                           <div>
                             <h4 className="font-semibold">{service.name}</h4>
                             <p className="text-sm text-muted-foreground">{service.duration} {t("common.minutes")} • {service.price} DH • {t("services.commission")} {service.commissionPercent ?? 50}%</p>
-                            {service.linkedProductId && (
-                              <p className="text-xs text-primary flex items-center gap-1 mt-1">
+                            {(((service.linkedProductIds as number[] | null | undefined) || []).length > 0 || service.linkedProductId) && (
+                              <div className="text-xs text-primary flex items-center gap-1 mt-1 flex-wrap">
                                 <Package className="w-3 h-3" />
-                                {products?.find(p => p.id === service.linkedProductId)?.name || t("services.linkedProduct")}
-                              </p>
+                                {((service.linkedProductIds as number[] | null | undefined) || []).length > 0 
+                                  ? ((service.linkedProductIds as number[]) || []).map(id => products?.find(p => p.id === id)?.name).filter(Boolean).join(", ")
+                                  : products?.find(p => p.id === service.linkedProductId)?.name || t("services.linkedProduct")
+                                }
+                              </div>
                             )}
                           </div>
                           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -327,29 +341,38 @@ export default function Services() {
               </div>
               <FormField
                 control={editSForm.control}
-                name="linkedProductId"
+                name="linkedProductIds"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2">
                       <Package className="w-4 h-4" />
-                      {t("services.linkedProduct")}
+                      {t("services.linkedProducts")}
                     </FormLabel>
-                    <Select 
-                      onValueChange={(val) => field.onChange(val === "none" ? null : Number(val))} 
-                      value={field.value ? String(field.value) : "none"}
-                    >
-                      <FormControl>
-                        <SelectTrigger><SelectValue placeholder={t("services.selectProduct")} /></SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">{t("services.noProduct")}</SelectItem>
-                        {products?.map((p) => (
-                          <SelectItem key={p.id} value={p.id.toString()}>
-                            {p.name} ({p.quantity} {t("services.inStock")})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="space-y-2 max-h-32 overflow-y-auto border rounded-md p-2">
+                      {products?.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">{t("services.noProductsAvailable")}</p>
+                      ) : (
+                        products?.map((p) => (
+                          <div key={p.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`edit-product-${p.id}`}
+                              checked={(field.value || []).includes(p.id)}
+                              onCheckedChange={(checked) => {
+                                const current = field.value || [];
+                                if (checked) {
+                                  field.onChange([...current, p.id]);
+                                } else {
+                                  field.onChange(current.filter((id: number) => id !== p.id));
+                                }
+                              }}
+                            />
+                            <label htmlFor={`edit-product-${p.id}`} className="text-sm cursor-pointer">
+                              {p.name} ({p.quantity} {t("services.inStock")})
+                            </label>
+                          </div>
+                        ))
+                      )}
+                    </div>
                   </FormItem>
                 )}
               />
