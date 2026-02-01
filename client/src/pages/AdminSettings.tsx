@@ -928,34 +928,36 @@ export default function AdminSettings() {
                 </div>
 
                 {/* Template Selection */}
-                <div className="space-y-2">
-                  <Label>{t("admin.messageTemplate", { defaultValue: "Template de message" })}</Label>
-                  <div className="flex gap-2">
-                    <Select value={selectedTemplateId} onValueChange={handleLoadTemplate}>
-                      <SelectTrigger className="flex-1">
-                        <SelectValue placeholder={t("admin.selectTemplate", { defaultValue: "Choisir un template..." })} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {messageTemplates.map(template => (
-                          <SelectItem key={template.id} value={template.id.toString()}>
-                            {template.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {selectedTemplateId && (
-                      <Button 
-                        type="button" 
-                        variant="destructive" 
-                        size="icon"
-                        onClick={() => deleteTemplateMutation.mutate(Number(selectedTemplateId))}
-                        disabled={deleteTemplateMutation.isPending}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    )}
+                {messageTemplates.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>{t("admin.messageTemplate", { defaultValue: "Template de message" })}</Label>
+                    <div className="flex gap-2">
+                      <Select value={selectedTemplateId} onValueChange={handleLoadTemplate}>
+                        <SelectTrigger className="flex-1">
+                          <SelectValue placeholder={t("admin.selectTemplate", { defaultValue: "Choisir un template..." })} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {messageTemplates.map(template => (
+                            <SelectItem key={template.id} value={template.id.toString()}>
+                              {template.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {selectedTemplateId && (
+                        <Button 
+                          type="button" 
+                          variant="destructive" 
+                          size="icon"
+                          onClick={() => deleteTemplateMutation.mutate(Number(selectedTemplateId))}
+                          disabled={deleteTemplateMutation.isPending}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="broadcast-message">{t("admin.message")}</Label>
