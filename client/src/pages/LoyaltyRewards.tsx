@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { io } from "socket.io-client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -133,6 +134,28 @@ export default function LoyaltyRewards() {
       });
     }
   }, [businessSettings]);
+
+  // Listen for real-time loyalty points updates
+  useEffect(() => {
+    const socket = io();
+    
+    socket.on("client:loyaltyUpdated", (data: { clientId: number; clientName: string; pointsAdded: number; newTotal: number }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      toast({
+        title: t("loyalty.pointsAwarded", { defaultValue: "Points attribués" }),
+        description: t("loyalty.pointsAwardedDesc", { 
+          defaultValue: `${data.pointsAdded} points ajoutés à ${data.clientName}`,
+          points: data.pointsAdded,
+          name: data.clientName
+        }),
+      });
+    });
+
+    return () => {
+      socket.off("client:loyaltyUpdated");
+      socket.disconnect();
+    };
+  }, [queryClient, toast, t]);
 
   const updateSettingsMutation = useMutation({
     mutationFn: async (settings: Partial<BusinessSettings>) => {

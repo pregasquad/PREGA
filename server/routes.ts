@@ -384,8 +384,15 @@ export async function registerRoutes(
             const pointsPerDh = settings?.loyaltyPointsPerDh ?? 1;
             const pointsToAdd = Math.floor(item.total * pointsPerDh);
             if (pointsToAdd > 0) {
-              await storage.updateClientLoyalty(client.id, pointsToAdd, item.total);
+              const updatedClient = await storage.updateClientLoyalty(client.id, pointsToAdd, item.total);
               console.log(`Awarded ${pointsToAdd} loyalty points to ${client.name} for appointment #${item.id}`);
+              // Emit real-time update for loyalty points
+              io.emit("client:loyaltyUpdated", { 
+                clientId: client.id, 
+                clientName: client.name,
+                pointsAdded: pointsToAdd, 
+                newTotal: updatedClient.loyaltyPoints 
+              });
             }
           }
         }
