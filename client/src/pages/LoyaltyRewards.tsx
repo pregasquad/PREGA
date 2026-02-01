@@ -11,7 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Gift, Settings, Users, Trophy, Star, Copy, Plus, X, Check, Search, Minus } from "lucide-react";
+import { Gift, Settings, Users, Trophy, Star, Copy, Plus, X, Check, Search, Minus, Edit2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -82,6 +83,8 @@ export default function LoyaltyRewards() {
   const [selectedClientId, setSelectedClientId] = useState<string>("");
   const [pointsToAdd, setPointsToAdd] = useState<number>(0);
   const [clientSearch, setClientSearch] = useState("");
+  const [editPointsOpen, setEditPointsOpen] = useState(false);
+  const [editPointsValue, setEditPointsValue] = useState<number>(0);
 
   const { data: businessSettings } = useQuery<BusinessSettings>({
     queryKey: ["/api/business-settings"],
@@ -219,6 +222,21 @@ export default function LoyaltyRewards() {
     if (selectedClient && pointsToAdd !== 0) {
       const newPoints = Math.max(0, selectedClient.loyaltyPoints + pointsToAdd);
       updateClientPointsMutation.mutate({ clientId: selectedClient.id, points: newPoints });
+    }
+  };
+
+  const handleEditPoints = () => {
+    if (selectedClient) {
+      setEditPointsValue(selectedClient.loyaltyPoints);
+      setEditPointsOpen(true);
+    }
+  };
+
+  const handleSaveEditedPoints = () => {
+    if (selectedClient) {
+      const newPoints = Math.max(0, editPointsValue);
+      updateClientPointsMutation.mutate({ clientId: selectedClient.id, points: newPoints });
+      setEditPointsOpen(false);
     }
   };
 
@@ -490,9 +508,19 @@ export default function LoyaltyRewards() {
                           {selectedClient.phone || t("loyalty.noPhone")}
                         </p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-3xl font-bold text-primary">{selectedClient.loyaltyPoints}</p>
-                        <p className="text-sm text-muted-foreground">{t("loyalty.currentPoints")}</p>
+                      <div className="text-right flex items-center gap-2">
+                        <div>
+                          <p className="text-3xl font-bold text-primary">{selectedClient.loyaltyPoints}</p>
+                          <p className="text-sm text-muted-foreground">{t("loyalty.currentPoints")}</p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={handleEditPoints}
+                          title={t("loyalty.editPoints", { defaultValue: "Modifier les points" })}
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </Button>
                       </div>
                     </div>
 
@@ -928,6 +956,40 @@ export default function LoyaltyRewards() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Edit Points Dialog */}
+      <Dialog open={editPointsOpen} onOpenChange={setEditPointsOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("loyalty.editPoints", { defaultValue: "Modifier les points" })}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-points">{t("loyalty.newPointsValue", { defaultValue: "Nouvelle valeur des points" })}</Label>
+              <Input
+                id="edit-points"
+                type="number"
+                min="0"
+                value={editPointsValue}
+                onChange={(e) => setEditPointsValue(parseInt(e.target.value) || 0)}
+              />
+            </div>
+            {selectedClient && (
+              <p className="text-sm text-muted-foreground">
+                {t("loyalty.currentPointsLabel", { defaultValue: "Points actuels" })}: {selectedClient.loyaltyPoints}
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditPointsOpen(false)}>
+              {t("common.cancel")}
+            </Button>
+            <Button onClick={handleSaveEditedPoints} disabled={updateClientPointsMutation.isPending}>
+              {t("common.save")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
