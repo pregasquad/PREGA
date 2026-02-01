@@ -102,15 +102,17 @@ const startServer = async () => {
     await setupVite(httpServer, app);
   }
 
-  const port = parseInt(process.env.PORT || "5000", 10);
+  const PORT = parseInt(process.env.PORT || "5000", 10);
+  const ENV = process.env.PORT ? "Koyeb" : "Local";
+  
   httpServer.listen(
     {
-      port,
+      port: PORT,
       host: "0.0.0.0",
       reusePort: true,
     },
     () => {
-      log(`serving on port ${port}`);
+      log(`serving on port ${PORT} (${ENV} environment)`);
     },
   );
 };
