@@ -1646,50 +1646,49 @@ export default function Planning() {
                   )}
                 />
 
-                {/* Packages Section */}
+                {/* Packages Section - Dropdown */}
                 {activePackages.length > 0 && (
                   <div className="col-span-3 space-y-2">
                     <Label className="flex items-center gap-2 text-xs font-medium">
                       <Gift className="w-3.5 h-3.5 text-primary" />
                       {t("booking.packages", { defaultValue: "Forfaits" })}
                     </Label>
-                    <div className="grid gap-2 max-h-[120px] overflow-y-auto">
-                      {activePackages.map(pkg => {
-                        const savings = pkg.originalPrice - pkg.discountedPrice;
-                        const savingsPercent = Math.round((savings / pkg.originalPrice) * 100);
-                        const isSelected = selectedPackage?.id === pkg.id;
-                        
-                        return (
-                          <button
-                            key={pkg.id}
-                            type="button"
-                            onClick={() => isSelected ? handleClearPackage() : handleSelectPackage(pkg)}
-                            className={cn(
-                              "w-full text-left p-3 rounded-xl border transition-all",
-                              "bg-background/50 hover:bg-background/80",
-                              isSelected
-                                ? "border-primary ring-1 ring-primary/20 bg-primary/5"
-                                : "border-border/50 hover:border-primary/30"
-                            )}
-                          >
-                            <div className="flex items-center justify-between gap-2">
+                    <Select
+                      value={selectedPackage?.id?.toString() || ""}
+                      onValueChange={(value) => {
+                        if (value === "none") {
+                          handleClearPackage();
+                        } else {
+                          const pkg = activePackages.find(p => p.id.toString() === value);
+                          if (pkg) handleSelectPackage(pkg);
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-full h-10 rounded-xl border-border/50 bg-background/50">
+                        <SelectValue placeholder={t("booking.selectPackage", { defaultValue: "Sélectionner un forfait" })} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">
+                          <span className="text-muted-foreground">{t("booking.noPackage", { defaultValue: "Aucun forfait" })}</span>
+                        </SelectItem>
+                        {activePackages.map(pkg => {
+                          const savings = pkg.originalPrice - pkg.discountedPrice;
+                          const savingsPercent = Math.round((savings / pkg.originalPrice) * 100);
+                          return (
+                            <SelectItem key={pkg.id} value={pkg.id.toString()}>
                               <div className="flex items-center gap-2">
-                                {isSelected && <Check className="w-4 h-4 text-primary" />}
-                                <span className="font-medium text-sm">{pkg.name}</span>
-                                <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 text-[10px] font-bold flex items-center gap-0.5">
-                                  <Tag className="w-2.5 h-2.5" />
+                                <span className="font-medium">{pkg.name}</span>
+                                <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 text-[10px] font-bold">
                                   -{savingsPercent}%
                                 </span>
+                                <span className="text-primary font-bold">{pkg.discountedPrice} DH</span>
+                                <span className="text-xs text-muted-foreground line-through">{pkg.originalPrice}</span>
                               </div>
-                              <div className="text-right">
-                                <span className="text-primary font-bold text-sm">{pkg.discountedPrice} DH</span>
-                                <span className="text-xs text-muted-foreground line-through ml-1">{pkg.originalPrice}</span>
-                              </div>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
                   </div>
                 )}
 
