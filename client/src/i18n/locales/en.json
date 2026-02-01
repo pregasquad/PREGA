@@ -813,6 +813,12 @@
     "removePoints": "Remove {{points}} points",
     "noChanges": "No changes",
     "pointsUpdated": "Points updated successfully",
-    "pointsError": "Failed to update points"
+    "pointsError": "Failed to update points",
+    "enrolled": "Enrolled",
+    "notEnrolled": "Not Enrolled",
+    "enrolledInProgram": "Enrolled in Loyalty Program",
+    "enrolledDesc": "Only enrolled clients earn points from appointments",
+    "enrollmentUpdated": "Enrollment status updated",
+    "enrollmentError": "Failed to update enrollment"
   }
 }

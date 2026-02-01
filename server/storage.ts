@@ -493,9 +493,12 @@ export class DatabaseStorage implements IStorage {
     const [client] = await db().select().from(s.clients).where(eq(s.clients.id, id));
     if (!client) throw new Error("Client not found");
     
+    // Only add loyalty points if client is enrolled in the program
+    const pointsToAdd = client.loyaltyEnrolled ? points : 0;
+    
     if (isMySQL()) {
       await db().update(s.clients).set({
-        loyaltyPoints: client.loyaltyPoints + points,
+        loyaltyPoints: client.loyaltyPoints + pointsToAdd,
         totalVisits: client.totalVisits + 1,
         totalSpent: client.totalSpent + spent,
       }).where(eq(s.clients.id, id));
@@ -504,7 +507,7 @@ export class DatabaseStorage implements IStorage {
       return updated;
     }
     const [updated] = await db().update(s.clients).set({
-      loyaltyPoints: client.loyaltyPoints + points,
+      loyaltyPoints: client.loyaltyPoints + pointsToAdd,
       totalVisits: client.totalVisits + 1,
       totalSpent: client.totalSpent + spent,
     }).where(eq(s.clients.id, id)).returning();

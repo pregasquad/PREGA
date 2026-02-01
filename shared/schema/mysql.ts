@@ -33,6 +33,7 @@ export const clients = mysqlTable("clients", {
   birthday: text("birthday"),
   notes: text("notes"),
   loyaltyPoints: int("loyalty_points").notNull().default(0),
+  loyaltyEnrolled: boolean("loyalty_enrolled").notNull().default(false),
   totalVisits: int("total_visits").notNull().default(0),
   totalSpent: double("total_spent").notNull().default(0),
   referredBy: int("referred_by"),
@@ -62,6 +63,7 @@ export const insertClientSchema = createInsertSchema(clients).omit({ id: true, c
   birthday: z.string().optional(),
   notes: z.string().optional(),
   referredBy: z.number().int().optional(),
+  loyaltyEnrolled: z.boolean().optional(),
 });
 export type InsertClient = z.infer<typeof insertClientSchema>;
 export type Client = typeof clients.$inferSelect;

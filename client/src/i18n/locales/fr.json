@@ -813,6 +813,12 @@
     "removePoints": "Retirer {{points}} points",
     "noChanges": "Aucun changement",
     "pointsUpdated": "Points mis à jour avec succès",
-    "pointsError": "Échec de la mise à jour des points"
+    "pointsError": "Échec de la mise à jour des points",
+    "enrolled": "Inscrit",
+    "notEnrolled": "Non inscrit",
+    "enrolledInProgram": "Inscrit au Programme Fidélité",
+    "enrolledDesc": "Seuls les clients inscrits gagnent des points sur les rendez-vous",
+    "enrollmentUpdated": "Statut d'inscription mis à jour",
+    "enrollmentError": "Échec de la mise à jour de l'inscription"
   }
 }

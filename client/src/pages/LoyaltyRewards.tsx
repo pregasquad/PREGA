@@ -52,6 +52,7 @@ interface Client {
   name: string;
   phone?: string;
   loyaltyPoints: number;
+  loyaltyEnrolled: boolean;
   totalVisits: number;
   totalSpent: number;
 }
@@ -220,6 +221,29 @@ export default function LoyaltyRewards() {
       updateClientPointsMutation.mutate({ clientId: selectedClient.id, points: newPoints });
     }
   };
+
+  const toggleEnrollmentMutation = useMutation({
+    mutationFn: async ({ clientId, enrolled }: { clientId: number; enrolled: boolean }) => {
+      return apiRequest("PATCH", `/api/clients/${clientId}`, { loyaltyEnrolled: enrolled });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      toast({
+        title: t("common.success"),
+        description: t("loyalty.enrollmentUpdated"),
+      });
+    },
+    onError: () => {
+      toast({
+        title: t("common.error"),
+        description: t("loyalty.enrollmentError"),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const enrolledClients = clients.filter(c => c.loyaltyEnrolled);
+  const unenrolledClients = clients.filter(c => !c.loyaltyEnrolled);
 
   const handleSaveSettings = () => {
     updateSettingsMutation.mutate(loyaltySettings);
@@ -434,9 +458,20 @@ export default function LoyaltyRewards() {
                         <SelectItem key={client.id} value={client.id.toString()}>
                           <div className="flex items-center justify-between w-full gap-4">
                             <span>{client.name}</span>
-                            <Badge variant="secondary" className="ml-2">
-                              {client.loyaltyPoints} pts
-                            </Badge>
+                            <div className="flex items-center gap-2">
+                              {client.loyaltyEnrolled ? (
+                                <Badge variant="default" className="bg-green-500/20 text-green-600">
+                                  {t("loyalty.enrolled")}
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-muted-foreground">
+                                  {t("loyalty.notEnrolled")}
+                                </Badge>
+                              )}
+                              <Badge variant="secondary">
+                                {client.loyaltyPoints} pts
+                              </Badge>
+                            </div>
                           </div>
                         </SelectItem>
                       ))
@@ -448,7 +483,7 @@ export default function LoyaltyRewards() {
               {selectedClient && (
                 <Card className="bg-muted/50">
                   <CardContent className="pt-6">
-                    <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center justify-between mb-4">
                       <div>
                         <h3 className="text-lg font-semibold">{selectedClient.name}</h3>
                         <p className="text-sm text-muted-foreground">
@@ -459,6 +494,28 @@ export default function LoyaltyRewards() {
                         <p className="text-3xl font-bold text-primary">{selectedClient.loyaltyPoints}</p>
                         <p className="text-sm text-muted-foreground">{t("loyalty.currentPoints")}</p>
                       </div>
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 rounded-lg bg-background mb-6">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="loyalty-enrolled" className="text-base font-medium">
+                          {t("loyalty.enrolledInProgram")}
+                        </Label>
+                        <p className="text-sm text-muted-foreground">
+                          {t("loyalty.enrolledDesc")}
+                        </p>
+                      </div>
+                      <Switch
+                        id="loyalty-enrolled"
+                        checked={selectedClient.loyaltyEnrolled}
+                        onCheckedChange={(checked) => {
+                          toggleEnrollmentMutation.mutate({ 
+                            clientId: selectedClient.id, 
+                            enrolled: checked 
+                          });
+                        }}
+                        disabled={toggleEnrollmentMutation.isPending}
+                      />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 mb-6">
