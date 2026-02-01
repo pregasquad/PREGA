@@ -252,7 +252,7 @@ export const ROLE_PERMISSIONS = {
     "view_expenses", "manage_expenses",
     "view_salaries", "manage_salaries",
     "view_reports",
-    "view_staff_performance",
+    "view_staff", "view_staff_performance",
     "manage_staff",
     "admin_settings",
     "export_data",
