@@ -1673,7 +1673,7 @@ export default function Planning() {
                         </SelectItem>
                         {activePackages.map(pkg => {
                           const savings = pkg.originalPrice - pkg.discountedPrice;
-                          const savingsPercent = Math.round((savings / pkg.originalPrice) * 100);
+                          const savingsPercent = pkg.originalPrice > 0 ? Math.round((savings / pkg.originalPrice) * 100) : 0;
                           return (
                             <SelectItem key={pkg.id} value={pkg.id.toString()}>
                               <div className="flex items-center gap-2">

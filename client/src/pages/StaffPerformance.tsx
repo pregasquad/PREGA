@@ -51,12 +51,15 @@ export default function StaffPerformance() {
 
   const { data: staffGoals = [], isLoading: loadingGoals } = useQuery<StaffGoal[]>({
     queryKey: ["/api/staff/goals/summary", selectedMonth],
-    queryFn: () => apiRequest(`/api/staff/goals/summary?period=${selectedMonth}`),
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/staff/goals/summary?period=${selectedMonth}`);
+      return res.json();
+    },
   });
 
   const saveGoalMutation = useMutation({
     mutationFn: (data: { staffId: number; goal: any }) =>
-      apiRequest(`/api/staff/${data.staffId}/goals`, { method: "POST", body: JSON.stringify(data.goal) }),
+      apiRequest("POST", `/api/staff/${data.staffId}/goals`, data.goal),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/staff/goals/summary"] });
       setGoalDialogOpen(false);
@@ -69,7 +72,7 @@ export default function StaffPerformance() {
 
   const calculateGoalMutation = useMutation({
     mutationFn: (data: { staffId: number; period: string }) =>
-      apiRequest(`/api/staff/${data.staffId}/goals/calculate`, { method: "POST", body: JSON.stringify({ period: data.period }) }),
+      apiRequest("POST", `/api/staff/${data.staffId}/goals/calculate`, { period: data.period }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/staff/goals/summary"] });
       toast({ title: t("goals.calculated"), description: t("goals.calculatedDesc") });

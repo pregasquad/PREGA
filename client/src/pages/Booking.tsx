@@ -510,7 +510,7 @@ export default function Booking() {
                       <div className="grid gap-3">
                         {packages.map(pkg => {
                           const savings = pkg.originalPrice - pkg.discountedPrice;
-                          const savingsPercent = Math.round((savings / pkg.originalPrice) * 100);
+                          const savingsPercent = pkg.originalPrice > 0 ? Math.round((savings / pkg.originalPrice) * 100) : 0;
                           const isSelected = selectedPackage?.id === pkg.id;
                           
                           return (
