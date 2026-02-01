@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { CalendarIcon, ChevronLeft, ChevronRight, Plus, Trash2, Check, X, Search, Star, RefreshCw, Sparkles, CreditCard, Settings2, Scissors, Clock, User, ChevronsUpDown, ListTodo, Bell, UserCheck } from "lucide-react";
+import { CalendarIcon, ChevronLeft, ChevronRight, Plus, Trash2, Check, X, Search, Star, RefreshCw, Sparkles, CreditCard, Settings2, Scissors, Clock, User, ChevronsUpDown, ListTodo, Bell, UserCheck, Gift, Tag } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
 import { cn } from "@/lib/utils";
@@ -336,6 +336,7 @@ export default function Planning() {
   });
   const [selectedServices, setSelectedServices] = useState<Array<{id: string, name: string, price: number, duration: number}>>([]);
   const [priceInputs, setPriceInputs] = useState<Record<string, string>>({});
+  const [selectedPackage, setSelectedPackage] = useState<{id: number; name: string; discountedPrice: number; originalPrice: number} | null>(null);
   const priceInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const { toast } = useToast();
 
@@ -347,6 +348,20 @@ export default function Planning() {
   const { data: services = [], isLoading: loadingServices, isError: servicesError } = useServices();
   const { data: clients = [] } = useQuery<Array<{id: number, name: string, phone: string | null}>>({
     queryKey: ["/api/clients"],
+  });
+  
+  const { data: packages = [] } = useQuery<Array<{
+    id: number;
+    name: string;
+    description: string | null;
+    services: number[];
+    originalPrice: number;
+    discountedPrice: number;
+    validFrom: string | null;
+    validUntil: string | null;
+    isActive: boolean;
+  }>>({
+    queryKey: ["/api/packages"],
   });
   
   const { data: waitlistEntries = [], refetch: refetchWaitlist } = useQuery<Array<{
@@ -550,6 +565,7 @@ export default function Planning() {
     });
     setSelectedServices([]);
     setPriceInputs({});
+    setSelectedPackage(null);
     setEditingAppointment(null);
     setIsDialogOpen(true);
   };
@@ -643,11 +659,15 @@ export default function Planning() {
     const calculatedTotal = servicesToSave.reduce((sum, s) => sum + s.price, 0);
     const finalTotal = customTotal !== null ? customTotal : calculatedTotal;
     
+    const serviceDescription = selectedPackage 
+      ? `${selectedPackage.name} (${servicesToSave.map(s => s.name).join(', ')})`
+      : (servicesToSave.length > 0 ? servicesToSave.map(s => s.name).join(', ') : data.service);
+    
     const submitData = {
       ...data,
       clientId,
       servicesJson: servicesToSave.length > 0 ? servicesToSave : undefined,
-      service: servicesToSave.length > 0 ? servicesToSave.map(s => s.name).join(', ') : data.service,
+      service: serviceDescription,
       duration: servicesToSave.length > 0 ? servicesToSave.reduce((sum, s) => sum + s.duration, 0) : data.duration,
       price: finalTotal,
       total: finalTotal,
@@ -662,6 +682,7 @@ export default function Planning() {
     }
     setSelectedServices([]);
     setPriceInputs({});
+    setSelectedPackage(null);
     setIsDialogOpen(false);
   };
 
@@ -687,6 +708,7 @@ export default function Planning() {
     const removedService = selectedServices[index];
     const updated = selectedServices.filter((_, i) => i !== index);
     setSelectedServices(updated);
+    setSelectedPackage(null);
     if (removedService) {
       setPriceInputs(prev => {
         const { [removedService.id]: _, ...rest } = prev;
@@ -697,10 +719,63 @@ export default function Planning() {
     const totalPrice = updated.reduce((sum, s) => sum + s.price, 0);
     form.setValue("service", updated.map(s => s.name).join(', '));
     form.setValue("duration", totalDuration);
-    // Update total input in DOM
     const totalInput = document.getElementById('total-price-input') as HTMLInputElement;
     if (totalInput) totalInput.value = String(totalPrice);
   };
+
+  const handleSelectPackage = (pkg: {id: number; name: string; services: number[]; originalPrice: number; discountedPrice: number}) => {
+    const packageServices = pkg.services
+      .map(serviceId => services.find(s => s.id === serviceId))
+      .filter((s): s is typeof services[number] => s !== undefined)
+      .map(s => ({
+        id: `pkg-svc-${s.id}-${Date.now()}`,
+        name: s.name,
+        price: s.price,
+        duration: s.duration
+      }));
+    
+    if (packageServices.length === 0) return;
+    
+    setSelectedPackage({ id: pkg.id, name: pkg.name, discountedPrice: pkg.discountedPrice, originalPrice: pkg.originalPrice });
+    setSelectedServices(packageServices);
+    
+    const priceInputsMap: Record<string, string> = {};
+    packageServices.forEach(s => {
+      priceInputsMap[s.id] = String(s.price);
+    });
+    setPriceInputs(priceInputsMap);
+    
+    const totalDuration = packageServices.reduce((sum, s) => sum + s.duration, 0);
+    form.setValue("service", packageServices.map(s => s.name).join(', '));
+    form.setValue("duration", totalDuration);
+    form.setValue("total", pkg.discountedPrice);
+    
+    const totalInput = document.getElementById('total-price-input') as HTMLInputElement;
+    if (totalInput) totalInput.value = String(pkg.discountedPrice);
+  };
+
+  const handleClearPackage = () => {
+    setSelectedPackage(null);
+    setSelectedServices([]);
+    setPriceInputs({});
+    form.setValue("service", "");
+    form.setValue("duration", 30);
+    form.setValue("total", 0);
+    const totalInput = document.getElementById('total-price-input') as HTMLInputElement;
+    if (totalInput) totalInput.value = "0";
+  };
+
+  const activePackages = useMemo(() => {
+    const now = new Date();
+    return packages.filter(pkg => {
+      if (!pkg.isActive) return false;
+      const validFrom = pkg.validFrom ? new Date(pkg.validFrom) : null;
+      const validUntil = pkg.validUntil ? new Date(pkg.validUntil) : null;
+      if (validFrom && now < validFrom) return false;
+      if (validUntil && now > validUntil) return false;
+      return true;
+    });
+  }, [packages]);
 
   const handlePriceInputChange = (serviceId: string, value: string) => {
     const newPrice = parseFloat(value.replace(',', '.')) || 0;
@@ -1375,6 +1450,7 @@ export default function Planning() {
           setIsEditFavoritesOpen(false);
           setSelectedServices([]);
           setPriceInputs({});
+          setSelectedPackage(null);
         }
       }}>
         <DialogContent 
@@ -1569,6 +1645,53 @@ export default function Planning() {
                     </FormItem>
                   )}
                 />
+
+                {/* Packages Section */}
+                {activePackages.length > 0 && (
+                  <div className="col-span-3 space-y-2">
+                    <Label className="flex items-center gap-2 text-xs font-medium">
+                      <Gift className="w-3.5 h-3.5 text-primary" />
+                      {t("booking.packages", { defaultValue: "Forfaits" })}
+                    </Label>
+                    <div className="grid gap-2 max-h-[120px] overflow-y-auto">
+                      {activePackages.map(pkg => {
+                        const savings = pkg.originalPrice - pkg.discountedPrice;
+                        const savingsPercent = Math.round((savings / pkg.originalPrice) * 100);
+                        const isSelected = selectedPackage?.id === pkg.id;
+                        
+                        return (
+                          <button
+                            key={pkg.id}
+                            type="button"
+                            onClick={() => isSelected ? handleClearPackage() : handleSelectPackage(pkg)}
+                            className={cn(
+                              "w-full text-left p-3 rounded-xl border transition-all",
+                              "bg-background/50 hover:bg-background/80",
+                              isSelected
+                                ? "border-primary ring-1 ring-primary/20 bg-primary/5"
+                                : "border-border/50 hover:border-primary/30"
+                            )}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                {isSelected && <Check className="w-4 h-4 text-primary" />}
+                                <span className="font-medium text-sm">{pkg.name}</span>
+                                <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 text-[10px] font-bold flex items-center gap-0.5">
+                                  <Tag className="w-2.5 h-2.5" />
+                                  -{savingsPercent}%
+                                </span>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-primary font-bold text-sm">{pkg.discountedPrice} DH</span>
+                                <span className="text-xs text-muted-foreground line-through ml-1">{pkg.originalPrice}</span>
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* Service - Multi-select with Pills */}
                 <div className="col-span-3 space-y-2">

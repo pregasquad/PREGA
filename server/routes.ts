@@ -282,6 +282,40 @@ export async function registerRoutes(
     }
   });
 
+  // Public packages endpoint - for booking page
+  app.get("/api/public/packages", publicRateLimitMiddleware, async (_req, res) => {
+    try {
+      const packages = await storage.getPackages();
+      const now = new Date();
+      
+      // Filter only active packages (within valid dates) and sanitize response
+      const activePackages = packages
+        .filter(pkg => {
+          if (!pkg.isActive) return false;
+          const validFrom = pkg.validFrom ? new Date(pkg.validFrom) : null;
+          const validUntil = pkg.validUntil ? new Date(pkg.validUntil) : null;
+          
+          if (validFrom && now < validFrom) return false;
+          if (validUntil && now > validUntil) return false;
+          return true;
+        })
+        .map(pkg => ({
+          id: pkg.id,
+          name: pkg.name,
+          description: pkg.description,
+          services: pkg.services,
+          originalPrice: pkg.originalPrice,
+          discountedPrice: pkg.discountedPrice,
+          validFrom: pkg.validFrom,
+          validUntil: pkg.validUntil
+        }));
+      
+      res.json(activePackages);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to fetch packages" });
+    }
+  });
+
   // Appointments - protected routes
   app.get(api.appointments.list.path, isPinAuthenticated, async (req, res) => {
     const { date } = z.object({ date: z.string().optional() }).parse(req.query);

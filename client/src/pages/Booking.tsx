@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { ar, enUS, fr } from "date-fns/locale";
-import { Clock, CheckCircle2, Scissors, User, Phone, CalendarDays, Sparkles, X, Users } from "lucide-react";
+import { Clock, CheckCircle2, Scissors, User, Phone, CalendarDays, Sparkles, X, Users, Gift, Tag } from "lucide-react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
@@ -57,6 +57,17 @@ interface MinimalAppointment {
   date: string;
 }
 
+interface Package {
+  id: number;
+  name: string;
+  description: string | null;
+  services: number[];
+  originalPrice: number;
+  discountedPrice: number;
+  validFrom: string | null;
+  validUntil: string | null;
+}
+
 const TIME_SLOTS = [
   "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
   "14:00", "14:30", "15:00", "15:30", "16:00", "16:30",
@@ -77,6 +88,8 @@ export default function Booking() {
   const [appointments, setAppointments] = useState<MinimalAppointment[]>([]);
   const [selectedServices, setSelectedServices] = useState<SelectedService[]>([]);
   const [visitorCount, setVisitorCount] = useState<number>(0);
+  const [packages, setPackages] = useState<Package[]>([]);
+  const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
 
   useEffect(() => {
     i18n.changeLanguage("fr");
@@ -113,6 +126,11 @@ export default function Booking() {
     fetch("/api/public/services")
       .then(res => res.json())
       .then(data => setServices(data))
+      .catch(console.error);
+    
+    fetch("/api/public/packages")
+      .then(res => res.json())
+      .then(data => setPackages(data))
       .catch(console.error);
   }, []);
 
@@ -207,9 +225,11 @@ export default function Booking() {
     setIsSubmitting(true);
     
     const clientName = data.phone ? `${data.client} (${data.phone})` : data.client;
-    const serviceNames = selectedServices.map(s => s.name).join(", ");
+    const serviceNames = selectedPackage 
+      ? `${selectedPackage.name} (${selectedServices.map(s => s.name).join(", ")})`
+      : selectedServices.map(s => s.name).join(", ");
     const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration, 0);
-    const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
+    const totalPrice = selectedPackage ? selectedPackage.discountedPrice : selectedServices.reduce((sum, s) => sum + s.price, 0);
     
     const appointmentData = {
       client: clientName,
@@ -264,12 +284,39 @@ export default function Booking() {
   const handleRemoveService = (index: number) => {
     const newSelectedServices = selectedServices.filter((_, i) => i !== index);
     setSelectedServices(newSelectedServices);
+    setSelectedPackage(null);
     const totalDuration = newSelectedServices.reduce((sum, s) => sum + s.duration, 0);
     const totalPrice = newSelectedServices.reduce((sum, s) => sum + s.price, 0);
     form.setValue("service", newSelectedServices.map(s => s.name).join(", "));
     form.setValue("duration", totalDuration);
     form.setValue("price", totalPrice);
     form.setValue("total", totalPrice);
+  };
+
+  const handleSelectPackage = (pkg: Package) => {
+    const packageServices = pkg.services
+      .map(serviceId => services.find(s => s.id === serviceId))
+      .filter((s): s is Service => s !== undefined)
+      .map(s => ({ name: s.name, price: s.price, duration: s.duration }));
+    
+    if (packageServices.length === 0) return;
+    
+    setSelectedPackage(pkg);
+    setSelectedServices(packageServices);
+    const totalDuration = packageServices.reduce((sum, s) => sum + s.duration, 0);
+    form.setValue("service", packageServices.map(s => s.name).join(", "));
+    form.setValue("duration", totalDuration);
+    form.setValue("price", pkg.discountedPrice);
+    form.setValue("total", pkg.discountedPrice);
+  };
+
+  const handleClearPackage = () => {
+    setSelectedPackage(null);
+    setSelectedServices([]);
+    form.setValue("service", "");
+    form.setValue("duration", 30);
+    form.setValue("price", 0);
+    form.setValue("total", 0);
   };
 
   const canSubmit = selectedServices.length > 0 && selectedStaff && date && selectedTime && form.watch("client");
@@ -454,6 +501,64 @@ export default function Booking() {
                     )}
                   />
 
+                  {packages.length > 0 && (
+                    <div className="space-y-3">
+                      <FormLabel className="flex items-center gap-2 text-sm font-medium">
+                        <Gift className="w-4 h-4 text-primary" />
+                        {t("booking.packages", { defaultValue: "Forfaits" })}
+                      </FormLabel>
+                      <div className="grid gap-3">
+                        {packages.map(pkg => {
+                          const savings = pkg.originalPrice - pkg.discountedPrice;
+                          const savingsPercent = Math.round((savings / pkg.originalPrice) * 100);
+                          const isSelected = selectedPackage?.id === pkg.id;
+                          
+                          return (
+                            <button
+                              key={pkg.id}
+                              type="button"
+                              onClick={() => isSelected ? handleClearPackage() : handleSelectPackage(pkg)}
+                              className={cn(
+                                "w-full text-left p-4 rounded-2xl border-2 transition-all relative overflow-hidden",
+                                "bg-background/50 backdrop-blur-sm hover:bg-background/80",
+                                isSelected
+                                  ? "border-primary ring-2 ring-primary/20 shadow-lg bg-primary/5"
+                                  : "border-border/50 hover:border-primary/30"
+                              )}
+                            >
+                              {isSelected && (
+                                <div className="absolute top-2 right-2">
+                                  <CheckCircle2 className="w-5 h-5 text-primary" />
+                                </div>
+                              )}
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-semibold text-base">{pkg.name}</span>
+                                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 text-xs font-bold flex items-center gap-1">
+                                      <Tag className="w-3 h-3" />
+                                      -{savingsPercent}%
+                                    </span>
+                                  </div>
+                                  {pkg.description && (
+                                    <p className="text-xs text-muted-foreground mt-1">{pkg.description}</p>
+                                  )}
+                                </div>
+                                <div className="text-right shrink-0">
+                                  <div className="text-primary font-bold text-lg">{pkg.discountedPrice} {t("common.currency")}</div>
+                                  <div className="text-xs text-muted-foreground line-through">{pkg.originalPrice} {t("common.currency")}</div>
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <p className="text-xs text-muted-foreground text-center">
+                        {t("booking.orSelectServices", { defaultValue: "Ou choisissez vos services individuellement ci-dessous" })}
+                      </p>
+                    </div>
+                  )}
+
                   <FormField
                     control={form.control}
                     name="service"
@@ -523,13 +628,29 @@ export default function Booking() {
                                   ))}
                                 </div>
                                 <div className="glass-subtle rounded-xl p-3">
+                                  {selectedPackage && (
+                                    <div className="flex items-center gap-2 mb-2 pb-2 border-b border-border/50">
+                                      <Gift className="w-4 h-4 text-emerald-500" />
+                                      <span className="text-sm font-medium text-emerald-600">{selectedPackage.name}</span>
+                                      <span className="ml-auto px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 text-xs font-bold">
+                                        -{selectedPackage.originalPrice - selectedPackage.discountedPrice} {t("common.currency")}
+                                      </span>
+                                    </div>
+                                  )}
                                   <div className="flex justify-between text-sm">
                                     <span className="text-muted-foreground">{t("common.duration")}:</span>
                                     <span className="font-medium">{form.getValues("duration")} {t("common.minutes")}</span>
                                   </div>
                                   <div className="flex justify-between text-sm mt-1">
                                     <span className="text-muted-foreground">{t("common.price")}:</span>
-                                    <span className="text-primary font-bold text-lg">{form.getValues("total")} {t("common.currency")}</span>
+                                    <div className="text-right">
+                                      {selectedPackage && (
+                                        <span className="text-xs text-muted-foreground line-through mr-2">
+                                          {selectedPackage.originalPrice} {t("common.currency")}
+                                        </span>
+                                      )}
+                                      <span className="text-primary font-bold text-lg">{form.getValues("total")} {t("common.currency")}</span>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
