@@ -229,11 +229,13 @@ export default function AdminSettings() {
     queryKey: ["/api/clients"],
     queryFn: async () => {
       const res = await fetch("/api/clients");
-      return res.json();
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
     }
   });
 
-  const clientsWithPhone = clients.filter(c => c.phone && c.phone.trim() !== '');
+  const clientsWithPhone = Array.isArray(clients) ? clients.filter(c => c.phone && c.phone.trim() !== '') : [];
 
   const broadcastMutation = useMutation({
     mutationFn: async (message: string) => {
