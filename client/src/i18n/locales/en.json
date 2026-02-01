@@ -795,6 +795,24 @@
     "noLoyaltyData": "No loyalty data available",
     "visits": "visits",
     "spent": "spent",
-    "points": "points"
+    "points": "points",
+    "clients": "Clients",
+    "manageClientPoints": "Manage Client Points",
+    "manageClientPointsDesc": "Search for a client and manually adjust their loyalty points",
+    "selectClient": "Select Client",
+    "searchClient": "Search for a client...",
+    "searchByNameOrPhone": "Search by name or phone",
+    "noClientsFound": "No clients found",
+    "noPhone": "No phone number",
+    "currentPoints": "Current Points",
+    "totalVisits": "Total Visits",
+    "totalSpent": "Total Spent",
+    "adjustPoints": "Adjust Points",
+    "newBalance": "New balance",
+    "addPoints": "Add {{points}} points",
+    "removePoints": "Remove {{points}} points",
+    "noChanges": "No changes",
+    "pointsUpdated": "Points updated successfully",
+    "pointsError": "Failed to update points"
   }
 }

@@ -11,7 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Gift, Settings, Users, Trophy, Star, Copy, Plus, X, Check } from "lucide-react";
+import { Gift, Settings, Users, Trophy, Star, Copy, Plus, X, Check, Search, Minus } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -76,6 +77,10 @@ export default function LoyaltyRewards() {
     recipientPhone: "",
     expiresAt: "",
   });
+
+  const [selectedClientId, setSelectedClientId] = useState<string>("");
+  const [pointsToAdd, setPointsToAdd] = useState<number>(0);
+  const [clientSearch, setClientSearch] = useState("");
 
   const { data: businessSettings } = useQuery<BusinessSettings>({
     queryKey: ["/api/business-settings"],
@@ -182,6 +187,40 @@ export default function LoyaltyRewards() {
     },
   });
 
+  const updateClientPointsMutation = useMutation({
+    mutationFn: async ({ clientId, points }: { clientId: number; points: number }) => {
+      return apiRequest("PATCH", `/api/clients/${clientId}`, { loyaltyPoints: points });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      setPointsToAdd(0);
+      toast({
+        title: t("common.success"),
+        description: t("loyalty.pointsUpdated"),
+      });
+    },
+    onError: () => {
+      toast({
+        title: t("common.error"),
+        description: t("loyalty.pointsError"),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const selectedClient = clients.find(c => c.id.toString() === selectedClientId);
+  const filteredClients = clients.filter(c => 
+    c.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
+    (c.phone && c.phone.includes(clientSearch))
+  );
+
+  const handleAddPoints = () => {
+    if (selectedClient && pointsToAdd !== 0) {
+      const newPoints = Math.max(0, selectedClient.loyaltyPoints + pointsToAdd);
+      updateClientPointsMutation.mutate({ clientId: selectedClient.id, points: newPoints });
+    }
+  };
+
   const handleSaveSettings = () => {
     updateSettingsMutation.mutate(loyaltySettings);
   };
@@ -224,10 +263,14 @@ export default function LoyaltyRewards() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 lg:w-[600px]">
+        <TabsList className="grid w-full grid-cols-5 lg:w-[750px]">
           <TabsTrigger value="settings" className="flex items-center gap-2">
             <Settings className="w-4 h-4" />
             <span className="hidden sm:inline">{t("loyalty.settings")}</span>
+          </TabsTrigger>
+          <TabsTrigger value="clients" className="flex items-center gap-2">
+            <Search className="w-4 h-4" />
+            <span className="hidden sm:inline">{t("loyalty.clients")}</span>
           </TabsTrigger>
           <TabsTrigger value="gift-cards" className="flex items-center gap-2">
             <Gift className="w-4 h-4" />
@@ -353,6 +396,134 @@ export default function LoyaltyRewards() {
               >
                 {updateSettingsMutation.isPending ? t("common.loading") : t("common.save")}
               </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="clients" className="space-y-6">
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Search className="w-5 h-5" />
+                {t("loyalty.manageClientPoints")}
+              </CardTitle>
+              <CardDescription>{t("loyalty.manageClientPointsDesc")}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label>{t("loyalty.selectClient")}</Label>
+                <Select value={selectedClientId} onValueChange={setSelectedClientId}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder={t("loyalty.searchClient")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <div className="p-2">
+                      <Input
+                        placeholder={t("loyalty.searchByNameOrPhone")}
+                        value={clientSearch}
+                        onChange={(e) => setClientSearch(e.target.value)}
+                        className="mb-2"
+                      />
+                    </div>
+                    {filteredClients.length === 0 ? (
+                      <div className="p-4 text-center text-muted-foreground text-sm">
+                        {t("loyalty.noClientsFound")}
+                      </div>
+                    ) : (
+                      filteredClients.slice(0, 50).map((client) => (
+                        <SelectItem key={client.id} value={client.id.toString()}>
+                          <div className="flex items-center justify-between w-full gap-4">
+                            <span>{client.name}</span>
+                            <Badge variant="secondary" className="ml-2">
+                              {client.loyaltyPoints} pts
+                            </Badge>
+                          </div>
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {selectedClient && (
+                <Card className="bg-muted/50">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between mb-6">
+                      <div>
+                        <h3 className="text-lg font-semibold">{selectedClient.name}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {selectedClient.phone || t("loyalty.noPhone")}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-3xl font-bold text-primary">{selectedClient.loyaltyPoints}</p>
+                        <p className="text-sm text-muted-foreground">{t("loyalty.currentPoints")}</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                      <div className="p-3 rounded-lg bg-background">
+                        <p className="text-sm text-muted-foreground">{t("loyalty.totalVisits")}</p>
+                        <p className="text-xl font-semibold">{selectedClient.totalVisits}</p>
+                      </div>
+                      <div className="p-3 rounded-lg bg-background">
+                        <p className="text-sm text-muted-foreground">{t("loyalty.totalSpent")}</p>
+                        <p className="text-xl font-semibold">{selectedClient.totalSpent} DH</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <Label>{t("loyalty.adjustPoints")}</Label>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setPointsToAdd(prev => prev - 10)}
+                        >
+                          <Minus className="w-4 h-4" />
+                        </Button>
+                        <Input
+                          type="number"
+                          value={pointsToAdd}
+                          onChange={(e) => setPointsToAdd(parseInt(e.target.value) || 0)}
+                          className="w-24 text-center"
+                        />
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setPointsToAdd(prev => prev + 10)}
+                        >
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {t("loyalty.newBalance")}: {Math.max(0, selectedClient.loyaltyPoints + pointsToAdd)} {t("loyalty.points")}
+                      </p>
+                      <Button
+                        onClick={handleAddPoints}
+                        disabled={pointsToAdd === 0 || updateClientPointsMutation.isPending}
+                        className="w-full"
+                      >
+                        {updateClientPointsMutation.isPending ? (
+                          t("common.saving")
+                        ) : pointsToAdd > 0 ? (
+                          <>
+                            <Plus className="w-4 h-4 mr-2" />
+                            {t("loyalty.addPoints", { points: pointsToAdd })}
+                          </>
+                        ) : pointsToAdd < 0 ? (
+                          <>
+                            <Minus className="w-4 h-4 mr-2" />
+                            {t("loyalty.removePoints", { points: Math.abs(pointsToAdd) })}
+                          </>
+                        ) : (
+                          t("loyalty.noChanges")
+                        )}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

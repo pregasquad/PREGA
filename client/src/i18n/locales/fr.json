@@ -795,6 +795,24 @@
     "noLoyaltyData": "Aucune donnée de fidélité",
     "visits": "visites",
     "spent": "dépensé",
-    "points": "points"
+    "points": "points",
+    "clients": "Clients",
+    "manageClientPoints": "Gérer les Points Client",
+    "manageClientPointsDesc": "Rechercher un client et ajuster manuellement ses points de fidélité",
+    "selectClient": "Sélectionner un Client",
+    "searchClient": "Rechercher un client...",
+    "searchByNameOrPhone": "Rechercher par nom ou téléphone",
+    "noClientsFound": "Aucun client trouvé",
+    "noPhone": "Pas de téléphone",
+    "currentPoints": "Points Actuels",
+    "totalVisits": "Visites Totales",
+    "totalSpent": "Total Dépensé",
+    "adjustPoints": "Ajuster les Points",
+    "newBalance": "Nouveau solde",
+    "addPoints": "Ajouter {{points}} points",
+    "removePoints": "Retirer {{points}} points",
+    "noChanges": "Aucun changement",
+    "pointsUpdated": "Points mis à jour avec succès",
+    "pointsError": "Échec de la mise à jour des points"
   }
 }
