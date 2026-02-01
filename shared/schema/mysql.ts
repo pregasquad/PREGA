@@ -284,8 +284,57 @@ export const businessSettings = mysqlTable("business_settings", {
   openingTime: varchar("opening_time", { length: 10 }).notNull().default("09:00"),
   closingTime: varchar("closing_time", { length: 10 }).notNull().default("19:00"),
   workingDays: json("working_days").$type<number[]>().notNull().default([1, 2, 3, 4, 5, 6]),
+  loyaltyEnabled: boolean("loyalty_enabled").notNull().default(true),
+  loyaltyPointsPerDh: int("loyalty_points_per_dh").notNull().default(1),
+  loyaltyPointsValue: double("loyalty_points_value").notNull().default(0.1),
+  referralBonusPoints: int("referral_bonus_points").notNull().default(100),
+  referralBonusReferee: int("referral_bonus_referee").notNull().default(50),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+export const giftCards = mysqlTable("gift_cards", {
+  id: serial("id").primaryKey(),
+  code: varchar("code", { length: 50 }).notNull().unique(),
+  initialBalance: double("initial_balance").notNull(),
+  currentBalance: double("current_balance").notNull(),
+  purchasedBy: int("purchased_by"),
+  recipientName: varchar("recipient_name", { length: 255 }),
+  recipientPhone: varchar("recipient_phone", { length: 50 }),
+  expiresAt: timestamp("expires_at"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertGiftCardSchema = createInsertSchema(giftCards).omit({ id: true, createdAt: true }).extend({
+  code: z.string().min(1),
+  initialBalance: z.number().min(1),
+  currentBalance: z.number().min(0),
+});
+export type GiftCard = typeof giftCards.$inferSelect;
+export type InsertGiftCard = z.infer<typeof insertGiftCardSchema>;
+
+export const giftCardTransactions = mysqlTable("gift_card_transactions", {
+  id: serial("id").primaryKey(),
+  giftCardId: int("gift_card_id").notNull(),
+  appointmentId: int("appointment_id"),
+  amount: double("amount").notNull(),
+  type: varchar("type", { length: 20 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const referrals = mysqlTable("referrals", {
+  id: serial("id").primaryKey(),
+  referrerId: int("referrer_id").notNull(),
+  refereeId: int("referee_id").notNull(),
+  referrerPointsAwarded: int("referrer_points_awarded").notNull().default(0),
+  refereePointsAwarded: int("referee_points_awarded").notNull().default(0),
+  status: varchar("status", { length: 20 }).notNull().default("pending"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertReferralSchema = createInsertSchema(referrals).omit({ id: true, createdAt: true });
+export type Referral = typeof referrals.$inferSelect;
+export type InsertReferral = z.infer<typeof insertReferralSchema>;
 
 export const insertBusinessSettingsSchema = createInsertSchema(businessSettings).omit({ id: true, updatedAt: true });
 export type BusinessSettings = typeof businessSettings.$inferSelect;
@@ -317,3 +366,178 @@ export const pageViews = mysqlTable("page_views", {
 });
 
 export type PageView = typeof pageViews.$inferSelect;
+
+export const packages = mysqlTable("packages", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  services: json("services").$type<number[]>().notNull().default([]),
+  originalPrice: double("original_price").notNull(),
+  discountedPrice: double("discounted_price").notNull(),
+  validFrom: text("valid_from"),
+  validUntil: text("valid_until"),
+  isActive: boolean("is_active").notNull().default(true),
+  maxUsesPerClient: int("max_uses_per_client").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertPackageSchema = createInsertSchema(packages).omit({ id: true, createdAt: true }).extend({
+  name: z.string().min(1, "Package name is required"),
+  description: z.string().optional(),
+  services: z.array(z.number().int()).min(1, "At least one service is required"),
+  originalPrice: z.number().min(0),
+  discountedPrice: z.number().min(0),
+  validFrom: z.string().optional(),
+  validUntil: z.string().optional(),
+  isActive: z.boolean().optional(),
+  maxUsesPerClient: z.number().int().min(1).optional(),
+});
+export type Package = typeof packages.$inferSelect;
+export type InsertPackage = z.infer<typeof insertPackageSchema>;
+
+export const packagePurchases = mysqlTable("package_purchases", {
+  id: serial("id").primaryKey(),
+  packageId: int("package_id").notNull(),
+  clientId: int("client_id").notNull(),
+  appointmentId: int("appointment_id"),
+  purchaseDate: text("purchase_date").notNull(),
+  usedCount: int("used_count").notNull().default(0),
+  maxUses: int("max_uses").notNull().default(1),
+  status: varchar("status", { length: 20 }).notNull().default("active"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertPackagePurchaseSchema = createInsertSchema(packagePurchases).omit({ id: true, createdAt: true }).extend({
+  packageId: z.number().int(),
+  clientId: z.number().int(),
+  appointmentId: z.number().int().optional(),
+  purchaseDate: z.string().min(1),
+  usedCount: z.number().int().min(0).optional(),
+  maxUses: z.number().int().min(1).optional(),
+  status: z.enum(["active", "completed", "expired", "cancelled"]).optional(),
+});
+export type PackagePurchase = typeof packagePurchases.$inferSelect;
+export type InsertPackagePurchase = z.infer<typeof insertPackagePurchaseSchema>;
+
+export const waitlist = mysqlTable("waitlist", {
+  id: serial("id").primaryKey(),
+  clientId: int("client_id"),
+  clientName: text("client_name").notNull(),
+  clientPhone: text("client_phone"),
+  requestedDate: text("requested_date").notNull(),
+  requestedTime: text("requested_time"),
+  serviceIds: json("service_ids").$type<number[]>().default([]),
+  servicesDescription: text("services_description"),
+  staffId: int("staff_id"),
+  staffName: text("staff_name"),
+  status: varchar("status", { length: 20 }).notNull().default("waiting"),
+  notifiedAt: timestamp("notified_at"),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertWaitlistSchema = createInsertSchema(waitlist).omit({ id: true, createdAt: true }).extend({
+  clientName: z.string().min(1, "Client name is required"),
+  clientPhone: z.string().optional(),
+  requestedDate: z.string().min(1, "Date is required"),
+  requestedTime: z.string().optional(),
+  serviceIds: z.array(z.number().int()).optional(),
+  servicesDescription: z.string().optional(),
+  staffId: z.number().int().optional(),
+  staffName: z.string().optional(),
+  status: z.enum(["waiting", "notified", "booked", "expired"]).optional(),
+});
+export type Waitlist = typeof waitlist.$inferSelect;
+export type InsertWaitlist = z.infer<typeof insertWaitlistSchema>;
+
+export const staffSchedules = mysqlTable("staff_schedules", {
+  id: serial("id").primaryKey(),
+  staffId: int("staff_id").notNull(),
+  dayOfWeek: int("day_of_week").notNull(),
+  startTime: varchar("start_time", { length: 10 }).notNull(),
+  endTime: varchar("end_time", { length: 10 }).notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertStaffScheduleSchema = createInsertSchema(staffSchedules).omit({ id: true, createdAt: true }).extend({
+  staffId: z.number().int(),
+  dayOfWeek: z.number().int().min(0).max(6),
+  startTime: z.string().regex(/^\d{2}:\d{2}$/),
+  endTime: z.string().regex(/^\d{2}:\d{2}$/),
+  isActive: z.boolean().optional(),
+});
+export type StaffSchedule = typeof staffSchedules.$inferSelect;
+export type InsertStaffSchedule = z.infer<typeof insertStaffScheduleSchema>;
+
+export const staffBreaks = mysqlTable("staff_breaks", {
+  id: serial("id").primaryKey(),
+  staffId: int("staff_id").notNull(),
+  date: text("date").notNull(),
+  startTime: varchar("start_time", { length: 10 }).notNull(),
+  endTime: varchar("end_time", { length: 10 }).notNull(),
+  reason: text("reason"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertStaffBreakSchema = createInsertSchema(staffBreaks).omit({ id: true, createdAt: true }).extend({
+  staffId: z.number().int(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  startTime: z.string().regex(/^\d{2}:\d{2}$/),
+  endTime: z.string().regex(/^\d{2}:\d{2}$/),
+  reason: z.string().optional(),
+});
+export type StaffBreak = typeof staffBreaks.$inferSelect;
+export type InsertStaffBreak = z.infer<typeof insertStaffBreakSchema>;
+
+export const staffTimeOff = mysqlTable("staff_time_off", {
+  id: serial("id").primaryKey(),
+  staffId: int("staff_id").notNull(),
+  startDate: text("start_date").notNull(),
+  endDate: text("end_date").notNull(),
+  reason: text("reason"),
+  status: varchar("status", { length: 20 }).notNull().default("pending"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertStaffTimeOffSchema = createInsertSchema(staffTimeOff).omit({ id: true, createdAt: true }).extend({
+  staffId: z.number().int(),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  reason: z.string().optional(),
+  status: z.enum(["pending", "approved", "rejected"]).optional(),
+});
+export type StaffTimeOff = typeof staffTimeOff.$inferSelect;
+export type InsertStaffTimeOff = z.infer<typeof insertStaffTimeOffSchema>;
+
+export const staffGoals = mysqlTable("staff_goals", {
+  id: serial("id").primaryKey(),
+  staffId: int("staff_id").notNull(),
+  period: varchar("period", { length: 7 }).notNull(),
+  revenueTarget: double("revenue_target").notNull().default(0),
+  appointmentsTarget: int("appointments_target").notNull().default(0),
+  commissionTarget: double("commission_target").notNull().default(0),
+  actualRevenue: double("actual_revenue").notNull().default(0),
+  actualAppointments: int("actual_appointments").notNull().default(0),
+  actualCommission: double("actual_commission").notNull().default(0),
+  bonusPercentage: double("bonus_percentage").notNull().default(5),
+  bonusAmount: double("bonus_amount").notNull().default(0),
+  status: varchar("status", { length: 20 }).notNull().default("active"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertStaffGoalSchema = createInsertSchema(staffGoals).omit({ id: true, createdAt: true }).extend({
+  staffId: z.number().int(),
+  period: z.string().regex(/^\d{4}-\d{2}$/, "Period must be YYYY-MM format"),
+  revenueTarget: z.number().min(0).optional(),
+  appointmentsTarget: z.number().int().min(0).optional(),
+  commissionTarget: z.number().min(0).optional(),
+  actualRevenue: z.number().min(0).optional(),
+  actualAppointments: z.number().int().min(0).optional(),
+  actualCommission: z.number().min(0).optional(),
+  bonusPercentage: z.number().min(0).max(100).optional(),
+  bonusAmount: z.number().min(0).optional(),
+  status: z.enum(["active", "achieved", "missed"]).optional(),
+});
+export type StaffGoal = typeof staffGoals.$inferSelect;
+export type InsertStaffGoal = z.infer<typeof insertStaffGoalSchema>;

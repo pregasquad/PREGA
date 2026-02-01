@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
-import { type InsertAppointment, type InsertService, type InsertCategory, type InsertClient, type InsertStaff } from "@shared/schema";
+import { type InsertAppointment, type InsertService, type InsertCategory, type InsertClient, type InsertStaff, type InsertStaffSchedule, type InsertStaffBreak, type InsertStaffTimeOff } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
 export function useAppointments(date?: string) {
@@ -506,6 +506,313 @@ export function useProducts() {
       if (!res.ok) throw new Error("Failed to fetch products");
       return res.json();
     },
-    staleTime: 5 * 60 * 1000, // Cache products for 5 minutes
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useStaffSchedule(staffId: number | undefined) {
+  return useQuery({
+    queryKey: ["/api/staff", staffId, "schedule"],
+    queryFn: async () => {
+      if (!staffId) return [];
+      const res = await fetch(`/api/staff/${staffId}/schedule`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch staff schedule");
+      return res.json();
+    },
+    enabled: !!staffId,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useSaveStaffSchedule() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ staffId, schedules }: { staffId: number; schedules: Array<{ dayOfWeek: number; startTime: string; endTime: string; isActive: boolean }> }) => {
+      const res = await fetch(`/api/staff/${staffId}/schedule`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(schedules),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to save schedule");
+      return res.json();
+    },
+    onSuccess: (_data, { staffId }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff", staffId, "schedule"] });
+      toast({ title: "Success", description: "Schedule saved successfully" });
+    },
+    onError: (err) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+}
+
+export function useStaffBreaks(staffId: number | undefined, startDate?: string, endDate?: string) {
+  return useQuery({
+    queryKey: ["/api/staff", staffId, "breaks", startDate, endDate],
+    queryFn: async () => {
+      if (!staffId) return [];
+      let url = `/api/staff/${staffId}/breaks`;
+      if (startDate && endDate) {
+        url += `?startDate=${startDate}&endDate=${endDate}`;
+      }
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch staff breaks");
+      return res.json();
+    },
+    enabled: !!staffId,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useCreateStaffBreak() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (data: InsertStaffBreak) => {
+      const res = await fetch("/api/staff/breaks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to add break");
+      return res.json();
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff", variables.staffId, "breaks"] });
+      toast({ title: "Success", description: "Break added successfully" });
+    },
+    onError: (err) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+}
+
+export function useDeleteStaffBreak() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ id, staffId }: { id: number; staffId: number }) => {
+      const res = await fetch(`/api/staff/breaks/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to delete break");
+      return { id, staffId };
+    },
+    onSuccess: (_data, { staffId }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff", staffId, "breaks"] });
+      toast({ title: "Deleted", description: "Break removed" });
+    },
+    onError: (err) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+}
+
+export function useStaffTimeOff(staffId: number | undefined) {
+  return useQuery({
+    queryKey: ["/api/staff", staffId, "time-off"],
+    queryFn: async () => {
+      if (!staffId) return [];
+      const res = await fetch(`/api/staff/${staffId}/time-off`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch time off");
+      return res.json();
+    },
+    enabled: !!staffId,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useAllStaffTimeOff() {
+  return useQuery({
+    queryKey: ["/api/staff/time-off/all"],
+    queryFn: async () => {
+      const res = await fetch("/api/staff/time-off/all", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch all time off");
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useCreateStaffTimeOff() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (data: InsertStaffTimeOff) => {
+      const res = await fetch("/api/staff/time-off", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to create time off request");
+      return res.json();
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff", variables.staffId, "time-off"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/staff/time-off/all"] });
+      toast({ title: "Success", description: "Time off request created" });
+    },
+    onError: (err) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+}
+
+export function useUpdateStaffTimeOff() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ id, staffId, ...data }: { id: number; staffId: number; status?: string }) => {
+      const res = await fetch(`/api/staff/time-off/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to update time off request");
+      return res.json();
+    },
+    onSuccess: (_data, { staffId }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff", staffId, "time-off"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/staff/time-off/all"] });
+      toast({ title: "Success", description: "Time off request updated" });
+    },
+    onError: (err) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+}
+
+export function useDeleteStaffTimeOff() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ id, staffId }: { id: number; staffId: number }) => {
+      const res = await fetch(`/api/staff/time-off/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to delete time off request");
+      return { id, staffId };
+    },
+    onSuccess: (_data, { staffId }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff", staffId, "time-off"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/staff/time-off/all"] });
+      toast({ title: "Deleted", description: "Time off request removed" });
+    },
+    onError: (err) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+}
+
+export function usePublicStaffAvailability(staffId: number | undefined, date?: string) {
+  return useQuery({
+    queryKey: ["/api/public/staff", staffId, "availability", date],
+    queryFn: async () => {
+      if (!staffId) return null;
+      let url = `/api/public/staff/${staffId}/availability`;
+      if (date) url += `?date=${date}`;
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch staff availability");
+      return res.json() as Promise<{
+        schedules: Array<{ dayOfWeek: number; startTime: string; endTime: string; isActive: boolean }>;
+        breaks: Array<{ date: string; startTime: string; endTime: string }>;
+        timeOffs: Array<{ startDate: string; endDate: string }>;
+      }>;
+    },
+    enabled: !!staffId,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export type StaffAvailabilityStatus = 'available' | 'day_off' | 'outside_hours' | 'on_break' | 'time_off';
+
+export function checkStaffAvailability(
+  availability: {
+    schedules: Array<{ dayOfWeek: number; startTime: string; endTime: string; isActive: boolean }>;
+    breaks: Array<{ date: string; startTime: string; endTime: string }>;
+    timeOffs: Array<{ startDate: string; endDate: string }>;
+  } | null | undefined,
+  date: string,
+  time: string
+): StaffAvailabilityStatus {
+  if (!availability) return 'available';
+  
+  const dateObj = new Date(date);
+  const dayOfWeek = dateObj.getDay();
+  
+  const timeToMinutes = (t: string) => {
+    const [h, m] = t.split(':').map(Number);
+    return h * 60 + m;
+  };
+  const timeMinutes = timeToMinutes(time);
+  
+  if (availability.timeOffs.some(t => date >= t.startDate && date <= t.endDate)) {
+    return 'time_off';
+  }
+  
+  const schedule = availability.schedules.find(s => s.dayOfWeek === dayOfWeek);
+  if (!schedule || !schedule.isActive) {
+    return 'day_off';
+  }
+  
+  const scheduleStart = timeToMinutes(schedule.startTime);
+  const scheduleEnd = timeToMinutes(schedule.endTime);
+  if (timeMinutes < scheduleStart || timeMinutes >= scheduleEnd) {
+    return 'outside_hours';
+  }
+  
+  const breaksForDate = availability.breaks.filter(b => b.date === date);
+  for (const brk of breaksForDate) {
+    const breakStart = timeToMinutes(brk.startTime);
+    const breakEnd = timeToMinutes(brk.endTime);
+    if (timeMinutes >= breakStart && timeMinutes < breakEnd) {
+      return 'on_break';
+    }
+  }
+  
+  return 'available';
+}
+
+export function useAllStaffSchedules() {
+  return useQuery({
+    queryKey: ["/api/staff/all-schedules"],
+    queryFn: async () => {
+      const staffRes = await fetch("/api/staff", { credentials: "include" });
+      if (!staffRes.ok) return {};
+      const staff = await staffRes.json();
+      
+      const availabilityMap: Record<number, {
+        schedules: Array<{ dayOfWeek: number; startTime: string; endTime: string; isActive: boolean }>;
+        breaks: Array<{ date: string; startTime: string; endTime: string }>;
+        timeOffs: Array<{ startDate: string; endDate: string }>;
+      }> = {};
+      
+      for (const s of staff) {
+        try {
+          const res = await fetch(`/api/public/staff/${s.id}/availability`, { credentials: "include" });
+          if (res.ok) {
+            availabilityMap[s.id] = await res.json();
+          }
+        } catch {
+          // Skip failed requests
+        }
+      }
+      
+      return availabilityMap;
+    },
+    staleTime: 5 * 60 * 1000,
   });
 }

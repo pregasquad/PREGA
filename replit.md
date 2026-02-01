@@ -105,6 +105,47 @@ Preferred communication style: Simple, everyday language.
   - `POST /api/public/page-views` - Increment and return visitor count for a page
 - **Security**: Rate limiting (10 req/min per IP), input validation with Zod, sanitized responses
 
+### Loyalty & Rewards System
+- **Loyalty Points**: Clients earn points per DH spent, redeemable for discounts
+- **Gift Cards**: Generate unique 8-character codes, track balance, manage expiry
+- **Referral Program**: Reward referrers and referees with bonus points
+- **Settings**: Configurable points-per-DH, points value, bonus amounts
+- **Tables**: `gift_cards`, `referrals`
+- **Routes**: `/api/gift-cards`, `/api/referrals`
+
+### Package Deals (Service Bundles)
+- **Feature**: Bundle multiple services at discounted prices
+- **Pricing**: Shows original vs discounted price with savings percentage
+- **Validity**: Date range for package availability
+- **Usage Tracking**: Track purchases and usage per client
+- **Tables**: `packages`, `package_purchases`
+- **Routes**: `/api/packages`, `/api/package-purchases`
+
+### Waitlist System
+- **Feature**: Clients can join waitlist when time slots are full
+- **Real-time Updates**: Socket.IO events for instant notifications
+- **Auto-expiry**: Entries expire 24 hours after requested date
+- **Status Flow**: waiting → notified → booked (or expired)
+- **Integration**: Collapsible section in Planning page, "Join Waitlist" button in Booking
+- **Table**: `waitlist`
+- **Routes**: `/api/waitlist`
+
+### Staff Schedule & Availability
+- **Weekly Schedule**: Set working hours per day for each staff member
+- **Breaks**: Schedule breaks that block bookings
+- **Time Off**: Request and approve/reject time-off requests
+- **Availability Check**: Public endpoint for booking integration
+- **Tables**: `staff_schedules`, `staff_breaks`, `staff_time_off`
+- **Routes**: `/api/staff/:id/schedule`, `/api/staff/:id/breaks`, `/api/staff/:id/time-off`
+
+### Staff Performance Goals
+- **Monthly Targets**: Set revenue and appointment targets per staff
+- **Bonus System**: Configurable bonus percentage when both targets are met
+- **Auto-calculation**: Calculate actuals from completed appointments
+- **Status Tracking**: Active/achieved/missed status with visual progress bars
+- **Table**: `staff_goals`
+- **Routes**: `/api/staff/:id/goals`, `/api/staff/goals/summary`
+
 ### Notifications
 - **SendZen API**: For WhatsApp appointment reminders and booking confirmations.
   - Endpoints: `/api/notifications/send`, `/api/notifications/appointment-reminder`, `/api/notifications/booking-confirmation`.

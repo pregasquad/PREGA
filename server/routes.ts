@@ -487,6 +487,251 @@ export async function registerRoutes(
     res.json(results);
   });
 
+  // Staff Schedule - protected routes
+  app.get("/api/staff/:id/schedule", isPinAuthenticated, async (req, res) => {
+    try {
+      const schedules = await storage.getStaffSchedules(Number(req.params.id));
+      res.json(schedules);
+    } catch (err) {
+      console.error("Error fetching staff schedule:", err);
+      res.status(500).json({ message: "Failed to fetch staff schedule" });
+    }
+  });
+
+  app.post("/api/staff/:id/schedule", isPinAuthenticated, requirePermission("manage_staff"), async (req, res) => {
+    try {
+      const staffId = Number(req.params.id);
+      const schedules = req.body as Array<{ dayOfWeek: number; startTime: string; endTime: string; isActive: boolean }>;
+      const results = [];
+      for (const schedule of schedules) {
+        const result = await storage.upsertStaffSchedule({
+          staffId,
+          dayOfWeek: schedule.dayOfWeek,
+          startTime: schedule.startTime,
+          endTime: schedule.endTime,
+          isActive: schedule.isActive,
+        });
+        results.push(result);
+      }
+      res.json(results);
+    } catch (err) {
+      console.error("Error saving staff schedule:", err);
+      res.status(400).json({ message: "Failed to save staff schedule" });
+    }
+  });
+
+  // Staff Breaks - protected routes
+  app.get("/api/staff/:id/breaks", isPinAuthenticated, async (req, res) => {
+    try {
+      const staffId = Number(req.params.id);
+      const { startDate, endDate } = req.query as { startDate?: string; endDate?: string };
+      const breaks = await storage.getStaffBreaks(staffId, startDate, endDate);
+      res.json(breaks);
+    } catch (err) {
+      console.error("Error fetching staff breaks:", err);
+      res.status(500).json({ message: "Failed to fetch staff breaks" });
+    }
+  });
+
+  app.post("/api/staff/breaks", isPinAuthenticated, requirePermission("manage_staff"), async (req, res) => {
+    try {
+      const breakItem = await storage.createStaffBreak(req.body);
+      res.status(201).json(breakItem);
+    } catch (err) {
+      console.error("Error creating staff break:", err);
+      res.status(400).json({ message: "Failed to create staff break" });
+    }
+  });
+
+  app.delete("/api/staff/breaks/:id", isPinAuthenticated, requirePermission("manage_staff"), async (req, res) => {
+    try {
+      await storage.deleteStaffBreak(Number(req.params.id));
+      res.status(204).send();
+    } catch (err) {
+      console.error("Error deleting staff break:", err);
+      res.status(500).json({ message: "Failed to delete staff break" });
+    }
+  });
+
+  // Staff Time Off - protected routes
+  app.get("/api/staff/:id/time-off", isPinAuthenticated, async (req, res) => {
+    try {
+      const timeOffs = await storage.getStaffTimeOff(Number(req.params.id));
+      res.json(timeOffs);
+    } catch (err) {
+      console.error("Error fetching staff time off:", err);
+      res.status(500).json({ message: "Failed to fetch staff time off" });
+    }
+  });
+
+  app.get("/api/staff/time-off/all", isPinAuthenticated, async (_req, res) => {
+    try {
+      const timeOffs = await storage.getAllStaffTimeOff();
+      res.json(timeOffs);
+    } catch (err) {
+      console.error("Error fetching all staff time off:", err);
+      res.status(500).json({ message: "Failed to fetch all staff time off" });
+    }
+  });
+
+  app.post("/api/staff/time-off", isPinAuthenticated, requirePermission("manage_staff"), async (req, res) => {
+    try {
+      const timeOff = await storage.createStaffTimeOff(req.body);
+      res.status(201).json(timeOff);
+    } catch (err) {
+      console.error("Error creating staff time off:", err);
+      res.status(400).json({ message: "Failed to create staff time off" });
+    }
+  });
+
+  app.patch("/api/staff/time-off/:id", isPinAuthenticated, requirePermission("manage_staff"), async (req, res) => {
+    try {
+      const timeOff = await storage.updateStaffTimeOff(Number(req.params.id), req.body);
+      res.json(timeOff);
+    } catch (err) {
+      console.error("Error updating staff time off:", err);
+      res.status(400).json({ message: "Failed to update staff time off" });
+    }
+  });
+
+  app.delete("/api/staff/time-off/:id", isPinAuthenticated, requirePermission("manage_staff"), async (req, res) => {
+    try {
+      await storage.deleteStaffTimeOff(Number(req.params.id));
+      res.status(204).send();
+    } catch (err) {
+      console.error("Error deleting staff time off:", err);
+      res.status(500).json({ message: "Failed to delete staff time off" });
+    }
+  });
+
+  // Staff Goals - Performance bonuses
+  app.get("/api/staff/goals/summary", isPinAuthenticated, async (req, res) => {
+    try {
+      const { period } = req.query as { period?: string };
+      const currentPeriod = period || new Date().toISOString().slice(0, 7);
+      const goals = await storage.getAllStaffGoalsForPeriod(currentPeriod);
+      res.json(goals);
+    } catch (err) {
+      console.error("Error fetching staff goals summary:", err);
+      res.status(500).json({ message: "Failed to fetch staff goals summary" });
+    }
+  });
+
+  app.get("/api/staff/:id/goals", isPinAuthenticated, async (req, res) => {
+    try {
+      const staffId = Number(req.params.id);
+      const { period } = req.query as { period?: string };
+      const goals = await storage.getStaffGoals(staffId, period);
+      res.json(goals);
+    } catch (err) {
+      console.error("Error fetching staff goals:", err);
+      res.status(500).json({ message: "Failed to fetch staff goals" });
+    }
+  });
+
+  app.post("/api/staff/:id/goals", isPinAuthenticated, requirePermission("manage_salaries"), async (req, res) => {
+    try {
+      const staffId = Number(req.params.id);
+      const goalData = { ...req.body, staffId };
+      const goal = await storage.upsertStaffGoal(goalData);
+      res.json(goal);
+    } catch (err) {
+      console.error("Error creating/updating staff goal:", err);
+      res.status(400).json({ message: "Failed to create/update staff goal" });
+    }
+  });
+
+  app.post("/api/staff/:id/goals/calculate", isPinAuthenticated, requirePermission("manage_salaries"), async (req, res) => {
+    try {
+      const staffId = Number(req.params.id);
+      const { period } = req.body as { period: string };
+      
+      if (!period || !/^\d{4}-\d{2}$/.test(period)) {
+        return res.status(400).json({ message: "Invalid period format. Use YYYY-MM" });
+      }
+
+      const startDate = `${period}-01`;
+      const endDate = new Date(parseInt(period.slice(0, 4)), parseInt(period.slice(5, 7)), 0).toISOString().slice(0, 10);
+      
+      const staff = (await storage.getStaff()).find(s => s.id === staffId);
+      if (!staff) {
+        return res.status(404).json({ message: "Staff not found" });
+      }
+
+      const performance = await storage.getStaffPerformance(staff.name, startDate, endDate);
+      
+      const existingGoal = await storage.getStaffGoal(staffId, period);
+      if (!existingGoal) {
+        return res.status(404).json({ message: "No goal set for this period" });
+      }
+
+      const revenueAchieved = performance.totalRevenue >= existingGoal.revenueTarget;
+      const appointmentsAchieved = performance.totalAppointments >= existingGoal.appointmentsTarget;
+      const bothAchieved = revenueAchieved && appointmentsAchieved;
+      
+      const bonusAmount = bothAchieved ? (performance.totalRevenue * (existingGoal.bonusPercentage / 100)) : 0;
+      const status = bothAchieved ? "achieved" : (new Date() > new Date(endDate) ? "missed" : "active");
+
+      const updatedGoal = await storage.updateStaffGoal(existingGoal.id, {
+        actualRevenue: performance.totalRevenue,
+        actualAppointments: performance.totalAppointments,
+        actualCommission: performance.totalCommission,
+        bonusAmount,
+        status,
+      });
+
+      res.json(updatedGoal);
+    } catch (err) {
+      console.error("Error calculating staff goal:", err);
+      res.status(500).json({ message: "Failed to calculate staff goal" });
+    }
+  });
+
+  app.delete("/api/staff/:id/goals/:goalId", isPinAuthenticated, requirePermission("manage_salaries"), async (req, res) => {
+    try {
+      await storage.deleteStaffGoal(Number(req.params.goalId));
+      res.status(204).send();
+    } catch (err) {
+      console.error("Error deleting staff goal:", err);
+      res.status(500).json({ message: "Failed to delete staff goal" });
+    }
+  });
+
+  // Public: Get staff availability for booking (schedule + breaks + time off)
+  app.get("/api/public/staff/:id/availability", publicRateLimitMiddleware, async (req, res) => {
+    try {
+      const staffId = Number(req.params.id);
+      const { date } = req.query as { date?: string };
+      
+      const schedules = await storage.getStaffSchedules(staffId);
+      const breaks = date ? await storage.getStaffBreaks(staffId, date, date) : [];
+      const timeOffs = await storage.getStaffTimeOff(staffId);
+      
+      const approvedTimeOffs = timeOffs.filter(t => t.status === "approved");
+      
+      res.json({
+        schedules: schedules.map(s => ({
+          dayOfWeek: s.dayOfWeek,
+          startTime: s.startTime,
+          endTime: s.endTime,
+          isActive: s.isActive,
+        })),
+        breaks: breaks.map(b => ({
+          date: b.date,
+          startTime: b.startTime,
+          endTime: b.endTime,
+        })),
+        timeOffs: approvedTimeOffs.map(t => ({
+          startDate: t.startDate,
+          endDate: t.endDate,
+        })),
+      });
+    } catch (err) {
+      console.error("Error fetching staff availability:", err);
+      res.status(500).json({ message: "Failed to fetch staff availability" });
+    }
+  });
+
   // Products/Inventory - protected routes
   app.get("/api/products", isPinAuthenticated, async (_req, res) => {
     const products = await storage.getProducts();
@@ -1386,6 +1631,292 @@ export async function registerRoutes(
       res.send(csv);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
+    }
+  });
+
+  // === Gift Cards - protected routes ===
+  app.get("/api/gift-cards", isPinAuthenticated, async (_req, res) => {
+    try {
+      const giftCards = await storage.getGiftCards();
+      res.json(giftCards);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/gift-cards/:id", isPinAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const giftCard = await storage.getGiftCard(id);
+      if (!giftCard) {
+        return res.status(404).json({ message: "Gift card not found" });
+      }
+      res.json(giftCard);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/gift-cards/code/:code", isPinAuthenticated, async (req, res) => {
+    try {
+      const giftCard = await storage.getGiftCardByCode(req.params.code);
+      if (!giftCard) {
+        return res.status(404).json({ message: "Gift card not found" });
+      }
+      res.json(giftCard);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/gift-cards", isPinAuthenticated, requirePermission("manage_business_settings"), async (req, res) => {
+    try {
+      const generateCode = () => {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let code = '';
+        for (let i = 0; i < 8; i++) {
+          code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return code;
+      };
+
+      let code = generateCode();
+      let existingCard = await storage.getGiftCardByCode(code);
+      while (existingCard) {
+        code = generateCode();
+        existingCard = await storage.getGiftCardByCode(code);
+      }
+
+      const giftCardData = {
+        code,
+        initialAmount: req.body.initialAmount,
+        currentBalance: req.body.initialAmount,
+        recipientName: req.body.recipientName || null,
+        recipientPhone: req.body.recipientPhone || null,
+        expiresAt: req.body.expiresAt ? new Date(req.body.expiresAt) : null,
+        isActive: true,
+      };
+
+      const giftCard = await storage.createGiftCard(giftCardData);
+      res.status(201).json(giftCard);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/gift-cards/:id", isPinAuthenticated, requirePermission("manage_business_settings"), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const giftCard = await storage.updateGiftCard(id, req.body);
+      res.json(giftCard);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
+  // === Referrals - protected routes ===
+  app.get("/api/referrals", isPinAuthenticated, async (_req, res) => {
+    try {
+      const referrals = await storage.getReferrals();
+      res.json(referrals);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/referrals/by-referrer/:referrerId", isPinAuthenticated, async (req, res) => {
+    try {
+      const referrerId = parseInt(req.params.referrerId);
+      const referrals = await storage.getReferralsByReferrer(referrerId);
+      res.json(referrals);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/referrals", isPinAuthenticated, async (req, res) => {
+    try {
+      const referralData = {
+        referrerId: req.body.referrerId,
+        refereeId: req.body.refereeId,
+        status: 'pending' as const,
+        referrerPointsAwarded: 0,
+        refereePointsAwarded: 0,
+      };
+      const referral = await storage.createReferral(referralData);
+      res.status(201).json(referral);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/referrals/:id", isPinAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const referral = await storage.updateReferral(id, req.body);
+      res.json(referral);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
+  // === Packages - protected routes ===
+  app.get("/api/packages", isPinAuthenticated, async (_req, res) => {
+    try {
+      const packages = await storage.getPackages();
+      res.json(packages);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/packages/:id", isPinAuthenticated, async (req, res) => {
+    try {
+      const pkg = await storage.getPackage(Number(req.params.id));
+      if (!pkg) {
+        return res.status(404).json({ message: "Package not found" });
+      }
+      res.json(pkg);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/packages", isPinAuthenticated, requirePermission("manage_services"), async (req, res) => {
+    try {
+      const pkg = await storage.createPackage(req.body);
+      res.status(201).json(pkg);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/packages/:id", isPinAuthenticated, requirePermission("manage_services"), async (req, res) => {
+    try {
+      const pkg = await storage.updatePackage(Number(req.params.id), req.body);
+      res.json(pkg);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/packages/:id", isPinAuthenticated, requirePermission("manage_services"), async (req, res) => {
+    try {
+      await storage.deletePackage(Number(req.params.id));
+      res.status(204).send();
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // === Package Purchases - protected routes ===
+  app.get("/api/package-purchases", isPinAuthenticated, async (_req, res) => {
+    try {
+      const purchases = await storage.getPackagePurchases();
+      res.json(purchases);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/package-purchases/:id", isPinAuthenticated, async (req, res) => {
+    try {
+      const purchase = await storage.getPackagePurchase(Number(req.params.id));
+      if (!purchase) {
+        return res.status(404).json({ message: "Package purchase not found" });
+      }
+      res.json(purchase);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/package-purchases/client/:clientId", isPinAuthenticated, async (req, res) => {
+    try {
+      const purchases = await storage.getPackagePurchasesByClient(Number(req.params.clientId));
+      res.json(purchases);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/package-purchases", isPinAuthenticated, async (req, res) => {
+    try {
+      const purchase = await storage.createPackagePurchase(req.body);
+      res.status(201).json(purchase);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/package-purchases/:id", isPinAuthenticated, async (req, res) => {
+    try {
+      const purchase = await storage.updatePackagePurchase(Number(req.params.id), req.body);
+      res.json(purchase);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
+  // === Waitlist Routes ===
+  app.get("/api/waitlist", isPinAuthenticated, async (_req, res) => {
+    try {
+      const waitlist = await storage.getWaitlist();
+      res.json(waitlist);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/waitlist/date/:date", isPinAuthenticated, async (req, res) => {
+    try {
+      const waitlist = await storage.getWaitlistByDate(req.params.date);
+      res.json(waitlist);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/waitlist", async (req, res) => {
+    try {
+      const entry = await storage.createWaitlistEntry(req.body);
+      io.emit("waitlist:created", entry);
+      res.status(201).json(entry);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/waitlist/:id", isPinAuthenticated, async (req, res) => {
+    try {
+      const entry = await storage.updateWaitlistEntry(Number(req.params.id), req.body);
+      io.emit("waitlist:updated", entry);
+      res.json(entry);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/waitlist/:id", isPinAuthenticated, async (req, res) => {
+    try {
+      await storage.deleteWaitlistEntry(Number(req.params.id));
+      io.emit("waitlist:deleted", { id: Number(req.params.id) });
+      res.status(204).send();
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/waitlist/:id/notify", isPinAuthenticated, async (req, res) => {
+    try {
+      const entry = await storage.updateWaitlistEntry(Number(req.params.id), {
+        status: "notified",
+        notifiedAt: new Date(),
+      } as any);
+      io.emit("waitlist:updated", entry);
+      res.json(entry);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
     }
   });
 

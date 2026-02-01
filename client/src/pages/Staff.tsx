@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, Edit2, User, Phone, Mail, DollarSign, Palette, Tag } from "lucide-react";
+import { Plus, Trash2, Edit2, User, Phone, Mail, DollarSign, Palette, Tag, Calendar } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormMessage, FormLabel } from "@/components/ui/form";
@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import type { Staff as StaffType } from "@shared/schema";
 import { useTranslation } from "react-i18next";
 import { Checkbox } from "@/components/ui/checkbox";
+import StaffScheduleManager from "@/components/StaffScheduleManager";
 
 const staffFormSchema = insertStaffSchema.extend({
   baseSalary: z.coerce.number().min(0).optional(),
@@ -33,6 +34,7 @@ export default function Staff() {
   const { data: categories = [] } = useCategories();
   
   const [editingStaff, setEditingStaff] = useState<StaffType | null>(null);
+  const [scheduleStaff, setScheduleStaff] = useState<StaffType | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 
   const createStaff = useCreateStaff();
@@ -314,6 +316,14 @@ export default function Staff() {
                     <Button 
                       variant="ghost" 
                       size="icon"
+                      onClick={() => setScheduleStaff(staff)}
+                      title={t("schedule.manageSchedule", "Manage Schedule")}
+                    >
+                      <Calendar className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
                       onClick={() => handleEdit(staff)}
                     >
                       <Edit2 className="h-4 w-4" />
@@ -382,6 +392,17 @@ export default function Staff() {
             onSubmitFn={onEditSubmit} 
             buttonText={t("staff.save", { defaultValue: "Save Changes" })} 
           />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!scheduleStaff} onOpenChange={(open) => !open && setScheduleStaff(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{t("schedule.manageSchedule", { defaultValue: "Manage Schedule" })}</DialogTitle>
+          </DialogHeader>
+          {scheduleStaff && (
+            <StaffScheduleManager staff={scheduleStaff} onClose={() => setScheduleStaff(null)} />
+          )}
         </DialogContent>
       </Dialog>
     </div>

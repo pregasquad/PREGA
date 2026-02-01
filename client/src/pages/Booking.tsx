@@ -591,10 +591,43 @@ export default function Booking() {
                         ))}
                       </div>
                       {getAvailableSlots.length === 0 && (
-                        <div className="glass-subtle rounded-xl p-6 text-center">
+                        <div className="glass-subtle rounded-xl p-6 text-center space-y-4">
                           <p className="text-muted-foreground">
                             {t("booking.noTimesAvailable")}
                           </p>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="rounded-xl"
+                            onClick={async () => {
+                              const clientName = form.getValues("client");
+                              const phone = form.getValues("phone");
+                              if (!clientName) {
+                                alert(t("booking.enterName"));
+                                return;
+                              }
+                              try {
+                                await fetch("/api/waitlist", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({
+                                    clientName,
+                                    clientPhone: phone,
+                                    requestedDate: date ? format(date, "yyyy-MM-dd") : "",
+                                    requestedTime: null,
+                                    servicesDescription: selectedServices.map(s => s.name).join(", "),
+                                    staffName: form.getValues("staff"),
+                                    status: "waiting",
+                                  }),
+                                });
+                                alert(t("booking.waitlistSuccess") + " " + t("booking.waitlistMessage"));
+                              } catch (err) {
+                                console.error("Failed to join waitlist:", err);
+                              }
+                            }}
+                          >
+                            {t("booking.joinWaitlist")}
+                          </Button>
                         </div>
                       )}
                     </div>

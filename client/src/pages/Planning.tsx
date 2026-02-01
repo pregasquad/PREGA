@@ -15,7 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { CalendarIcon, ChevronLeft, ChevronRight, Plus, Trash2, Check, X, Search, Star, RefreshCw, Sparkles, CreditCard, Settings2, Scissors, Clock, User, ChevronsUpDown } from "lucide-react";
+import { CalendarIcon, ChevronLeft, ChevronRight, Plus, Trash2, Check, X, Search, Star, RefreshCw, Sparkles, CreditCard, Settings2, Scissors, Clock, User, ChevronsUpDown, ListTodo, Bell, UserCheck } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
@@ -276,6 +277,7 @@ export default function Planning() {
   // Track data loaded state
   const dataLoadedRef = useRef(false);
   const [isEditFavoritesOpen, setIsEditFavoritesOpen] = useState(false);
+  const [isWaitlistOpen, setIsWaitlistOpen] = useState(false);
   const [servicePopoverOpen, setServicePopoverOpen] = useState(false);
   const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
   const [appointmentSearch, setAppointmentSearch] = useState("");
@@ -345,6 +347,21 @@ export default function Planning() {
   const { data: services = [], isLoading: loadingServices, isError: servicesError } = useServices();
   const { data: clients = [] } = useQuery<Array<{id: number, name: string, phone: string | null}>>({
     queryKey: ["/api/clients"],
+  });
+  
+  const { data: waitlistEntries = [], refetch: refetchWaitlist } = useQuery<Array<{
+    id: number;
+    clientName: string;
+    clientPhone: string | null;
+    requestedDate: string;
+    requestedTime: string | null;
+    servicesDescription: string | null;
+    staffName: string | null;
+    status: string;
+    createdAt: string;
+    expiresAt: string | null;
+  }>>({
+    queryKey: ["/api/waitlist"],
   });
   
   // Show loading state while essential data loads
@@ -1052,6 +1069,111 @@ export default function Planning() {
 
         </div>
       </div>
+
+      {/* Waitlist Collapsible Section */}
+      {waitlistEntries.length > 0 && (
+        <Collapsible open={isWaitlistOpen} onOpenChange={setIsWaitlistOpen} className="mb-2 shrink-0">
+          <CollapsibleTrigger className="w-full glass-card px-4 py-2 flex items-center justify-between hover:bg-muted/50 transition-all">
+            <div className="flex items-center gap-2">
+              <ListTodo className="w-4 h-4 text-primary" />
+              <span className="font-medium text-sm">{t("waitlist.title")}</span>
+              <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full text-xs font-bold">
+                {waitlistEntries.filter(e => e.status === "waiting").length}
+              </span>
+            </div>
+            <ChevronsUpDown className={cn("w-4 h-4 transition-transform", isWaitlistOpen && "rotate-180")} />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="glass-card mt-1 rounded-2xl overflow-hidden">
+            <div className="max-h-[200px] overflow-auto">
+              {waitlistEntries.map((entry) => (
+                <div 
+                  key={entry.id} 
+                  className="p-3 border-b last:border-b-0 hover:bg-muted/30 flex items-center justify-between gap-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <User className="w-3 h-3 text-muted-foreground shrink-0" />
+                      <span className="font-medium text-sm truncate">{entry.clientName}</span>
+                      <span className={cn(
+                        "px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0",
+                        entry.status === "waiting" && "bg-amber-100 text-amber-700",
+                        entry.status === "notified" && "bg-blue-100 text-blue-700",
+                        entry.status === "booked" && "bg-green-100 text-green-700",
+                        entry.status === "expired" && "bg-gray-100 text-gray-500"
+                      )}>
+                        {t(`waitlist.${entry.status}`)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                      <span>{entry.requestedDate}</span>
+                      {entry.requestedTime && <span>{entry.requestedTime}</span>}
+                      {entry.servicesDescription && (
+                        <span className="truncate max-w-[150px]">{entry.servicesDescription}</span>
+                      )}
+                      {entry.staffName && <span>• {entry.staffName}</span>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {entry.status === "waiting" && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 rounded-full hover:bg-primary/10"
+                        onClick={async () => {
+                          try {
+                            await apiRequest("POST", `/api/waitlist/${entry.id}/notify`);
+                            toast({ title: t("waitlist.notifySuccess"), description: t("waitlist.notifyMessage") });
+                            refetchWaitlist();
+                          } catch (err) {
+                            console.error("Failed to notify:", err);
+                          }
+                        }}
+                      >
+                        <Bell className="w-3 h-3" />
+                      </Button>
+                    )}
+                    {entry.status === "notified" && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 rounded-full hover:bg-green-500/10"
+                        onClick={async () => {
+                          try {
+                            await apiRequest("PATCH", `/api/waitlist/${entry.id}`, { status: "booked" });
+                            toast({ title: t("waitlist.booked") });
+                            refetchWaitlist();
+                          } catch (err) {
+                            console.error("Failed to mark booked:", err);
+                          }
+                        }}
+                      >
+                        <UserCheck className="w-3 h-3 text-green-600" />
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 rounded-full hover:bg-destructive/10"
+                      onClick={async () => {
+                        if (!confirm(t("waitlist.deleteConfirm"))) return;
+                        try {
+                          await apiRequest("DELETE", `/api/waitlist/${entry.id}`);
+                          toast({ title: t("waitlist.deleted") });
+                          refetchWaitlist();
+                        } catch (err) {
+                          console.error("Failed to delete:", err);
+                        }
+                      }}
+                    >
+                      <Trash2 className="w-3 h-3 text-destructive" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
 
       {/* Board with sticky header - Glass Container */}
       <div className="flex-1 min-h-0 flex flex-col glass-card rounded-3xl overflow-hidden" dir={isRtl ? "rtl" : "ltr"}>

@@ -1,0 +1,705 @@
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { Gift, Settings, Users, Trophy, Star, Copy, Plus, X, Check } from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+
+interface BusinessSettings {
+  id?: number;
+  loyaltyEnabled?: boolean;
+  loyaltyPointsPerDh?: number;
+  loyaltyPointsValue?: number;
+  referralBonusPoints?: number;
+  referralBonusReferee?: number;
+}
+
+interface GiftCard {
+  id: number;
+  code: string;
+  initialAmount: number;
+  currentBalance: number;
+  recipientName?: string;
+  recipientPhone?: string;
+  isActive: boolean;
+  expiresAt?: string;
+  createdAt: string;
+}
+
+interface Referral {
+  id: number;
+  referrerId: number;
+  refereeId: number;
+  status: 'pending' | 'completed';
+  referrerPointsAwarded: number;
+  refereePointsAwarded: number;
+  createdAt: string;
+}
+
+interface Client {
+  id: number;
+  name: string;
+  phone?: string;
+  loyaltyPoints: number;
+  totalVisits: number;
+  totalSpent: number;
+}
+
+export default function LoyaltyRewards() {
+  const { t, i18n } = useTranslation();
+  const isRtl = i18n.language === "ar";
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState("settings");
+  
+  const [loyaltySettings, setLoyaltySettings] = useState<BusinessSettings>({
+    loyaltyEnabled: true,
+    loyaltyPointsPerDh: 1,
+    loyaltyPointsValue: 0.1,
+    referralBonusPoints: 100,
+    referralBonusReferee: 50,
+  });
+
+  const [newGiftCard, setNewGiftCard] = useState({
+    initialAmount: 100,
+    recipientName: "",
+    recipientPhone: "",
+    expiresAt: "",
+  });
+
+  const { data: businessSettings } = useQuery<BusinessSettings>({
+    queryKey: ["/api/business-settings"],
+    queryFn: async () => {
+      const res = await fetch("/api/business-settings");
+      if (!res.ok) throw new Error("Failed to fetch settings");
+      return res.json();
+    },
+  });
+
+  const { data: giftCards = [], isLoading: giftCardsLoading } = useQuery<GiftCard[]>({
+    queryKey: ["/api/gift-cards"],
+    queryFn: async () => {
+      const res = await fetch("/api/gift-cards");
+      if (!res.ok) throw new Error("Failed to fetch gift cards");
+      return res.json();
+    },
+  });
+
+  const { data: referrals = [], isLoading: referralsLoading } = useQuery<Referral[]>({
+    queryKey: ["/api/referrals"],
+    queryFn: async () => {
+      const res = await fetch("/api/referrals");
+      if (!res.ok) throw new Error("Failed to fetch referrals");
+      return res.json();
+    },
+  });
+
+  const { data: clients = [] } = useQuery<Client[]>({
+    queryKey: ["/api/clients"],
+    queryFn: async () => {
+      const res = await fetch("/api/clients");
+      if (!res.ok) throw new Error("Failed to fetch clients");
+      return res.json();
+    },
+  });
+
+  useState(() => {
+    if (businessSettings) {
+      setLoyaltySettings({
+        loyaltyEnabled: businessSettings.loyaltyEnabled ?? true,
+        loyaltyPointsPerDh: businessSettings.loyaltyPointsPerDh ?? 1,
+        loyaltyPointsValue: businessSettings.loyaltyPointsValue ?? 0.1,
+        referralBonusPoints: businessSettings.referralBonusPoints ?? 100,
+        referralBonusReferee: businessSettings.referralBonusReferee ?? 50,
+      });
+    }
+  });
+
+  const updateSettingsMutation = useMutation({
+    mutationFn: async (settings: Partial<BusinessSettings>) => {
+      return apiRequest("PATCH", "/api/business-settings", settings);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/business-settings"] });
+      toast({
+        title: t("common.success"),
+        description: t("loyalty.settingsSaved"),
+      });
+    },
+    onError: () => {
+      toast({
+        title: t("common.error"),
+        description: t("loyalty.settingsError"),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const createGiftCardMutation = useMutation({
+    mutationFn: async (data: typeof newGiftCard) => {
+      return apiRequest("POST", "/api/gift-cards", {
+        ...data,
+        initialAmount: Number(data.initialAmount),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/gift-cards"] });
+      setNewGiftCard({ initialAmount: 100, recipientName: "", recipientPhone: "", expiresAt: "" });
+      toast({
+        title: t("common.success"),
+        description: t("loyalty.giftCardCreated"),
+      });
+    },
+    onError: () => {
+      toast({
+        title: t("common.error"),
+        description: t("loyalty.giftCardError"),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const toggleGiftCardMutation = useMutation({
+    mutationFn: async ({ id, isActive }: { id: number; isActive: boolean }) => {
+      return apiRequest("PATCH", `/api/gift-cards/${id}`, { isActive });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/gift-cards"] });
+      toast({
+        title: t("common.success"),
+        description: t("loyalty.giftCardUpdated"),
+      });
+    },
+  });
+
+  const handleSaveSettings = () => {
+    updateSettingsMutation.mutate(loyaltySettings);
+  };
+
+  const handleCreateGiftCard = (e: React.FormEvent) => {
+    e.preventDefault();
+    createGiftCardMutation.mutate(newGiftCard);
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: t("common.success"),
+      description: t("loyalty.codeCopied"),
+    });
+  };
+
+  const topClients = [...clients]
+    .filter((c) => c.loyaltyPoints > 0)
+    .sort((a, b) => b.loyaltyPoints - a.loyaltyPoints)
+    .slice(0, 10);
+
+  const totalReferrals = referrals.length;
+  const completedReferrals = referrals.filter((r) => r.status === "completed").length;
+  const totalPointsAwarded = referrals.reduce(
+    (sum, r) => sum + r.referrerPointsAwarded + r.refereePointsAwarded,
+    0
+  );
+
+  return (
+    <div className={cn("space-y-6", isRtl && "rtl")} dir={isRtl ? "rtl" : "ltr"}>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+            <Gift className="w-7 h-7 text-primary" />
+            {t("loyalty.title")}
+          </h1>
+          <p className="text-muted-foreground">{t("loyalty.description")}</p>
+        </div>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4 lg:w-[600px]">
+          <TabsTrigger value="settings" className="flex items-center gap-2">
+            <Settings className="w-4 h-4" />
+            <span className="hidden sm:inline">{t("loyalty.settings")}</span>
+          </TabsTrigger>
+          <TabsTrigger value="gift-cards" className="flex items-center gap-2">
+            <Gift className="w-4 h-4" />
+            <span className="hidden sm:inline">{t("loyalty.giftCards")}</span>
+          </TabsTrigger>
+          <TabsTrigger value="referrals" className="flex items-center gap-2">
+            <Users className="w-4 h-4" />
+            <span className="hidden sm:inline">{t("loyalty.referrals")}</span>
+          </TabsTrigger>
+          <TabsTrigger value="overview" className="flex items-center gap-2">
+            <Trophy className="w-4 h-4" />
+            <span className="hidden sm:inline">{t("loyalty.overview")}</span>
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="settings">
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="w-5 h-5" />
+                {t("loyalty.loyaltySettings")}
+              </CardTitle>
+              <CardDescription>{t("loyalty.loyaltySettingsDesc")}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
+                <div>
+                  <Label className="text-base font-medium">{t("loyalty.enableProgram")}</Label>
+                  <p className="text-sm text-muted-foreground">{t("loyalty.enableProgramDesc")}</p>
+                </div>
+                <Switch
+                  checked={loyaltySettings.loyaltyEnabled}
+                  onCheckedChange={(checked) =>
+                    setLoyaltySettings({ ...loyaltySettings, loyaltyEnabled: checked })
+                  }
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="pointsPerDh">{t("loyalty.pointsPerDh")}</Label>
+                  <Input
+                    id="pointsPerDh"
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={loyaltySettings.loyaltyPointsPerDh}
+                    onChange={(e) =>
+                      setLoyaltySettings({
+                        ...loyaltySettings,
+                        loyaltyPointsPerDh: parseFloat(e.target.value) || 0,
+                      })
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">{t("loyalty.pointsPerDhDesc")}</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="pointsValue">{t("loyalty.pointsValue")}</Label>
+                  <Input
+                    id="pointsValue"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={loyaltySettings.loyaltyPointsValue}
+                    onChange={(e) =>
+                      setLoyaltySettings({
+                        ...loyaltySettings,
+                        loyaltyPointsValue: parseFloat(e.target.value) || 0,
+                      })
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">{t("loyalty.pointsValueDesc")}</p>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h4 className="font-medium mb-4 flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  {t("loyalty.referralBonuses")}
+                </h4>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="referrerBonus">{t("loyalty.referrerBonus")}</Label>
+                    <Input
+                      id="referrerBonus"
+                      type="number"
+                      min="0"
+                      value={loyaltySettings.referralBonusPoints}
+                      onChange={(e) =>
+                        setLoyaltySettings({
+                          ...loyaltySettings,
+                          referralBonusPoints: parseInt(e.target.value) || 0,
+                        })
+                      }
+                    />
+                    <p className="text-xs text-muted-foreground">{t("loyalty.referrerBonusDesc")}</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="refereeBonus">{t("loyalty.refereeBonus")}</Label>
+                    <Input
+                      id="refereeBonus"
+                      type="number"
+                      min="0"
+                      value={loyaltySettings.referralBonusReferee}
+                      onChange={(e) =>
+                        setLoyaltySettings({
+                          ...loyaltySettings,
+                          referralBonusReferee: parseInt(e.target.value) || 0,
+                        })
+                      }
+                    />
+                    <p className="text-xs text-muted-foreground">{t("loyalty.refereeBonusDesc")}</p>
+                  </div>
+                </div>
+              </div>
+
+              <Button
+                onClick={handleSaveSettings}
+                disabled={updateSettingsMutation.isPending}
+                className="w-full md:w-auto"
+              >
+                {updateSettingsMutation.isPending ? t("common.loading") : t("common.save")}
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="gift-cards" className="space-y-6">
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Plus className="w-5 h-5" />
+                {t("loyalty.createGiftCard")}
+              </CardTitle>
+              <CardDescription>{t("loyalty.createGiftCardDesc")}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleCreateGiftCard} className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <div className="space-y-2">
+                  <Label htmlFor="amount">{t("loyalty.amount")}</Label>
+                  <Input
+                    id="amount"
+                    type="number"
+                    min="1"
+                    value={newGiftCard.initialAmount}
+                    onChange={(e) =>
+                      setNewGiftCard({ ...newGiftCard, initialAmount: parseInt(e.target.value) || 0 })
+                    }
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="recipientName">{t("loyalty.recipientName")}</Label>
+                  <Input
+                    id="recipientName"
+                    value={newGiftCard.recipientName}
+                    onChange={(e) => setNewGiftCard({ ...newGiftCard, recipientName: e.target.value })}
+                    placeholder={t("loyalty.optional")}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="recipientPhone">{t("loyalty.recipientPhone")}</Label>
+                  <Input
+                    id="recipientPhone"
+                    value={newGiftCard.recipientPhone}
+                    onChange={(e) => setNewGiftCard({ ...newGiftCard, recipientPhone: e.target.value })}
+                    placeholder={t("loyalty.optional")}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="expiresAt">{t("loyalty.expiryDate")}</Label>
+                  <Input
+                    id="expiresAt"
+                    type="date"
+                    value={newGiftCard.expiresAt}
+                    onChange={(e) => setNewGiftCard({ ...newGiftCard, expiresAt: e.target.value })}
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  disabled={createGiftCardMutation.isPending}
+                  className="md:col-span-2 lg:col-span-4"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  {createGiftCardMutation.isPending ? t("common.loading") : t("loyalty.createGiftCard")}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Gift className="w-5 h-5" />
+                {t("loyalty.allGiftCards")}
+              </CardTitle>
+              <CardDescription>
+                {giftCards.length} {t("loyalty.giftCardsTotal")}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {giftCardsLoading ? (
+                <div className="text-center py-8 text-muted-foreground">{t("common.loading")}</div>
+              ) : giftCards.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">{t("loyalty.noGiftCards")}</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t("loyalty.code")}</TableHead>
+                        <TableHead>{t("loyalty.initialBalance")}</TableHead>
+                        <TableHead>{t("loyalty.currentBalance")}</TableHead>
+                        <TableHead>{t("loyalty.recipient")}</TableHead>
+                        <TableHead>{t("common.status")}</TableHead>
+                        <TableHead>{t("loyalty.created")}</TableHead>
+                        <TableHead>{t("common.actions")}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {giftCards.map((card) => (
+                        <TableRow key={card.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <code className="font-mono text-sm bg-muted px-2 py-1 rounded">
+                                {card.code}
+                              </code>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => copyToClipboard(card.code)}
+                              >
+                                <Copy className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                          <TableCell>{card.initialAmount} DH</TableCell>
+                          <TableCell className={card.currentBalance < card.initialAmount ? "text-orange-500" : ""}>
+                            {card.currentBalance} DH
+                          </TableCell>
+                          <TableCell>
+                            {card.recipientName || "-"}
+                            {card.recipientPhone && (
+                              <span className="block text-xs text-muted-foreground">{card.recipientPhone}</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={card.isActive ? "default" : "secondary"}>
+                              {card.isActive ? t("loyalty.active") : t("loyalty.inactive")}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {format(new Date(card.createdAt), "dd/MM/yyyy")}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant={card.isActive ? "destructive" : "default"}
+                              size="sm"
+                              onClick={() =>
+                                toggleGiftCardMutation.mutate({
+                                  id: card.id,
+                                  isActive: !card.isActive,
+                                })
+                              }
+                              disabled={toggleGiftCardMutation.isPending}
+                            >
+                              {card.isActive ? <X className="w-3 h-3" /> : <Check className="w-3 h-3" />}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="referrals" className="space-y-6">
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card className="glass-card">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-full bg-primary/10">
+                    <Users className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{totalReferrals}</p>
+                    <p className="text-sm text-muted-foreground">{t("loyalty.totalReferrals")}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="glass-card">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-full bg-green-500/10">
+                    <Check className="w-6 h-6 text-green-500" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{completedReferrals}</p>
+                    <p className="text-sm text-muted-foreground">{t("loyalty.completedReferrals")}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="glass-card">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-full bg-orange-500/10">
+                    <Star className="w-6 h-6 text-orange-500" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{totalPointsAwarded}</p>
+                    <p className="text-sm text-muted-foreground">{t("loyalty.pointsAwarded")}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                {t("loyalty.referralsList")}
+              </CardTitle>
+              <CardDescription>{t("loyalty.referralsListDesc")}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {referralsLoading ? (
+                <div className="text-center py-8 text-muted-foreground">{t("common.loading")}</div>
+              ) : referrals.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">{t("loyalty.noReferrals")}</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t("loyalty.referrer")}</TableHead>
+                        <TableHead>{t("loyalty.referee")}</TableHead>
+                        <TableHead>{t("common.status")}</TableHead>
+                        <TableHead>{t("loyalty.pointsAwarded")}</TableHead>
+                        <TableHead>{t("common.date")}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {referrals.map((referral) => {
+                        const referrer = clients.find((c) => c.id === referral.referrerId);
+                        const referee = clients.find((c) => c.id === referral.refereeId);
+                        return (
+                          <TableRow key={referral.id}>
+                            <TableCell>
+                              <div>
+                                <p className="font-medium">{referrer?.name || `#${referral.referrerId}`}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {t("loyalty.referralCode")}: REF{referral.referrerId}
+                                </p>
+                              </div>
+                            </TableCell>
+                            <TableCell>{referee?.name || `#${referral.refereeId}`}</TableCell>
+                            <TableCell>
+                              <Badge variant={referral.status === "completed" ? "default" : "secondary"}>
+                                {referral.status === "completed" ? t("loyalty.completed") : t("loyalty.pending")}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {referral.referrerPointsAwarded + referral.refereePointsAwarded} pts
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {format(new Date(referral.createdAt), "dd/MM/yyyy")}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Copy className="w-5 h-5" />
+                {t("loyalty.clientReferralCodes")}
+              </CardTitle>
+              <CardDescription>{t("loyalty.clientReferralCodesDesc")}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                {clients.slice(0, 9).map((client) => (
+                  <div
+                    key={client.id}
+                    className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                  >
+                    <div>
+                      <p className="font-medium text-sm">{client.name}</p>
+                      <code className="text-xs bg-muted px-1.5 py-0.5 rounded">REF{client.id}</code>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => copyToClipboard(`REF${client.id}`)}
+                    >
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="overview" className="space-y-6">
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Trophy className="w-5 h-5" />
+                {t("loyalty.topClients")}
+              </CardTitle>
+              <CardDescription>{t("loyalty.topClientsDesc")}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {topClients.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">{t("loyalty.noLoyaltyData")}</div>
+              ) : (
+                <div className="space-y-3">
+                  {topClients.map((client, index) => (
+                    <div
+                      key={client.id}
+                      className="flex items-center justify-between p-4 rounded-lg bg-muted/50"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div
+                          className={cn(
+                            "w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm",
+                            index === 0 && "bg-yellow-500/20 text-yellow-600",
+                            index === 1 && "bg-gray-400/20 text-gray-600",
+                            index === 2 && "bg-orange-500/20 text-orange-600",
+                            index > 2 && "bg-muted text-muted-foreground"
+                          )}
+                        >
+                          {index + 1}
+                        </div>
+                        <div>
+                          <p className="font-medium">{client.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {client.totalVisits} {t("loyalty.visits")} · {client.totalSpent} DH {t("loyalty.spent")}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-primary">{client.loyaltyPoints}</p>
+                        <p className="text-xs text-muted-foreground">{t("loyalty.points")}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}

@@ -12,7 +12,16 @@ import {
   type LoyaltyRedemption, type InsertLoyaltyRedemption,
   type AdminRole, type InsertAdminRole,
   type BusinessSettings, type InsertBusinessSettings,
-  type StaffCommission, type InsertStaffCommission
+  type StaffCommission, type InsertStaffCommission,
+  type GiftCard, type InsertGiftCard,
+  type Referral, type InsertReferral,
+  type Package, type InsertPackage,
+  type PackagePurchase, type InsertPackagePurchase,
+  type Waitlist, type InsertWaitlist,
+  type StaffSchedule, type InsertStaffSchedule,
+  type StaffBreak, type InsertStaffBreak,
+  type StaffTimeOff, type InsertStaffTimeOff,
+  type StaffGoal, type InsertStaffGoal
 } from "@shared/schema";
 import { eq, desc, and, gte, lte, sql } from "drizzle-orm";
 import { authStorage, type IAuthStorage } from "./replit_integrations/auth/storage";
@@ -105,6 +114,60 @@ export interface IStorage extends IAuthStorage {
 
   getPageViewCount(pagePath: string): Promise<number>;
   incrementPageView(pagePath: string): Promise<number>;
+
+  getGiftCards(): Promise<GiftCard[]>;
+  getGiftCard(id: number): Promise<GiftCard | undefined>;
+  getGiftCardByCode(code: string): Promise<GiftCard | undefined>;
+  createGiftCard(giftCard: InsertGiftCard): Promise<GiftCard>;
+  updateGiftCard(id: number, giftCard: Partial<InsertGiftCard>): Promise<GiftCard>;
+
+  getReferrals(): Promise<Referral[]>;
+  getReferralsByReferrer(referrerId: number): Promise<Referral[]>;
+  createReferral(referral: InsertReferral): Promise<Referral>;
+  updateReferral(id: number, referral: Partial<InsertReferral>): Promise<Referral>;
+
+  getPackages(): Promise<Package[]>;
+  getPackage(id: number): Promise<Package | undefined>;
+  createPackage(pkg: InsertPackage): Promise<Package>;
+  updatePackage(id: number, pkg: Partial<InsertPackage>): Promise<Package>;
+  deletePackage(id: number): Promise<void>;
+
+  getPackagePurchases(): Promise<PackagePurchase[]>;
+  getPackagePurchase(id: number): Promise<PackagePurchase | undefined>;
+  getPackagePurchasesByClient(clientId: number): Promise<PackagePurchase[]>;
+  createPackagePurchase(purchase: InsertPackagePurchase): Promise<PackagePurchase>;
+  updatePackagePurchase(id: number, purchase: Partial<InsertPackagePurchase>): Promise<PackagePurchase>;
+
+  getWaitlist(): Promise<Waitlist[]>;
+  getWaitlistEntry(id: number): Promise<Waitlist | undefined>;
+  getWaitlistByDate(date: string): Promise<Waitlist[]>;
+  createWaitlistEntry(entry: InsertWaitlist): Promise<Waitlist>;
+  updateWaitlistEntry(id: number, entry: Partial<InsertWaitlist>): Promise<Waitlist>;
+  deleteWaitlistEntry(id: number): Promise<void>;
+
+  getStaffSchedules(staffId: number): Promise<StaffSchedule[]>;
+  saveStaffSchedule(schedule: InsertStaffSchedule): Promise<StaffSchedule>;
+  updateStaffSchedule(id: number, schedule: Partial<InsertStaffSchedule>): Promise<StaffSchedule>;
+  deleteStaffSchedule(id: number): Promise<void>;
+  upsertStaffSchedule(schedule: InsertStaffSchedule): Promise<StaffSchedule>;
+
+  getStaffBreaks(staffId: number, startDate?: string, endDate?: string): Promise<StaffBreak[]>;
+  createStaffBreak(breakItem: InsertStaffBreak): Promise<StaffBreak>;
+  deleteStaffBreak(id: number): Promise<void>;
+
+  getStaffTimeOff(staffId: number): Promise<StaffTimeOff[]>;
+  getAllStaffTimeOff(): Promise<StaffTimeOff[]>;
+  createStaffTimeOff(timeOff: InsertStaffTimeOff): Promise<StaffTimeOff>;
+  updateStaffTimeOff(id: number, timeOff: Partial<InsertStaffTimeOff>): Promise<StaffTimeOff>;
+  deleteStaffTimeOff(id: number): Promise<void>;
+
+  getStaffGoals(staffId: number, period?: string): Promise<StaffGoal[]>;
+  getStaffGoal(staffId: number, period: string): Promise<StaffGoal | undefined>;
+  getAllStaffGoalsForPeriod(period: string): Promise<StaffGoal[]>;
+  createStaffGoal(goal: InsertStaffGoal): Promise<StaffGoal>;
+  updateStaffGoal(id: number, goal: Partial<InsertStaffGoal>): Promise<StaffGoal>;
+  deleteStaffGoal(id: number): Promise<void>;
+  upsertStaffGoal(goal: InsertStaffGoal): Promise<StaffGoal>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -765,6 +828,421 @@ export class DatabaseStorage implements IStorage {
     
     const [result] = await db().select().from(s.pageViews).where(eq(s.pageViews.pagePath, pagePath));
     return result?.viewCount ?? 1;
+  }
+
+  async getGiftCards(): Promise<GiftCard[]> {
+    const s = schema();
+    return await db().select().from(s.giftCards).orderBy(desc(s.giftCards.createdAt));
+  }
+
+  async getGiftCard(id: number): Promise<GiftCard | undefined> {
+    const s = schema();
+    const [giftCard] = await db().select().from(s.giftCards).where(eq(s.giftCards.id, id));
+    return giftCard;
+  }
+
+  async getGiftCardByCode(code: string): Promise<GiftCard | undefined> {
+    const s = schema();
+    const [giftCard] = await db().select().from(s.giftCards).where(eq(s.giftCards.code, code));
+    return giftCard;
+  }
+
+  async createGiftCard(giftCard: InsertGiftCard): Promise<GiftCard> {
+    const s = schema();
+    if (isMySQL()) {
+      const result = await db().insert(s.giftCards).values(giftCard);
+      const insertId = (result as any).insertId ?? (result as any)[0]?.insertId;
+      if (!insertId) throw new Error("Failed to get insert ID");
+      const [created] = await db().select().from(s.giftCards).where(eq(s.giftCards.id, insertId));
+      if (!created) throw new Error("Failed to retrieve created gift card");
+      return created;
+    }
+    const [created] = await db().insert(s.giftCards).values(giftCard).returning();
+    return created;
+  }
+
+  async updateGiftCard(id: number, giftCard: Partial<InsertGiftCard>): Promise<GiftCard> {
+    const s = schema();
+    if (isMySQL()) {
+      await db().update(s.giftCards).set(giftCard).where(eq(s.giftCards.id, id));
+      const [updated] = await db().select().from(s.giftCards).where(eq(s.giftCards.id, id));
+      if (!updated) throw new Error("Gift card not found");
+      return updated;
+    }
+    const [updated] = await db().update(s.giftCards).set(giftCard).where(eq(s.giftCards.id, id)).returning();
+    return updated;
+  }
+
+  async getReferrals(): Promise<Referral[]> {
+    const s = schema();
+    return await db().select().from(s.referrals).orderBy(desc(s.referrals.createdAt));
+  }
+
+  async getReferralsByReferrer(referrerId: number): Promise<Referral[]> {
+    const s = schema();
+    return await db().select().from(s.referrals).where(eq(s.referrals.referrerId, referrerId));
+  }
+
+  async createReferral(referral: InsertReferral): Promise<Referral> {
+    const s = schema();
+    if (isMySQL()) {
+      const result = await db().insert(s.referrals).values(referral);
+      const insertId = (result as any).insertId ?? (result as any)[0]?.insertId;
+      if (!insertId) throw new Error("Failed to get insert ID");
+      const [created] = await db().select().from(s.referrals).where(eq(s.referrals.id, insertId));
+      if (!created) throw new Error("Failed to retrieve created referral");
+      return created;
+    }
+    const [created] = await db().insert(s.referrals).values(referral).returning();
+    return created;
+  }
+
+  async updateReferral(id: number, referral: Partial<InsertReferral>): Promise<Referral> {
+    const s = schema();
+    if (isMySQL()) {
+      await db().update(s.referrals).set(referral).where(eq(s.referrals.id, id));
+      const [updated] = await db().select().from(s.referrals).where(eq(s.referrals.id, id));
+      if (!updated) throw new Error("Referral not found");
+      return updated;
+    }
+    const [updated] = await db().update(s.referrals).set(referral).where(eq(s.referrals.id, id)).returning();
+    return updated;
+  }
+
+  async getPackages(): Promise<Package[]> {
+    const s = schema();
+    return await db().select().from(s.packages).orderBy(desc(s.packages.createdAt));
+  }
+
+  async getPackage(id: number): Promise<Package | undefined> {
+    const s = schema();
+    const [pkg] = await db().select().from(s.packages).where(eq(s.packages.id, id));
+    return pkg;
+  }
+
+  async createPackage(pkg: InsertPackage): Promise<Package> {
+    const s = schema();
+    if (isMySQL()) {
+      const result = await db().insert(s.packages).values(pkg);
+      const insertId = (result as any).insertId ?? (result as any)[0]?.insertId;
+      if (!insertId) throw new Error("Failed to get insert ID");
+      const [created] = await db().select().from(s.packages).where(eq(s.packages.id, insertId));
+      if (!created) throw new Error("Failed to retrieve created package");
+      return created;
+    }
+    const [created] = await db().insert(s.packages).values(pkg).returning();
+    return created;
+  }
+
+  async updatePackage(id: number, pkg: Partial<InsertPackage>): Promise<Package> {
+    const s = schema();
+    if (isMySQL()) {
+      await db().update(s.packages).set(pkg).where(eq(s.packages.id, id));
+      const [updated] = await db().select().from(s.packages).where(eq(s.packages.id, id));
+      if (!updated) throw new Error("Package not found");
+      return updated;
+    }
+    const [updated] = await db().update(s.packages).set(pkg).where(eq(s.packages.id, id)).returning();
+    return updated;
+  }
+
+  async deletePackage(id: number): Promise<void> {
+    const s = schema();
+    await db().delete(s.packages).where(eq(s.packages.id, id));
+  }
+
+  async getPackagePurchases(): Promise<PackagePurchase[]> {
+    const s = schema();
+    return await db().select().from(s.packagePurchases).orderBy(desc(s.packagePurchases.createdAt));
+  }
+
+  async getPackagePurchase(id: number): Promise<PackagePurchase | undefined> {
+    const s = schema();
+    const [purchase] = await db().select().from(s.packagePurchases).where(eq(s.packagePurchases.id, id));
+    return purchase;
+  }
+
+  async getPackagePurchasesByClient(clientId: number): Promise<PackagePurchase[]> {
+    const s = schema();
+    return await db().select().from(s.packagePurchases)
+      .where(eq(s.packagePurchases.clientId, clientId))
+      .orderBy(desc(s.packagePurchases.createdAt));
+  }
+
+  async createPackagePurchase(purchase: InsertPackagePurchase): Promise<PackagePurchase> {
+    const s = schema();
+    if (isMySQL()) {
+      const result = await db().insert(s.packagePurchases).values(purchase);
+      const insertId = (result as any).insertId ?? (result as any)[0]?.insertId;
+      if (!insertId) throw new Error("Failed to get insert ID");
+      const [created] = await db().select().from(s.packagePurchases).where(eq(s.packagePurchases.id, insertId));
+      if (!created) throw new Error("Failed to retrieve created package purchase");
+      return created;
+    }
+    const [created] = await db().insert(s.packagePurchases).values(purchase).returning();
+    return created;
+  }
+
+  async updatePackagePurchase(id: number, purchase: Partial<InsertPackagePurchase>): Promise<PackagePurchase> {
+    const s = schema();
+    if (isMySQL()) {
+      await db().update(s.packagePurchases).set(purchase).where(eq(s.packagePurchases.id, id));
+      const [updated] = await db().select().from(s.packagePurchases).where(eq(s.packagePurchases.id, id));
+      if (!updated) throw new Error("Package purchase not found");
+      return updated;
+    }
+    const [updated] = await db().update(s.packagePurchases).set(purchase).where(eq(s.packagePurchases.id, id)).returning();
+    return updated;
+  }
+
+  async getWaitlist(): Promise<Waitlist[]> {
+    const s = schema();
+    return await db().select().from(s.waitlist).orderBy(desc(s.waitlist.createdAt));
+  }
+
+  async getWaitlistEntry(id: number): Promise<Waitlist | undefined> {
+    const s = schema();
+    const [entry] = await db().select().from(s.waitlist).where(eq(s.waitlist.id, id));
+    return entry;
+  }
+
+  async getWaitlistByDate(date: string): Promise<Waitlist[]> {
+    const s = schema();
+    return await db().select().from(s.waitlist)
+      .where(eq(s.waitlist.requestedDate, date))
+      .orderBy(desc(s.waitlist.createdAt));
+  }
+
+  async createWaitlistEntry(entry: InsertWaitlist): Promise<Waitlist> {
+    const s = schema();
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 1);
+    
+    const entryWithExpiry = {
+      ...entry,
+      expiresAt,
+    };
+    
+    if (isMySQL()) {
+      const result = await db().insert(s.waitlist).values(entryWithExpiry);
+      const insertId = (result as any).insertId ?? (result as any)[0]?.insertId;
+      if (!insertId) throw new Error("Failed to get insert ID");
+      const [created] = await db().select().from(s.waitlist).where(eq(s.waitlist.id, insertId));
+      if (!created) throw new Error("Failed to retrieve created waitlist entry");
+      return created;
+    }
+    const [created] = await db().insert(s.waitlist).values(entryWithExpiry).returning();
+    return created;
+  }
+
+  async updateWaitlistEntry(id: number, entry: Partial<InsertWaitlist>): Promise<Waitlist> {
+    const s = schema();
+    if (isMySQL()) {
+      await db().update(s.waitlist).set(entry).where(eq(s.waitlist.id, id));
+      const [updated] = await db().select().from(s.waitlist).where(eq(s.waitlist.id, id));
+      if (!updated) throw new Error("Waitlist entry not found");
+      return updated;
+    }
+    const [updated] = await db().update(s.waitlist).set(entry).where(eq(s.waitlist.id, id)).returning();
+    return updated;
+  }
+
+  async deleteWaitlistEntry(id: number): Promise<void> {
+    const s = schema();
+    await db().delete(s.waitlist).where(eq(s.waitlist.id, id));
+  }
+
+  async getStaffSchedules(staffId: number): Promise<StaffSchedule[]> {
+    const s = schema();
+    return await db().select().from(s.staffSchedules).where(eq(s.staffSchedules.staffId, staffId));
+  }
+
+  async saveStaffSchedule(schedule: InsertStaffSchedule): Promise<StaffSchedule> {
+    const s = schema();
+    if (isMySQL()) {
+      const result = await db().insert(s.staffSchedules).values(schedule);
+      const insertId = (result as any).insertId ?? (result as any)[0]?.insertId;
+      if (!insertId) throw new Error("Failed to get insert ID");
+      const [created] = await db().select().from(s.staffSchedules).where(eq(s.staffSchedules.id, insertId));
+      if (!created) throw new Error("Failed to retrieve created staff schedule");
+      return created;
+    }
+    const [created] = await db().insert(s.staffSchedules).values(schedule).returning();
+    return created;
+  }
+
+  async updateStaffSchedule(id: number, schedule: Partial<InsertStaffSchedule>): Promise<StaffSchedule> {
+    const s = schema();
+    if (isMySQL()) {
+      await db().update(s.staffSchedules).set(schedule).where(eq(s.staffSchedules.id, id));
+      const [updated] = await db().select().from(s.staffSchedules).where(eq(s.staffSchedules.id, id));
+      if (!updated) throw new Error("Staff schedule not found");
+      return updated;
+    }
+    const [updated] = await db().update(s.staffSchedules).set(schedule).where(eq(s.staffSchedules.id, id)).returning();
+    return updated;
+  }
+
+  async deleteStaffSchedule(id: number): Promise<void> {
+    const s = schema();
+    await db().delete(s.staffSchedules).where(eq(s.staffSchedules.id, id));
+  }
+
+  async upsertStaffSchedule(schedule: InsertStaffSchedule): Promise<StaffSchedule> {
+    const s = schema();
+    const [existing] = await db().select().from(s.staffSchedules)
+      .where(and(eq(s.staffSchedules.staffId, schedule.staffId), eq(s.staffSchedules.dayOfWeek, schedule.dayOfWeek)));
+    
+    if (existing) {
+      return await this.updateStaffSchedule(existing.id, schedule);
+    }
+    return await this.saveStaffSchedule(schedule);
+  }
+
+  async getStaffBreaks(staffId: number, startDate?: string, endDate?: string): Promise<StaffBreak[]> {
+    const s = schema();
+    let query = db().select().from(s.staffBreaks).where(eq(s.staffBreaks.staffId, staffId));
+    
+    if (startDate && endDate) {
+      return await db().select().from(s.staffBreaks)
+        .where(and(
+          eq(s.staffBreaks.staffId, staffId),
+          gte(s.staffBreaks.date, startDate),
+          lte(s.staffBreaks.date, endDate)
+        ))
+        .orderBy(desc(s.staffBreaks.createdAt));
+    }
+    
+    return await db().select().from(s.staffBreaks)
+      .where(eq(s.staffBreaks.staffId, staffId))
+      .orderBy(desc(s.staffBreaks.createdAt));
+  }
+
+  async createStaffBreak(breakItem: InsertStaffBreak): Promise<StaffBreak> {
+    const s = schema();
+    if (isMySQL()) {
+      const result = await db().insert(s.staffBreaks).values(breakItem);
+      const insertId = (result as any).insertId ?? (result as any)[0]?.insertId;
+      if (!insertId) throw new Error("Failed to get insert ID");
+      const [created] = await db().select().from(s.staffBreaks).where(eq(s.staffBreaks.id, insertId));
+      if (!created) throw new Error("Failed to retrieve created staff break");
+      return created;
+    }
+    const [created] = await db().insert(s.staffBreaks).values(breakItem).returning();
+    return created;
+  }
+
+  async deleteStaffBreak(id: number): Promise<void> {
+    const s = schema();
+    await db().delete(s.staffBreaks).where(eq(s.staffBreaks.id, id));
+  }
+
+  async getStaffTimeOff(staffId: number): Promise<StaffTimeOff[]> {
+    const s = schema();
+    return await db().select().from(s.staffTimeOff)
+      .where(eq(s.staffTimeOff.staffId, staffId))
+      .orderBy(desc(s.staffTimeOff.createdAt));
+  }
+
+  async getAllStaffTimeOff(): Promise<StaffTimeOff[]> {
+    const s = schema();
+    return await db().select().from(s.staffTimeOff).orderBy(desc(s.staffTimeOff.createdAt));
+  }
+
+  async createStaffTimeOff(timeOff: InsertStaffTimeOff): Promise<StaffTimeOff> {
+    const s = schema();
+    if (isMySQL()) {
+      const result = await db().insert(s.staffTimeOff).values(timeOff);
+      const insertId = (result as any).insertId ?? (result as any)[0]?.insertId;
+      if (!insertId) throw new Error("Failed to get insert ID");
+      const [created] = await db().select().from(s.staffTimeOff).where(eq(s.staffTimeOff.id, insertId));
+      if (!created) throw new Error("Failed to retrieve created staff time off");
+      return created;
+    }
+    const [created] = await db().insert(s.staffTimeOff).values(timeOff).returning();
+    return created;
+  }
+
+  async updateStaffTimeOff(id: number, timeOff: Partial<InsertStaffTimeOff>): Promise<StaffTimeOff> {
+    const s = schema();
+    if (isMySQL()) {
+      await db().update(s.staffTimeOff).set(timeOff).where(eq(s.staffTimeOff.id, id));
+      const [updated] = await db().select().from(s.staffTimeOff).where(eq(s.staffTimeOff.id, id));
+      if (!updated) throw new Error("Staff time off not found");
+      return updated;
+    }
+    const [updated] = await db().update(s.staffTimeOff).set(timeOff).where(eq(s.staffTimeOff.id, id)).returning();
+    return updated;
+  }
+
+  async deleteStaffTimeOff(id: number): Promise<void> {
+    const s = schema();
+    await db().delete(s.staffTimeOff).where(eq(s.staffTimeOff.id, id));
+  }
+
+  async getStaffGoals(staffId: number, period?: string): Promise<StaffGoal[]> {
+    const s = schema();
+    if (period) {
+      return await db().select().from(s.staffGoals)
+        .where(and(eq(s.staffGoals.staffId, staffId), eq(s.staffGoals.period, period)))
+        .orderBy(desc(s.staffGoals.period));
+    }
+    return await db().select().from(s.staffGoals)
+      .where(eq(s.staffGoals.staffId, staffId))
+      .orderBy(desc(s.staffGoals.period));
+  }
+
+  async getStaffGoal(staffId: number, period: string): Promise<StaffGoal | undefined> {
+    const s = schema();
+    const [goal] = await db().select().from(s.staffGoals)
+      .where(and(eq(s.staffGoals.staffId, staffId), eq(s.staffGoals.period, period)));
+    return goal;
+  }
+
+  async getAllStaffGoalsForPeriod(period: string): Promise<StaffGoal[]> {
+    const s = schema();
+    return await db().select().from(s.staffGoals)
+      .where(eq(s.staffGoals.period, period))
+      .orderBy(s.staffGoals.staffId);
+  }
+
+  async createStaffGoal(goal: InsertStaffGoal): Promise<StaffGoal> {
+    const s = schema();
+    if (isMySQL()) {
+      const result = await db().insert(s.staffGoals).values(goal);
+      const insertId = (result as any).insertId ?? (result as any)[0]?.insertId;
+      if (!insertId) throw new Error("Failed to get insert ID");
+      const [created] = await db().select().from(s.staffGoals).where(eq(s.staffGoals.id, insertId));
+      if (!created) throw new Error("Failed to retrieve created staff goal");
+      return created;
+    }
+    const [created] = await db().insert(s.staffGoals).values(goal).returning();
+    return created;
+  }
+
+  async updateStaffGoal(id: number, goal: Partial<InsertStaffGoal>): Promise<StaffGoal> {
+    const s = schema();
+    if (isMySQL()) {
+      await db().update(s.staffGoals).set(goal).where(eq(s.staffGoals.id, id));
+      const [updated] = await db().select().from(s.staffGoals).where(eq(s.staffGoals.id, id));
+      if (!updated) throw new Error("Staff goal not found");
+      return updated;
+    }
+    const [updated] = await db().update(s.staffGoals).set(goal).where(eq(s.staffGoals.id, id)).returning();
+    return updated;
+  }
+
+  async deleteStaffGoal(id: number): Promise<void> {
+    const s = schema();
+    await db().delete(s.staffGoals).where(eq(s.staffGoals.id, id));
+  }
+
+  async upsertStaffGoal(goal: InsertStaffGoal): Promise<StaffGoal> {
+    const existing = await this.getStaffGoal(goal.staffId, goal.period);
+    if (existing) {
+      return await this.updateStaffGoal(existing.id, goal);
+    }
+    return await this.createStaffGoal(goal);
   }
 }
 

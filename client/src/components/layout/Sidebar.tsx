@@ -22,7 +22,9 @@ import {
   TrendingUp,
   Settings,
   Percent,
-  ChevronDown
+  ChevronDown,
+  Gift,
+  PackageOpen
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
@@ -46,11 +48,13 @@ const NAV_ITEMS = [
   { labelKey: "nav.home", href: "/home", icon: Home, permission: "view_home" },
   { labelKey: "nav.planning", href: "/planning", icon: CalendarDays, permission: "view_planning" },
   { labelKey: "nav.services", href: "/services", icon: Scissors, permission: "view_services" },
+  { labelKey: "nav.packages", href: "/packages", icon: PackageOpen, permission: "manage_services" },
   { labelKey: "nav.clients", href: "/clients", icon: Users, permission: "view_clients" },
   { labelKey: "nav.inventory", href: "/inventory", icon: Package, permission: "view_inventory" },
   { labelKey: "nav.expenses", href: "/charges", icon: Wallet, permission: "view_expenses" },
   { labelKey: "nav.salaries", href: "/salaries", icon: DollarSign, permission: "view_salaries" },
   { labelKey: "nav.reports", href: "/reports", icon: BarChart3, permission: "view_reports" },
+  { labelKey: "nav.loyaltyRewards", href: "/loyalty-rewards", icon: Gift, permission: "manage_business_settings" },
   { labelKey: "nav.adminSettings", href: "/admin-settings", icon: Settings, permission: "admin_settings" },
   { labelKey: "nav.booking", href: "/booking", icon: ExternalLink, external: true, permission: null },
 ];
