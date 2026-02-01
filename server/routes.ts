@@ -1054,18 +1054,24 @@ export async function registerRoutes(
     }
   });
 
-  // Bulk WhatsApp broadcast to all clients
+  // Bulk WhatsApp broadcast to selected clients (or all if none specified)
   app.post("/api/notifications/broadcast", isPinAuthenticated, requirePermission("admin_settings"), async (req, res) => {
     try {
       const { sendWhatsAppMessage } = await import("./whapi");
-      const { message } = z.object({
+      const { message, clientIds } = z.object({
         message: z.string().min(1, "Message is required"),
+        clientIds: z.array(z.number()).optional(),
       }).parse(req.body);
       
       const clients = await storage.getClients();
-      const clientsWithPhone = clients.filter(c => c.phone && c.phone.trim() !== '');
+      let targetClients = clients.filter(c => c.phone && c.phone.trim() !== '');
       
-      if (clientsWithPhone.length === 0) {
+      // If specific client IDs provided, filter to only those clients
+      if (clientIds && clientIds.length > 0) {
+        targetClients = targetClients.filter(c => clientIds.includes(c.id));
+      }
+      
+      if (targetClients.length === 0) {
         return res.status(400).json({ success: false, error: "No clients with phone numbers found" });
       }
       
@@ -1073,7 +1079,7 @@ export async function registerRoutes(
       let failed = 0;
       const errors: string[] = [];
       
-      for (const client of clientsWithPhone) {
+      for (const client of targetClients) {
         try {
           const personalizedMessage = message.replace(/\{name\}/gi, client.name);
           const result = await sendWhatsAppMessage(client.phone!, personalizedMessage);
@@ -1097,7 +1103,7 @@ export async function registerRoutes(
         success: true, 
         sent, 
         failed, 
-        total: clientsWithPhone.length,
+        total: targetClients.length,
         errors: errors.slice(0, 5) // Return first 5 errors only
       });
     } catch (err: any) {

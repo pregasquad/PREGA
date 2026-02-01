@@ -116,6 +116,8 @@ export default function AdminSettings() {
   });
   const [broadcastMessage, setBroadcastMessage] = useState("");
   const [broadcastResult, setBroadcastResult] = useState<{sent: number, failed: number, total: number} | null>(null);
+  const [selectedClientIds, setSelectedClientIds] = useState<Set<number>>(new Set());
+  const [clientSearchQuery, setClientSearchQuery] = useState("");
 
   const { data: adminRoles = [], isLoading } = useQuery<AdminRole[]>({
     queryKey: ["/api/admin-roles"],
@@ -238,8 +240,8 @@ export default function AdminSettings() {
   const clientsWithPhone = Array.isArray(clients) ? clients.filter(c => c.phone && c.phone.trim() !== '') : [];
 
   const broadcastMutation = useMutation({
-    mutationFn: async (message: string) => {
-      const res = await apiRequest("POST", "/api/notifications/broadcast", { message });
+    mutationFn: async ({ message, clientIds }: { message: string; clientIds?: number[] }) => {
+      const res = await apiRequest("POST", "/api/notifications/broadcast", { message, clientIds });
       return res.json();
     },
     onSuccess: (data) => {
@@ -249,6 +251,7 @@ export default function AdminSettings() {
         description: `${data.sent}/${data.total} ${t("admin.messagesSent")}`
       });
       setBroadcastMessage("");
+      setSelectedClientIds(new Set());
     },
     onError: (err: any) => {
       toast({ title: t("common.error"), description: err.message, variant: "destructive" });
@@ -259,7 +262,33 @@ export default function AdminSettings() {
     e.preventDefault();
     if (!broadcastMessage.trim()) return;
     setBroadcastResult(null);
-    broadcastMutation.mutate(broadcastMessage);
+    const clientIds = selectedClientIds.size > 0 ? Array.from(selectedClientIds) : undefined;
+    broadcastMutation.mutate({ message: broadcastMessage, clientIds });
+  };
+
+  const filteredClientsForBroadcast = clientsWithPhone.filter(c => 
+    c.name.toLowerCase().includes(clientSearchQuery.toLowerCase()) ||
+    (c.phone && c.phone.includes(clientSearchQuery))
+  );
+
+  const toggleClientSelection = (clientId: number) => {
+    setSelectedClientIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(clientId)) {
+        newSet.delete(clientId);
+      } else {
+        newSet.add(clientId);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAllClients = () => {
+    setSelectedClientIds(new Set(filteredClientsForBroadcast.map(c => c.id)));
+  };
+
+  const deselectAllClients = () => {
+    setSelectedClientIds(new Set());
   };
 
   const handleBusinessSave = (e: React.FormEvent) => {
@@ -774,13 +803,59 @@ export default function AdminSettings() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleBroadcast} className="space-y-4">
-                <div className="p-4 rounded-lg bg-muted/50 border">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                    <Users className="w-4 h-4" />
-                    <span>{t("admin.clientsWithPhone")}: <strong className="text-foreground">{clientsWithPhone.length}</strong></span>
+                {/* Client Selection */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="flex items-center gap-2">
+                      <Users className="w-4 h-4" />
+                      {t("admin.selectClients", { defaultValue: "Sélectionner les clients" })}
+                    </Label>
+                    <div className="flex gap-2">
+                      <Button type="button" variant="outline" size="sm" onClick={selectAllClients}>
+                        {t("common.selectAll", { defaultValue: "Tout sélectionner" })}
+                      </Button>
+                      <Button type="button" variant="outline" size="sm" onClick={deselectAllClients}>
+                        {t("common.deselectAll", { defaultValue: "Tout désélectionner" })}
+                      </Button>
+                    </div>
                   </div>
+                  
+                  <Input
+                    placeholder={t("admin.searchClients", { defaultValue: "Rechercher par nom ou téléphone..." })}
+                    value={clientSearchQuery}
+                    onChange={(e) => setClientSearchQuery(e.target.value)}
+                    className="mb-2"
+                  />
+                  
+                  <div className="border rounded-lg max-h-[200px] overflow-y-auto">
+                    {filteredClientsForBroadcast.length === 0 ? (
+                      <div className="p-4 text-center text-muted-foreground text-sm">
+                        {t("admin.noClientsFound", { defaultValue: "Aucun client trouvé" })}
+                      </div>
+                    ) : (
+                      filteredClientsForBroadcast.map(client => (
+                        <div 
+                          key={client.id}
+                          className="flex items-center gap-3 p-3 border-b last:border-b-0 hover:bg-muted/50 cursor-pointer"
+                          onClick={() => toggleClientSelection(client.id)}
+                        >
+                          <Checkbox 
+                            checked={selectedClientIds.has(client.id)}
+                            onCheckedChange={() => toggleClientSelection(client.id)}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate">{client.name}</p>
+                            <p className="text-xs text-muted-foreground">{client.phone}</p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  
                   <p className="text-xs text-muted-foreground">
-                    {t("admin.broadcastTip")}
+                    {selectedClientIds.size > 0 
+                      ? `${selectedClientIds.size} ${t("admin.clientsSelected", { defaultValue: "client(s) sélectionné(s)" })}`
+                      : t("admin.allClientsWillReceive", { defaultValue: "Tous les clients recevront le message si aucun n'est sélectionné" })}
                   </p>
                 </div>
 
@@ -823,7 +898,9 @@ export default function AdminSettings() {
                   ) : (
                     <>
                       <Send className="w-4 h-4 mr-2" />
-                      {t("admin.sendToAll")} ({clientsWithPhone.length})
+                      {selectedClientIds.size > 0 
+                        ? `${t("admin.sendTo", { defaultValue: "Envoyer à" })} ${selectedClientIds.size} ${t("admin.clients", { defaultValue: "client(s)" })}`
+                        : `${t("admin.sendToAll")} (${clientsWithPhone.length})`}
                     </>
                   )}
                 </Button>
