@@ -96,8 +96,7 @@ async function updateLocalCacheForOfflineMutation(
 
 // Auth endpoints should never be queued for offline sync
 const authEndpoints = [
-  '/api/admin-roles/verify-pin',
-  '/api/admin-roles/offline-setup',
+  '/api/admin-roles',  // All admin role operations (create, update PIN, etc.)
   '/api/auth/pin-logout',
   '/api/auth/status',
   '/api/status/database',
