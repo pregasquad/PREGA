@@ -46,6 +46,15 @@ interface BusinessSettings {
   workingDays: number[];
 }
 
+interface MessageTemplate {
+  id: number;
+  name: string;
+  content: string;
+  category?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 const ROLE_LABELS: Record<string, { label: string, color: string }> = {
   owner: { label: "Owner", color: "bg-red-500" },
   manager: { label: "Manager", color: "bg-orange-500" },
@@ -118,6 +127,9 @@ export default function AdminSettings() {
   const [broadcastResult, setBroadcastResult] = useState<{sent: number, failed: number, total: number} | null>(null);
   const [selectedClientIds, setSelectedClientIds] = useState<Set<number>>(new Set());
   const [clientSearchQuery, setClientSearchQuery] = useState("");
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
+  const [newTemplateName, setNewTemplateName] = useState("");
+  const [showSaveTemplate, setShowSaveTemplate] = useState(false);
 
   const { data: adminRoles = [], isLoading } = useQuery<AdminRole[]>({
     queryKey: ["/api/admin-roles"],
@@ -238,6 +250,61 @@ export default function AdminSettings() {
   });
 
   const clientsWithPhone = Array.isArray(clients) ? clients.filter(c => c.phone && c.phone.trim() !== '') : [];
+
+  const { data: messageTemplates = [] } = useQuery<MessageTemplate[]>({
+    queryKey: ["/api/message-templates"],
+    queryFn: async () => {
+      const res = await fetch("/api/message-templates");
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    }
+  });
+
+  const createTemplateMutation = useMutation({
+    mutationFn: async (template: { name: string; content: string }) => {
+      const res = await apiRequest("POST", "/api/message-templates", template);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/message-templates"] });
+      toast({ title: t("admin.templateSaved", { defaultValue: "Template enregistré" }) });
+      setNewTemplateName("");
+      setShowSaveTemplate(false);
+    },
+    onError: (err: any) => {
+      toast({ title: t("common.error"), description: err.message, variant: "destructive" });
+    }
+  });
+
+  const deleteTemplateMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/message-templates/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/message-templates"] });
+      setSelectedTemplateId("");
+      toast({ title: t("admin.templateDeleted", { defaultValue: "Template supprimé" }) });
+    },
+    onError: (err: any) => {
+      toast({ title: t("common.error"), description: err.message, variant: "destructive" });
+    }
+  });
+
+  const handleLoadTemplate = (templateId: string) => {
+    setSelectedTemplateId(templateId);
+    if (templateId) {
+      const template = messageTemplates.find(t => t.id.toString() === templateId);
+      if (template) {
+        setBroadcastMessage(template.content);
+      }
+    }
+  };
+
+  const handleSaveAsTemplate = () => {
+    if (!newTemplateName.trim() || !broadcastMessage.trim()) return;
+    createTemplateMutation.mutate({ name: newTemplateName.trim(), content: broadcastMessage });
+  };
 
   const broadcastMutation = useMutation({
     mutationFn: async ({ message, clientIds }: { message: string; clientIds?: number[] }) => {
@@ -859,6 +926,36 @@ export default function AdminSettings() {
                   </p>
                 </div>
 
+                {/* Template Selection */}
+                <div className="space-y-2">
+                  <Label>{t("admin.messageTemplate", { defaultValue: "Template de message" })}</Label>
+                  <div className="flex gap-2">
+                    <Select value={selectedTemplateId} onValueChange={handleLoadTemplate}>
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder={t("admin.selectTemplate", { defaultValue: "Choisir un template..." })} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {messageTemplates.map(template => (
+                          <SelectItem key={template.id} value={template.id.toString()}>
+                            {template.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {selectedTemplateId && (
+                      <Button 
+                        type="button" 
+                        variant="destructive" 
+                        size="icon"
+                        onClick={() => deleteTemplateMutation.mutate(Number(selectedTemplateId))}
+                        disabled={deleteTemplateMutation.isPending}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="broadcast-message">{t("admin.message")}</Label>
                   <Textarea
@@ -872,6 +969,55 @@ export default function AdminSettings() {
                   <p className="text-xs text-muted-foreground">
                     {t("admin.useNameVariable")}
                   </p>
+                  
+                  {/* Save as Template */}
+                  {broadcastMessage.trim() && (
+                    <div className="mt-2">
+                      {!showSaveTemplate ? (
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setShowSaveTemplate(true)}
+                        >
+                          <Save className="w-4 h-4 mr-2" />
+                          {t("admin.saveAsTemplate", { defaultValue: "Sauvegarder comme template" })}
+                        </Button>
+                      ) : (
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder={t("admin.templateName", { defaultValue: "Nom du template" })}
+                            value={newTemplateName}
+                            onChange={(e) => setNewTemplateName(e.target.value)}
+                            className="flex-1"
+                          />
+                          <Button 
+                            type="button" 
+                            size="sm"
+                            onClick={handleSaveAsTemplate}
+                            disabled={!newTemplateName.trim() || createTemplateMutation.isPending}
+                          >
+                            {createTemplateMutation.isPending ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Save className="w-4 h-4" />
+                            )}
+                          </Button>
+                          <Button 
+                            type="button" 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => {
+                              setShowSaveTemplate(false);
+                              setNewTemplateName("");
+                            }}
+                          >
+                            {t("common.cancel", { defaultValue: "Annuler" })}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {broadcastResult && (
