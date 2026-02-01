@@ -1054,6 +1054,57 @@ export async function registerRoutes(
     }
   });
 
+  // Bulk WhatsApp broadcast to all clients
+  app.post("/api/notifications/broadcast", isPinAuthenticated, requirePermission("admin_settings"), async (req, res) => {
+    try {
+      const { sendWhatsAppMessage } = await import("./whapi");
+      const { message } = z.object({
+        message: z.string().min(1, "Message is required"),
+      }).parse(req.body);
+      
+      const clients = await storage.getClients();
+      const clientsWithPhone = clients.filter(c => c.phone && c.phone.trim() !== '');
+      
+      if (clientsWithPhone.length === 0) {
+        return res.status(400).json({ success: false, error: "No clients with phone numbers found" });
+      }
+      
+      let sent = 0;
+      let failed = 0;
+      const errors: string[] = [];
+      
+      for (const client of clientsWithPhone) {
+        try {
+          const personalizedMessage = message.replace(/\{name\}/gi, client.name);
+          const result = await sendWhatsAppMessage(client.phone!, personalizedMessage);
+          
+          if (result.success) {
+            sent++;
+          } else {
+            failed++;
+            errors.push(`${client.name}: ${result.error}`);
+          }
+          
+          // Small delay to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (err: any) {
+          failed++;
+          errors.push(`${client.name}: ${err.message}`);
+        }
+      }
+      
+      res.json({ 
+        success: true, 
+        sent, 
+        failed, 
+        total: clientsWithPhone.length,
+        errors: errors.slice(0, 5) // Return first 5 errors only
+      });
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: err.message });
+    }
+  });
+
   // === Push Notifications ===
   
   app.get("/api/push/vapid-public-key", (_req, res) => {
