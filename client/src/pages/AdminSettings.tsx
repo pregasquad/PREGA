@@ -900,24 +900,24 @@ export default function AdminSettings() {
                         {t("admin.noClientsFound", { defaultValue: "Aucun client trouvé" })}
                       </div>
                     ) : (
-                      filteredClientsForBroadcast.map(client => (
-                        <div 
-                          key={client.id}
-                          className="flex items-center gap-3 p-3 border-b last:border-b-0 hover:bg-muted/50 cursor-pointer"
-                          onClick={() => toggleClientSelection(client.id)}
-                        >
-                          <div onClick={(e) => e.stopPropagation()}>
-                            <Checkbox 
-                              checked={selectedClientIds.has(client.id)}
-                              onCheckedChange={() => toggleClientSelection(client.id)}
-                            />
+                      filteredClientsForBroadcast.map(client => {
+                        const isSelected = selectedClientIds.has(client.id);
+                        return (
+                          <div 
+                            key={client.id}
+                            className="flex items-center gap-3 p-3 border-b last:border-b-0 hover:bg-muted/50 cursor-pointer"
+                            onClick={() => toggleClientSelection(client.id)}
+                          >
+                            <div className={`w-4 h-4 rounded border flex items-center justify-center ${isSelected ? 'bg-primary border-primary' : 'border-input'}`}>
+                              {isSelected && <span className="text-primary-foreground text-xs">✓</span>}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm truncate">{client.name}</p>
+                              <p className="text-xs text-muted-foreground">{client.phone}</p>
+                            </div>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm truncate">{client.name}</p>
-                            <p className="text-xs text-muted-foreground">{client.phone}</p>
-                          </div>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                   
