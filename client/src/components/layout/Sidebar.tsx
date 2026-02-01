@@ -48,20 +48,20 @@ const NAV_ITEMS = [
   { labelKey: "nav.home", href: "/home", icon: Home, permission: "view_home" },
   { labelKey: "nav.planning", href: "/planning", icon: CalendarDays, permission: "view_planning" },
   { labelKey: "nav.services", href: "/services", icon: Scissors, permission: "view_services" },
-  { labelKey: "nav.packages", href: "/packages", icon: PackageOpen, permission: "manage_services" },
+  { labelKey: "nav.packages", href: "/packages", icon: PackageOpen, permission: "view_packages" },
   { labelKey: "nav.clients", href: "/clients", icon: Users, permission: "view_clients" },
   { labelKey: "nav.inventory", href: "/inventory", icon: Package, permission: "view_inventory" },
   { labelKey: "nav.expenses", href: "/charges", icon: Wallet, permission: "view_expenses" },
   { labelKey: "nav.salaries", href: "/salaries", icon: DollarSign, permission: "view_salaries" },
   { labelKey: "nav.reports", href: "/reports", icon: BarChart3, permission: "view_reports" },
-  { labelKey: "nav.loyaltyRewards", href: "/loyalty-rewards", icon: Gift, permission: null },
+  { labelKey: "nav.loyaltyRewards", href: "/loyalty-rewards", icon: Gift, permission: "view_loyalty" },
   { labelKey: "nav.adminSettings", href: "/admin-settings", icon: Settings, permission: "admin_settings" },
   { labelKey: "nav.booking", href: "/booking", icon: ExternalLink, external: true, permission: null },
 ];
 
 const STAFF_NAV_ITEMS = [
-  { labelKey: "nav.staffManagement", href: "/staff", icon: User, permission: "manage_staff" },
-  { labelKey: "nav.staffCommissions", href: "/staff-commissions", icon: Percent, permission: "manage_salaries" },
+  { labelKey: "nav.staffManagement", href: "/staff", icon: User, permission: "view_staff" },
+  { labelKey: "nav.staffCommissions", href: "/staff-commissions", icon: Percent, permission: "view_salaries" },
   { labelKey: "nav.staffPerformance", href: "/staff-performance", icon: TrendingUp, permission: "view_staff_performance" },
 ];
 
