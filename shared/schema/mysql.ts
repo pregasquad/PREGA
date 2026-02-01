@@ -554,3 +554,20 @@ export const insertStaffGoalSchema = createInsertSchema(staffGoals).omit({ id: t
 });
 export type StaffGoal = typeof staffGoals.$inferSelect;
 export type InsertStaffGoal = z.infer<typeof insertStaffGoalSchema>;
+
+export const messageTemplates = mysqlTable("message_templates", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  content: text("content").notNull(),
+  category: varchar("category", { length: 100 }).default("general"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertMessageTemplateSchema = createInsertSchema(messageTemplates).omit({ id: true, createdAt: true, updatedAt: true }).extend({
+  name: z.string().min(1, "Template name is required"),
+  content: z.string().min(1, "Template content is required"),
+  category: z.string().optional(),
+});
+export type MessageTemplate = typeof messageTemplates.$inferSelect;
+export type InsertMessageTemplate = z.infer<typeof insertMessageTemplateSchema>;
