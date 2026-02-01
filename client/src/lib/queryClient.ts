@@ -94,11 +94,36 @@ async function updateLocalCacheForOfflineMutation(
   }
 }
 
+// Auth endpoints should never be queued for offline sync
+const authEndpoints = [
+  '/api/admin-roles/verify-pin',
+  '/api/admin-roles/offline-setup',
+  '/api/auth/pin-logout',
+  '/api/auth/status',
+  '/api/status/database',
+];
+
+function isAuthEndpoint(url: string): boolean {
+  return authEndpoints.some(endpoint => url.startsWith(endpoint));
+}
+
 export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  // Never queue auth endpoints - they must succeed or fail immediately
+  if (isAuthEndpoint(url)) {
+    const res = await fetch(url, {
+      method,
+      headers: data ? { "Content-Type": "application/json" } : {},
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: "include",
+    });
+    await throwIfResNotOk(res);
+    return res;
+  }
+
   if (isEffectivelyOffline() && method !== 'GET') {
     console.log(`[Offline] Queueing ${method} ${url} for later sync`);
     await addToSyncQueue({
