@@ -1447,6 +1447,33 @@ export async function registerRoutes(
     res.json({ success: true });
   });
 
+  // Refresh all users' permissions based on their role
+  app.post("/api/admin-roles/refresh-permissions", isPinAuthenticated, async (req, res) => {
+    try {
+      const allRoles = await storage.getAdminRoles();
+      let updated = 0;
+      
+      for (const role of allRoles) {
+        const newPermissions = ROLE_PERMISSIONS[role.role as keyof typeof ROLE_PERMISSIONS] || [];
+        await storage.updateAdminRole(role.id, { permissions: [...newPermissions] });
+        updated++;
+      }
+      
+      // Also refresh current session permissions
+      if (req.session?.pinAuth) {
+        const currentRole = allRoles.find(r => r.name === req.session!.pinAuth!.userName);
+        if (currentRole) {
+          const newPerms = ROLE_PERMISSIONS[currentRole.role as keyof typeof ROLE_PERMISSIONS] || [];
+          req.session.pinAuth.permissions = [...newPerms];
+        }
+      }
+      
+      res.json({ success: true, updated, message: `Updated permissions for ${updated} users` });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   // Sync offline data to database when connection is restored
   app.post("/api/sync/offline-data", isPinAuthenticated, requirePermission("admin_settings"), async (req, res) => {
     try {

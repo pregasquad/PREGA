@@ -242,7 +242,8 @@ export type InsertAdminRole = z.infer<typeof insertAdminRoleSchema>;
 
 export const ROLE_PERMISSIONS = {
   owner: [
-    "view_planning", "manage_appointments", 
+    "view_home",
+    "view_planning", "manage_appointments", "edit_cardboard",
     "view_clients", "manage_clients",
     "view_services", "manage_services",
     "view_inventory", "manage_inventory",
@@ -252,10 +253,16 @@ export const ROLE_PERMISSIONS = {
     "view_staff_performance",
     "manage_staff",
     "admin_settings",
-    "export_data"
+    "export_data",
+    "view_packages", "manage_packages",
+    "view_loyalty", "manage_loyalty",
+    "view_gift_cards", "manage_gift_cards",
+    "manage_staff_goals",
+    "manage_waitlist"
   ],
   manager: [
-    "view_planning", "manage_appointments",
+    "view_home",
+    "view_planning", "manage_appointments", "edit_cardboard",
     "view_clients", "manage_clients", 
     "view_services", "manage_services",
     "view_inventory", "manage_inventory",
@@ -263,9 +270,13 @@ export const ROLE_PERMISSIONS = {
     "view_salaries",
     "view_reports",
     "view_staff_performance",
-    "export_data"
+    "export_data",
+    "view_packages",
+    "view_loyalty",
+    "view_gift_cards"
   ],
   receptionist: [
+    "view_home",
     "view_planning", "manage_appointments",
     "view_clients",
     "view_services"
