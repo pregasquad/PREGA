@@ -284,6 +284,11 @@ export function requirePermission(permission: string): RequestHandler {
       return res.status(401).json({ message: "Unauthorized - Please login first" });
     }
     
+    // Owner role always has full access to everything
+    if (pinAuth.role === "owner") {
+      return next();
+    }
+    
     // Empty permissions array means full access (opt-in restriction model)
     if (!pinAuth.permissions || pinAuth.permissions.length === 0) {
       return next();
