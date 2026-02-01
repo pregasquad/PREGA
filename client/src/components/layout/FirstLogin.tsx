@@ -261,8 +261,12 @@ export function FirstLogin({ children }: FirstLoginProps) {
         setError(t("auth.wrongPassword"));
         setPin("");
       }
-    } catch (err) {
-      setDatabaseOffline(true);
+    } catch (err: any) {
+      // Only set offline if it's a network/server error, not a normal auth failure
+      const isServerError = err?.message?.includes('500') || err?.message?.includes('Server error');
+      if (isServerError) {
+        setDatabaseOffline(true);
+      }
       const credentials = getOfflineCredentials();
       const userCreds = credentials[selectedUser.name];
       

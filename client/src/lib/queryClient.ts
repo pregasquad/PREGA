@@ -113,6 +113,7 @@ export async function apiRequest(
   data?: unknown | undefined,
 ): Promise<Response> {
   // Never queue auth endpoints - they must succeed or fail immediately
+  // Don't throw on 4xx errors for auth endpoints (user errors like wrong password)
   if (isAuthEndpoint(url)) {
     const res = await fetch(url, {
       method,
@@ -120,7 +121,10 @@ export async function apiRequest(
       body: data ? JSON.stringify(data) : undefined,
       credentials: "include",
     });
-    await throwIfResNotOk(res);
+    // Only throw on server errors (5xx), not client errors (4xx)
+    if (res.status >= 500) {
+      throw new Error(`${res.status}: Server error`);
+    }
     return res;
   }
 
@@ -243,8 +247,22 @@ export const getQueryFn: <T>(options: {
       }
 
       return data;
-    } catch (error) {
-      setDatabaseOffline(true);
+    } catch (error: any) {
+      // Only set offline for network errors or 5xx, not for 401/403 auth errors
+      const errorMsg = error?.message || '';
+      const isAuthError = errorMsg.includes('401') || errorMsg.includes('403');
+      const isNetworkError = errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError');
+      const isServerError = errorMsg.includes('500') || errorMsg.includes('502') || errorMsg.includes('503');
+      
+      if (isNetworkError || isServerError) {
+        setDatabaseOffline(true);
+      }
+      
+      // Don't try to return cached data for auth errors - just rethrow
+      if (isAuthError) {
+        throw error;
+      }
+      
       if (storeName) {
         try {
           const offlineData = await getFromOfflineStore(storeName as any);
