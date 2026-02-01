@@ -905,13 +905,17 @@ export default function AdminSettings() {
                         return (
                           <div 
                             key={client.id}
-                            className="flex items-center gap-3 p-3 border-b last:border-b-0 hover:bg-muted/50 cursor-pointer"
-                            onClick={() => toggleClientSelection(client.id)}
+                            className="flex items-center gap-3 p-3 border-b last:border-b-0 hover:bg-muted/50 cursor-pointer select-none"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              toggleClientSelection(client.id);
+                            }}
                           >
-                            <div className={`w-4 h-4 rounded border flex items-center justify-center ${isSelected ? 'bg-primary border-primary' : 'border-input'}`}>
+                            <div className={`w-4 h-4 rounded border flex items-center justify-center pointer-events-none ${isSelected ? 'bg-primary border-primary' : 'border-input'}`}>
                               {isSelected && <span className="text-primary-foreground text-xs">✓</span>}
                             </div>
-                            <div className="flex-1 min-w-0">
+                            <div className="flex-1 min-w-0 pointer-events-none">
                               <p className="font-medium text-sm truncate">{client.name}</p>
                               <p className="text-xs text-muted-foreground">{client.phone}</p>
                             </div>
