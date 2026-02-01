@@ -217,7 +217,7 @@ export async function registerRoutes(
       // If phone was provided, send WhatsApp confirmation (server-side only)
       if (input.phone) {
         try {
-          const { sendBookingConfirmation } = await import("./sendzen");
+          const { sendBookingConfirmation } = await import("./whapi");
           let formattedPhone = input.phone.replace(/[^0-9]/g, "");
           if (formattedPhone.startsWith("0")) {
             formattedPhone = "212" + formattedPhone.substring(1);
@@ -953,10 +953,10 @@ export async function registerRoutes(
     }
   });
 
-  // WhatsApp Notifications (SendZen) - protected routes
+  // WhatsApp Notifications (Whapi.cloud) - protected routes
   app.post("/api/notifications/send", isPinAuthenticated, async (req, res) => {
     try {
-      const { sendWhatsAppMessage } = await import("./sendzen");
+      const { sendWhatsAppMessage } = await import("./whapi");
       const { phone, message } = z.object({
         phone: z.string(),
         message: z.string(),
@@ -976,7 +976,7 @@ export async function registerRoutes(
 
   app.post("/api/notifications/appointment-reminder", isPinAuthenticated, async (req, res) => {
     try {
-      const { sendAppointmentReminder } = await import("./sendzen");
+      const { sendAppointmentReminder } = await import("./whapi");
       const { clientPhone, clientName, appointmentDate, appointmentTime, serviceName } = z.object({
         clientPhone: z.string(),
         clientName: z.string(),
@@ -999,7 +999,7 @@ export async function registerRoutes(
 
   app.post("/api/notifications/booking-confirmation", isPinAuthenticated, async (req, res) => {
     try {
-      const { sendBookingConfirmation } = await import("./sendzen");
+      const { sendBookingConfirmation } = await import("./whapi");
       const { clientPhone, clientName, appointmentDate, appointmentTime, serviceName } = z.object({
         clientPhone: z.string(),
         clientName: z.string(),
@@ -1689,8 +1689,8 @@ export async function registerRoutes(
 
       const giftCardData = {
         code,
-        initialAmount: req.body.initialAmount,
-        currentBalance: req.body.initialAmount,
+        initialBalance: req.body.initialBalance || req.body.initialAmount,
+        currentBalance: req.body.initialBalance || req.body.initialAmount,
         recipientName: req.body.recipientName || null,
         recipientPhone: req.body.recipientPhone || null,
         expiresAt: req.body.expiresAt ? new Date(req.body.expiresAt) : null,
