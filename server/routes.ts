@@ -339,6 +339,27 @@ export async function registerRoutes(
         io.emit("booking:created", item);
       }
       
+      // Award loyalty points if appointment is created as paid
+      if (item.paid && item.client && item.total && item.total > 0) {
+        const client = await storage.getClientByName(item.client);
+        if (client && client.loyaltyEnrolled) {
+          const settings = await storage.getBusinessSettings();
+          const pointsPerDh = settings?.loyaltyPointsPerDh ?? 1;
+          const pointsToAdd = Math.floor(item.total * pointsPerDh);
+          if (pointsToAdd > 0) {
+            const updatedClient = await storage.updateClientLoyalty(client.id, pointsToAdd, item.total);
+            console.log(`Awarded ${pointsToAdd} loyalty points to ${client.name} for new appointment #${item.id}`);
+            // Emit real-time update for loyalty points
+            io.emit("client:loyaltyUpdated", { 
+              clientId: client.id, 
+              clientName: client.name,
+              pointsAdded: pointsToAdd, 
+              newTotal: updatedClient.loyaltyPoints 
+            });
+          }
+        }
+      }
+      
       // Send push notification for new appointment
       const clientName = item.client || "Client";
       const serviceName = item.service || "RDV";
