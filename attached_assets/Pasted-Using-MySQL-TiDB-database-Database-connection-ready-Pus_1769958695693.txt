@@ -1,0 +1,94 @@
+Using MySQL/TiDB database
+Database connection ready
+Push subscriptions table ready
+Appointments audit columns ready
+Admin roles photo column ready
+Foreign key constraints are only added for PostgreSQL
+Not on Replit - auth routes disabled
+Failed to start server: Error: Unknown column 'linked_product_ids' in 'field list'
+    at cl.query (/app/dist/index.cjs:3057:52018)
+    at lE.execute (/app/dist/index.cjs:3063:30153)
+    at tE.execute (/app/dist/index.cjs:3063:20437)
+    at tE.then (/app/dist/index.cjs:63:37645)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5) {
+  code: 'ER_BAD_FIELD_ERROR',
+  errno: 1054,
+  sql: 'select `id`, `name`, `price`, `duration`, `category`, `linked_product_id`, `linked_product_ids`, `commission_percent`, `loyalty_points_multiplier` from `services`',
+  sqlState: '42S22',
+  sqlMessage: "Unknown column 'linked_product_ids' in 'field list'"
+}
+Using MySQL/TiDB database
+Failed to start server: Error: Unknown column 'linked_product_ids' in 'field list'
+    at cl.query (/app/dist/index.cjs:3057:52018)
+    at lE.execute (/app/dist/index.cjs:3063:30153)
+    at tE.execute (/app/dist/index.cjs:3063:20437)
+    at tE.then (/app/dist/index.cjs:63:37645)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5) {
+  code: 'ER_BAD_FIELD_ERROR',
+  errno: 1054,
+  sql: 'select `id`, `name`, `price`, `duration`, `category`, `linked_product_id`, `linked_product_ids`, `commission_percent`, `loyalty_points_multiplier` from `services`',
+  sqlState: '42S22',
+  sqlMessage: "Unknown column 'linked_product_ids' in 'field list'"
+}
+Database connection ready
+Push subscriptions table ready
+Appointments audit columns ready
+Admin roles photo column ready
+Foreign key constraints are only added for PostgreSQL
+Not on Replit - auth routes disabled
+Using MySQL/TiDB database
+Failed to start server: Error: Unknown column 'linked_product_ids' in 'field list'
+    at cl.query (/app/dist/index.cjs:3057:52018)
+    at lE.execute (/app/dist/index.cjs:3063:30153)
+    at tE.execute (/app/dist/index.cjs:3063:20437)
+    at tE.then (/app/dist/index.cjs:63:37645)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5) {
+  code: 'ER_BAD_FIELD_ERROR',
+  errno: 1054,
+  sql: 'select `id`, `name`, `price`, `duration`, `category`, `linked_product_id`, `linked_product_ids`, `commission_percent`, `loyalty_points_multiplier` from `services`',
+  sqlState: '42S22',
+  sqlMessage: "Unknown column 'linked_product_ids' in 'field list'"
+}
+Database connection ready
+Push subscriptions table ready
+Appointments audit columns ready
+Admin roles photo column ready
+Foreign key constraints are only added for PostgreSQL
+Not on Replit - auth routes disabled
+3:07:01 PM [express] GET /api/status/database 304 in 9ms :: {"online":true,"mode":"online","hasPendingSync":false}
+3:07:35 PM [express] HEAD /api/health 200 in 1ms :: {"status":"ok","timestamp":"2026-02-01T15:07:35.360Z"}
+3:07:49 PM [express] HEAD /api/health 200 in 1ms :: {"status":"ok","timestamp":"2026-02-01T15:07:49.688Z"}
+Using MySQL/TiDB database
+Database connection ready
+Push subscriptions table ready
+Appointments audit columns ready
+Admin roles photo column ready
+Foreign key constraints are only added for PostgreSQL
+Not on Replit - auth routes disabled
+Failed to start server: Error: Unknown column 'linked_product_ids' in 'field list'
+    at cl.query (/app/dist/index.cjs:3057:52018)
+    at lE.execute (/app/dist/index.cjs:3063:30153)
+    at tE.execute (/app/dist/index.cjs:3063:20437)
+    at tE.then (/app/dist/index.cjs:63:37645)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5) {
+  code: 'ER_BAD_FIELD_ERROR',
+  errno: 1054,
+  sql: 'select `id`, `name`, `price`, `duration`, `category`, `linked_product_id`, `linked_product_ids`, `commission_percent`, `loyalty_points_multiplier` from `services`',
+  sqlState: '42S22',
+  sqlMessage: "Unknown column 'linked_product_ids' in 'field list'"
+}
+Using MySQL/TiDB database
+Database connection ready
+Push subscriptions table ready
+Appointments audit columns ready
+Failed to start server: Error: Unknown column 'linked_product_ids' in 'field list'
+    at cl.query (/app/dist/index.cjs:3057:52018)
+    at lE.execute (/app/dist/index.cjs:3063:30153)
+    at tE.execute (/app/dist/index.cjs:3063:20437)
+    at tE.then (/app/dist/index.cjs:63:37645)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5) {
+  code: 'ER_BAD_FIELD_ERROR',
+  errno: 1054,
+  sql: 'select `id`, `name`, `price`, `duration`, `category`, `linked_product_id`, `linked_product_ids`, `commission_percent`, `loyalty_points_multiplier` from `services`',
+  sqlState: '42S22',
+  sqlMessage: "Unknown column 'linked_product_ids' in 'field list'"
