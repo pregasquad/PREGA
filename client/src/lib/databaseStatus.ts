@@ -14,7 +14,9 @@ export function getDatabaseOffline(): boolean {
 }
 
 export function isEffectivelyOffline(): boolean {
-  return !navigator.onLine || isDatabaseOffline;
+  // Only rely on actual database status check, not navigator.onLine
+  // navigator.onLine is unreliable in iframes/webviews
+  return isDatabaseOffline;
 }
 
 export async function checkDatabaseStatus(): Promise<boolean> {
@@ -53,9 +55,8 @@ export async function checkDatabaseStatus(): Promise<boolean> {
 export async function initDatabaseStatusCheck(): Promise<void> {
   await checkDatabaseStatus();
   
+  // Always check status, don't rely on navigator.onLine
   setInterval(() => {
-    if (navigator.onLine) {
-      checkDatabaseStatus();
-    }
+    checkDatabaseStatus();
   }, STATUS_CHECK_INTERVAL);
 }
