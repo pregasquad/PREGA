@@ -908,6 +908,7 @@ export default function AdminSettings() {
                         >
                           <Checkbox 
                             checked={selectedClientIds.has(client.id)}
+                            onClick={(e) => e.stopPropagation()}
                             onCheckedChange={() => toggleClientSelection(client.id)}
                           />
                           <div className="flex-1 min-w-0">
