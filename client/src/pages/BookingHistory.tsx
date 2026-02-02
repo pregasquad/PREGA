@@ -67,7 +67,7 @@ export default function BookingHistory() {
   const updateAppointmentMutation = useMutation({
     mutationFn: async ({ id, staff }: { id: number; staff: string }) => {
       const res = await fetch(`/api/appointments/${id}`, {
-        method: "PATCH",
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ staff }),
       });
