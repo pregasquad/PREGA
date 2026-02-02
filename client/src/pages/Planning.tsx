@@ -873,7 +873,7 @@ export default function Planning() {
       if (totalInput) totalInput.value = String(newTotal);
       form.setValue("total", newTotal);
       
-      toast({ title: t("giftCard.applied", "Gift card applied!") + ` -${discountAmount} DH` });
+      toast({ title: t("giftCard.applied", "Gift card applied!") + ` -${discountAmount.toFixed(2)} DH` });
     } catch (e) {
       toast({ title: t("giftCard.error", "Failed to apply gift card"), variant: "destructive" });
     } finally {
@@ -1856,7 +1856,7 @@ export default function Planning() {
                       <div className="flex items-center gap-2">
                         <Gift className="w-4 h-4 text-green-600" />
                         <span className="font-mono font-bold text-sm">{appliedGiftCard.code}</span>
-                        <span className="text-green-600 font-bold">-{appliedGiftCard.discountAmount} DH</span>
+                        <span className="text-green-600 font-bold">-{appliedGiftCard.discountAmount.toFixed(2)} DH</span>
                       </div>
                       <Button
                         type="button"
