@@ -584,9 +584,16 @@ export default function Planning() {
     
     // Calculate base total from services (before discounts)
     const baseTotal = selectedServices.reduce((sum, s) => sum + s.price, 0);
-    if (baseTotal <= 0) return;
+    if (baseTotal <= 0) {
+      // Reset discounts if no services
+      if (appliedLoyaltyPoints) setAppliedLoyaltyPoints(null);
+      if (appliedGiftCardBalance) setAppliedGiftCardBalance(null);
+      return;
+    }
     
     let runningTotal = baseTotal;
+    let newLoyaltyPoints: typeof appliedLoyaltyPoints = null;
+    let newGiftCardBalance: typeof appliedGiftCardBalance = null;
     
     // Apply loyalty points if enabled
     if (client.usePoints && client.loyaltyPoints > 0 && businessSettings?.loyaltyEnabled) {
@@ -595,12 +602,12 @@ export default function Planning() {
       const discountAmount = Math.min(maxDiscount, runningTotal);
       const pointsUsed = Math.ceil(discountAmount / pointsValue);
       
-      if (discountAmount > 0 && (!appliedLoyaltyPoints || appliedLoyaltyPoints.discountAmount !== discountAmount)) {
-        setAppliedLoyaltyPoints({
+      if (discountAmount > 0) {
+        newLoyaltyPoints = {
           clientId: client.id,
           points: pointsUsed,
           discountAmount
-        });
+        };
         runningTotal = Math.max(0, runningTotal - discountAmount);
       }
     }
@@ -609,22 +616,28 @@ export default function Planning() {
     if (client.useGiftCardBalance && client.giftCardBalance > 0) {
       const discountAmount = Math.min(client.giftCardBalance, runningTotal);
       
-      if (discountAmount > 0 && (!appliedGiftCardBalance || appliedGiftCardBalance.discountAmount !== discountAmount)) {
-        setAppliedGiftCardBalance({
+      if (discountAmount > 0) {
+        newGiftCardBalance = {
           clientId: client.id,
           amount: client.giftCardBalance,
           discountAmount
-        });
+        };
         runningTotal = Math.max(0, runningTotal - discountAmount);
       }
     }
     
-    // Update the total
-    if (runningTotal !== form.getValues("total")) {
-      form.setValue("total", runningTotal);
-      const totalInput = document.getElementById('total-price-input') as HTMLInputElement;
-      if (totalInput) totalInput.value = String(runningTotal);
+    // Update state if changed
+    if (JSON.stringify(newLoyaltyPoints) !== JSON.stringify(appliedLoyaltyPoints)) {
+      setAppliedLoyaltyPoints(newLoyaltyPoints);
     }
+    if (JSON.stringify(newGiftCardBalance) !== JSON.stringify(appliedGiftCardBalance)) {
+      setAppliedGiftCardBalance(newGiftCardBalance);
+    }
+    
+    // Update the total and DOM input
+    form.setValue("total", runningTotal);
+    const totalInput = document.getElementById('total-price-input') as HTMLInputElement;
+    if (totalInput) totalInput.value = String(runningTotal);
   }, [selectedServices, isDialogOpen, clients, businessSettings, form, appliedLoyaltyPoints, appliedGiftCardBalance]);
 
   // Helper function to parse services from an appointment
@@ -869,6 +882,8 @@ export default function Planning() {
     const totalPrice = updated.reduce((sum, s) => sum + s.price, 0);
     form.setValue("service", updated.map(s => s.name).join(', '));
     form.setValue("duration", totalDuration);
+    form.setValue("price", totalPrice);
+    form.setValue("total", totalPrice);
     // Update total input in DOM
     const totalInput = document.getElementById('total-price-input') as HTMLInputElement;
     if (totalInput) totalInput.value = String(totalPrice);
@@ -889,6 +904,8 @@ export default function Planning() {
     const totalPrice = updated.reduce((sum, s) => sum + s.price, 0);
     form.setValue("service", updated.map(s => s.name).join(', '));
     form.setValue("duration", totalDuration);
+    form.setValue("price", totalPrice);
+    form.setValue("total", totalPrice);
     const totalInput = document.getElementById('total-price-input') as HTMLInputElement;
     if (totalInput) totalInput.value = String(totalPrice);
   };
