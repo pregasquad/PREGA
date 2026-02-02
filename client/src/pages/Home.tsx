@@ -183,6 +183,7 @@ export default function Home() {
             size="icon"
             onClick={() => {
               queryClient.invalidateQueries();
+              toast({ title: t("common.refreshed"), description: t("common.dataUpdated") });
             }}
             title={t("common.refresh")}
           >

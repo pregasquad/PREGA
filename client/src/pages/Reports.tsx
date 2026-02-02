@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addWeeks, subWeeks, addMonths, subMonths, isWithinInterval, parseISO, startOfDay, endOfDay } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 import { ar, enUS, fr } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
 
@@ -24,6 +25,7 @@ type ViewMode = "weekly" | "monthly" | "custom";
 export default function Reports() {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [viewMode, setViewMode] = useState<ViewMode>("weekly");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [customRange, setCustomRange] = useState<DateRange | undefined>({
@@ -168,7 +170,10 @@ export default function Reports() {
           <Button
             variant="outline"
             size="icon"
-            onClick={() => queryClient.invalidateQueries()}
+            onClick={() => {
+              queryClient.invalidateQueries();
+              toast({ title: t("common.refreshed"), description: t("common.dataUpdated") });
+            }}
             title={t("common.refresh")}
           >
             <RefreshCw className="h-4 w-4" />

@@ -18,6 +18,7 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import type { Product, Service, Category } from "@shared/schema";
 import { useTranslation } from "react-i18next";
+import { useToast } from "@/hooks/use-toast";
 
 const serviceFormSchema = insertServiceSchema.extend({
   price: z.coerce.number(),
@@ -34,6 +35,7 @@ export default function Services() {
   const { data: products = [] } = useQuery<Product[]>({
     queryKey: ["/api/products"],
   });
+  const { toast } = useToast();
   
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -109,7 +111,10 @@ export default function Services() {
         <Button
           variant="outline"
           size="icon"
-          onClick={() => queryClient.invalidateQueries()}
+          onClick={() => {
+            queryClient.invalidateQueries();
+            toast({ title: t("common.refreshed"), description: t("common.dataUpdated") });
+          }}
           title={t("common.refresh")}
         >
           <RefreshCw className="h-4 w-4" />

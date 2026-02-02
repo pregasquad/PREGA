@@ -8,6 +8,7 @@ import { Users, Percent, Save, Check, RefreshCw } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import type { Staff, Service } from "@shared/schema";
 
 interface StaffCommission {
@@ -20,6 +21,7 @@ interface StaffCommission {
 export default function StaffCommissions() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [selectedStaffId, setSelectedStaffId] = useState<number | null>(null);
   const [commissionValues, setCommissionValues] = useState<Record<number, number>>({});
   const [hasChanges, setHasChanges] = useState(false);
@@ -137,7 +139,10 @@ export default function StaffCommissions() {
         <Button
           variant="outline"
           size="icon"
-          onClick={() => queryClient.invalidateQueries()}
+          onClick={() => {
+            queryClient.invalidateQueries();
+            toast({ title: t("common.refreshed"), description: t("common.dataUpdated") });
+          }}
           title={t("common.refresh")}
         >
           <RefreshCw className="h-4 w-4" />

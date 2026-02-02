@@ -238,7 +238,10 @@ export default function StaffPerformance() {
           <Button
             variant="outline"
             size="icon"
-            onClick={() => queryClient.invalidateQueries()}
+            onClick={() => {
+              queryClient.invalidateQueries();
+              toast({ title: t("common.refreshed"), description: t("common.dataUpdated") });
+            }}
             title={t("common.refresh")}
           >
             <RefreshCw className="h-4 w-4" />
