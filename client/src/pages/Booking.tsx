@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { ar, enUS, fr } from "date-fns/locale";
-import { Clock, CheckCircle2, Scissors, User, Phone, CalendarDays, Sparkles, X, Users, Gift, Tag, History, UserCheck, ChevronRight, ChevronLeft } from "lucide-react";
+import { Clock, CheckCircle2, Scissors, User, Phone, CalendarDays, Sparkles, X, Users, Gift, Tag } from "lucide-react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
@@ -57,18 +57,6 @@ interface MinimalAppointment {
   date: string;
 }
 
-interface BookingHistoryItem {
-  id: number;
-  client: string;
-  service: string;
-  staff: string;
-  startTime: string;
-  date: string;
-  duration: number;
-  price: number;
-  total: number;
-}
-
 interface Package {
   id: number;
   name: string;
@@ -102,9 +90,6 @@ export default function Booking() {
   const [visitorCount, setVisitorCount] = useState<number>(0);
   const [packages, setPackages] = useState<Package[]>([]);
   const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
-  const [bookingHistory, setBookingHistory] = useState<BookingHistoryItem[]>([]);
-  const [showHistory, setShowHistory] = useState(false);
-  const [assigningId, setAssigningId] = useState<number | null>(null);
 
   useEffect(() => {
     i18n.changeLanguage("fr");
