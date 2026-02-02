@@ -224,6 +224,30 @@ export default function Clients() {
     },
   });
 
+  const toggleUsePointsMutation = useMutation({
+    mutationFn: async ({ clientId, usePoints }: { clientId: number; usePoints: boolean }) => {
+      const res = await fetch(`/api/clients/${clientId}/use-points`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ usePoints }),
+      });
+      if (!res.ok) throw new Error("Failed to update");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({ 
+        title: data.usePoints 
+          ? t("clients.pointsActivated", "Points discount activated") 
+          : t("clients.pointsDeactivated", "Points discount deactivated")
+      });
+      setSelectedClient(data);
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+    },
+    onError: () => {
+      toast({ title: t("common.error", "Error"), variant: "destructive" });
+    },
+  });
+
   const handleRedeemGiftCard = () => {
     if (!foundGiftCard) {
       toast({ title: t("giftCard.noCard", "No gift card selected"), variant: "destructive" });
@@ -799,6 +823,38 @@ export default function Clients() {
                       <p className="text-sm text-muted-foreground">{t("clients.totalSpent")}</p>
                     </div>
                   </div>
+                  
+                  <div className={cn(
+                    "p-4 rounded-lg border-2 transition-all cursor-pointer",
+                    selectedClient.usePoints 
+                      ? "border-green-500 bg-green-500/10" 
+                      : "border-muted bg-muted/50"
+                  )}
+                    onClick={() => toggleUsePointsMutation.mutate({ clientId: selectedClient.id, usePoints: !selectedClient.usePoints })}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          "w-10 h-10 rounded-full flex items-center justify-center",
+                          selectedClient.usePoints ? "bg-green-500" : "bg-muted-foreground/30"
+                        )}>
+                          {selectedClient.usePoints ? <Check className="h-5 w-5 text-white" /> : <Zap className="h-5 w-5" />}
+                        </div>
+                        <div>
+                          <p className="font-medium">{t("clients.usePointsForDiscount", "Use Points for Discount")}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {selectedClient.usePoints 
+                              ? t("clients.pointsWillBeApplied", "Points will be applied on next appointment") 
+                              : t("clients.pointsSaved", "Points are being saved")}
+                          </p>
+                        </div>
+                      </div>
+                      <Badge variant={selectedClient.usePoints ? "default" : "secondary"}>
+                        {selectedClient.usePoints ? t("common.active", "Active") : t("common.inactive", "Inactive")}
+                      </Badge>
+                    </div>
+                  </div>
+
                   <div className="p-4 bg-gradient-to-r from-primary/20 to-primary/10 rounded-lg">
                     <p className="text-sm text-muted-foreground mb-2">{t("clients.loyaltyPoints")}</p>
                     <p className="text-sm">• 100 {t("clients.loyaltyPoints")} = 10 {t("common.currency")}</p>

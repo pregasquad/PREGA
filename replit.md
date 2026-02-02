@@ -107,11 +107,13 @@ Preferred communication style: Simple, everyday language.
 
 ### Loyalty & Rewards System
 - **Loyalty Points**: Clients earn points per DH spent, redeemable for discounts
-- **Gift Cards**: Generate unique 8-character codes, track balance, manage expiry
+- **Use Points Toggle**: Clients have a `usePoints` boolean field that can be enabled from Client Details > Loyalty tab
+- **Automatic Points Application**: When creating an appointment and selecting a client with `usePoints` enabled and available points, the system automatically calculates and applies a discount (0.1 DH per point) to the total. After the appointment is created, the points are deducted and `usePoints` is disabled automatically.
+- **Gift Cards**: Generate unique 8-character codes, track balance, manage expiry. Gift card discount can be manually applied in the appointment form.
 - **Referral Program**: Reward referrers and referees with bonus points
 - **Settings**: Configurable points-per-DH, points value, bonus amounts
-- **Tables**: `gift_cards`, `referrals`
-- **Routes**: `/api/gift-cards`, `/api/referrals`
+- **Tables**: `gift_cards`, `referrals`, `clients.usePoints`
+- **Routes**: `/api/gift-cards`, `/api/referrals`, `/api/clients/:id/use-points`, `/api/clients/:id/loyalty`
 
 ### Package Deals (Service Bundles)
 - **Feature**: Bundle multiple services at discounted prices

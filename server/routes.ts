@@ -1164,6 +1164,16 @@ export async function registerRoutes(
     }
   });
 
+  app.patch("/api/clients/:id/use-points", isPinAuthenticated, requirePermission("manage_clients"), async (req, res) => {
+    try {
+      const { usePoints } = req.body;
+      const item = await storage.updateClient(Number(req.params.id), { usePoints: !!usePoints });
+      res.json(item);
+    } catch (err) {
+      res.status(400).json({ message: "Update failed" });
+    }
+  });
+
   app.delete("/api/clients/:id", isPinAuthenticated, requirePermission("manage_clients"), async (req, res) => {
     await storage.deleteClient(Number(req.params.id));
     res.status(204).send();

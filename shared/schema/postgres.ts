@@ -34,6 +34,7 @@ export const clients = pgTable("clients", {
   notes: text("notes"),
   loyaltyPoints: integer("loyalty_points").notNull().default(0),
   loyaltyEnrolled: boolean("loyalty_enrolled").notNull().default(false),
+  usePoints: boolean("use_points").notNull().default(false),
   totalVisits: integer("total_visits").notNull().default(0),
   totalSpent: doublePrecision("total_spent").notNull().default(0),
   referredBy: integer("referred_by"),
@@ -64,6 +65,7 @@ export const insertClientSchema = createInsertSchema(clients).omit({ id: true, c
   notes: z.string().optional(),
   referredBy: z.number().int().optional(),
   loyaltyEnrolled: z.boolean().optional(),
+  usePoints: z.boolean().optional(),
 });
 export type InsertClient = z.infer<typeof insertClientSchema>;
 export type Client = typeof clients.$inferSelect;
