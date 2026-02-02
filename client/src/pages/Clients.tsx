@@ -201,7 +201,7 @@ export default function Clients() {
   };
 
   const redeemGiftCardMutation = useMutation({
-    mutationFn: async ({ cardId, amount }: { cardId: number; amount: number }) => {
+    mutationFn: async ({ cardId, amount, clientId }: { cardId: number; amount: number; clientId: number }) => {
       const res = await fetch(`/api/gift-cards/${cardId}/redeem`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -211,13 +211,27 @@ export default function Clients() {
         const error = await res.json().catch(() => ({ message: "Failed to redeem" }));
         throw new Error(error.message);
       }
-      return res.json();
+      const giftCardData = await res.json();
+      
+      const clientRes = await fetch(`/api/clients/${clientId}/gift-card-balance`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount }),
+      });
+      if (!clientRes.ok) {
+        throw new Error("Failed to credit client balance");
+      }
+      const clientData = await clientRes.json();
+      
+      return { giftCard: giftCardData, client: clientData };
     },
     onSuccess: (data) => {
-      toast({ title: t("giftCard.redeemed", "Gift card redeemed successfully!") });
-      setFoundGiftCard(data);
+      toast({ title: t("giftCard.redeemed", "Gift card redeemed successfully!") + ` +${redeemAmount} DH` });
+      setFoundGiftCard(data.giftCard);
+      setSelectedClient(data.client);
       setRedeemAmount("");
       queryClient.invalidateQueries({ queryKey: ["/api/gift-cards"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
     },
     onError: (error: Error) => {
       toast({ title: error.message || t("giftCard.redeemError", "Failed to redeem gift card"), variant: "destructive" });
@@ -248,9 +262,37 @@ export default function Clients() {
     },
   });
 
+  const toggleUseGiftCardBalanceMutation = useMutation({
+    mutationFn: async ({ clientId, useGiftCardBalance }: { clientId: number; useGiftCardBalance: boolean }) => {
+      const res = await fetch(`/api/clients/${clientId}/use-gift-card-balance`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ useGiftCardBalance }),
+      });
+      if (!res.ok) throw new Error("Failed to update");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({ 
+        title: data.useGiftCardBalance 
+          ? t("giftCard.balanceActivated", "Gift card balance discount activated") 
+          : t("giftCard.balanceDeactivated", "Gift card balance discount deactivated")
+      });
+      setSelectedClient(data);
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+    },
+    onError: () => {
+      toast({ title: t("common.error", "Error"), variant: "destructive" });
+    },
+  });
+
   const handleRedeemGiftCard = () => {
     if (!foundGiftCard) {
       toast({ title: t("giftCard.noCard", "No gift card selected"), variant: "destructive" });
+      return;
+    }
+    if (!selectedClient) {
+      toast({ title: t("giftCard.noClient", "No client selected"), variant: "destructive" });
       return;
     }
     const amount = parseFloat(redeemAmount);
@@ -266,7 +308,7 @@ export default function Clients() {
       toast({ title: t("giftCard.inactive", "This gift card is inactive"), variant: "destructive" });
       return;
     }
-    redeemGiftCardMutation.mutate({ cardId: foundGiftCard.id, amount });
+    redeemGiftCardMutation.mutate({ cardId: foundGiftCard.id, amount, clientId: selectedClient.id });
   };
 
   const resetForm = () => {
@@ -854,6 +896,37 @@ export default function Clients() {
                       </Badge>
                     </div>
                   </div>
+
+                  {(selectedClient.giftCardBalance ?? 0) > 0 && (
+                    <div className={cn(
+                      "p-4 rounded-lg border-2 transition-all cursor-pointer",
+                      selectedClient.useGiftCardBalance 
+                        ? "border-emerald-500 bg-emerald-500/10" 
+                        : "border-muted bg-muted/50"
+                    )}
+                      onClick={() => toggleUseGiftCardBalanceMutation.mutate({ clientId: selectedClient.id, useGiftCardBalance: !selectedClient.useGiftCardBalance })}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={cn(
+                            "w-10 h-10 rounded-full flex items-center justify-center",
+                            selectedClient.useGiftCardBalance ? "bg-emerald-500" : "bg-muted-foreground/30"
+                          )}>
+                            {selectedClient.useGiftCardBalance ? <Check className="h-5 w-5 text-white" /> : <CreditCard className="h-5 w-5" />}
+                          </div>
+                          <div>
+                            <p className="font-medium">{t("giftCard.useBalanceForDiscount", "Use Gift Card Balance")}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {t("giftCard.availableBalance", "Available")}: {(selectedClient.giftCardBalance ?? 0).toFixed(2)} {t("common.currency")}
+                            </p>
+                          </div>
+                        </div>
+                        <Badge variant={selectedClient.useGiftCardBalance ? "default" : "secondary"}>
+                          {selectedClient.useGiftCardBalance ? t("common.active", "Active") : t("common.inactive", "Inactive")}
+                        </Badge>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="p-4 bg-gradient-to-r from-primary/20 to-primary/10 rounded-lg">
                     <p className="text-sm text-muted-foreground mb-2">{t("clients.loyaltyPoints")}</p>

@@ -1174,6 +1174,27 @@ export async function registerRoutes(
     }
   });
 
+  app.patch("/api/clients/:id/use-gift-card-balance", isPinAuthenticated, requirePermission("manage_clients"), async (req, res) => {
+    try {
+      const { useGiftCardBalance } = req.body;
+      const item = await storage.updateClient(Number(req.params.id), { useGiftCardBalance: !!useGiftCardBalance });
+      res.json(item);
+    } catch (err) {
+      res.status(400).json({ message: "Update failed" });
+    }
+  });
+
+  app.patch("/api/clients/:id/gift-card-balance", isPinAuthenticated, requirePermission("manage_appointments"), async (req, res) => {
+    try {
+      const { amount } = req.body;
+      const clientId = Number(req.params.id);
+      const item = await storage.updateClientGiftCardBalance(clientId, amount);
+      res.json(item);
+    } catch (err) {
+      res.status(400).json({ message: "Update failed" });
+    }
+  });
+
   app.delete("/api/clients/:id", isPinAuthenticated, requirePermission("manage_clients"), async (req, res) => {
     await storage.deleteClient(Number(req.params.id));
     res.status(204).send();

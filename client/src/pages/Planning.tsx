@@ -337,10 +337,8 @@ export default function Planning() {
   const [selectedServices, setSelectedServices] = useState<Array<{id: string, name: string, price: number, duration: number}>>([]);
   const [priceInputs, setPriceInputs] = useState<Record<string, string>>({});
   const [selectedPackage, setSelectedPackage] = useState<{id: number; name: string; discountedPrice: number; originalPrice: number} | null>(null);
-  const [giftCardCode, setGiftCardCode] = useState("");
-  const [appliedGiftCard, setAppliedGiftCard] = useState<{id: number; code: string; currentBalance: number; discountAmount: number} | null>(null);
-  const [giftCardLoading, setGiftCardLoading] = useState(false);
   const [appliedLoyaltyPoints, setAppliedLoyaltyPoints] = useState<{clientId: number; points: number; discountAmount: number} | null>(null);
+  const [appliedGiftCardBalance, setAppliedGiftCardBalance] = useState<{clientId: number; amount: number; discountAmount: number} | null>(null);
   const priceInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const { toast } = useToast();
 
@@ -350,7 +348,7 @@ export default function Planning() {
   const { data: allAppointments = [] } = useAppointments();
   const { data: staffList = [], isLoading: loadingStaff, isError: staffError } = useStaff();
   const { data: services = [], isLoading: loadingServices, isError: servicesError } = useServices();
-  const { data: clients = [] } = useQuery<Array<{id: number, name: string, phone: string | null, loyaltyPoints: number, usePoints: boolean, loyaltyEnrolled: boolean, totalSpent: number}>>({
+  const { data: clients = [] } = useQuery<Array<{id: number, name: string, phone: string | null, loyaltyPoints: number, usePoints: boolean, loyaltyEnrolled: boolean, totalSpent: number, giftCardBalance: number, useGiftCardBalance: boolean}>>({
     queryKey: ["/api/clients"],
   });
   
@@ -578,9 +576,8 @@ export default function Planning() {
     setSelectedServices([]);
     setPriceInputs({});
     setSelectedPackage(null);
-    setGiftCardCode("");
-    setAppliedGiftCard(null);
     setAppliedLoyaltyPoints(null);
+    setAppliedGiftCardBalance(null);
     setEditingAppointment(null);
     setIsDialogOpen(true);
   };
@@ -696,15 +693,15 @@ export default function Planning() {
       playSuccessSound();
     }
     
-    // Deduct gift card balance if applied
-    if (appliedGiftCard && appliedGiftCard.discountAmount > 0) {
+    // Deduct gift card balance from client if applied
+    if (appliedGiftCardBalance && appliedGiftCardBalance.discountAmount > 0) {
       try {
-        await apiRequest("POST", `/api/gift-cards/${appliedGiftCard.id}/redeem`, {
-          amount: appliedGiftCard.discountAmount
+        await apiRequest("PATCH", `/api/clients/${appliedGiftCardBalance.clientId}/gift-card-balance`, {
+          amount: -appliedGiftCardBalance.discountAmount
         });
-        queryClient.invalidateQueries({ queryKey: ["/api/gift-cards"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       } catch (e) {
-        console.error("Gift card deduction failed:", e);
+        console.error("Gift card balance deduction failed:", e);
       }
     }
     
@@ -732,9 +729,8 @@ export default function Planning() {
     setSelectedServices([]);
     setPriceInputs({});
     setSelectedPackage(null);
-    setGiftCardCode("");
-    setAppliedGiftCard(null);
     setAppliedLoyaltyPoints(null);
+    setAppliedGiftCardBalance(null);
     setIsDialogOpen(false);
   };
 
@@ -817,81 +813,15 @@ export default function Planning() {
     if (totalInput) totalInput.value = "0";
   };
 
-  const handleApplyGiftCard = async () => {
-    if (!giftCardCode.trim()) {
-      toast({ title: t("giftCard.enterCode", "Please enter a gift card code"), variant: "destructive" });
-      return;
-    }
-    
-    setGiftCardLoading(true);
-    try {
-      const res = await apiRequest("GET", `/api/gift-cards?code=${encodeURIComponent(giftCardCode.trim())}`);
-      const giftCards = await res.json();
-      const card = giftCards.find((c: any) => c.code.toUpperCase() === giftCardCode.trim().toUpperCase());
-      
-      if (!card) {
-        toast({ title: t("giftCard.notFound", "Gift card not found"), variant: "destructive" });
-        return;
-      }
-      
-      if (!card.isActive) {
-        toast({ title: t("giftCard.inactive", "This gift card is inactive"), variant: "destructive" });
-        return;
-      }
-      
-      if (card.currentBalance <= 0) {
-        toast({ title: t("giftCard.noBalance", "This gift card has no balance"), variant: "destructive" });
-        return;
-      }
-      
-      if (card.expiresAt && new Date(card.expiresAt) < new Date()) {
-        toast({ title: t("giftCard.expired", "This gift card has expired"), variant: "destructive" });
-        return;
-      }
-      
-      // Get current total from DOM
+  const handleClearGiftCardBalance = () => {
+    if (appliedGiftCardBalance) {
       const totalInput = document.getElementById('total-price-input') as HTMLInputElement;
       const currentTotal = parseFloat(totalInput?.value || "0");
-      
-      // Calculate discount (up to the gift card balance or total, whichever is less)
-      const discountAmount = Math.min(card.currentBalance, currentTotal);
-      
-      if (discountAmount <= 0) {
-        toast({ title: t("giftCard.noDiscount", "No discount to apply - check appointment total"), variant: "destructive" });
-        return;
-      }
-      
-      setAppliedGiftCard({
-        id: card.id,
-        code: card.code,
-        currentBalance: card.currentBalance,
-        discountAmount
-      });
-      
-      // Update the total in DOM
-      const newTotal = Math.max(0, currentTotal - discountAmount);
+      const newTotal = currentTotal + appliedGiftCardBalance.discountAmount;
       if (totalInput) totalInput.value = String(newTotal);
       form.setValue("total", newTotal);
-      
-      toast({ title: t("giftCard.applied", "Gift card applied!") + ` -${discountAmount.toFixed(2)} DH` });
-    } catch (e) {
-      toast({ title: t("giftCard.error", "Failed to apply gift card"), variant: "destructive" });
-    } finally {
-      setGiftCardLoading(false);
     }
-  };
-
-  const handleClearGiftCard = () => {
-    if (appliedGiftCard) {
-      // Restore the original total
-      const totalInput = document.getElementById('total-price-input') as HTMLInputElement;
-      const currentTotal = parseFloat(totalInput?.value || "0");
-      const restoredTotal = currentTotal + appliedGiftCard.discountAmount;
-      if (totalInput) totalInput.value = String(restoredTotal);
-      form.setValue("total", restoredTotal);
-    }
-    setAppliedGiftCard(null);
-    setGiftCardCode("");
+    setAppliedGiftCardBalance(null);
   };
 
   const activePackages = useMemo(() => {
@@ -1697,13 +1627,15 @@ export default function Planning() {
                                       form.setValue("clientId" as any, client.id);
                                       setClientPopoverOpen(false);
                                       
+                                      // Get current total for calculations
+                                      let totalInput = document.getElementById('total-price-input') as HTMLInputElement;
+                                      let runningTotal = parseFloat(totalInput?.value || "0");
+                                      
                                       // Auto-apply loyalty points if client has usePoints enabled
                                       if (client.usePoints && client.loyaltyPoints > 0 && businessSettings?.loyaltyEnabled) {
                                         const pointsValue = businessSettings?.loyaltyPointsValue || 0.1;
-                                        const totalInput = document.getElementById('total-price-input') as HTMLInputElement;
-                                        const currentTotal = parseFloat(totalInput?.value || "0");
                                         const maxDiscount = client.loyaltyPoints * pointsValue;
-                                        const discountAmount = Math.min(maxDiscount, currentTotal);
+                                        const discountAmount = Math.min(maxDiscount, runningTotal);
                                         const pointsUsed = Math.ceil(discountAmount / pointsValue);
                                         
                                         if (discountAmount > 0) {
@@ -1712,13 +1644,32 @@ export default function Planning() {
                                             points: pointsUsed,
                                             discountAmount
                                           });
-                                          const newTotal = Math.max(0, currentTotal - discountAmount);
-                                          if (totalInput) totalInput.value = String(newTotal);
-                                          form.setValue("total", newTotal);
-                                          toast({ title: t("clients.pointsApplied", "Loyalty points applied!") + ` -${discountAmount} DH` });
+                                          runningTotal = Math.max(0, runningTotal - discountAmount);
+                                          if (totalInput) totalInput.value = String(runningTotal);
+                                          form.setValue("total", runningTotal);
+                                          toast({ title: t("clients.pointsApplied", "Loyalty points applied!") + ` -${discountAmount.toFixed(2)} DH` });
                                         }
                                       } else {
                                         setAppliedLoyaltyPoints(null);
+                                      }
+                                      
+                                      // Auto-apply gift card balance if client has useGiftCardBalance enabled
+                                      if (client.useGiftCardBalance && client.giftCardBalance > 0) {
+                                        const discountAmount = Math.min(client.giftCardBalance, runningTotal);
+                                        
+                                        if (discountAmount > 0) {
+                                          setAppliedGiftCardBalance({
+                                            clientId: client.id,
+                                            amount: client.giftCardBalance,
+                                            discountAmount
+                                          });
+                                          runningTotal = Math.max(0, runningTotal - discountAmount);
+                                          if (totalInput) totalInput.value = String(runningTotal);
+                                          form.setValue("total", runningTotal);
+                                          toast({ title: t("giftCard.balanceApplied", "Gift card balance applied!") + ` -${discountAmount.toFixed(2)} DH` });
+                                        }
+                                      } else {
+                                        setAppliedGiftCardBalance(null);
                                       }
                                     }}
                                   >
@@ -1845,55 +1796,32 @@ export default function Planning() {
                   </div>
                 )}
 
-                {/* Gift Card Discount Section */}
-                <div className="col-span-3 space-y-2">
-                  <Label className="flex items-center gap-2 text-xs font-medium">
-                    <Tag className="w-3.5 h-3.5 text-primary" />
-                    {t("giftCard.applyDiscount", "Carte Cadeau")}
-                  </Label>
-                  {appliedGiftCard ? (
+                {/* Applied Gift Card Balance */}
+                {appliedGiftCardBalance && (
+                  <div className="col-span-3 space-y-2">
+                    <Label className="flex items-center gap-2 text-xs font-medium">
+                      <Gift className="w-3.5 h-3.5 text-green-500" />
+                      {t("giftCard.balanceDiscount", "Solde Carte Cadeau")}
+                    </Label>
                     <div className="flex items-center justify-between p-3 bg-green-500/10 border border-green-500/30 rounded-xl">
                       <div className="flex items-center gap-2">
                         <Gift className="w-4 h-4 text-green-600" />
-                        <span className="font-mono font-bold text-sm">{appliedGiftCard.code}</span>
-                        <span className="text-green-600 font-bold">-{appliedGiftCard.discountAmount.toFixed(2)} DH</span>
+                        <span className="font-medium text-sm">{appliedGiftCardBalance.amount.toFixed(2)} DH</span>
+                        <span className="text-green-600 font-bold">-{appliedGiftCardBalance.discountAmount.toFixed(2)} DH</span>
                       </div>
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={handleClearGiftCard}
+                        onClick={handleClearGiftCardBalance}
                         className="h-7 text-xs text-destructive hover:text-destructive"
                       >
                         <X className="w-3 h-3 mr-1" />
                         {t("common.remove", "Retirer")}
                       </Button>
                     </div>
-                  ) : (
-                    <div className="flex gap-2">
-                      <Input
-                        placeholder={t("giftCard.enterCode", "Code carte cadeau")}
-                        value={giftCardCode}
-                        onChange={(e) => setGiftCardCode(e.target.value.toUpperCase())}
-                        className="h-10 rounded-xl text-xs border-0 bg-secondary/50 font-mono uppercase"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={handleApplyGiftCard}
-                        disabled={giftCardLoading || !giftCardCode.trim()}
-                        className="h-10 px-4 rounded-xl"
-                      >
-                        {giftCardLoading ? (
-                          <RefreshCw className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Check className="w-4 h-4" />
-                        )}
-                      </Button>
-                    </div>
-                  )}
-                </div>
+                  </div>
+                )}
 
                 {/* Applied Loyalty Points */}
                 {appliedLoyaltyPoints && (
