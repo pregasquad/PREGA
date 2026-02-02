@@ -572,6 +572,61 @@ export default function Planning() {
     return { matches, total, count: matches.length };
   }, [allAppointments, appointmentSearch]);
 
+  // Recalculate discounts when services change and a client with discounts is selected
+  useEffect(() => {
+    if (!isDialogOpen) return;
+    
+    const clientName = form.getValues("client");
+    if (!clientName) return;
+    
+    const client = clients.find(c => c.name === clientName);
+    if (!client) return;
+    
+    // Calculate base total from services (before discounts)
+    const baseTotal = selectedServices.reduce((sum, s) => sum + s.price, 0);
+    if (baseTotal <= 0) return;
+    
+    let runningTotal = baseTotal;
+    
+    // Apply loyalty points if enabled
+    if (client.usePoints && client.loyaltyPoints > 0 && businessSettings?.loyaltyEnabled) {
+      const pointsValue = businessSettings?.loyaltyPointsValue || 0.1;
+      const maxDiscount = client.loyaltyPoints * pointsValue;
+      const discountAmount = Math.min(maxDiscount, runningTotal);
+      const pointsUsed = Math.ceil(discountAmount / pointsValue);
+      
+      if (discountAmount > 0 && (!appliedLoyaltyPoints || appliedLoyaltyPoints.discountAmount !== discountAmount)) {
+        setAppliedLoyaltyPoints({
+          clientId: client.id,
+          points: pointsUsed,
+          discountAmount
+        });
+        runningTotal = Math.max(0, runningTotal - discountAmount);
+      }
+    }
+    
+    // Apply gift card balance if enabled
+    if (client.useGiftCardBalance && client.giftCardBalance > 0) {
+      const discountAmount = Math.min(client.giftCardBalance, runningTotal);
+      
+      if (discountAmount > 0 && (!appliedGiftCardBalance || appliedGiftCardBalance.discountAmount !== discountAmount)) {
+        setAppliedGiftCardBalance({
+          clientId: client.id,
+          amount: client.giftCardBalance,
+          discountAmount
+        });
+        runningTotal = Math.max(0, runningTotal - discountAmount);
+      }
+    }
+    
+    // Update the total
+    if (runningTotal !== form.getValues("total")) {
+      form.setValue("total", runningTotal);
+      const totalInput = document.getElementById('total-price-input') as HTMLInputElement;
+      if (totalInput) totalInput.value = String(runningTotal);
+    }
+  }, [selectedServices, isDialogOpen, clients, businessSettings, form, appliedLoyaltyPoints, appliedGiftCardBalance]);
+
   // Helper function to parse services from an appointment
   const parseAppointmentServices = (app: any): Array<{id: string, name: string, price: number, duration: number}> => {
     let parsedServices: Array<{id?: string, name: string, price: number, duration: number}> = [];
