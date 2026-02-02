@@ -141,22 +141,22 @@ export default function BookingHistory() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-display font-bold">
-            {t("bookingHistory.title", { defaultValue: "Historique des Réservations" })}
+            {t("bookingHistory.title")}
           </h1>
           <p className="text-muted-foreground mt-1">
-            {t("bookingHistory.subtitle", { defaultValue: "Gérer et assigner les réservations" })}
+            {t("bookingHistory.subtitle")}
           </p>
         </div>
         <div className="flex items-center gap-2">
           {unassignedCount > 0 && (
             <Badge variant="destructive" className="px-3 py-1">
               <UserPlus className="w-4 h-4 mr-1" />
-              {unassignedCount} {t("bookingHistory.toAssign", { defaultValue: "à assigner" })}
+              {unassignedCount} {t("bookingHistory.toAssign")}
             </Badge>
           )}
           <Button variant="outline" size="sm" onClick={() => refetch()}>
             <RefreshCw className="w-4 h-4 mr-2" />
-            {t("common.refresh", { defaultValue: "Actualiser" })}
+            {t("common.refresh")}
           </Button>
         </div>
       </div>
@@ -167,7 +167,7 @@ export default function BookingHistory() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder={t("bookingHistory.searchPlaceholder", { defaultValue: "Rechercher par client ou service..." })}
+                placeholder={t("bookingHistory.searchPlaceholder")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -180,11 +180,11 @@ export default function BookingHistory() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">{t("common.all", { defaultValue: "Tous" })}</SelectItem>
-                  <SelectItem value="unassigned">{t("bookingHistory.unassigned", { defaultValue: "Non assignés" })}</SelectItem>
-                  <SelectItem value="assigned">{t("bookingHistory.assigned", { defaultValue: "Assignés" })}</SelectItem>
-                  <SelectItem value="paid">{t("bookingHistory.paid", { defaultValue: "Payés" })}</SelectItem>
-                  <SelectItem value="unpaid">{t("bookingHistory.unpaid", { defaultValue: "Non payés" })}</SelectItem>
+                  <SelectItem value="all">{t("common.all")}</SelectItem>
+                  <SelectItem value="unassigned">{t("bookingHistory.unassigned")}</SelectItem>
+                  <SelectItem value="assigned">{t("bookingHistory.assigned")}</SelectItem>
+                  <SelectItem value="paid">{t("bookingHistory.paid")}</SelectItem>
+                  <SelectItem value="unpaid">{t("bookingHistory.unpaid")}</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={filterStaff} onValueChange={setFilterStaff}>
@@ -193,9 +193,9 @@ export default function BookingHistory() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">{t("common.allStaff", { defaultValue: "Tout le staff" })}</SelectItem>
+                  <SelectItem value="all">{t("bookingHistory.allStaff")}</SelectItem>
                   <SelectItem value="À assigner">
-                    <span className="text-orange-600">{t("bookingHistory.toAssignOption", { defaultValue: "À assigner" })}</span>
+                    <span className="text-orange-600">{t("bookingHistory.toAssignOption")}</span>
                   </SelectItem>
                   {staffList.map((staff) => (
                     <SelectItem key={staff.id} value={staff.name}>
@@ -218,20 +218,20 @@ export default function BookingHistory() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
-                  <TableHead className="w-[180px]">{t("common.client")}</TableHead>
-                  <TableHead>{t("common.service")}</TableHead>
+                  <TableHead className="w-[180px]">{t("bookingHistory.client")}</TableHead>
+                  <TableHead>{t("bookingHistory.service")}</TableHead>
                   <TableHead className="w-[140px]">{t("common.date")}</TableHead>
-                  <TableHead className="w-[80px]">{t("common.time")}</TableHead>
+                  <TableHead className="w-[80px]">{t("planning.time")}</TableHead>
                   <TableHead className="w-[100px]">{t("common.price")}</TableHead>
-                  <TableHead className="w-[80px]">{t("common.status")}</TableHead>
-                  <TableHead className="w-[180px]">{t("common.staff")}</TableHead>
+                  <TableHead className="w-[80px]">{t("bookingHistory.status")}</TableHead>
+                  <TableHead className="w-[180px]">{t("bookingHistory.staff")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredAppointments.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                      {t("bookingHistory.noResults", { defaultValue: "Aucune réservation trouvée" })}
+                      {t("bookingHistory.noResults")}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -296,7 +296,7 @@ export default function BookingHistory() {
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="À assigner">
-                                <span className="text-orange-600">{t("bookingHistory.toAssignOption", { defaultValue: "À assigner" })}</span>
+                                <span className="text-orange-600">{t("bookingHistory.toAssignOption")}</span>
                               </SelectItem>
                               {staffList.map((staff) => (
                                 <SelectItem key={staff.id} value={staff.name}>
@@ -321,11 +321,7 @@ export default function BookingHistory() {
           </div>
           
           <div className="mt-4 text-sm text-muted-foreground text-center">
-            {t("bookingHistory.showingCount", { 
-              count: filteredAppointments.length, 
-              total: appointments.length,
-              defaultValue: `Affichage de ${filteredAppointments.length} sur ${appointments.length} réservations`
-            })}
+            {t("bookingHistory.showingCount", { count: filteredAppointments.length })}
           </div>
         </CardContent>
       </Card>
