@@ -29,6 +29,7 @@ const Staff = lazy(() => import("@/pages/Staff"));
 const AdminSettings = lazy(() => import("@/pages/AdminSettings"));
 const LoyaltyRewards = lazy(() => import("@/pages/LoyaltyRewards"));
 const Packages = lazy(() => import("@/pages/Packages"));
+const BookingHistory = lazy(() => import("@/pages/BookingHistory"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
 // Loading fallback component with smooth fade - prevents flash
@@ -175,6 +176,10 @@ function Router() {
 
       <Route path="/packages">
         <PageRoute component={Packages} requireAdmin permission="manage_services" lazy />
+      </Route>
+
+      <Route path="/booking-history">
+        <PageRoute component={BookingHistory} permission="view_planning" lazy />
       </Route>
 
       <Route path="/booking" component={Booking} />

@@ -144,14 +144,19 @@ Preferred communication style: Simple, everyday language.
 - **Table**: `waitlist`
 - **Routes**: `/api/waitlist`
 
-### Booking History Sidebar
-- **Feature**: Collapsible section in sidebar showing recent bookings with quick staff assignment
-- **Location**: `client/src/components/layout/Sidebar.tsx`
-- **Display**: Shows up to 15 recent bookings, prioritizing unassigned ones (orange highlight)
-- **Badge**: Shows count of unassigned bookings needing attention
-- **Quick Assign**: Dropdown to assign staff directly from the sidebar without navigating to Planning
-- **Booking Card**: Shows client name, service, price, date/time, and staff assignment status
-- **Real-time**: Updates automatically when new bookings are created via Socket.IO
+### Booking History Page
+- **Route**: `/booking-history` - Dedicated page for viewing and managing all bookings
+- **Location**: `client/src/pages/BookingHistory.tsx`
+- **Navigation**: Listed in sidebar under "Historique" with History icon
+- **Features**:
+  - Searchable table of all appointments
+  - Filter by status (all, unassigned, assigned, paid, unpaid)
+  - Filter by staff member
+  - Quick staff assignment dropdown in each row
+  - Badge showing count of unassigned bookings
+  - Unassigned bookings highlighted in orange
+  - Responsive table design
+- **Sorting**: Prioritizes unassigned bookings, then sorts by date (newest first)
 
 ### Staff Schedule & Availability
 - **Weekly Schedule**: Set working hours per day for each staff member
