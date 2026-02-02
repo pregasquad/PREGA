@@ -616,7 +616,7 @@ export default function Clients() {
       </Card>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{t("clients.editClient")}</DialogTitle>
           </DialogHeader>
@@ -633,7 +633,7 @@ export default function Clients() {
       </Dialog>
 
       <Dialog open={isQuickBookOpen} onOpenChange={setIsQuickBookOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Zap className="w-5 h-5 text-primary" />
@@ -780,7 +780,7 @@ export default function Clients() {
           setRedeemAmount("");
         }
       }}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{t("clients.clientDetails")}</DialogTitle>
           </DialogHeader>
