@@ -568,8 +568,8 @@ export default function Clients() {
                     <TableCell>{client.totalVisits}</TableCell>
                     <TableCell>{client.loyaltyPoints}</TableCell>
                     <TableCell>
-                      {(client.giftCardBalance ?? 0) > 0 ? (
-                        <span className="text-green-600 font-medium">{(client.giftCardBalance ?? 0).toFixed(2)}</span>
+                      {Number(client.giftCardBalance ?? 0) > 0 ? (
+                        <span className="text-green-600 font-medium">{Number(client.giftCardBalance ?? 0).toFixed(2)}</span>
                       ) : (
                         <span className="text-muted-foreground">0</span>
                       )}
@@ -875,8 +875,8 @@ export default function Clients() {
                       <p className="text-sm text-muted-foreground">{t("clients.totalSpent")}</p>
                     </div>
                     <div className="p-4 bg-muted rounded-lg">
-                      <p className={`text-2xl font-bold ${(selectedClient.giftCardBalance ?? 0) > 0 ? 'text-green-600' : ''}`}>
-                        {(selectedClient.giftCardBalance ?? 0).toFixed(2)} {t("common.currency")}
+                      <p className={`text-2xl font-bold ${Number(selectedClient.giftCardBalance ?? 0) > 0 ? 'text-green-600' : ''}`}>
+                        {Number(selectedClient.giftCardBalance ?? 0).toFixed(2)} {t("common.currency")}
                       </p>
                       <p className="text-sm text-muted-foreground">{t("giftCard.balance", "Gift Card Balance")}</p>
                     </div>
@@ -933,7 +933,7 @@ export default function Clients() {
                           <div>
                             <p className="font-medium">{t("giftCard.useBalanceForDiscount", "Use Gift Card Balance")}</p>
                             <p className="text-sm text-muted-foreground">
-                              {t("giftCard.availableBalance", "Available")}: {(selectedClient.giftCardBalance ?? 0).toFixed(2)} {t("common.currency")}
+                              {t("giftCard.availableBalance", "Available")}: {Number(selectedClient.giftCardBalance ?? 0).toFixed(2)} {t("common.currency")}
                             </p>
                           </div>
                         </div>
