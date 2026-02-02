@@ -20,7 +20,7 @@ import { io, Socket } from "socket.io-client";
 const bookingSchema = z.object({
   client: z.string().min(1),
   service: z.string().optional(),
-  staff: z.string().min(1),
+  staff: z.string().optional(),
   duration: z.coerce.number(),
   price: z.coerce.number(),
   total: z.coerce.number(),
@@ -189,9 +189,8 @@ export default function Booking() {
   }, [filteredServices]);
 
   const getAvailableSlots = useMemo(() => {
-    if (!selectedStaff || !date) return [];
+    if (!date) return [];
     
-    const staffAppointments = appointments.filter(a => a.staff === selectedStaff);
     const duration = serviceDuration || 30;
     
     const now = new Date();
@@ -205,20 +204,9 @@ export default function Booking() {
         return false;
       }
       
-      for (const app of staffAppointments) {
-        const appStart = parseInt(app.startTime.split(":")[0]) * 60 + parseInt(app.startTime.split(":")[1]);
-        const appEnd = appStart + app.duration;
-        const slotEnd = slotMinutes + duration;
-        
-        if ((slotMinutes >= appStart && slotMinutes < appEnd) || 
-            (slotEnd > appStart && slotEnd <= appEnd) ||
-            (slotMinutes <= appStart && slotEnd >= appEnd)) {
-          return false;
-        }
-      }
       return true;
     });
-  }, [selectedStaff, date, appointments, serviceDuration]);
+  }, [date, serviceDuration]);
 
   const onSubmit = async (data: BookingFormValues) => {
     if (!date || !selectedTime || selectedServices.length === 0) return;
@@ -319,7 +307,7 @@ export default function Booking() {
     form.setValue("total", 0);
   };
 
-  const canSubmit = selectedServices.length > 0 && selectedStaff && date && selectedTime && form.watch("client");
+  const canSubmit = selectedServices.length > 0 && date && selectedTime && form.watch("client");
 
   if (isSuccess) {
     return (
@@ -448,59 +436,6 @@ export default function Booking() {
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="staff"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2 text-sm font-medium">
-                          <User className="w-4 h-4 text-primary" />
-                          {t("booking.preferredStaff")}
-                        </FormLabel>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                          {staffList.map(s => (
-                            <Button
-                              key={s.id}
-                              type="button"
-                              variant="outline"
-                              className={cn(
-                                "h-20 flex-col gap-2 rounded-2xl transition-all border-2 relative overflow-hidden",
-                                "bg-background/50 backdrop-blur-sm hover:bg-background/80",
-                                field.value === s.name 
-                                  ? "border-primary ring-2 ring-primary/20 shadow-lg bg-primary/5" 
-                                  : "border-border/50 hover:border-primary/30"
-                              )}
-                              onClick={() => {
-                                if (field.value !== s.name) {
-                                  setSelectedServices([]);
-                                  form.setValue("service", "");
-                                  form.setValue("duration", 30);
-                                  form.setValue("price", 0);
-                                  form.setValue("total", 0);
-                                }
-                                field.onChange(s.name);
-                              }}
-                            >
-                              {field.value === s.name && (
-                                <div className="absolute top-1 right-1">
-                                  <CheckCircle2 className="w-4 h-4 text-primary" />
-                                </div>
-                              )}
-                              <div 
-                                className="w-10 h-10 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-white font-bold text-lg"
-                                style={{ backgroundColor: s.color }}
-                              >
-                                {s.name.charAt(0).toUpperCase()}
-                              </div>
-                              <span className="text-xs font-semibold">{s.name}</span>
-                            </Button>
-                          ))}
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
                   {packages.length > 0 && (
                     <div className="space-y-3">
                       <FormLabel className="flex items-center gap-2 text-sm font-medium">
@@ -568,44 +503,38 @@ export default function Booking() {
                           <Scissors className="w-4 h-4 text-primary" />
                           {t("booking.requiredService")}
                         </FormLabel>
-                        {!selectedStaff ? (
-                          <div className="glass-subtle rounded-xl p-4 text-center text-muted-foreground text-sm">
-                            {t("booking.selectStaffFirst")}
-                          </div>
-                        ) : (
-                          <>
-                            <Select onValueChange={handleAddService} value="">
-                              <FormControl>
-                                <SelectTrigger className="h-12 rounded-xl bg-background/50 backdrop-blur-sm border-border/50">
-                                  <SelectValue placeholder={t("booking.selectService")} />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent className="glass max-h-[300px] rounded-xl">
-                                {filteredCategories.map(cat => (
-                                  <div key={cat}>
-                                    <div className="px-3 py-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                      {cat}
-                                    </div>
-                                    {filteredServices.filter(s => s.category === cat).map(s => {
-                                      const isSelected = selectedServices.some(sel => sel.name === s.name);
-                                      return (
-                                        <SelectItem 
-                                          key={s.id} 
-                                          value={s.name} 
-                                          className={cn("rounded-lg", isSelected && "opacity-50")}
-                                          disabled={isSelected}
-                                        >
-                                          <div className="flex justify-between items-center w-full gap-4">
-                                            <span>{s.name}</span>
-                                            <span className="text-primary font-bold">{s.price} {t("common.currency")}</span>
-                                          </div>
-                                        </SelectItem>
-                                      );
-                                    })}
-                                  </div>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                        <Select onValueChange={handleAddService} value="">
+                          <FormControl>
+                            <SelectTrigger className="h-12 rounded-xl bg-background/50 backdrop-blur-sm border-border/50">
+                              <SelectValue placeholder={t("booking.selectService")} />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent className="glass max-h-[300px] rounded-xl">
+                            {filteredCategories.map(cat => (
+                              <div key={cat}>
+                                <div className="px-3 py-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                                  {cat}
+                                </div>
+                                {filteredServices.filter(s => s.category === cat).map(s => {
+                                  const isSelected = selectedServices.some(sel => sel.name === s.name);
+                                  return (
+                                    <SelectItem 
+                                      key={s.id} 
+                                      value={s.name} 
+                                      className={cn("rounded-lg", isSelected && "opacity-50")}
+                                      disabled={isSelected}
+                                    >
+                                      <div className="flex justify-between items-center w-full gap-4">
+                                        <span>{s.name}</span>
+                                        <span className="text-primary font-bold">{s.price} {t("common.currency")}</span>
+                                      </div>
+                                    </SelectItem>
+                                  );
+                                })}
+                              </div>
+                            ))}
+                          </SelectContent>
+                        </Select>
                             
                             {selectedServices.length > 0 && (
                               <div className="space-y-3 mt-3">
@@ -655,8 +584,6 @@ export default function Booking() {
                                 </div>
                               </div>
                             )}
-                          </>
-                        )}
                         <FormMessage />
                       </FormItem>
                     )}
@@ -685,7 +612,7 @@ export default function Booking() {
                     </div>
                   </div>
 
-                  {date && selectedStaff && (
+                  {date && (
                     <div className="animate-fade-in">
                       <FormLabel className="flex items-center gap-2 mb-4 text-sm font-medium">
                         <Clock className="w-4 h-4 text-primary" />

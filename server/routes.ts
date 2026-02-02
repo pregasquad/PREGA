@@ -171,7 +171,7 @@ export async function registerRoutes(
   const publicBookingSchema = z.object({
     client: z.string().min(1).max(100),
     service: z.string().min(1).max(500), // Can be comma-separated list for multi-service
-    staff: z.string().min(1).max(50),
+    staff: z.string().max(50).optional(), // Staff is optional - admin assigns later
     duration: z.number().min(5).max(480),
     price: z.number().min(0).max(100000),
     total: z.number().min(0).max(100000),
@@ -190,7 +190,7 @@ export async function registerRoutes(
       const appointmentData: any = {
         client: input.client,
         service: input.service,
-        staff: input.staff,
+        staff: input.staff || "À assigner", // Default staff name for unassigned
         duration: input.duration,
         price: input.price,
         total: input.total,
