@@ -324,7 +324,9 @@ export async function registerRoutes(
   // Public: Create appointment from booking page (rate limited, sanitized input)
   app.post("/api/public/appointments", publicRateLimitMiddleware, async (req, res) => {
     try {
+      console.log("[PUBLIC BOOKING] Received request:", JSON.stringify(req.body));
       const input = publicBookingSchema.parse(req.body);
+      console.log("[PUBLIC BOOKING] Validated input:", JSON.stringify(input));
       
       // Auto-assign staff based on service categories and availability
       let assignedStaff = input.staff || "";
@@ -375,10 +377,13 @@ export async function registerRoutes(
         servicesJson: input.servicesJson, // Multi-service array (processed by storage layer)
       };
       
+      console.log("[PUBLIC BOOKING] Creating appointment with data:", JSON.stringify(appointmentData));
       const item = await storage.createAppointment(appointmentData);
+      console.log("[PUBLIC BOOKING] Appointment created successfully:", JSON.stringify(item));
       
       // Emit real-time notification for new booking
       io.emit("booking:created", item);
+      console.log("[PUBLIC BOOKING] Socket.IO event emitted: booking:created");
       
       // Send push notification for new appointment
       const clientName = item.client || "Client";
@@ -422,10 +427,12 @@ export async function registerRoutes(
         staff: item.staff
       });
     } catch (err) {
+      console.error("[PUBLIC BOOKING] Error:", err);
       if (err instanceof z.ZodError) {
+        console.error("[PUBLIC BOOKING] Validation error:", JSON.stringify(err.errors));
         return res.status(400).json({ message: err.errors[0].message });
       }
-      throw err;
+      return res.status(500).json({ message: "Failed to create appointment", error: String(err) });
     }
   });
 
