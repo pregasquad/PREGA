@@ -620,15 +620,17 @@ export default function Clients() {
           <DialogHeader>
             <DialogTitle>{t("clients.editClient")}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            {renderFormFields()}
-            <Button 
-              onClick={() => selectedClient && updateMutation.mutate({ id: selectedClient.id, data: formData })} 
-              className="w-full"
-            >
-              {t("common.save")}
-            </Button>
-          </div>
+          {selectedClient && (
+            <div className="space-y-4">
+              {renderFormFields()}
+              <Button 
+                onClick={() => updateMutation.mutate({ id: selectedClient.id, data: formData })} 
+                className="w-full"
+              >
+                {t("common.save")}
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
