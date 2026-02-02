@@ -328,11 +328,37 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  opacity: 1;
+  animation: fadeIn 0.15s ease-out;
 }
 
-/* Smooth content swap */
+/* Smooth content swap - prevent flash on lazy load */
 .content-ready {
-  animation: fadeIn 0.2s ease-out;
+  animation: fadeIn 0.15s ease-out;
+}
+
+/* Page transition wrapper */
+.page-wrapper {
+  animation: fadeIn 0.12s ease-out;
+  will-change: opacity;
+}
+
+/* Smooth page content appearance */
+.page-content {
+  opacity: 1;
+  transform: translateY(0);
+  animation: pageSlideIn 0.15s ease-out;
+}
+
+@keyframes pageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Appointment Card Styles - iOS Liquid Glass */

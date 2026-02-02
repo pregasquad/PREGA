@@ -31,13 +31,18 @@ const LoyaltyRewards = lazy(() => import("@/pages/LoyaltyRewards"));
 const Packages = lazy(() => import("@/pages/Packages"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
-// Loading fallback component with smooth fade
+// Loading fallback component with smooth fade - prevents flash
 function PageLoader() {
   return (
-    <div className="loading-container min-h-[60vh]">
+    <div className="loading-container min-h-[60vh] page-wrapper">
       <SpinningLogo size="lg" />
     </div>
   );
+}
+
+// Wrapper for smooth page content appearance
+function PageContent({ children }: { children: React.ReactNode }) {
+  return <div className="page-content">{children}</div>;
 }
 
 function PermissionGuard({ children, permission }: { children: React.ReactNode, permission?: string }) {
@@ -82,10 +87,14 @@ function PermissionGuard({ children, permission }: { children: React.ReactNode, 
 function PageRoute({ component: Component, requireAdmin = false, permission, lazy: isLazy = false }: { component: React.ComponentType, requireAdmin?: boolean, permission?: string, lazy?: boolean }) {
   const pageContent = isLazy ? (
     <Suspense fallback={<PageLoader />}>
-      <Component />
+      <PageContent>
+        <Component />
+      </PageContent>
     </Suspense>
   ) : (
-    <Component />
+    <PageContent>
+      <Component />
+    </PageContent>
   );
 
   const content = (

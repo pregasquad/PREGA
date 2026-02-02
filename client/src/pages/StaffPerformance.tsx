@@ -221,7 +221,7 @@ export default function StaffPerformance() {
 
   if (isLoading) {
     return (
-      <div className="loading-container h-64" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
+      <div className="loading-container min-h-[60vh]" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
         <SpinningLogo size="lg" />
       </div>
     );
