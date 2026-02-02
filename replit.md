@@ -109,11 +109,11 @@ Preferred communication style: Simple, everyday language.
 - **Loyalty Points**: Clients earn points per DH spent, redeemable for discounts
 - **Use Points Toggle**: Clients have a `usePoints` boolean field that can be enabled from Client Details > Loyalty tab
 - **Automatic Points Application**: When creating an appointment and selecting a client with `usePoints` enabled and available points, the system automatically calculates and applies a discount (0.1 DH per point) to the total. After the appointment is created, the points are deducted and `usePoints` is disabled automatically.
-- **Gift Cards**: Generate unique 8-character codes, track balance, manage expiry. Gift card discount can be manually applied in the appointment form.
+- **Gift Cards**: Generate unique 8-character codes, track balance, manage expiry. Gift cards are redeemed in the Client section, crediting the client's `giftCardBalance`. When creating an appointment, if the client has `useGiftCardBalance` enabled and a balance > 0, the system automatically applies the balance as a discount (capped at appointment total). After the appointment is saved, the balance is deducted and `useGiftCardBalance` is disabled.
 - **Referral Program**: Reward referrers and referees with bonus points
 - **Settings**: Configurable points-per-DH, points value, bonus amounts
-- **Tables**: `gift_cards`, `referrals`, `clients.usePoints`
-- **Routes**: `/api/gift-cards`, `/api/referrals`, `/api/clients/:id/use-points`, `/api/clients/:id/loyalty`
+- **Tables**: `gift_cards`, `referrals`, `clients.usePoints`, `clients.giftCardBalance`, `clients.useGiftCardBalance`
+- **Routes**: `/api/gift-cards`, `/api/referrals`, `/api/clients/:id/use-points`, `/api/clients/:id/loyalty`, `/api/clients/:id/gift-card-balance`, `/api/clients/:id/use-gift-card-balance`
 
 ### Package Deals (Service Bundles)
 - **Feature**: Bundle multiple services at discounted prices
