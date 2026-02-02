@@ -572,11 +572,14 @@ export default function Planning() {
     return { matches, total, count: matches.length };
   }, [allAppointments, appointmentSearch]);
 
+  // Watch the client field to trigger recalculation when client changes
+  const watchedClient = form.watch("client");
+  
   // Recalculate discounts when services change and a client with discounts is selected
   useEffect(() => {
     if (!isDialogOpen) return;
     
-    const clientName = form.getValues("client");
+    const clientName = watchedClient;
     if (!clientName) return;
     
     const client = clients.find(c => c.name === clientName);
@@ -640,7 +643,7 @@ export default function Planning() {
     form.setValue("total", runningTotal);
     const totalInput = document.getElementById('total-price-input') as HTMLInputElement;
     if (totalInput) totalInput.value = String(runningTotal);
-  }, [selectedServices, selectedPackage, isDialogOpen, clients, businessSettings, form, appliedLoyaltyPoints, appliedGiftCardBalance]);
+  }, [selectedServices, selectedPackage, isDialogOpen, clients, businessSettings, form, appliedLoyaltyPoints, appliedGiftCardBalance, watchedClient]);
 
   // Helper function to parse services from an appointment
   const parseAppointmentServices = (app: any): Array<{id: string, name: string, price: number, duration: number}> => {
