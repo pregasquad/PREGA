@@ -25,6 +25,7 @@ import type { Staff as StaffType, StaffSchedule, StaffBreak, StaffTimeOff } from
 interface Props {
   staff: StaffType;
   onClose: () => void;
+  defaultTab?: "schedule" | "breaks" | "timeoff";
 }
 
 const DAYS_OF_WEEK = [
@@ -44,7 +45,7 @@ const DEFAULT_SCHEDULE = DAYS_OF_WEEK.map(day => ({
   isActive: day.value !== 0 && day.value !== 6,
 }));
 
-export default function StaffScheduleManager({ staff, onClose }: Props) {
+export default function StaffScheduleManager({ staff, onClose, defaultTab = "schedule" }: Props) {
   const { t } = useTranslation();
   const { data: scheduleData = [] } = useStaffSchedule(staff.id);
   const { data: breaksData = [] } = useStaffBreaks(staff.id);
@@ -131,7 +132,7 @@ export default function StaffScheduleManager({ staff, onClose }: Props) {
         </div>
       </div>
 
-      <Tabs defaultValue="schedule" className="w-full">
+      <Tabs defaultValue={defaultTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="schedule" className="gap-2">
             <Calendar className="h-4 w-4" />

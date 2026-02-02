@@ -1912,6 +1912,36 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/gift-cards/:id/redeem", isPinAuthenticated, requirePermission("manage_appointments"), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { amount } = z.object({ amount: z.number().positive() }).parse(req.body);
+      
+      const giftCard = await storage.getGiftCard(id);
+      if (!giftCard) {
+        return res.status(404).json({ message: "Gift card not found" });
+      }
+      if (!giftCard.isActive) {
+        return res.status(400).json({ message: "Gift card is inactive" });
+      }
+      if (giftCard.expiresAt && new Date(giftCard.expiresAt) < new Date()) {
+        return res.status(400).json({ message: "Gift card has expired" });
+      }
+      if (amount > giftCard.currentBalance) {
+        return res.status(400).json({ message: "Insufficient balance" });
+      }
+      
+      const newBalance = giftCard.currentBalance - amount;
+      const updated = await storage.updateGiftCard(id, { currentBalance: newBalance });
+      res.json(updated);
+    } catch (err: any) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      res.status(400).json({ message: err.message });
+    }
+  });
+
   // === Referrals - protected routes ===
   app.get("/api/referrals", isPinAuthenticated, async (_req, res) => {
     try {

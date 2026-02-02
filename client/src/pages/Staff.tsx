@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, Edit2, User, Phone, Mail, DollarSign, Palette, Tag, Calendar } from "lucide-react";
+import { Plus, Trash2, Edit2, User, Phone, Mail, DollarSign, Palette, Tag, Calendar, Coffee, CalendarOff } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormMessage, FormLabel } from "@/components/ui/form";
@@ -35,6 +35,7 @@ export default function Staff() {
   
   const [editingStaff, setEditingStaff] = useState<StaffType | null>(null);
   const [scheduleStaff, setScheduleStaff] = useState<StaffType | null>(null);
+  const [scheduleTab, setScheduleTab] = useState<"schedule" | "breaks" | "timeoff">("schedule");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 
   const createStaff = useCreateStaff();
@@ -94,6 +95,11 @@ export default function Staff() {
     if (confirm(t("staff.confirmDelete", { defaultValue: "Are you sure you want to delete this staff member?" }))) {
       await deleteStaff.mutateAsync(id);
     }
+  };
+
+  const openScheduleTab = (staff: StaffType, tab: "schedule" | "breaks" | "timeoff") => {
+    setScheduleTab(tab);
+    setScheduleStaff(staff);
   };
 
   const getInitial = (name: string) => name.charAt(0).toUpperCase();
@@ -316,10 +322,26 @@ export default function Staff() {
                     <Button 
                       variant="ghost" 
                       size="icon"
-                      onClick={() => setScheduleStaff(staff)}
+                      onClick={() => openScheduleTab(staff, "schedule")}
                       title={t("schedule.manageSchedule", "Manage Schedule")}
                     >
                       <Calendar className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => openScheduleTab(staff, "breaks")}
+                      title={t("schedule.addBreak", "Add Break")}
+                    >
+                      <Coffee className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => openScheduleTab(staff, "timeoff")}
+                      title={t("schedule.requestTimeOff", "Day Off")}
+                    >
+                      <CalendarOff className="h-4 w-4" />
                     </Button>
                     <Button 
                       variant="ghost" 
@@ -401,7 +423,12 @@ export default function Staff() {
             <DialogTitle>{t("schedule.manageSchedule", { defaultValue: "Manage Schedule" })}</DialogTitle>
           </DialogHeader>
           {scheduleStaff && (
-            <StaffScheduleManager staff={scheduleStaff} onClose={() => setScheduleStaff(null)} />
+            <StaffScheduleManager 
+              key={`${scheduleStaff.id}-${scheduleTab}`} 
+              staff={scheduleStaff} 
+              onClose={() => setScheduleStaff(null)} 
+              defaultTab={scheduleTab} 
+            />
           )}
         </DialogContent>
       </Dialog>

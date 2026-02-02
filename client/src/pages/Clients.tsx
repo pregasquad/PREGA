@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit2, Trash2, User, Phone, Mail, Gift, Calendar as CalendarIcon, Star, Crown, Award, Zap, Clock, RefreshCw } from "lucide-react";
+import { Plus, Edit2, Trash2, User, Phone, Mail, Gift, Calendar as CalendarIcon, Star, Crown, Award, Zap, Clock, RefreshCw, CreditCard, Search, Check } from "lucide-react";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
 import { format, startOfToday } from "date-fns";
 import { ar, enUS, fr } from "date-fns/locale";
@@ -39,6 +39,9 @@ export default function Clients() {
   const [isQuickBookOpen, setIsQuickBookOpen] = useState(false);
   const [quickBookClient, setQuickBookClient] = useState<Client | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [giftCardCode, setGiftCardCode] = useState("");
+  const [foundGiftCard, setFoundGiftCard] = useState<any>(null);
+  const [redeemAmount, setRedeemAmount] = useState("");
 
   const [quickBookData, setQuickBookData] = useState({
     date: startOfToday(),
@@ -180,6 +183,67 @@ export default function Clients() {
       toast({ title: t("clients.bookingSuccess") });
     },
   });
+
+  const lookupGiftCard = async () => {
+    if (!giftCardCode.trim()) return;
+    try {
+      const res = await fetch(`/api/gift-cards/code/${giftCardCode.toUpperCase()}`);
+      if (!res.ok) {
+        toast({ title: t("giftCard.notFound", "Gift card not found"), variant: "destructive" });
+        setFoundGiftCard(null);
+        return;
+      }
+      const card = await res.json();
+      setFoundGiftCard(card);
+    } catch {
+      toast({ title: t("giftCard.lookupError", "Error looking up gift card"), variant: "destructive" });
+    }
+  };
+
+  const redeemGiftCardMutation = useMutation({
+    mutationFn: async ({ cardId, amount }: { cardId: number; amount: number }) => {
+      const res = await fetch(`/api/gift-cards/${cardId}/redeem`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount }),
+      });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ message: "Failed to redeem" }));
+        throw new Error(error.message);
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({ title: t("giftCard.redeemed", "Gift card redeemed successfully!") });
+      setFoundGiftCard(data);
+      setRedeemAmount("");
+      queryClient.invalidateQueries({ queryKey: ["/api/gift-cards"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: error.message || t("giftCard.redeemError", "Failed to redeem gift card"), variant: "destructive" });
+    },
+  });
+
+  const handleRedeemGiftCard = () => {
+    if (!foundGiftCard) {
+      toast({ title: t("giftCard.noCard", "No gift card selected"), variant: "destructive" });
+      return;
+    }
+    const amount = parseFloat(redeemAmount);
+    if (!amount || amount <= 0) {
+      toast({ title: t("giftCard.invalidAmount", "Please enter a valid amount"), variant: "destructive" });
+      return;
+    }
+    if (amount > foundGiftCard.currentBalance) {
+      toast({ title: t("giftCard.insufficientBalance", "Amount exceeds card balance"), variant: "destructive" });
+      return;
+    }
+    if (!foundGiftCard.isActive) {
+      toast({ title: t("giftCard.inactive", "This gift card is inactive"), variant: "destructive" });
+      return;
+    }
+    redeemGiftCardMutation.mutate({ cardId: foundGiftCard.id, amount });
+  };
 
   const resetForm = () => {
     setFormData({ name: "", phone: "", email: "", birthday: "", notes: "" });
@@ -634,7 +698,14 @@ export default function Clients() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
+      <Dialog open={isDetailDialogOpen} onOpenChange={(open) => {
+        setIsDetailDialogOpen(open);
+        if (!open) {
+          setGiftCardCode("");
+          setFoundGiftCard(null);
+          setRedeemAmount("");
+        }
+      }}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>{t("clients.clientDetails")}</DialogTitle>
@@ -645,6 +716,10 @@ export default function Clients() {
                 <TabsTrigger value="info" className="flex-1">{t("clients.clientDetails")}</TabsTrigger>
                 <TabsTrigger value="history" className="flex-1">{t("clients.appointmentHistory")}</TabsTrigger>
                 <TabsTrigger value="loyalty" className="flex-1">{t("clients.loyaltyPoints")}</TabsTrigger>
+                <TabsTrigger value="giftcard" className="flex-1 gap-1">
+                  <CreditCard className="h-3 w-3" />
+                  {t("giftCard.title", "Gift Card")}
+                </TabsTrigger>
               </TabsList>
               <TabsContent value="info" className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -730,6 +805,119 @@ export default function Clients() {
                     <p className="text-sm">• 500 {t("clients.loyaltyPoints")} = Free Service</p>
                     <p className="text-sm">• 1000 {t("clients.loyaltyPoints")} = {t("clients.vip")}</p>
                   </div>
+                </div>
+              </TabsContent>
+              <TabsContent value="giftcard">
+                <div className="space-y-4">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder={t("giftCard.enterCode", "Enter gift card code")}
+                      value={giftCardCode}
+                      onChange={(e) => setGiftCardCode(e.target.value.toUpperCase())}
+                      className="flex-1"
+                    />
+                    <Button onClick={lookupGiftCard} className="gap-2">
+                      <Search className="h-4 w-4" />
+                      {t("giftCard.lookup", "Lookup")}
+                    </Button>
+                  </div>
+                  
+                  {foundGiftCard && (
+                    <Card className="glass-card">
+                      <CardContent className="pt-4 space-y-4">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="text-sm text-muted-foreground">{t("giftCard.code", "Code")}</p>
+                            <p className="font-mono font-bold text-lg">{foundGiftCard.code}</p>
+                          </div>
+                          <Badge variant={foundGiftCard.isActive ? "default" : "secondary"}>
+                            {foundGiftCard.isActive ? t("giftCard.active", "Active") : t("giftCard.inactive", "Inactive")}
+                          </Badge>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="p-3 bg-muted rounded-lg text-center">
+                            <p className="text-2xl font-bold text-green-600">{foundGiftCard.currentBalance} {t("common.currency")}</p>
+                            <p className="text-xs text-muted-foreground">{t("giftCard.currentBalance", "Current Balance")}</p>
+                          </div>
+                          <div className="p-3 bg-muted rounded-lg text-center">
+                            <p className="text-2xl font-bold">{foundGiftCard.initialBalance} {t("common.currency")}</p>
+                            <p className="text-xs text-muted-foreground">{t("giftCard.initialBalance", "Initial Balance")}</p>
+                          </div>
+                        </div>
+
+                        {foundGiftCard.recipientName && (
+                          <div className="text-sm">
+                            <span className="text-muted-foreground">{t("giftCard.recipient", "Recipient")}: </span>
+                            {foundGiftCard.recipientName}
+                          </div>
+                        )}
+
+                        {foundGiftCard.expiresAt && (
+                          <div className="text-sm">
+                            <span className="text-muted-foreground">{t("giftCard.expires", "Expires")}: </span>
+                            {format(new Date(foundGiftCard.expiresAt), "PPP", { locale: getDateLocale() })}
+                          </div>
+                        )}
+
+                        {foundGiftCard.isActive && foundGiftCard.currentBalance > 0 && (
+                          <div className="pt-4 border-t space-y-3">
+                            <Label>{t("giftCard.redeemAmount", "Amount to Redeem")} ({t("common.currency")})</Label>
+                            <div className="flex gap-2">
+                              <Input
+                                type="number"
+                                placeholder="0"
+                                value={redeemAmount}
+                                onChange={(e) => setRedeemAmount(e.target.value)}
+                                max={foundGiftCard.currentBalance}
+                                className="flex-1"
+                              />
+                              <Button 
+                                onClick={handleRedeemGiftCard}
+                                disabled={redeemGiftCardMutation.isPending}
+                                className="gap-2"
+                              >
+                                <Check className="h-4 w-4" />
+                                {t("giftCard.redeem", "Redeem")}
+                              </Button>
+                            </div>
+                            <div className="flex gap-1 flex-wrap">
+                              {[50, 100, 200].filter(v => v <= foundGiftCard.currentBalance).map(amount => (
+                                <Button 
+                                  key={amount}
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => setRedeemAmount(String(amount))}
+                                >
+                                  {amount} {t("common.currency")}
+                                </Button>
+                              ))}
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => setRedeemAmount(String(foundGiftCard.currentBalance))}
+                              >
+                                {t("giftCard.useAll", "Use All")}
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+
+                        {foundGiftCard.currentBalance === 0 && (
+                          <div className="p-3 bg-muted rounded-lg text-center text-muted-foreground">
+                            {t("giftCard.empty", "This gift card has been fully used")}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {!foundGiftCard && (
+                    <div className="p-8 text-center text-muted-foreground">
+                      <CreditCard className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>{t("giftCard.enterCodeHint", "Enter a gift card code to look up its balance and redeem it")}</p>
+                    </div>
+                  )}
                 </div>
               </TabsContent>
             </Tabs>
