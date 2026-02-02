@@ -1204,9 +1204,15 @@ export async function registerRoutes(
     try {
       const { amount } = req.body;
       const clientId = Number(req.params.id);
-      const item = await storage.updateClientGiftCardBalance(clientId, amount);
+      const numAmount = Number(amount);
+      console.log(`[GiftCard Route] Updating client ${clientId} balance by ${numAmount} (raw: ${amount})`);
+      if (isNaN(numAmount)) {
+        return res.status(400).json({ message: "Invalid amount" });
+      }
+      const item = await storage.updateClientGiftCardBalance(clientId, numAmount);
       res.json(item);
     } catch (err) {
+      console.error("[GiftCard Route] Error:", err);
       res.status(400).json({ message: "Update failed" });
     }
   });

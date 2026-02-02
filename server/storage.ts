@@ -559,6 +559,7 @@ export class DatabaseStorage implements IStorage {
     
     const currentBalance = Number(client.giftCardBalance) || 0;
     const newBalance = Math.max(0, currentBalance + amount);
+    console.log(`[GiftCard] Updating client ${id} balance: ${currentBalance} + ${amount} = ${newBalance}`);
     
     if (isMySQL()) {
       await db().update(s.clients).set({
