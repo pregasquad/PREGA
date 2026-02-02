@@ -201,7 +201,15 @@ export async function registerRoutes(
         return staffCategories.includes(category.toLowerCase());
       });
       
-      // If no staff matches the category, fall back to unassigned
+      // Fallback: if no staff matches the category, try any staff with schedules (excluding already used)
+      if (eligibleStaff.length === 0) {
+        eligibleStaff = allStaff.filter(s => {
+          if (excludeStaff.includes(s.name)) return false;
+          return true; // Consider all staff as potential fallback
+        });
+      }
+      
+      // If still no staff available, fall back to unassigned
       if (eligibleStaff.length === 0) {
         return "À assigner";
       }
