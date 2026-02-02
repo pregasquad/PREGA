@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import { useTranslation } from "react-i18next";
@@ -24,13 +24,17 @@ import {
   Percent,
   ChevronDown,
   Gift,
-  PackageOpen
+  PackageOpen,
+  History,
+  UserPlus,
+  Check
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Sidebar as ShadcnSidebar,
   SidebarContent,
@@ -82,6 +86,12 @@ interface AdminRole {
   permissions: string[];
 }
 
+interface Staff {
+  id: number;
+  name: string;
+  color: string;
+}
+
 export function Sidebar() {
   const [location, setLocation] = useLocation();
   const { isMobile, setOpenMobile } = useSidebar();
@@ -101,6 +111,7 @@ export function Sidebar() {
     const stored = localStorage.getItem("booking_notifications");
     return stored ? JSON.parse(stored) : [];
   });
+  const [bookingHistoryOpen, setBookingHistoryOpen] = useState(false);
 
   const currentUserName = typeof window !== 'undefined' ? sessionStorage.getItem("current_user") : null;
   
@@ -139,6 +150,31 @@ export function Sidebar() {
     },
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
+  });
+
+  const { data: staffList = [] } = useQuery<Staff[]>({
+    queryKey: ["/api/staff"],
+    queryFn: async () => {
+      const res = await fetch("/api/staff");
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  const updateAppointmentMutation = useMutation({
+    mutationFn: async ({ id, staff }: { id: number; staff: string }) => {
+      const res = await fetch(`/api/appointments/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ staff }),
+      });
+      if (!res.ok) throw new Error("Failed to update appointment");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments/all"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+    },
   });
 
   // Play notification sound
@@ -210,6 +246,21 @@ export function Sidebar() {
   };
 
   const unpaidReservations = allAppointments.filter(app => !app.paid);
+  
+  // Get recent bookings sorted by date, prioritizing unassigned ones
+  const recentBookings = [...allAppointments]
+    .sort((a, b) => {
+      // Prioritize unassigned bookings
+      const aUnassigned = a.staff === "À assigner" || !a.staff;
+      const bUnassigned = b.staff === "À assigner" || !b.staff;
+      if (aUnassigned && !bUnassigned) return -1;
+      if (!aUnassigned && bUnassigned) return 1;
+      // Then sort by date (newest first)
+      return new Date(b.date + " " + b.startTime).getTime() - new Date(a.date + " " + a.startTime).getTime();
+    })
+    .slice(0, 15);
+  
+  const unassignedCount = allAppointments.filter(app => app.staff === "À assigner" || !app.staff).length;
 
   const handleNavClick = () => {
     if (isMobile) {
@@ -472,6 +523,132 @@ export function Sidebar() {
             );
           })}
         </SidebarMenu>
+
+        {/* Booking History Section */}
+        <div className="mt-4 px-2">
+          <Collapsible open={bookingHistoryOpen} onOpenChange={setBookingHistoryOpen}>
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                className="w-full h-12 justify-between px-4 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
+                <div className="flex items-center gap-3">
+                  <History className="w-5 h-5" />
+                  <span className="font-medium text-base">{t("sidebar.bookingHistory", { defaultValue: "Historique" })}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {unassignedCount > 0 && (
+                    <span className="px-2 py-0.5 bg-orange-500 text-white text-xs font-bold rounded-full">
+                      {unassignedCount}
+                    </span>
+                  )}
+                  <ChevronDown className={cn(
+                    "w-4 h-4 transition-transform duration-200",
+                    bookingHistoryOpen && "rotate-180"
+                  )} />
+                </div>
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-2 space-y-2 overflow-hidden data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">
+              <ScrollArea className="max-h-[300px]">
+                {recentBookings.length === 0 ? (
+                  <div className="p-4 text-center text-muted-foreground text-sm">
+                    {t("sidebar.noBookings", { defaultValue: "Aucune réservation" })}
+                  </div>
+                ) : (
+                  <div className="space-y-2 pr-2">
+                    {recentBookings.map((booking) => {
+                      const isUnassigned = booking.staff === "À assigner" || !booking.staff;
+                      return (
+                        <div 
+                          key={booking.id}
+                          className={cn(
+                            "p-3 rounded-lg border transition-colors",
+                            isUnassigned 
+                              ? "bg-orange-500/10 border-orange-500/30" 
+                              : "bg-muted/50 border-transparent hover:bg-muted"
+                          )}
+                        >
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-sm truncate flex items-center gap-1">
+                                <User className="w-3 h-3 shrink-0" />
+                                {booking.client}
+                              </p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {booking.service}
+                              </p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className="text-xs font-bold text-primary">{booking.total} DH</p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-2 text-[10px] text-muted-foreground mb-2">
+                            <Clock className="w-3 h-3" />
+                            <span>{booking.date} - {booking.startTime}</span>
+                          </div>
+
+                          {/* Staff Assignment */}
+                          <Select
+                            value={booking.staff || "À assigner"}
+                            onValueChange={(value) => {
+                              updateAppointmentMutation.mutate({ id: booking.id, staff: value });
+                            }}
+                          >
+                            <SelectTrigger className={cn(
+                              "h-8 text-xs",
+                              isUnassigned && "border-orange-500/50 text-orange-600"
+                            )}>
+                              <div className="flex items-center gap-2">
+                                {isUnassigned ? (
+                                  <UserPlus className="w-3 h-3" />
+                                ) : (
+                                  <Check className="w-3 h-3 text-green-500" />
+                                )}
+                                <SelectValue />
+                              </div>
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="À assigner">
+                                <span className="text-orange-600">{t("sidebar.toAssign", { defaultValue: "À assigner" })}</span>
+                              </SelectItem>
+                              {staffList.map((staff) => (
+                                <SelectItem key={staff.id} value={staff.name}>
+                                  <div className="flex items-center gap-2">
+                                    <div 
+                                      className="w-3 h-3 rounded-full" 
+                                      style={{ backgroundColor: staff.color || "#888" }}
+                                    />
+                                    {staff.name}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </ScrollArea>
+              
+              {recentBookings.length > 0 && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full mt-2"
+                  onClick={() => {
+                    setLocation("/planning");
+                    if (isMobile) setOpenMobile(false);
+                  }}
+                >
+                  {t("sidebar.viewAllInPlanning", { defaultValue: "Voir tout dans Planning" })}
+                </Button>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
       </SidebarContent>
 
       <SidebarFooter className="p-4 border-t border-border bg-muted/20">

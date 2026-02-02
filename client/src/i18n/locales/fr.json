@@ -484,7 +484,10 @@
     "viewAllInPlanning": "Voir tout dans Planning",
     "admin": "Administrateur",
     "user": "Utilisateur",
-    "fullAccess": "Accès complet"
+    "fullAccess": "Accès complet",
+    "bookingHistory": "Historique",
+    "noBookings": "Aucune réservation",
+    "toAssign": "À assigner"
   },
   "staff": {
     "title": "Personnel",
