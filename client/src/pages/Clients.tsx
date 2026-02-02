@@ -796,7 +796,7 @@ export default function Clients() {
                 </TabsTrigger>
               </TabsList>
               <TabsContent value="info" className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex items-center gap-2">
                     <User className="w-4 h-4 text-muted-foreground" />
                     <span>{selectedClient.name}</span>
