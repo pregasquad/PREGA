@@ -590,6 +590,22 @@ export async function registerRoutes(
                 newTotal: updatedClient.loyaltyPoints 
               });
             }
+            
+            // Deduct gift card balance if client has enabled it
+            if (client.useGiftCardBalance && Number(client.giftCardBalance) > 0 && item.total) {
+              const giftCardBalance = Number(client.giftCardBalance) || 0;
+              const amountToDeduct = Math.min(giftCardBalance, item.total);
+              if (amountToDeduct > 0) {
+                await storage.updateClientGiftCardBalance(client.id, -amountToDeduct);
+                console.log(`Deducted ${amountToDeduct} from gift card balance for ${client.name}`);
+                io.emit("client:giftCardUpdated", {
+                  clientId: client.id,
+                  clientName: client.name,
+                  amountDeducted: amountToDeduct,
+                  newBalance: giftCardBalance - amountToDeduct
+                });
+              }
+            }
           }
         }
       }

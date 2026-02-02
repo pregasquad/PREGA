@@ -557,7 +557,8 @@ export class DatabaseStorage implements IStorage {
     const [client] = await db().select().from(s.clients).where(eq(s.clients.id, id));
     if (!client) throw new Error("Client not found");
     
-    const newBalance = Math.max(0, (client.giftCardBalance || 0) + amount);
+    const currentBalance = Number(client.giftCardBalance) || 0;
+    const newBalance = Math.max(0, currentBalance + amount);
     
     if (isMySQL()) {
       await db().update(s.clients).set({

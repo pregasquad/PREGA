@@ -913,7 +913,7 @@ export default function Clients() {
                     </div>
                   </div>
 
-                  {(selectedClient.giftCardBalance ?? 0) > 0 && (
+                  {Number(selectedClient.giftCardBalance ?? 0) > 0 && (
                     <div className={cn(
                       "p-4 rounded-lg border-2 transition-all cursor-pointer",
                       selectedClient.useGiftCardBalance 
