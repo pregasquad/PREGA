@@ -64,6 +64,7 @@ const ROLE_LABELS: Record<string, { label: string, color: string }> = {
 const ALL_PERMISSIONS = [
   { key: "view_home", labelKey: "permissions.viewHome", icon: "Home" },
   { key: "view_planning", labelKey: "permissions.viewPlanning", icon: "Calendar" },
+  { key: "view_booking_history", labelKey: "permissions.viewBookingHistory", icon: "History" },
   { key: "manage_appointments", labelKey: "permissions.manageAppointments", icon: "Calendar" },
   { key: "edit_cardboard", labelKey: "permissions.editCardboard", icon: "Layout" },
   { key: "view_services", labelKey: "permissions.viewServices", icon: "Scissors" },

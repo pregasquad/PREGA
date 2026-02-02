@@ -179,7 +179,7 @@ function Router() {
       </Route>
 
       <Route path="/booking-history">
-        <PageRoute component={BookingHistory} permission="view_planning" lazy />
+        <PageRoute component={BookingHistory} permission="view_booking_history" lazy />
       </Route>
 
       <Route path="/booking" component={Booking} />
