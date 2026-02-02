@@ -711,19 +711,19 @@ export default function Planning() {
     // Deduct loyalty points if applied
     if (appliedLoyaltyPoints && appliedLoyaltyPoints.points > 0) {
       try {
-        const client = clients.find(c => c.id === appliedLoyaltyPoints.clientId);
-        if (client) {
-          const newPoints = Math.max(0, client.loyaltyPoints - appliedLoyaltyPoints.points);
-          await apiRequest("PATCH", `/api/clients/${appliedLoyaltyPoints.clientId}/loyalty`, {
-            points: newPoints,
-            spent: client.totalSpent || 0
-          });
-          // Also disable usePoints after using them
-          await apiRequest("PATCH", `/api/clients/${appliedLoyaltyPoints.clientId}/use-points`, {
-            usePoints: false
-          });
-          queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
-        }
+        // Create a loyalty redemption record which also deducts the points
+        await apiRequest("POST", "/api/loyalty-redemptions", {
+          clientId: appliedLoyaltyPoints.clientId,
+          pointsUsed: appliedLoyaltyPoints.points,
+          rewardDescription: `Réduction automatique: -${appliedLoyaltyPoints.discountAmount.toFixed(2)} DH`,
+          date: format(date, "yyyy-MM-dd")
+        });
+        // Also disable usePoints after using them
+        await apiRequest("PATCH", `/api/clients/${appliedLoyaltyPoints.clientId}/use-points`, {
+          usePoints: false
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/loyalty-redemptions"] });
       } catch (e) {
         console.error("Loyalty points deduction failed:", e);
       }
