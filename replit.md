@@ -84,6 +84,13 @@ Preferred communication style: Simple, everyday language.
 - **Recharts**: Charting library.
 - **date-fns**: Date manipulation utilities.
 
+### Planning Page & Business Hours
+- **Dynamic Time Slots**: Time slots in the planning calendar are generated from business settings (opening/closing times)
+- **generateTimeSlots Function**: Creates 30-minute intervals between opening and closing times, handles overnight hours (e.g., 09:00-01:00)
+- **Working Days**: Visual indicator shown when viewing a non-working day (doesn't block booking, just shows "Off Day" message)
+- **Live Time Line**: Current time indicator that works correctly with dynamic hours, including overnight windows
+- **Business Settings Integration**: Fetches `openingTime`, `closingTime`, and `workingDays` from `/api/business-settings`
+
 ### Multi-Service Appointments
 - **Feature**: Appointments can now have multiple services in a single booking
 - **Storage**: `servicesJson` column stores array of service objects (name, price, duration)
