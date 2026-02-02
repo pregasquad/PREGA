@@ -86,6 +86,12 @@ export default function LoyaltyRewards() {
     recipientName: "",
     recipientPhone: "",
   });
+  const [newGiftCard, setNewGiftCard] = useState({
+    initialAmount: 100,
+    recipientName: "",
+    recipientPhone: "",
+    expiresAt: "",
+  });
 
   const { data: businessSettings } = useQuery<BusinessSettings>({
     queryKey: ["/api/business-settings"],
@@ -186,6 +192,30 @@ export default function LoyaltyRewards() {
       toast({
         title: t("common.success"),
         description: t("loyalty.giftCardUpdated"),
+      });
+    },
+  });
+
+  const createGiftCardMutation = useMutation({
+    mutationFn: async (data: typeof newGiftCard) => {
+      return apiRequest("POST", "/api/gift-cards", {
+        ...data,
+        initialAmount: Number(data.initialAmount),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/gift-cards"] });
+      setNewGiftCard({ initialAmount: 100, recipientName: "", recipientPhone: "", expiresAt: "" });
+      toast({
+        title: t("common.success"),
+        description: t("loyalty.giftCardCreated"),
+      });
+    },
+    onError: () => {
+      toast({
+        title: t("common.error"),
+        description: t("loyalty.giftCardError"),
+        variant: "destructive",
       });
     },
   });
@@ -305,6 +335,11 @@ export default function LoyaltyRewards() {
 
   const handleSaveSettings = () => {
     updateSettingsMutation.mutate(loyaltySettings);
+  };
+
+  const handleCreateGiftCard = (e: React.FormEvent) => {
+    e.preventDefault();
+    createGiftCardMutation.mutate(newGiftCard);
   };
 
   const handleEditGiftCard = (card: GiftCard) => {
@@ -668,6 +703,66 @@ export default function LoyaltyRewards() {
         </TabsContent>
 
         <TabsContent value="gift-cards" className="space-y-6">
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Plus className="w-5 h-5" />
+                {t("loyalty.createGiftCard")}
+              </CardTitle>
+              <CardDescription>
+                {t("loyalty.createGiftCardDesc", "Create a new gift card with a unique code")}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleCreateGiftCard} className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="gc-amount">{t("loyalty.amount")}</Label>
+                    <Input
+                      id="gc-amount"
+                      type="number"
+                      min="1"
+                      value={newGiftCard.initialAmount}
+                      onChange={(e) => setNewGiftCard({ ...newGiftCard, initialAmount: parseInt(e.target.value) || 0 })}
+                      placeholder="100"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="gc-recipient">{t("loyalty.recipientName")}</Label>
+                    <Input
+                      id="gc-recipient"
+                      value={newGiftCard.recipientName}
+                      onChange={(e) => setNewGiftCard({ ...newGiftCard, recipientName: e.target.value })}
+                      placeholder={t("loyalty.recipientNamePlaceholder", "Optional")}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="gc-phone">{t("loyalty.recipientPhone")}</Label>
+                    <Input
+                      id="gc-phone"
+                      value={newGiftCard.recipientPhone}
+                      onChange={(e) => setNewGiftCard({ ...newGiftCard, recipientPhone: e.target.value })}
+                      placeholder={t("loyalty.recipientPhonePlaceholder", "Optional")}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="gc-expires">{t("loyalty.expiresAt", "Expires At")}</Label>
+                    <Input
+                      id="gc-expires"
+                      type="date"
+                      value={newGiftCard.expiresAt}
+                      onChange={(e) => setNewGiftCard({ ...newGiftCard, expiresAt: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <Button type="submit" disabled={createGiftCardMutation.isPending || newGiftCard.initialAmount <= 0}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  {createGiftCardMutation.isPending ? t("common.loading") : t("loyalty.createGiftCard")}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
           <Card className="glass-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
