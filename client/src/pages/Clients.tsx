@@ -885,36 +885,41 @@ export default function Clients() {
                     </div>
                   </div>
                   
-                  <div className={cn(
-                    "p-4 rounded-lg border-2 transition-all cursor-pointer",
-                    selectedClient.usePoints 
-                      ? "border-green-500 bg-green-500/10" 
-                      : "border-muted bg-muted/50"
-                  )}
-                    onClick={() => toggleUsePointsMutation.mutate({ clientId: selectedClient.id, usePoints: !selectedClient.usePoints })}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={cn(
-                          "w-10 h-10 rounded-full flex items-center justify-center",
-                          selectedClient.usePoints ? "bg-green-500" : "bg-muted-foreground/30"
-                        )}>
-                          {selectedClient.usePoints ? <Check className="h-5 w-5 text-white" /> : <Zap className="h-5 w-5" />}
+                  {selectedClient.loyaltyPoints > 0 && (
+                    <div className={cn(
+                      "p-4 rounded-lg border-2 transition-all cursor-pointer",
+                      selectedClient.usePoints 
+                        ? "border-green-500 bg-green-500/10" 
+                        : "border-muted bg-muted/50"
+                    )}
+                      onClick={() => toggleUsePointsMutation.mutate({ clientId: selectedClient.id, usePoints: !selectedClient.usePoints })}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={cn(
+                            "w-10 h-10 rounded-full flex items-center justify-center",
+                            selectedClient.usePoints ? "bg-green-500" : "bg-muted-foreground/30"
+                          )}>
+                            {selectedClient.usePoints ? <Check className="h-5 w-5 text-white" /> : <Zap className="h-5 w-5" />}
+                          </div>
+                          <div>
+                            <p className="font-medium">{t("clients.usePointsForDiscount", "Use Points for Discount")}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {selectedClient.usePoints 
+                                ? t("clients.pointsWillBeApplied", "Points will be applied on next appointment") 
+                                : t("clients.pointsSaved", "Points are being saved")}
+                            </p>
+                            <p className="text-xs text-primary mt-1">
+                              {t("clients.availablePoints", "Available")}: {selectedClient.loyaltyPoints} {t("clients.points", "points")}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium">{t("clients.usePointsForDiscount", "Use Points for Discount")}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {selectedClient.usePoints 
-                              ? t("clients.pointsWillBeApplied", "Points will be applied on next appointment") 
-                              : t("clients.pointsSaved", "Points are being saved")}
-                          </p>
-                        </div>
+                        <Badge variant={selectedClient.usePoints ? "default" : "secondary"}>
+                          {selectedClient.usePoints ? t("common.active", "Active") : t("common.inactive", "Inactive")}
+                        </Badge>
                       </div>
-                      <Badge variant={selectedClient.usePoints ? "default" : "secondary"}>
-                        {selectedClient.usePoints ? t("common.active", "Active") : t("common.inactive", "Inactive")}
-                      </Badge>
                     </div>
-                  </div>
+                  )}
 
                   {Number(selectedClient.giftCardBalance ?? 0) > 0 && (
                     <div className={cn(
