@@ -103,6 +103,7 @@ export const services = pgTable("services", {
 export const categories = pgTable("categories", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull().unique(),
+  color: varchar("color", { length: 50 }),
 });
 
 export const staff = pgTable("staff", {
