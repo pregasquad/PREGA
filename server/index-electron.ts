@@ -122,7 +122,10 @@ app.get(api.appointments.list.path, async (req, res) => {
 app.post(api.appointments.create.path, async (req, res) => {
   try {
     const input = api.appointments.create.input.parse(req.body);
-    const item = await storage.createAppointment(input);
+    const item = await storage.createAppointment({
+      ...input,
+      service: input.service || '',
+    });
     if (!item.paid) {
       io.emit("booking:created", item);
     }
