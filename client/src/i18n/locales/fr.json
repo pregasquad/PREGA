@@ -14,6 +14,7 @@
     "services": "Services",
     "packages": "Forfaits",
     "clients": "Clients",
+    "staff": "Personnel",
     "inventory": "Stock",
     "expenses": "Dépenses",
     "salaries": "Salaires",
@@ -22,7 +23,8 @@
     "reports": "Rapports",
     "loyaltyRewards": "Fidélité & Récompenses",
     "adminSettings": "Paramètres Admin",
-    "booking": "Page de Réservation"
+    "booking": "Page de Réservation",
+    "bookingHistory": "Historique des RDV"
   },
   "common": {
     "save": "Enregistrer",

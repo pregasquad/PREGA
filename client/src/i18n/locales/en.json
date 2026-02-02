@@ -14,6 +14,7 @@
     "services": "Services",
     "packages": "Packages",
     "clients": "Clients",
+    "staff": "Staff",
     "inventory": "Inventory",
     "expenses": "Expenses",
     "salaries": "Salaries",
@@ -22,7 +23,8 @@
     "reports": "Reports",
     "loyaltyRewards": "Loyalty & Rewards",
     "adminSettings": "Admin Settings",
-    "booking": "Booking Page"
+    "booking": "Booking Page",
+    "bookingHistory": "Booking History"
   },
   "common": {
     "save": "Save",
