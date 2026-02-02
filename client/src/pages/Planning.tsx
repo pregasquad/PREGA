@@ -699,6 +699,10 @@ export default function Planning() {
         await apiRequest("PATCH", `/api/clients/${appliedGiftCardBalance.clientId}/gift-card-balance`, {
           amount: -appliedGiftCardBalance.discountAmount
         });
+        // Also disable useGiftCardBalance after using it
+        await apiRequest("PATCH", `/api/clients/${appliedGiftCardBalance.clientId}/use-gift-card-balance`, {
+          useGiftCardBalance: false
+        });
         queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       } catch (e) {
         console.error("Gift card balance deduction failed:", e);

@@ -35,6 +35,8 @@ export const clients = mysqlTable("clients", {
   loyaltyPoints: int("loyalty_points").notNull().default(0),
   loyaltyEnrolled: boolean("loyalty_enrolled").notNull().default(false),
   usePoints: boolean("use_points").notNull().default(false),
+  giftCardBalance: double("gift_card_balance").notNull().default(0),
+  useGiftCardBalance: boolean("use_gift_card_balance").notNull().default(false),
   totalVisits: int("total_visits").notNull().default(0),
   totalSpent: double("total_spent").notNull().default(0),
   referredBy: int("referred_by"),
@@ -57,7 +59,7 @@ export const insertProductSchema = createInsertSchema(products).omit({ id: true,
 export type InsertProduct = z.infer<typeof insertProductSchema>;
 export type Product = typeof products.$inferSelect;
 
-export const insertClientSchema = createInsertSchema(clients).omit({ id: true, createdAt: true, loyaltyPoints: true, totalVisits: true, totalSpent: true }).extend({
+export const insertClientSchema = createInsertSchema(clients).omit({ id: true, createdAt: true, loyaltyPoints: true, totalVisits: true, totalSpent: true, giftCardBalance: true }).extend({
   name: z.string().min(1, "Client name is required"),
   phone: z.string().optional(),
   email: z.string().email().optional().or(z.literal("")),
@@ -66,6 +68,7 @@ export const insertClientSchema = createInsertSchema(clients).omit({ id: true, c
   referredBy: z.number().int().optional(),
   loyaltyEnrolled: z.boolean().optional(),
   usePoints: z.boolean().optional(),
+  useGiftCardBalance: z.boolean().optional(),
 });
 export type InsertClient = z.infer<typeof insertClientSchema>;
 export type Client = typeof clients.$inferSelect;
