@@ -181,16 +181,191 @@ export async function registerRoutes(
     servicesJson: z.array(serviceItemSchema).optional(), // Multi-service support
   });
 
+  // Helper: Find available staff based on service categories and time slot
+  async function findAvailableStaffForCategories(
+    serviceCategories: string[],
+    date: string,
+    startTime: string,
+    duration: number
+  ): Promise<string> {
+    try {
+      const allStaff = await storage.getStaff();
+      const appointments = await storage.getAppointments(date);
+      
+      // Filter staff by categories - staff must handle ALL required categories
+      let eligibleStaff = allStaff;
+      if (serviceCategories.length > 0) {
+        eligibleStaff = allStaff.filter(s => {
+          if (!s.categories) return false;
+          const staffCategories = s.categories.split(",").map(c => c.trim().toLowerCase());
+          // Check if staff can handle ALL required service categories
+          return serviceCategories.every(reqCat => 
+            staffCategories.includes(reqCat.toLowerCase())
+          );
+        });
+      }
+      
+      // If no staff matches all categories, fall back to unassigned
+      if (eligibleStaff.length === 0) {
+        return "À assigner";
+      }
+      
+      // Parse the requested time
+      const [reqHour, reqMin] = startTime.split(":").map(Number);
+      const reqStartMinutes = reqHour * 60 + reqMin;
+      const reqEndMinutes = reqStartMinutes + duration;
+      
+      // Get day of week (0 = Sunday, 1 = Monday, etc.)
+      const dateObj = new Date(date);
+      const dayOfWeek = dateObj.getDay();
+      
+      // Check each eligible staff for availability
+      for (const staffMember of eligibleStaff) {
+        let isAvailable = true;
+        
+        // Check staff schedule for this day
+        try {
+          const schedules = await storage.getStaffSchedules(staffMember.id);
+          const daySchedule = schedules.find(s => s.dayOfWeek === dayOfWeek);
+          
+          if (daySchedule) {
+            if (!daySchedule.isActive) {
+              isAvailable = false;
+              continue;
+            }
+            // Check if appointment time is within working hours
+            if (daySchedule.startTime && daySchedule.endTime) {
+              const [schStartH, schStartM] = daySchedule.startTime.split(":").map(Number);
+              const [schEndH, schEndM] = daySchedule.endTime.split(":").map(Number);
+              const schStart = schStartH * 60 + schStartM;
+              const schEnd = schEndH * 60 + schEndM;
+              
+              if (reqStartMinutes < schStart || reqEndMinutes > schEnd) {
+                isAvailable = false;
+                continue;
+              }
+            }
+          }
+          // No schedule for this day means staff is not available that day
+          if (!daySchedule) {
+            isAvailable = false;
+            continue;
+          }
+        } catch (e) {
+          // Error fetching schedule - skip this staff
+          isAvailable = false;
+          continue;
+        }
+        
+        // Check for time off on this date
+        try {
+          const timeOffRequests = await storage.getStaffTimeOff(staffMember.id);
+          const hasTimeOff = timeOffRequests.some(t => 
+            t.status === "approved" && 
+            t.startDate <= date && 
+            t.endDate >= date
+          );
+          if (hasTimeOff) {
+            isAvailable = false;
+            continue;
+          }
+        } catch (e) {
+          // No time off - continue
+        }
+        
+        // Check for breaks on this date
+        try {
+          const breaks = await storage.getStaffBreaks(staffMember.id, date, date);
+          const hasBreakConflict = breaks.some(b => {
+            const [bStartH, bStartM] = b.startTime.split(":").map(Number);
+            const [bEndH, bEndM] = b.endTime.split(":").map(Number);
+            const bStart = bStartH * 60 + bStartM;
+            const bEnd = bEndH * 60 + bEndM;
+            
+            return !(reqEndMinutes <= bStart || reqStartMinutes >= bEnd);
+          });
+          if (hasBreakConflict) {
+            isAvailable = false;
+            continue;
+          }
+        } catch (e) {
+          // No breaks - continue
+        }
+        
+        // Check for appointment conflicts
+        const staffAppointments = appointments.filter(a => a.staff === staffMember.name);
+        const hasConflict = staffAppointments.some(appt => {
+          const [apptH, apptM] = (appt.startTime || "00:00").split(":").map(Number);
+          const apptStart = apptH * 60 + apptM;
+          const apptEnd = apptStart + (appt.duration || 30);
+          
+          return !(reqEndMinutes <= apptStart || reqStartMinutes >= apptEnd);
+        });
+        
+        if (hasConflict) {
+          isAvailable = false;
+          continue;
+        }
+        
+        // Found an available staff member!
+        if (isAvailable) {
+          return staffMember.name;
+        }
+      }
+      
+      // No available staff found
+      return "À assigner";
+    } catch (e) {
+      console.error("Error finding available staff:", e);
+      return "À assigner";
+    }
+  }
+
   // Public: Create appointment from booking page (rate limited, sanitized input)
   app.post("/api/public/appointments", publicRateLimitMiddleware, async (req, res) => {
     try {
       const input = publicBookingSchema.parse(req.body);
       
+      // Auto-assign staff based on service categories and availability
+      let assignedStaff = input.staff || "";
+      
+      if (!assignedStaff) {
+        // Collect all service categories
+        const serviceCategories: string[] = [];
+        const services = await storage.getServices();
+        
+        if (input.servicesJson && input.servicesJson.length > 0) {
+          // Multi-service: collect categories from all services
+          for (const svc of input.servicesJson) {
+            const matchedService = services.find(s => s.name === svc.name);
+            if (matchedService && matchedService.category) {
+              if (!serviceCategories.includes(matchedService.category)) {
+                serviceCategories.push(matchedService.category);
+              }
+            }
+          }
+        } else if (input.service) {
+          // Single service: find by name
+          const matchedService = services.find(s => s.name === input.service);
+          if (matchedService && matchedService.category) {
+            serviceCategories.push(matchedService.category);
+          }
+        }
+        
+        // Find available staff that can handle all required categories
+        assignedStaff = await findAvailableStaffForCategories(
+          serviceCategories,
+          input.date,
+          input.startTime,
+          input.duration
+        );
+      }
+      
       // Force paid to false for public bookings - never trust client
       const appointmentData: any = {
         client: input.client,
         service: input.service,
-        staff: input.staff || "À assigner", // Default staff name for unassigned
+        staff: assignedStaff,
         duration: input.duration,
         price: input.price,
         total: input.total,
