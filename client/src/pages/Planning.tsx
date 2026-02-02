@@ -847,7 +847,7 @@ export default function Planning() {
         await apiRequest("POST", "/api/loyalty-redemptions", {
           clientId: appliedLoyaltyPoints.clientId,
           pointsUsed: appliedLoyaltyPoints.points,
-          rewardDescription: `Réduction automatique: -${appliedLoyaltyPoints.discountAmount.toFixed(2)} DH`,
+          rewardDescription: `Réduction automatique: -${Number(appliedLoyaltyPoints.discountAmount ?? 0).toFixed(2)} DH`,
           date: format(date, "yyyy-MM-dd")
         });
         // Also disable usePoints after using them
@@ -1952,8 +1952,8 @@ export default function Planning() {
                     <div className="flex items-center justify-between p-3 bg-green-500/10 border border-green-500/30 rounded-xl">
                       <div className="flex items-center gap-2">
                         <Gift className="w-4 h-4 text-green-600" />
-                        <span className="font-medium text-sm">{appliedGiftCardBalance.amount.toFixed(2)} DH</span>
-                        <span className="text-green-600 font-bold">-{appliedGiftCardBalance.discountAmount.toFixed(2)} DH</span>
+                        <span className="font-medium text-sm">{Number(appliedGiftCardBalance.amount ?? 0).toFixed(2)} DH</span>
+                        <span className="text-green-600 font-bold">-{Number(appliedGiftCardBalance.discountAmount ?? 0).toFixed(2)} DH</span>
                       </div>
                       <Button
                         type="button"
@@ -1980,7 +1980,7 @@ export default function Planning() {
                       <div className="flex items-center gap-2">
                         <Star className="w-4 h-4 text-yellow-600" />
                         <span className="font-medium text-sm">{appliedLoyaltyPoints.points} {t("clients.points", "points")}</span>
-                        <span className="text-yellow-600 font-bold">-{appliedLoyaltyPoints.discountAmount.toFixed(2)} DH</span>
+                        <span className="text-yellow-600 font-bold">-{Number(appliedLoyaltyPoints.discountAmount ?? 0).toFixed(2)} DH</span>
                       </div>
                       <Button
                         type="button"
