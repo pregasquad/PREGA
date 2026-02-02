@@ -187,7 +187,8 @@ export async function registerRoutes(
     date: string,
     startTime: string,
     duration: number,
-    excludeStaff: string[] = [] // Staff already assigned to other appointments in this booking
+    excludeStaff: string[] = [], // Staff already assigned to other appointments in this booking
+    useFallback: boolean = true // Whether to fall back to any available staff if no specialist found
   ): Promise<string> {
     try {
       const allStaff = await storage.getStaff();
@@ -201,8 +202,8 @@ export async function registerRoutes(
         return staffCategories.includes(category.toLowerCase());
       });
       
-      // Fallback: if no staff matches the category, try any staff with schedules (excluding already used)
-      if (eligibleStaff.length === 0) {
+      // Only use fallback if enabled and no specialists found
+      if (eligibleStaff.length === 0 && useFallback) {
         eligibleStaff = allStaff.filter(s => {
           if (excludeStaff.includes(s.name)) return false;
           return true; // Consider all staff as potential fallback
@@ -446,25 +447,42 @@ export async function registerRoutes(
         for (const [category, group] of categoryGroups) {
           const currentStartTime = minutesToTime(currentStartMinutes);
           
-          // Find available staff for this category
-          // First try excluding already used staff to prefer different specialists
+          // Find available staff for this category - priority order:
+          // 1. Specialist for this category (excluding already used staff)
+          // 2. Specialist for this category (including used staff - same person can do multiple)
+          // 3. Any available staff as fallback
+          
+          // Step 1: Try specialists only, excluding used staff
           let assignedStaff = await findAvailableStaffForCategory(
             category,
             input.date,
             currentStartTime,
             group.totalDuration,
-            usedStaff
+            usedStaff,
+            false // No fallback - specialists only
           );
           
-          // If no staff found and we have usedStaff, try again without exclusion
-          // (same staff can handle multiple categories sequentially)
+          // Step 2: If no different specialist found, try same specialist (without exclusion)
           if (assignedStaff === "À assigner" && usedStaff.length > 0) {
             assignedStaff = await findAvailableStaffForCategory(
               category,
               input.date,
               currentStartTime,
               group.totalDuration,
-              [] // No exclusion
+              [], // No exclusion
+              false // No fallback - specialists only
+            );
+          }
+          
+          // Step 3: If still no specialist, fall back to any available staff
+          if (assignedStaff === "À assigner") {
+            assignedStaff = await findAvailableStaffForCategory(
+              category,
+              input.date,
+              currentStartTime,
+              group.totalDuration,
+              usedStaff,
+              true // Use fallback
             );
           }
           
