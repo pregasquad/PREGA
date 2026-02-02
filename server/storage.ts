@@ -124,6 +124,7 @@ export interface IStorage extends IAuthStorage {
   getGiftCardByCode(code: string): Promise<GiftCard | undefined>;
   createGiftCard(giftCard: InsertGiftCard): Promise<GiftCard>;
   updateGiftCard(id: number, giftCard: Partial<InsertGiftCard>): Promise<GiftCard>;
+  deleteGiftCard(id: number): Promise<void>;
 
   getReferrals(): Promise<Referral[]>;
   getReferralsByReferrer(referrerId: number): Promise<Referral[]>;
@@ -932,6 +933,11 @@ export class DatabaseStorage implements IStorage {
     }
     const [updated] = await db().update(s.giftCards).set(giftCard).where(eq(s.giftCards.id, id)).returning();
     return updated;
+  }
+
+  async deleteGiftCard(id: number): Promise<void> {
+    const s = schema();
+    await db().delete(s.giftCards).where(eq(s.giftCards.id, id));
   }
 
   async getReferrals(): Promise<Referral[]> {

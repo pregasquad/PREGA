@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Gift, Settings, Users, Trophy, Star, Copy, Plus, X, Check, Search, Minus, Edit2 } from "lucide-react";
+import { Gift, Settings, Users, Trophy, Star, Copy, Plus, X, Check, Search, Minus, Edit2, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
@@ -79,6 +79,13 @@ export default function LoyaltyRewards() {
   const [clientSearch, setClientSearch] = useState("");
   const [editPointsOpen, setEditPointsOpen] = useState(false);
   const [editPointsValue, setEditPointsValue] = useState<number>(0);
+  const [editingGiftCard, setEditingGiftCard] = useState<GiftCard | null>(null);
+  const [editGiftCardData, setEditGiftCardData] = useState({
+    initialAmount: 0,
+    currentBalance: 0,
+    recipientName: "",
+    recipientPhone: "",
+  });
 
   const { data: businessSettings } = useQuery<BusinessSettings>({
     queryKey: ["/api/business-settings"],
@@ -183,6 +190,47 @@ export default function LoyaltyRewards() {
     },
   });
 
+  const editGiftCardMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: typeof editGiftCardData }) => {
+      return apiRequest("PATCH", `/api/gift-cards/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/gift-cards"] });
+      setEditingGiftCard(null);
+      toast({
+        title: t("common.success"),
+        description: t("loyalty.giftCardUpdated"),
+      });
+    },
+    onError: () => {
+      toast({
+        title: t("common.error"),
+        description: t("loyalty.giftCardError"),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteGiftCardMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return apiRequest("DELETE", `/api/gift-cards/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/gift-cards"] });
+      toast({
+        title: t("common.success"),
+        description: t("loyalty.giftCardDeleted"),
+      });
+    },
+    onError: () => {
+      toast({
+        title: t("common.error"),
+        description: t("loyalty.giftCardError"),
+        variant: "destructive",
+      });
+    },
+  });
+
   const updateClientPointsMutation = useMutation({
     mutationFn: async ({ clientId, points }: { clientId: number; points: number }) => {
       return apiRequest("PATCH", `/api/clients/${clientId}`, { loyaltyPoints: points });
@@ -259,6 +307,24 @@ export default function LoyaltyRewards() {
     updateSettingsMutation.mutate(loyaltySettings);
   };
 
+  const handleEditGiftCard = (card: GiftCard) => {
+    setEditingGiftCard(card);
+    setEditGiftCardData({
+      initialAmount: card.initialAmount,
+      currentBalance: card.currentBalance,
+      recipientName: card.recipientName || "",
+      recipientPhone: card.recipientPhone || "",
+    });
+  };
+
+  const handleSaveGiftCard = () => {
+    if (editingGiftCard) {
+      editGiftCardMutation.mutate({
+        id: editingGiftCard.id,
+        data: editGiftCardData,
+      });
+    }
+  };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -668,19 +734,41 @@ export default function LoyaltyRewards() {
                             {format(new Date(card.createdAt), "dd/MM/yyyy")}
                           </TableCell>
                           <TableCell>
-                            <Button
-                              variant={card.isActive ? "destructive" : "default"}
-                              size="sm"
-                              onClick={() =>
-                                toggleGiftCardMutation.mutate({
-                                  id: card.id,
-                                  isActive: !card.isActive,
-                                })
-                              }
-                              disabled={toggleGiftCardMutation.isPending}
-                            >
-                              {card.isActive ? <X className="w-3 h-3" /> : <Check className="w-3 h-3" />}
-                            </Button>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditGiftCard(card)}
+                              >
+                                <Edit2 className="w-3 h-3" />
+                              </Button>
+                              <Button
+                                variant={card.isActive ? "destructive" : "default"}
+                                size="sm"
+                                onClick={() =>
+                                  toggleGiftCardMutation.mutate({
+                                    id: card.id,
+                                    isActive: !card.isActive,
+                                  })
+                                }
+                                disabled={toggleGiftCardMutation.isPending}
+                              >
+                                {card.isActive ? <X className="w-3 h-3" /> : <Check className="w-3 h-3" />}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => {
+                                  if (confirm(t("loyalty.confirmDeleteGiftCard"))) {
+                                    deleteGiftCardMutation.mutate(card.id);
+                                  }
+                                }}
+                                disabled={deleteGiftCardMutation.isPending}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -911,6 +999,61 @@ export default function LoyaltyRewards() {
               {t("common.cancel")}
             </Button>
             <Button onClick={handleSaveEditedPoints} disabled={updateClientPointsMutation.isPending}>
+              {t("common.save")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Gift Card Dialog */}
+      <Dialog open={!!editingGiftCard} onOpenChange={(open) => !open && setEditingGiftCard(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("loyalty.editGiftCard", { defaultValue: "Edit Gift Card" })}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="initial-amount">{t("loyalty.initialBalance")}</Label>
+              <Input
+                id="initial-amount"
+                type="number"
+                min="0"
+                value={editGiftCardData.initialAmount}
+                onChange={(e) => setEditGiftCardData({ ...editGiftCardData, initialAmount: parseFloat(e.target.value) || 0 })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="current-balance">{t("loyalty.currentBalance")}</Label>
+              <Input
+                id="current-balance"
+                type="number"
+                min="0"
+                value={editGiftCardData.currentBalance}
+                onChange={(e) => setEditGiftCardData({ ...editGiftCardData, currentBalance: parseFloat(e.target.value) || 0 })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="recipient-name">{t("loyalty.recipientName", { defaultValue: "Recipient Name" })}</Label>
+              <Input
+                id="recipient-name"
+                value={editGiftCardData.recipientName}
+                onChange={(e) => setEditGiftCardData({ ...editGiftCardData, recipientName: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="recipient-phone">{t("loyalty.recipientPhone", { defaultValue: "Recipient Phone" })}</Label>
+              <Input
+                id="recipient-phone"
+                value={editGiftCardData.recipientPhone}
+                onChange={(e) => setEditGiftCardData({ ...editGiftCardData, recipientPhone: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingGiftCard(null)}>
+              {t("common.cancel")}
+            </Button>
+            <Button onClick={handleSaveGiftCard} disabled={editGiftCardMutation.isPending}>
               {t("common.save")}
             </Button>
           </DialogFooter>

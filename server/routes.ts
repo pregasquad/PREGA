@@ -2118,6 +2118,16 @@ export async function registerRoutes(
     }
   });
 
+  app.delete("/api/gift-cards/:id", isPinAuthenticated, requirePermission("manage_business_settings"), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteGiftCard(id);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
   app.post("/api/gift-cards/:id/redeem", isPinAuthenticated, requirePermission("manage_appointments"), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
