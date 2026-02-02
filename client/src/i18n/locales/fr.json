@@ -97,6 +97,7 @@
     "bookingCreated": "Réservation créée avec succès",
     "bookingUpdated": "Réservation mise à jour avec succès",
     "bookingDeleted": "Réservation supprimée avec succès",
+    "nonWorkingDay": "Jour de repos",
     "appointmentMoved": "Rendez-vous déplacé",
     "moveError": "Échec du déplacement du rendez-vous",
     "searchClient": "Rechercher un client...",

@@ -97,6 +97,7 @@
     "bookingCreated": "Booking created successfully",
     "bookingUpdated": "Booking updated successfully",
     "bookingDeleted": "Booking deleted successfully",
+    "nonWorkingDay": "Off Day",
     "appointmentMoved": "Appointment moved",
     "moveError": "Failed to move appointment",
     "searchClient": "Search for a client...",

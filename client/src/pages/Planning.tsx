@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { CalendarIcon, ChevronLeft, ChevronRight, Plus, Trash2, Check, X, Search, Star, RefreshCw, Sparkles, CreditCard, Settings2, Scissors, Clock, User, ChevronsUpDown, ListTodo, Bell, UserCheck, Gift, Tag } from "lucide-react";
+import { CalendarIcon, ChevronLeft, ChevronRight, Plus, Trash2, Check, X, Search, Star, RefreshCw, Sparkles, CreditCard, Settings2, Scissors, Clock, User, ChevronsUpDown, ListTodo, Bell, UserCheck, Gift, Tag, AlertCircle } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
 import { cn } from "@/lib/utils";
@@ -26,7 +26,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { insertAppointmentSchema, insertStaffSchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
-const hours = [
+const DEFAULT_HOURS = [
   "10:00","10:30","11:00","11:30","12:00","12:30",
   "13:00","13:30","14:00","14:30","15:00","15:30",
   "16:00","16:30","17:00","17:30","18:00","18:30",
@@ -34,6 +34,29 @@ const hours = [
   "22:00","22:30","23:00","23:30","00:00","00:30",
   "01:00","01:30"
 ];
+
+function generateTimeSlots(openingTime: string, closingTime: string): string[] {
+  const slots: string[] = [];
+  
+  const [openHour, openMin] = openingTime.split(":").map(Number);
+  const [closeHour, closeMin] = closingTime.split(":").map(Number);
+  
+  let openingMinutes = openHour * 60 + openMin;
+  let closingMinutes = closeHour * 60 + closeMin;
+  
+  if (closingMinutes <= openingMinutes) {
+    closingMinutes += 24 * 60;
+  }
+  
+  for (let mins = openingMinutes; mins < closingMinutes; mins += 30) {
+    const normalizedMins = mins % (24 * 60);
+    const h = Math.floor(normalizedMins / 60);
+    const m = normalizedMins % 60;
+    slots.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+  }
+  
+  return slots;
+}
 
 const formSchema = insertAppointmentSchema.extend({
   price: z.coerce.number().min(0),
@@ -129,25 +152,58 @@ export default function Planning() {
     };
   }, [isMobile]);
 
-  const getCurrentTimePosition = () => {
+  const getCurrentTimePosition = useCallback((hoursArray: string[], openingTime?: string, closingTime?: string) => {
+    if (hoursArray.length === 0) return -1;
+    
     const now = currentTime;
     const currentHour = now.getHours();
     const currentMinutes = now.getMinutes();
-    // Schedule runs from 10am to 2am (next day)
-    // Hours 10-23 map to slots 0-27, Hours 00-01 map to slots 28-31
-    let adjustedHour;
-    if (currentHour >= 10) {
-      adjustedHour = currentHour - 10;
-    } else if (currentHour < 2) {
-      adjustedHour = currentHour + 14; // 00:00 = slot 28, 01:00 = slot 30
+    
+    // Compute opening minutes from opening time or first slot
+    let openingMinutes: number;
+    if (openingTime) {
+      const [openH, openM] = openingTime.split(":").map(Number);
+      openingMinutes = openH * 60 + openM;
     } else {
-      return -1; // Outside work hours (2am-10am)
+      const firstSlot = hoursArray[0];
+      const [firstH, firstM] = firstSlot.split(":").map(Number);
+      openingMinutes = firstH * 60 + firstM;
     }
-    const totalMinutes = adjustedHour * 60 + currentMinutes;
+    
+    // Compute closing minutes from closing time directly (not last slot)
+    // This fixes the overnight window bug where last slot is 00:30 but closing is 01:00
+    let closingMinutes: number;
+    if (closingTime) {
+      const [closeH, closeM] = closingTime.split(":").map(Number);
+      closingMinutes = closeH * 60 + closeM;
+    } else {
+      // Fallback to last slot + 30 if no closing time provided
+      const lastSlot = hoursArray[hoursArray.length - 1];
+      const [lastH, lastM] = lastSlot.split(":").map(Number);
+      closingMinutes = lastH * 60 + lastM + 30;
+    }
+    
+    // Handle overnight windows (closing time is earlier than opening time)
+    if (closingMinutes <= openingMinutes) {
+      closingMinutes += 24 * 60;
+    }
+    
+    let currentTotalMinutes = currentHour * 60 + currentMinutes;
+    // If current time is before opening and it's early morning, add 24 hours (overnight)
+    if (currentTotalMinutes < openingMinutes && currentHour < 12) {
+      currentTotalMinutes += 24 * 60;
+    }
+    
+    // Check if current time is within business hours
+    if (currentTotalMinutes < openingMinutes || currentTotalMinutes > closingMinutes) {
+      return -1;
+    }
+    
+    const minutesSinceOpen = currentTotalMinutes - openingMinutes;
     const slotHeight = 52;
-    const position = (totalMinutes / 30) * slotHeight;
+    const position = (minutesSinceOpen / 30) * slotHeight;
     return position;
-  };
+  }, [currentTime]);
 
   // Check if we're viewing the current "work day" (accounting for 2 AM start)
   const isToday = useMemo(() => {
@@ -169,35 +225,24 @@ export default function Planning() {
       return true;
     }
     
-    // Method 2: Fallback to manual scrollTop calculation
+    // Method 2: Fallback - calculate approximate position based on current time and scroll board directly
+    // Uses DEFAULT_HOURS as a fallback since actual hours may not be available when this is first called
     const board = boardRef.current;
-    if (!board || board.scrollHeight <= board.clientHeight) return false;
-    
-    const now = new Date();
-    const currentHour = now.getHours();
-    const currentMinutes = now.getMinutes();
-    
-    let adjustedHour;
-    if (currentHour >= 10) {
-      adjustedHour = currentHour - 10;
-    } else if (currentHour < 2) {
-      adjustedHour = currentHour + 14;
-    } else {
-      return false;
+    if (board) {
+      const fallbackPosition = getCurrentTimePosition(DEFAULT_HOURS);
+      if (fallbackPosition >= 0) {
+        const boardHeight = board.clientHeight;
+        const targetScroll = fallbackPosition - boardHeight / 2;
+        board.scrollTo({
+          top: Math.max(0, targetScroll),
+          behavior: smooth ? 'smooth' : 'auto'
+        });
+        return true;
+      }
     }
     
-    const totalMinutes = adjustedHour * 60 + currentMinutes;
-    const slotHeight = 52;
-    const targetTop = (totalMinutes / 30) * slotHeight + 52;
-    const scrollTarget = Math.max(0, targetTop - board.clientHeight / 2);
-    
-    if (smooth) {
-      board.scrollTo({ top: scrollTarget, behavior: 'smooth' });
-    } else {
-      board.scrollTop = scrollTarget;
-    }
-    return true;
-  }, []);
+    return false;
+  }, [getCurrentTimePosition]);
 
   // AGGRESSIVE AUTO-SCROLL: Try many times with different delays
   useLayoutEffect(() => {
@@ -356,9 +401,27 @@ export default function Planning() {
     loyaltyPointsPerDh: number;
     loyaltyPointsValue: number;
     loyaltyEnabled: boolean;
+    openingTime?: string;
+    closingTime?: string;
+    workingDays?: number[];
   }>({
     queryKey: ["/api/business-settings"],
   });
+  
+  const hours = useMemo(() => {
+    if (businessSettings?.openingTime && businessSettings?.closingTime) {
+      return generateTimeSlots(businessSettings.openingTime, businessSettings.closingTime);
+    }
+    return DEFAULT_HOURS;
+  }, [businessSettings?.openingTime, businessSettings?.closingTime]);
+  
+  const isNonWorkingDay = useMemo(() => {
+    if (!businessSettings?.workingDays || businessSettings.workingDays.length === 0) {
+      return false;
+    }
+    const dayOfWeek = date.getDay();
+    return !businessSettings.workingDays.includes(dayOfWeek);
+  }, [date, businessSettings?.workingDays]);
   
   const { data: packages = [] } = useQuery<Array<{
     id: number;
@@ -1205,6 +1268,13 @@ export default function Planning() {
             </Button>
           </div>
 
+          {isNonWorkingDay && (
+            <div className="glass-card px-3 py-1.5 flex items-center gap-2 text-amber-600 dark:text-amber-400">
+              <AlertCircle className="w-4 h-4" />
+              <span className="text-xs font-medium">{t("planning.nonWorkingDay", "Off Day")}</span>
+            </div>
+          )}
+
         </div>
       </div>
 
@@ -1347,12 +1417,12 @@ export default function Planning() {
             }}
           >
             {/* Current Time Line - iOS Liquid Glass Style */}
-            {isToday && getCurrentTimePosition() >= 0 && (
+            {isToday && getCurrentTimePosition(hours, businessSettings?.openingTime, businessSettings?.closingTime) >= 0 && (
               <div 
                 ref={liveLineRef}
                 className="absolute z-[35] pointer-events-none transition-all duration-1000 ease-in-out"
                 style={{ 
-                  top: `${getCurrentTimePosition()}px`,
+                  top: `${getCurrentTimePosition(hours, businessSettings?.openingTime, businessSettings?.closingTime)}px`,
                   left: 0,
                   right: 0,
                 }}
@@ -2084,7 +2154,7 @@ export default function Planning() {
       </Dialog>
       
       {/* Floating "Go to Now" button - iOS Liquid Glass Style */}
-      {isToday && getCurrentTimePosition() >= 0 && (
+      {isToday && getCurrentTimePosition(hours, businessSettings?.openingTime, businessSettings?.closingTime) >= 0 && (
         <button
           onClick={() => scrollToLiveLine(true)}
           className={cn(

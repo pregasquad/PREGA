@@ -97,6 +97,7 @@
     "bookingCreated": "تم إنشاء الحجز بنجاح",
     "bookingUpdated": "تم تحديث الحجز بنجاح",
     "bookingDeleted": "تم حذف الحجز بنجاح",
+    "nonWorkingDay": "يوم عطلة",
     "appointmentMoved": "تم نقل الموعد",
     "moveError": "فشل نقل الموعد",
     "searchClient": "ابحث عن عميل...",
