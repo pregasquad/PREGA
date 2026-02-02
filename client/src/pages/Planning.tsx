@@ -582,8 +582,10 @@ export default function Planning() {
     const client = clients.find(c => c.name === clientName);
     if (!client) return;
     
-    // Calculate base total from services (before discounts)
-    const baseTotal = selectedServices.reduce((sum, s) => sum + s.price, 0);
+    // Calculate base total - use package discounted price if a package is selected, otherwise sum of services
+    const baseTotal = selectedPackage 
+      ? selectedPackage.discountedPrice 
+      : selectedServices.reduce((sum, s) => sum + s.price, 0);
     if (baseTotal <= 0) {
       // Reset discounts if no services
       if (appliedLoyaltyPoints) setAppliedLoyaltyPoints(null);
@@ -638,7 +640,7 @@ export default function Planning() {
     form.setValue("total", runningTotal);
     const totalInput = document.getElementById('total-price-input') as HTMLInputElement;
     if (totalInput) totalInput.value = String(runningTotal);
-  }, [selectedServices, isDialogOpen, clients, businessSettings, form, appliedLoyaltyPoints, appliedGiftCardBalance]);
+  }, [selectedServices, selectedPackage, isDialogOpen, clients, businessSettings, form, appliedLoyaltyPoints, appliedGiftCardBalance]);
 
   // Helper function to parse services from an appointment
   const parseAppointmentServices = (app: any): Array<{id: string, name: string, price: number, duration: number}> => {
@@ -799,7 +801,10 @@ export default function Planning() {
     // Read total price from DOM (user can override the calculated total)
     const totalInputEl = document.getElementById('total-price-input') as HTMLInputElement;
     const customTotal = totalInputEl?.value ? parseFloat(totalInputEl.value) : null;
-    const calculatedTotal = servicesToSave.reduce((sum, s) => sum + s.price, 0);
+    // Use package discounted price if a package is selected, otherwise sum of services
+    const calculatedTotal = selectedPackage 
+      ? selectedPackage.discountedPrice 
+      : servicesToSave.reduce((sum, s) => sum + s.price, 0);
     const finalTotal = customTotal !== null ? customTotal : calculatedTotal;
     
     const serviceDescription = selectedPackage 
@@ -877,6 +882,7 @@ export default function Planning() {
     };
     const updated = [...selectedServices, newService];
     setSelectedServices(updated);
+    setSelectedPackage(null); // Clear package when adding individual services
     setPriceInputs(prev => ({ ...prev, [serviceId]: String(service.price) }));
     const totalDuration = updated.reduce((sum, s) => sum + s.duration, 0);
     const totalPrice = updated.reduce((sum, s) => sum + s.price, 0);
