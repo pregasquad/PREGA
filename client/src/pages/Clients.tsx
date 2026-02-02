@@ -547,6 +547,7 @@ export default function Clients() {
                 <TableHead>{t("clients.email")}</TableHead>
                 <TableHead>{t("clients.totalAppointments")}</TableHead>
                 <TableHead>{t("clients.loyaltyPoints")}</TableHead>
+                <TableHead>{t("giftCard.balance", "Gift Card")}</TableHead>
                 <TableHead>{t("common.status")}</TableHead>
                 <TableHead>{t("common.actions")}</TableHead>
               </TableRow>
@@ -566,6 +567,13 @@ export default function Clients() {
                     <TableCell dir="ltr">{client.email || "-"}</TableCell>
                     <TableCell>{client.totalVisits}</TableCell>
                     <TableCell>{client.loyaltyPoints}</TableCell>
+                    <TableCell>
+                      {(client.giftCardBalance ?? 0) > 0 ? (
+                        <span className="text-green-600 font-medium">{(client.giftCardBalance ?? 0).toFixed(2)}</span>
+                      ) : (
+                        <span className="text-muted-foreground">0</span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Badge className={`${tier.color} text-white`}>
                         <TierIcon className="w-3 h-3 ml-1" />
@@ -851,7 +859,7 @@ export default function Clients() {
               </TabsContent>
               <TabsContent value="loyalty">
                 <div className="space-y-4">
-                  <div className="grid grid-cols-3 gap-4 text-center">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                     <div className="p-4 bg-muted rounded-lg">
                       <p className="text-2xl font-bold text-primary">{selectedClient.loyaltyPoints}</p>
                       <p className="text-sm text-muted-foreground">{t("clients.loyaltyPoints")}</p>
@@ -863,6 +871,12 @@ export default function Clients() {
                     <div className="p-4 bg-muted rounded-lg">
                       <p className="text-2xl font-bold">{selectedClient.totalSpent} {t("common.currency")}</p>
                       <p className="text-sm text-muted-foreground">{t("clients.totalSpent")}</p>
+                    </div>
+                    <div className="p-4 bg-muted rounded-lg">
+                      <p className={`text-2xl font-bold ${(selectedClient.giftCardBalance ?? 0) > 0 ? 'text-green-600' : ''}`}>
+                        {(selectedClient.giftCardBalance ?? 0).toFixed(2)} {t("common.currency")}
+                      </p>
+                      <p className="text-sm text-muted-foreground">{t("giftCard.balance", "Gift Card Balance")}</p>
                     </div>
                   </div>
                   
