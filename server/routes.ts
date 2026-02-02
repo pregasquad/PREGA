@@ -181,31 +181,27 @@ export async function registerRoutes(
     servicesJson: z.array(serviceItemSchema).optional(), // Multi-service support
   });
 
-  // Helper: Find available staff based on service categories and time slot
-  async function findAvailableStaffForCategories(
-    serviceCategories: string[],
+  // Helper: Find available staff for a SINGLE category and time slot
+  async function findAvailableStaffForCategory(
+    category: string,
     date: string,
     startTime: string,
-    duration: number
+    duration: number,
+    excludeStaff: string[] = [] // Staff already assigned to other appointments in this booking
   ): Promise<string> {
     try {
       const allStaff = await storage.getStaff();
       const appointments = await storage.getAppointments(date);
       
-      // Filter staff by categories - staff must handle ALL required categories
-      let eligibleStaff = allStaff;
-      if (serviceCategories.length > 0) {
-        eligibleStaff = allStaff.filter(s => {
-          if (!s.categories) return false;
-          const staffCategories = s.categories.split(",").map(c => c.trim().toLowerCase());
-          // Check if staff can handle ALL required service categories
-          return serviceCategories.every(reqCat => 
-            staffCategories.includes(reqCat.toLowerCase())
-          );
-        });
-      }
+      // Filter staff by category - staff must have this category in their specializations
+      let eligibleStaff = allStaff.filter(s => {
+        if (excludeStaff.includes(s.name)) return false; // Exclude already used staff
+        if (!s.categories) return false;
+        const staffCategories = s.categories.split(",").map(c => c.trim().toLowerCase());
+        return staffCategories.includes(category.toLowerCase());
+      });
       
-      // If no staff matches all categories, fall back to unassigned
+      // If no staff matches the category, fall back to unassigned
       if (eligibleStaff.length === 0) {
         return "À assigner";
       }
@@ -316,86 +312,204 @@ export async function registerRoutes(
       // No available staff found
       return "À assigner";
     } catch (e) {
-      console.error("Error finding available staff:", e);
+      console.error("Error finding available staff for category:", e);
       return "À assigner";
     }
   }
 
+  // Helper: Convert minutes to HH:MM format
+  function minutesToTime(minutes: number): string {
+    const hours = Math.floor(minutes / 60) % 24;
+    const mins = minutes % 60;
+    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+  }
+
+  // Helper: Convert HH:MM to minutes
+  function timeToMinutes(time: string): number {
+    const [hours, mins] = time.split(":").map(Number);
+    return hours * 60 + mins;
+  }
+
+  // Type for grouped services by category
+  interface CategoryGroup {
+    category: string;
+    services: Array<{ name: string; price: number; duration: number }>;
+    totalDuration: number;
+    totalPrice: number;
+  }
+
   // Public: Create appointment from booking page (rate limited, sanitized input)
+  // Supports auto-splitting by category: if services are from different categories,
+  // creates separate appointments with appropriate staff specialists for each category
   app.post("/api/public/appointments", publicRateLimitMiddleware, async (req, res) => {
     try {
       console.log("[PUBLIC BOOKING] Received request:", JSON.stringify(req.body));
       const input = publicBookingSchema.parse(req.body);
       console.log("[PUBLIC BOOKING] Validated input:", JSON.stringify(input));
       
-      // Auto-assign staff based on service categories and availability
-      let assignedStaff = input.staff || "";
+      const allServices = await storage.getServices();
+      const createdAppointments: any[] = [];
       
-      if (!assignedStaff) {
-        // Collect all service categories
-        const serviceCategories: string[] = [];
-        const services = await storage.getServices();
-        
-        if (input.servicesJson && input.servicesJson.length > 0) {
-          // Multi-service: collect categories from all services
-          for (const svc of input.servicesJson) {
-            const matchedService = services.find(s => s.name === svc.name);
-            if (matchedService && matchedService.category) {
-              if (!serviceCategories.includes(matchedService.category)) {
-                serviceCategories.push(matchedService.category);
-              }
-            }
+      // Group services by category
+      const categoryGroups: Map<string, CategoryGroup> = new Map();
+      
+      if (input.servicesJson && input.servicesJson.length > 0) {
+        // Multi-service booking: group by category
+        for (const svc of input.servicesJson) {
+          const matchedService = allServices.find(s => s.name === svc.name);
+          const category = matchedService?.category || "Général";
+          
+          if (!categoryGroups.has(category)) {
+            categoryGroups.set(category, {
+              category,
+              services: [],
+              totalDuration: 0,
+              totalPrice: 0
+            });
           }
-        } else if (input.service) {
-          // Single service: find by name
-          const matchedService = services.find(s => s.name === input.service);
-          if (matchedService && matchedService.category) {
-            serviceCategories.push(matchedService.category);
-          }
+          
+          const group = categoryGroups.get(category)!;
+          group.services.push({
+            name: svc.name,
+            price: svc.price,
+            duration: svc.duration
+          });
+          group.totalDuration += svc.duration;
+          group.totalPrice += svc.price;
         }
+      } else if (input.service) {
+        // Single service booking
+        const matchedService = allServices.find(s => s.name === input.service);
+        const category = matchedService?.category || "Général";
         
-        // Find available staff that can handle all required categories
-        assignedStaff = await findAvailableStaffForCategories(
-          serviceCategories,
+        categoryGroups.set(category, {
+          category,
+          services: [{ name: input.service, price: input.price, duration: input.duration }],
+          totalDuration: input.duration,
+          totalPrice: input.price
+        });
+      }
+      
+      console.log("[PUBLIC BOOKING] Category groups:", categoryGroups.size);
+      
+      // If only one category, create a single appointment (original behavior)
+      if (categoryGroups.size <= 1) {
+        const [category] = categoryGroups.keys();
+        const group = categoryGroups.get(category);
+        
+        // Find available staff for this category
+        const assignedStaff = input.staff || await findAvailableStaffForCategory(
+          category || "Général",
           input.date,
           input.startTime,
           input.duration
         );
+        
+        const appointmentData: any = {
+          client: input.client,
+          service: input.service,
+          staff: assignedStaff,
+          duration: input.duration,
+          price: input.price,
+          total: input.total,
+          date: input.date,
+          startTime: input.startTime,
+          paid: false,
+          servicesJson: input.servicesJson,
+        };
+        
+        console.log("[PUBLIC BOOKING] Creating single appointment:", JSON.stringify(appointmentData));
+        const item = await storage.createAppointment(appointmentData);
+        createdAppointments.push(item);
+        
+      } else {
+        // Multiple categories: split into separate appointments
+        console.log("[PUBLIC BOOKING] Splitting into", categoryGroups.size, "appointments by category");
+        
+        // Calculate total service prices before discount to determine discount ratio
+        const totalServicePrice = Array.from(categoryGroups.values()).reduce((sum, g) => sum + g.totalPrice, 0);
+        const hasDiscount = input.total < totalServicePrice;
+        const discountRatio = hasDiscount ? input.total / totalServicePrice : 1;
+        console.log("[PUBLIC BOOKING] Discount ratio:", discountRatio, "(total:", input.total, "vs services:", totalServicePrice, ")");
+        
+        let currentStartMinutes = timeToMinutes(input.startTime);
+        const usedStaff: string[] = [];
+        
+        for (const [category, group] of categoryGroups) {
+          const currentStartTime = minutesToTime(currentStartMinutes);
+          
+          // Find available staff for this category
+          // First try excluding already used staff to prefer different specialists
+          let assignedStaff = await findAvailableStaffForCategory(
+            category,
+            input.date,
+            currentStartTime,
+            group.totalDuration,
+            usedStaff
+          );
+          
+          // If no staff found and we have usedStaff, try again without exclusion
+          // (same staff can handle multiple categories sequentially)
+          if (assignedStaff === "À assigner" && usedStaff.length > 0) {
+            assignedStaff = await findAvailableStaffForCategory(
+              category,
+              input.date,
+              currentStartTime,
+              group.totalDuration,
+              [] // No exclusion
+            );
+          }
+          
+          // Track used staff to prefer different specialists for remaining categories
+          if (assignedStaff !== "À assigner") {
+            usedStaff.push(assignedStaff);
+          }
+          
+          // Create service name from group
+          const serviceNames = group.services.map(s => s.name).join(", ");
+          
+          // Apply package discount proportionally to this group's price
+          const discountedPrice = Math.round(group.totalPrice * discountRatio * 100) / 100;
+          
+          const appointmentData: any = {
+            client: input.client,
+            service: serviceNames,
+            staff: assignedStaff,
+            duration: group.totalDuration,
+            price: discountedPrice,
+            total: discountedPrice,
+            date: input.date,
+            startTime: currentStartTime,
+            paid: false,
+            servicesJson: group.services,
+          };
+          
+          console.log(`[PUBLIC BOOKING] Creating appointment for category "${category}":`, JSON.stringify(appointmentData));
+          const item = await storage.createAppointment(appointmentData);
+          createdAppointments.push(item);
+          
+          // Move start time forward for next appointment
+          currentStartMinutes += group.totalDuration;
+        }
       }
       
-      // Force paid to false for public bookings - never trust client
-      const appointmentData: any = {
-        client: input.client,
-        service: input.service,
-        staff: assignedStaff,
-        duration: input.duration,
-        price: input.price,
-        total: input.total,
-        date: input.date,
-        startTime: input.startTime,
-        paid: false, // Always unpaid for public bookings
-        servicesJson: input.servicesJson, // Multi-service array (processed by storage layer)
-      };
+      // Emit real-time notifications for all created bookings
+      for (const item of createdAppointments) {
+        io.emit("booking:created", item);
+        console.log("[PUBLIC BOOKING] Socket.IO event emitted: booking:created for appointment", item.id);
+        
+        // Send push notification
+        const clientName = item.client || "Client";
+        const serviceName = item.service || "RDV";
+        sendPushNotification(
+          "Nouveau RDV (En ligne)",
+          `${clientName} - ${serviceName} (${item.startTime}) - ${item.staff}`,
+          `/planning?date=${item.date}`
+        ).catch(console.error);
+      }
       
-      console.log("[PUBLIC BOOKING] Creating appointment with data:", JSON.stringify(appointmentData));
-      const item = await storage.createAppointment(appointmentData);
-      console.log("[PUBLIC BOOKING] Appointment created successfully:", JSON.stringify(item));
-      
-      // Emit real-time notification for new booking
-      io.emit("booking:created", item);
-      console.log("[PUBLIC BOOKING] Socket.IO event emitted: booking:created");
-      
-      // Send push notification for new appointment
-      const clientName = item.client || "Client";
-      const serviceName = item.service || "RDV";
-      sendPushNotification(
-        "Nouveau RDV (En ligne)",
-        `${clientName} - ${serviceName} (${item.startTime}) - ${item.staff}`,
-        `/planning?date=${item.date}`
-      ).catch(console.error);
-      
-      // If phone was provided, send WhatsApp confirmation (server-side only)
-      if (input.phone) {
+      // Send WhatsApp confirmation for the overall booking (if phone provided)
+      if (input.phone && createdAppointments.length > 0) {
         try {
           const { sendBookingConfirmation } = await import("./whapi");
           let formattedPhone = input.phone.replace(/[^0-9]/g, "");
@@ -405,27 +519,48 @@ export async function registerRoutes(
             formattedPhone = "212" + formattedPhone;
           }
           
+          // Create a summary of all services booked
+          const allServiceNames = createdAppointments.map(a => a.service).join(" + ");
+          
           await sendBookingConfirmation(
             formattedPhone,
-            input.client.split(" (")[0], // Extract name without phone
-            item.date,
-            item.startTime,
-            item.service || ""
+            input.client.split(" (")[0],
+            input.date,
+            input.startTime,
+            allServiceNames
           );
         } catch (err) {
           console.log("WhatsApp notification failed:", err);
         }
       }
       
-      // Return only confirmation info, not full internal record
-      res.status(201).json({
-        success: true,
-        id: item.id,
-        date: item.date,
-        startTime: item.startTime,
-        service: item.service,
-        staff: item.staff
-      });
+      // Return confirmation info for all created appointments
+      if (createdAppointments.length === 1) {
+        const item = createdAppointments[0];
+        res.status(201).json({
+          success: true,
+          id: item.id,
+          date: item.date,
+          startTime: item.startTime,
+          service: item.service,
+          staff: item.staff
+        });
+      } else {
+        // Multiple appointments created
+        res.status(201).json({
+          success: true,
+          multipleAppointments: true,
+          count: createdAppointments.length,
+          appointments: createdAppointments.map(item => ({
+            id: item.id,
+            date: item.date,
+            startTime: item.startTime,
+            service: item.service,
+            staff: item.staff,
+            duration: item.duration
+          }))
+        });
+      }
     } catch (err) {
       console.error("[PUBLIC BOOKING] Error:", err);
       if (err instanceof z.ZodError) {

@@ -68,6 +68,25 @@ interface Package {
   validUntil: string | null;
 }
 
+interface BookingResult {
+  success: boolean;
+  multipleAppointments?: boolean;
+  count?: number;
+  id?: number;
+  date?: string;
+  startTime?: string;
+  service?: string;
+  staff?: string;
+  appointments?: Array<{
+    id: number;
+    date: string;
+    startTime: string;
+    service: string;
+    staff: string;
+    duration: number;
+  }>;
+}
+
 const TIME_SLOTS = [
   "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
   "14:00", "14:30", "15:00", "15:30", "16:00", "16:30",
@@ -90,6 +109,7 @@ export default function Booking() {
   const [visitorCount, setVisitorCount] = useState<number>(0);
   const [packages, setPackages] = useState<Package[]>([]);
   const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
+  const [bookingResult, setBookingResult] = useState<BookingResult | null>(null);
 
   useEffect(() => {
     i18n.changeLanguage("fr");
@@ -244,6 +264,8 @@ export default function Booking() {
         throw new Error(errorData.message || "Failed to book appointment");
       }
       
+      const result: BookingResult = await res.json();
+      setBookingResult(result);
       setIsSuccess(true);
       setSelectedServices([]);
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
@@ -310,6 +332,8 @@ export default function Booking() {
   const canSubmit = selectedServices.length > 0 && date && selectedTime && form.watch("client");
 
   if (isSuccess) {
+    const hasMultipleAppointments = bookingResult?.multipleAppointments && bookingResult.appointments;
+    
     return (
       <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-accent/10" />
@@ -325,34 +349,109 @@ export default function Booking() {
           <div className="space-y-2">
             <h1 className="text-3xl font-display font-bold">{t("booking.bookingConfirmed")}</h1>
             <p className="text-muted-foreground text-base">{t("booking.thankYou")}</p>
+            {hasMultipleAppointments && (
+              <p className="text-sm text-primary font-medium">
+                {t("booking.multipleAppointments", { count: bookingResult.count, defaultValue: `${bookingResult.count} rendez-vous créés` })}
+              </p>
+            )}
           </div>
-          <div className="glass-subtle rounded-2xl p-5 text-sm space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground flex items-center gap-2">
-                <CalendarDays className="w-4 h-4" />
-                {t("common.date")}
-              </span>
-              <span className="font-semibold">{date && format(date, "PPP", { locale: getDateLocale() })}</span>
+          
+          {hasMultipleAppointments ? (
+            <div className="space-y-3">
+              {bookingResult.appointments!.map((appt, index) => (
+                <div key={appt.id} className="glass-subtle rounded-2xl p-4 text-sm space-y-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-1 rounded-full">
+                      RDV {index + 1}
+                    </span>
+                    <span className="text-xs text-muted-foreground">{appt.duration} min</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground flex items-center gap-2">
+                      <Clock className="w-4 h-4" />
+                      {t("booking.time")}
+                    </span>
+                    <span className="font-semibold">{appt.startTime}</span>
+                  </div>
+                  <div className="flex justify-between items-start">
+                    <span className="text-muted-foreground flex items-center gap-2">
+                      <Scissors className="w-4 h-4" />
+                      {t("booking.service")}
+                    </span>
+                    <span className="font-semibold text-right max-w-[150px] text-sm">{appt.service}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground flex items-center gap-2">
+                      <User className="w-4 h-4" />
+                      {t("booking.staff", { defaultValue: "Spécialiste" })}
+                    </span>
+                    <span className={cn(
+                      "font-semibold text-sm",
+                      appt.staff === "À assigner" ? "text-orange-500" : "text-emerald-500"
+                    )}>
+                      {appt.staff}
+                    </span>
+                  </div>
+                </div>
+              ))}
+              <div className="glass-subtle rounded-2xl p-4 text-sm">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground flex items-center gap-2">
+                    <CalendarDays className="w-4 h-4" />
+                    {t("common.date")}
+                  </span>
+                  <span className="font-semibold">{date && format(date, "PPP", { locale: getDateLocale() })}</span>
+                </div>
+                <div className="flex justify-between items-center border-t border-border/50 pt-3 mt-3">
+                  <span className="text-muted-foreground">{t("common.price")}</span>
+                  <span className="font-bold text-primary text-xl">{form.getValues("total")} {t("common.currency")}</span>
+                </div>
+              </div>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground flex items-center gap-2">
-                <Clock className="w-4 h-4" />
-                {t("booking.time")}
-              </span>
-              <span className="font-semibold">{selectedTime}</span>
+          ) : (
+            <div className="glass-subtle rounded-2xl p-5 text-sm space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground flex items-center gap-2">
+                  <CalendarDays className="w-4 h-4" />
+                  {t("common.date")}
+                </span>
+                <span className="font-semibold">{date && format(date, "PPP", { locale: getDateLocale() })}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  {t("booking.time")}
+                </span>
+                <span className="font-semibold">{selectedTime}</span>
+              </div>
+              <div className="flex justify-between items-start">
+                <span className="text-muted-foreground flex items-center gap-2">
+                  <Scissors className="w-4 h-4" />
+                  {t("booking.service")}
+                </span>
+                <span className="font-semibold text-right max-w-[180px]">{form.getValues("service")}</span>
+              </div>
+              {bookingResult?.staff && (
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground flex items-center gap-2">
+                    <User className="w-4 h-4" />
+                    {t("booking.staff", { defaultValue: "Spécialiste" })}
+                  </span>
+                  <span className={cn(
+                    "font-semibold",
+                    bookingResult.staff === "À assigner" ? "text-orange-500" : "text-emerald-500"
+                  )}>
+                    {bookingResult.staff}
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-between items-center border-t border-border/50 pt-3 mt-3">
+                <span className="text-muted-foreground">{t("common.price")}</span>
+                <span className="font-bold text-primary text-xl">{form.getValues("total")} {t("common.currency")}</span>
+              </div>
             </div>
-            <div className="flex justify-between items-start">
-              <span className="text-muted-foreground flex items-center gap-2">
-                <Scissors className="w-4 h-4" />
-                {t("booking.service")}
-              </span>
-              <span className="font-semibold text-right max-w-[180px]">{form.getValues("service")}</span>
-            </div>
-            <div className="flex justify-between items-center border-t border-border/50 pt-3 mt-3">
-              <span className="text-muted-foreground">{t("common.price")}</span>
-              <span className="font-bold text-primary text-xl">{form.getValues("total")} {t("common.currency")}</span>
-            </div>
-          </div>
+          )}
+          
           <Button onClick={() => window.location.reload()} className="w-full h-12 text-lg mt-4 rounded-2xl">
             {t("booking.newBooking")}
           </Button>

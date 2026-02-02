@@ -103,11 +103,16 @@ Preferred communication style: Simple, everyday language.
 - **Design**: iOS liquid glass aesthetic with glassmorphism effects, gradient backgrounds, and smooth animations
 - **Multi-Service Support**: Clients can select multiple services, shown as removable pills with total calculation
 - **Visitor Counter**: Displays total visitor count on the booking page, tracked via `page_views` table with atomic upserts
+- **Auto Staff Assignment**: When booking, the system automatically assigns staff based on their category specializations
+- **Category-Based Appointment Splitting**: If services are from different categories (e.g., Hair + Nails), the system creates separate appointments:
+  - Each appointment is assigned to a specialist for that category
+  - Appointments are scheduled sequentially (e.g., Hair at 14:00, Nails at 14:30)
+  - Confirmation shows all created appointments with their assigned staff
 - **Public API Endpoints** (rate-limited, sanitized responses):
   - `GET /api/public/services` - Service list (id, name, category, duration, price only)
   - `GET /api/public/staff` - Staff list (id, name, color only)
   - `GET /api/public/appointments` - Availability check (minimal appointment data)
-  - `POST /api/public/appointments` - Create booking (strict input validation, forced unpaid status, multi-service support)
+  - `POST /api/public/appointments` - Create booking (strict input validation, forced unpaid status, multi-service support, auto-split by category)
   - `GET /api/public/page-views` - Get visitor count for a page
   - `POST /api/public/page-views` - Increment and return visitor count for a page
 - **Security**: Rate limiting (10 req/min per IP), input validation with Zod, sanitized responses
