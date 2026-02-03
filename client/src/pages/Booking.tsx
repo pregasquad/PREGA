@@ -467,31 +467,31 @@ export default function Booking() {
   }
 
   return (
-    <div className="min-h-screen p-4 md:p-6 relative overflow-hidden" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
+    <div className="min-h-screen p-3 md:p-4 relative overflow-hidden" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-accent/10" />
       <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/10 rounded-full blur-3xl opacity-60" />
       <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-accent/20 rounded-full blur-3xl opacity-60" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl opacity-40" />
       
-      <div className="max-w-4xl mx-auto space-y-6 relative z-10 animate-fade-in">
-        <div className="flex justify-between items-center mb-2">
-          {visitorCount > 0 && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground/80">
-              <Users className="w-4 h-4" />
-              <span>{visitorCount} {t("booking.activeVisitors", { defaultValue: "en ligne" })}</span>
+      <div className="max-w-4xl mx-auto space-y-4 relative z-10 animate-fade-in">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img src="/prega_logo.png" alt="PregaSquad" className="w-12 h-12" />
+            <div>
+              <h1 className="text-xl md:text-2xl font-display font-bold gradient-text leading-tight">
+                {t("booking.title")}
+              </h1>
+              <p className="text-xs text-muted-foreground hidden sm:block">{t("booking.subtitle")}</p>
             </div>
-          )}
-          {visitorCount === 0 && <div />}
-          <LanguageSwitcher />
-        </div>
-        <div className="text-center space-y-3 py-4">
-          <div className="flex justify-center mb-4">
-            <img src="/prega_logo.png" alt="PregaSquad" className="w-24 h-24" />
           </div>
-          <h1 className="text-3xl md:text-4xl font-display font-bold gradient-text">
-            {t("booking.title")}
-          </h1>
-          <p className="text-muted-foreground">{t("booking.subtitle")}</p>
+          <div className="flex items-center gap-3">
+            {visitorCount > 0 && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground/80">
+                <Users className="w-3.5 h-3.5" />
+                <span>{visitorCount}</span>
+              </div>
+            )}
+            <LanguageSwitcher />
+          </div>
         </div>
 
         <div className="glass-card p-6 md:p-8">
