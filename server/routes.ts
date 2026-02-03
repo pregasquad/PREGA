@@ -447,8 +447,9 @@ export async function registerRoutes(
         // Calculate total service prices before discount to determine discount ratio
         const totalServicePrice = Array.from(categoryGroups.values()).reduce((sum, g) => sum + g.totalPrice, 0);
         const effectiveTotal = input.total || totalServicePrice;
-        const hasDiscount = effectiveTotal < totalServicePrice;
-        const discountRatio = hasDiscount ? effectiveTotal / totalServicePrice : 1;
+        // Guard against division by zero: if all services are free, no discount applies
+        const hasDiscount = totalServicePrice > 0 && effectiveTotal < totalServicePrice;
+        const discountRatio = (hasDiscount && totalServicePrice > 0) ? effectiveTotal / totalServicePrice : 1;
         console.log("[PUBLIC BOOKING] Discount ratio:", discountRatio, "(total:", effectiveTotal, "vs services:", totalServicePrice, ")");
         
         let currentStartMinutes = timeToMinutes(input.startTime);
@@ -769,8 +770,8 @@ export async function registerRoutes(
               });
             }
             
-            // Deduct gift card balance if client has enabled it
-            if (client.useGiftCardBalance && Number(client.giftCardBalance) > 0 && item.total) {
+            // Deduct gift card balance if client has enabled it (only for positive totals)
+            if (client.useGiftCardBalance && Number(client.giftCardBalance) > 0 && item.total && item.total > 0) {
               const giftCardBalance = Number(client.giftCardBalance) || 0;
               const amountToDeduct = Math.min(giftCardBalance, item.total);
               if (amountToDeduct > 0) {

@@ -258,17 +258,27 @@ export class DatabaseStorage implements IStorage {
     const servicesArray = (appointment as any).servicesJson;
     
     if (servicesArray && Array.isArray(servicesArray) && servicesArray.length > 0) {
-      const totalDuration = servicesArray.reduce((sum: number, svc: any) => sum + (svc.duration || 0), 0);
-      const calculatedPrice = servicesArray.reduce((sum: number, svc: any) => sum + (svc.price || 0), 0);
-      const serviceNames = servicesArray.map((svc: any) => svc.name).join(', ');
+      // Ensure non-negative values for each service
+      const sanitizedServices = servicesArray.map((svc: any) => ({
+        ...svc,
+        duration: Math.max(0, svc.duration || 0),
+        price: Math.max(0, svc.price || 0),
+      }));
+      
+      const totalDuration = sanitizedServices.reduce((sum: number, svc: any) => sum + svc.duration, 0);
+      const calculatedPrice = sanitizedServices.reduce((sum: number, svc: any) => sum + svc.price, 0);
+      const serviceNames = sanitizedServices.map((svc: any) => svc.name).join(', ');
       
       // Use the user's custom price/total if provided, otherwise use calculated values
-      const finalPrice = (appointment as any).price !== undefined ? (appointment as any).price : calculatedPrice;
-      const finalTotal = (appointment as any).total !== undefined ? (appointment as any).total : calculatedPrice;
+      // Ensure non-negative final values
+      const rawPrice = (appointment as any).price !== undefined ? (appointment as any).price : calculatedPrice;
+      const rawTotal = (appointment as any).total !== undefined ? (appointment as any).total : calculatedPrice;
+      const finalPrice = Math.max(0, rawPrice);
+      const finalTotal = Math.max(0, rawTotal);
       
       return {
         ...appointment,
-        servicesJson: JSON.stringify(servicesArray),
+        servicesJson: JSON.stringify(sanitizedServices),
         service: appointment.service || serviceNames,
         duration: totalDuration,
         price: finalPrice,
