@@ -43,16 +43,17 @@ export async function sendWhatsAppMessage(
     const chatId = formatPhoneNumber(to);
     console.log('Sending WhatsApp via WSAPI to:', chatId);
     
-    const response = await fetch(`${WSAPI_BASE_URL}/instances/${instanceId}/client/action/send-message`, {
+    const response = await fetch(`${WSAPI_BASE_URL}/messages/text`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        'X-Api-Key': apiKey,
+        'X-Instance-Id': instanceId,
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
       body: JSON.stringify({
-        chatId,
-        message
+        to: chatId,
+        text: message
       })
     });
 
@@ -90,18 +91,18 @@ export async function sendWhatsAppImage(
   try {
     const chatId = formatPhoneNumber(to);
     
-    const response = await fetch(`${WSAPI_BASE_URL}/instances/${instanceId}/client/action/send-media`, {
+    const response = await fetch(`${WSAPI_BASE_URL}/messages/image`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        'X-Api-Key': apiKey,
+        'X-Instance-Id': instanceId,
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
       body: JSON.stringify({
-        chatId,
-        mediaUrl: imageUrl,
-        caption: caption || '',
-        type: 'image'
+        to: chatId,
+        url: imageUrl,
+        caption: caption || ''
       })
     });
 
@@ -133,13 +134,14 @@ export async function setTypingIndicator(
   try {
     const chatId = formatPhoneNumber(to);
     
-    const response = await fetch(`${WSAPI_BASE_URL}/instances/${instanceId}/client/action/set-presence`, {
+    const response = await fetch(`${WSAPI_BASE_URL}/chats/${chatId}/presence`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        'X-Api-Key': apiKey,
+        'X-Instance-Id': instanceId,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ chatId, state })
+      body: JSON.stringify({ state })
     });
 
     return { success: response.ok };
@@ -243,10 +245,11 @@ export async function getConnectionStatus(): Promise<{ connected: boolean; error
   }
 
   try {
-    const response = await fetch(`${WSAPI_BASE_URL}/instances/${instanceId}`, {
+    const response = await fetch(`${WSAPI_BASE_URL}/instance`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        'X-Api-Key': apiKey,
+        'X-Instance-Id': instanceId,
         'Accept': 'application/json'
       }
     });
