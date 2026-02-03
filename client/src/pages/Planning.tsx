@@ -229,9 +229,9 @@ export default function Planning() {
 
   // BULLETPROOF SCROLL TO LIVE LINE - uses scrollIntoView on the actual element
   const scrollToLiveLine = useCallback((smooth = false, force = false) => {
-    // Check if user recently scrolled (pause for 30s) - unless forced or smooth (user-initiated)
+    // Check if user recently scrolled (pause for 30s) - unless forced
     const now = Date.now();
-    if (!force && !smooth && now - userScrollPauseRef.current < 30000) {
+    if (!force && now - userScrollPauseRef.current < 30000) {
       return false; // User scrolled recently, skip auto-scroll
     }
     
@@ -429,11 +429,11 @@ export default function Planning() {
     // Only scroll when: viewing today, data loaded, and haven't scrolled yet
     if (!isToday || initialScrollDoneRef.current || staffList.length === 0) return;
     
-    // Wait a bit for DOM to render, then scroll once
+    // Wait a bit for DOM to render, then scroll once with smooth animation
     const timer = setTimeout(() => {
       if (!initialScrollDoneRef.current) {
         initialScrollDoneRef.current = true;
-        scrollToLiveLine(false, true); // force = true bypasses user pause
+        scrollToLiveLine(true, true); // smooth = true, force = true
       }
     }, 300);
     
@@ -444,7 +444,7 @@ export default function Planning() {
   // This respects user scroll pause - won't scroll if user scrolled in last 30s
   useEffect(() => {
     if (!isToday) return;
-    scrollToLiveLine(); // normal call, respects user pause
+    scrollToLiveLine(true); // smooth animation, respects user pause
   }, [isToday, currentTime, scrollToLiveLine]);
 
   // Scroll when visibility changes (returning from background in PWA)
