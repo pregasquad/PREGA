@@ -1,21 +1,74 @@
 const WAWP_BASE_URL = 'https://wawp.net/wp-json/awp/v1';
 
+// Known country codes and their expected local number lengths (without leading 0)
+const COUNTRY_CODES: { [key: string]: { code: string; localLength: number } } = {
+  '33': { code: '33', localLength: 9 },   // France
+  '31': { code: '31', localLength: 9 },   // Netherlands
+  '212': { code: '212', localLength: 9 }, // Morocco
+  '32': { code: '32', localLength: 9 },   // Belgium
+  '34': { code: '34', localLength: 9 },   // Spain
+  '39': { code: '39', localLength: 10 },  // Italy
+  '44': { code: '44', localLength: 10 },  // UK
+  '49': { code: '49', localLength: 10 },  // Germany
+  '1': { code: '1', localLength: 10 },    // USA/Canada
+  '971': { code: '971', localLength: 9 }, // UAE
+  '966': { code: '966', localLength: 9 }, // Saudi Arabia
+};
+
 function formatPhoneNumber(phone: string): string {
-  let cleaned = phone.replace(/[^0-9]/g, '');
+  // Remove all non-digit characters except leading +
+  let cleaned = phone.replace(/[^0-9+]/g, '');
   
+  // Handle + prefix
+  if (cleaned.startsWith('+')) {
+    cleaned = cleaned.substring(1);
+  }
+  
+  // Handle 00 international prefix
   if (cleaned.startsWith('00')) {
     cleaned = cleaned.substring(2);
   }
   
+  // Check if number already starts with a known country code
+  for (const [prefix, info] of Object.entries(COUNTRY_CODES)) {
+    if (cleaned.startsWith(prefix)) {
+      // Already has country code - validate and return
+      return cleaned + '@c.us';
+    }
+  }
+  
+  // Number doesn't have country code - apply Morocco (212) as default
+  // Handle local Moroccan format: 0612345678 -> 212612345678
   if (cleaned.startsWith('0') && cleaned.length === 10) {
     cleaned = '212' + cleaned.substring(1);
   }
-  
-  if (!cleaned.startsWith('212') && cleaned.length === 9) {
+  // Handle short Moroccan format: 612345678 -> 212612345678
+  else if (cleaned.length === 9) {
     cleaned = '212' + cleaned;
   }
   
   return cleaned + '@c.us';
+}
+
+// Helper to detect country from phone number
+export function detectCountry(phone: string): string {
+  let cleaned = phone.replace(/[^0-9+]/g, '');
+  if (cleaned.startsWith('+')) cleaned = cleaned.substring(1);
+  if (cleaned.startsWith('00')) cleaned = cleaned.substring(2);
+  
+  if (cleaned.startsWith('33')) return 'France';
+  if (cleaned.startsWith('31')) return 'Netherlands';
+  if (cleaned.startsWith('212')) return 'Morocco';
+  if (cleaned.startsWith('32')) return 'Belgium';
+  if (cleaned.startsWith('34')) return 'Spain';
+  if (cleaned.startsWith('39')) return 'Italy';
+  if (cleaned.startsWith('44')) return 'UK';
+  if (cleaned.startsWith('49')) return 'Germany';
+  if (cleaned.startsWith('1')) return 'USA/Canada';
+  if (cleaned.startsWith('971')) return 'UAE';
+  if (cleaned.startsWith('966')) return 'Saudi Arabia';
+  
+  return 'Morocco'; // Default
 }
 
 export async function sendWhatsAppMessage(
