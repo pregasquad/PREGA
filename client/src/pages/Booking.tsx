@@ -559,7 +559,7 @@ export default function Booking() {
                         </div>
                       </div>
                       
-                      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+                      <div className="flex gap-2 overflow-x-auto pt-3 pb-1 -mx-1 px-1 scrollbar-hide overflow-y-visible">
                         {packages.map(pkg => {
                           const savings = pkg.originalPrice - pkg.discountedPrice;
                           const savingsPercent = pkg.originalPrice > 0 ? Math.round((savings / pkg.originalPrice) * 100) : 0;
