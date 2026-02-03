@@ -331,6 +331,7 @@ export default function Planning() {
   });
   const [selectedServices, setSelectedServices] = useState<Array<{id: string, name: string, price: number, duration: number}>>([]);
   const [priceInputs, setPriceInputs] = useState<Record<string, string>>({});
+  const [totalInputValue, setTotalInputValue] = useState<string>("0");
   const [selectedPackage, setSelectedPackage] = useState<{id: number; name: string; discountedPrice: number; originalPrice: number} | null>(null);
   const [appliedLoyaltyPoints, setAppliedLoyaltyPoints] = useState<{clientId: number; points: number; discountAmount: number} | null>(null);
   const [appliedGiftCardBalance, setAppliedGiftCardBalance] = useState<{clientId: number; amount: number; discountAmount: number} | null>(null);
@@ -690,10 +691,9 @@ export default function Planning() {
       setAppliedGiftCardBalance(newGiftCardBalance);
     }
     
-    // Update the total and DOM input
+    // Update the total state
     form.setValue("total", runningTotal);
-    const totalInput = document.getElementById('total-price-input') as HTMLInputElement;
-    if (totalInput) totalInput.value = String(runningTotal);
+    setTotalInputValue(String(runningTotal));
   }, [selectedServices, selectedPackage, isDialogOpen, clients, businessSettings, form, appliedLoyaltyPoints, appliedGiftCardBalance, watchedClient]);
 
   // Helper function to parse services from an appointment
@@ -844,17 +844,15 @@ export default function Planning() {
     const selectedClient = clients.find(c => c.name === data.client);
     const clientId = selectedClient?.id || (data as any).clientId || null;
 
-    // Read prices directly from DOM inputs (completely bypasses React state)
+    // Read prices from React state (priceInputs tracks individual service prices)
     const servicesToSave = selectedServices.map(s => {
-      const inputEl = document.getElementById(`price-input-${s.id}`) as HTMLInputElement;
-      const inputValue = inputEl?.value;
-      const price = inputValue ? (parseFloat(inputValue) || s.price) : s.price;
+      const inputValue = priceInputs[s.id];
+      const price = inputValue !== undefined ? (parseFloat(inputValue) || s.price) : s.price;
       return { name: s.name, price, duration: s.duration };
     });
     
-    // Read total price from DOM (user can override the calculated total)
-    const totalInputEl = document.getElementById('total-price-input') as HTMLInputElement;
-    const customTotal = totalInputEl?.value ? parseFloat(totalInputEl.value) : null;
+    // Read total price from state (user can override the calculated total)
+    const customTotal = totalInputValue ? parseFloat(totalInputValue) : null;
     // Use package discounted price if a package is selected, otherwise sum of services
     const calculatedTotal = selectedPackage 
       ? selectedPackage.discountedPrice 
@@ -944,9 +942,7 @@ export default function Planning() {
     form.setValue("duration", totalDuration);
     form.setValue("price", totalPrice);
     form.setValue("total", totalPrice);
-    // Update total input in DOM
-    const totalInput = document.getElementById('total-price-input') as HTMLInputElement;
-    if (totalInput) totalInput.value = String(totalPrice);
+    setTotalInputValue(String(totalPrice));
   };
 
   const handleRemoveService = (index: number) => {
@@ -966,8 +962,7 @@ export default function Planning() {
     form.setValue("duration", totalDuration);
     form.setValue("price", totalPrice);
     form.setValue("total", totalPrice);
-    const totalInput = document.getElementById('total-price-input') as HTMLInputElement;
-    if (totalInput) totalInput.value = String(totalPrice);
+    setTotalInputValue(String(totalPrice));
   };
 
   const handleSelectPackage = (pkg: {id: number; name: string; services: number[]; originalPrice: number; discountedPrice: number}) => {
@@ -996,9 +991,7 @@ export default function Planning() {
     form.setValue("service", packageServices.map(s => s.name).join(', '));
     form.setValue("duration", totalDuration);
     form.setValue("total", pkg.discountedPrice);
-    
-    const totalInput = document.getElementById('total-price-input') as HTMLInputElement;
-    if (totalInput) totalInput.value = String(pkg.discountedPrice);
+    setTotalInputValue(String(pkg.discountedPrice));
   };
 
   const handleClearPackage = () => {
@@ -1008,16 +1001,14 @@ export default function Planning() {
     form.setValue("service", "");
     form.setValue("duration", 30);
     form.setValue("total", 0);
-    const totalInput = document.getElementById('total-price-input') as HTMLInputElement;
-    if (totalInput) totalInput.value = "0";
+    setTotalInputValue("0");
   };
 
   const handleClearGiftCardBalance = () => {
     if (appliedGiftCardBalance) {
-      const totalInput = document.getElementById('total-price-input') as HTMLInputElement;
-      const currentTotal = parseFloat(totalInput?.value || "0");
+      const currentTotal = parseFloat(totalInputValue || "0");
       const newTotal = currentTotal + appliedGiftCardBalance.discountAmount;
-      if (totalInput) totalInput.value = String(newTotal);
+      setTotalInputValue(String(newTotal));
       form.setValue("total", newTotal);
     }
     setAppliedGiftCardBalance(null);
@@ -1761,9 +1752,11 @@ export default function Planning() {
                   <input
                     type="number"
                     inputMode="decimal"
-                    id="total-price-input"
-                    defaultValue={form.getValues("total") || 0}
-                    key={editingAppointment?.id || 'new'}
+                    value={totalInputValue}
+                    onChange={(e) => {
+                      setTotalInputValue(e.target.value);
+                      form.setValue("total", parseFloat(e.target.value) || 0);
+                    }}
                     placeholder="0"
                     onClick={(e) => e.stopPropagation()}
                     onFocus={(e) => e.target.select()}
@@ -1834,8 +1827,7 @@ export default function Planning() {
                                       setClientPopoverOpen(false);
                                       
                                       // Get current total for calculations
-                                      let totalInput = document.getElementById('total-price-input') as HTMLInputElement;
-                                      let runningTotal = parseFloat(totalInput?.value || "0");
+                                      let runningTotal = parseFloat(totalInputValue || "0");
                                       
                                       // Auto-apply loyalty points if client has usePoints enabled
                                       if (client.usePoints && client.loyaltyPoints > 0 && businessSettings?.loyaltyEnabled) {
@@ -1851,7 +1843,7 @@ export default function Planning() {
                                             discountAmount
                                           });
                                           runningTotal = Math.max(0, runningTotal - discountAmount);
-                                          if (totalInput) totalInput.value = String(runningTotal);
+                                          setTotalInputValue(String(runningTotal));
                                           form.setValue("total", runningTotal);
                                           toast({ title: t("clients.pointsApplied", "Loyalty points applied!") + ` -${discountAmount.toFixed(2)} DH` });
                                         }
@@ -1870,7 +1862,7 @@ export default function Planning() {
                                             discountAmount
                                           });
                                           runningTotal = Math.max(0, runningTotal - discountAmount);
-                                          if (totalInput) totalInput.value = String(runningTotal);
+                                          setTotalInputValue(String(runningTotal));
                                           form.setValue("total", runningTotal);
                                           toast({ title: t("giftCard.balanceApplied", "Gift card balance applied!") + ` -${discountAmount.toFixed(2)} DH` });
                                         }
@@ -2047,10 +2039,9 @@ export default function Planning() {
                         variant="ghost"
                         size="sm"
                         onClick={() => {
-                          const totalInput = document.getElementById('total-price-input') as HTMLInputElement;
-                          const currentTotal = parseFloat(totalInput?.value || "0");
+                          const currentTotal = parseFloat(totalInputValue || "0");
                           const newTotal = currentTotal + appliedLoyaltyPoints.discountAmount;
-                          if (totalInput) totalInput.value = String(newTotal);
+                          setTotalInputValue(String(newTotal));
                           form.setValue("total", newTotal);
                           setAppliedLoyaltyPoints(null);
                         }}
