@@ -110,6 +110,7 @@ export default function Booking() {
   const [packages, setPackages] = useState<Package[]>([]);
   const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
   const [bookingResult, setBookingResult] = useState<BookingResult | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   useEffect(() => {
     i18n.changeLanguage("fr");
@@ -207,6 +208,11 @@ export default function Booking() {
   const filteredCategories = useMemo(() => {
     return Array.from(new Set(filteredServices.map(s => s.category)));
   }, [filteredServices]);
+
+  const categoryFilteredServices = useMemo(() => {
+    if (!selectedCategory) return filteredServices;
+    return filteredServices.filter(s => s.category === selectedCategory);
+  }, [filteredServices, selectedCategory]);
 
   const getAvailableSlots = useMemo(() => {
     if (!date) return [];
@@ -598,34 +604,86 @@ export default function Booking() {
                     name="service"
                     render={() => (
                       <FormItem>
-                        <FormLabel className="flex items-center gap-2 text-sm font-medium">
-                          <Scissors className="w-4 h-4 text-primary" />
+                        <FormLabel className="flex items-center gap-2 text-base font-semibold mb-3">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                            <Scissors className="w-4 h-4 text-primary" />
+                          </div>
                           {t("booking.requiredService")}
                         </FormLabel>
+                        
+                        {filteredCategories.length > 1 && (
+                          <div className="flex flex-wrap gap-2 mb-3">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedCategory(null)}
+                              className={cn(
+                                "px-4 py-2 rounded-full text-sm font-medium transition-all",
+                                !selectedCategory
+                                  ? "bg-primary text-primary-foreground shadow-md"
+                                  : "bg-background/60 hover:bg-background/80 border border-border/50"
+                              )}
+                            >
+                              {t("common.all", { defaultValue: "Tous" })}
+                            </button>
+                            {filteredCategories.map(cat => (
+                              <button
+                                key={cat}
+                                type="button"
+                                onClick={() => setSelectedCategory(cat)}
+                                className={cn(
+                                  "px-4 py-2 rounded-full text-sm font-medium transition-all",
+                                  selectedCategory === cat
+                                    ? "bg-primary text-primary-foreground shadow-md"
+                                    : "bg-background/60 hover:bg-background/80 border border-border/50"
+                                )}
+                              >
+                                {cat}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        
                         <Select onValueChange={handleAddService} value="">
                           <FormControl>
-                            <SelectTrigger className="h-12 rounded-xl bg-background/50 backdrop-blur-sm border-border/50">
-                              <SelectValue placeholder={t("booking.selectService")} />
+                            <SelectTrigger className={cn(
+                              "h-14 rounded-2xl text-base font-medium",
+                              "bg-gradient-to-r from-primary/5 to-primary/10",
+                              "border-2 border-primary/30 hover:border-primary/50",
+                              "shadow-lg shadow-primary/5",
+                              selectedServices.length === 0 && "animate-pulse"
+                            )}>
+                              <div className="flex items-center gap-3">
+                                <Sparkles className="w-5 h-5 text-primary" />
+                                <SelectValue placeholder={t("booking.selectService")} />
+                              </div>
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent className="glass max-h-[300px] rounded-xl">
-                            {filteredCategories.map(cat => (
+                          <SelectContent className="glass max-h-[350px] rounded-2xl border-2 border-primary/20 shadow-xl">
+                            {(selectedCategory ? [selectedCategory] : filteredCategories).map(cat => (
                               <div key={cat}>
-                                <div className="px-3 py-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                  {cat}
-                                </div>
-                                {filteredServices.filter(s => s.category === cat).map(s => {
+                                {!selectedCategory && (
+                                  <div className="px-3 py-2 text-xs font-bold text-primary uppercase tracking-wider bg-primary/5 sticky top-0">
+                                    {cat}
+                                  </div>
+                                )}
+                                {categoryFilteredServices.filter(s => s.category === cat).map(s => {
                                   const isSelected = selectedServices.some(sel => sel.name === s.name);
                                   return (
                                     <SelectItem 
                                       key={s.id} 
                                       value={s.name} 
-                                      className={cn("rounded-lg", isSelected && "opacity-50")}
+                                      className={cn(
+                                        "rounded-xl py-3 px-4 my-1 cursor-pointer",
+                                        isSelected && "opacity-40 bg-muted"
+                                      )}
                                       disabled={isSelected}
                                     >
                                       <div className="flex justify-between items-center w-full gap-4">
-                                        <span>{s.name}</span>
-                                        <span className="text-primary font-bold">{s.price} {t("common.currency")}</span>
+                                        <div className="flex flex-col">
+                                          <span className="font-medium">{s.name}</span>
+                                          <span className="text-xs text-muted-foreground">{s.duration} min</span>
+                                        </div>
+                                        <span className="text-primary font-bold text-lg">{s.price} {t("common.currency")}</span>
                                       </div>
                                     </SelectItem>
                                   );
