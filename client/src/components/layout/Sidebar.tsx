@@ -352,11 +352,11 @@ export function Sidebar() {
                     size="sm" 
                     className="w-full"
                     onClick={() => {
-                      setLocation("/planning");
+                      setLocation("/booking-history");
                       if (isMobile) setOpenMobile(false);
                     }}
                   >
-                    {t("sidebar.viewAllInPlanning")}
+                    {t("sidebar.viewAllAppointments", { defaultValue: "Voir tous les rendez-vous" })}
                   </Button>
                 </div>
               )}
