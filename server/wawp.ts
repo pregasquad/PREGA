@@ -214,28 +214,44 @@ export async function getConnectionStatus(): Promise<{ connected: boolean; statu
   }
 
   try {
-    const params = new URLSearchParams({
-      instance_id: instanceId,
-      access_token: accessToken
-    });
+    // Try the status endpoint with POST method (Wawp API requires POST for most endpoints)
+    const formData = new URLSearchParams();
+    formData.append('instance_id', instanceId);
+    formData.append('access_token', accessToken);
     
-    const response = await fetch(`${WAWP_BASE_URL}/info?${params.toString()}`, {
-      method: 'GET',
+    const response = await fetch(`${WAWP_BASE_URL}/status`, {
+      method: 'POST',
       headers: {
-        'Accept': 'application/json'
-      }
+        'Accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: formData.toString()
     });
 
     const data = await response.json();
+    console.log('Wawp status response:', JSON.stringify(data));
     
     if (response.ok) {
-      const status = data.status || data.state;
+      // Check various status indicators from Wawp API
+      const status = data.status || data.state || data.connection_status;
+      const isConnected = status === 'CONNECTED' || 
+                         status === 'connected' || 
+                         status === 'open' || 
+                         data.success === true ||
+                         data.authenticated === true ||
+                         data.connected === true;
       return { 
-        connected: status === 'CONNECTED' || status === 'open' || data.success === true,
-        status 
+        connected: isConnected,
+        status: status || (isConnected ? 'connected' : 'unknown')
       };
     } else {
-      return { connected: false, error: data.message || 'Failed to get session status' };
+      // If status endpoint fails, credentials are configured but connection status unknown
+      // Return configured: true but connected: unknown
+      return { 
+        connected: false, 
+        status: 'configured',
+        error: data.message || data.error || 'Could not verify connection status'
+      };
     }
   } catch (error: any) {
     return { connected: false, error: error.message };

@@ -168,18 +168,22 @@ export async function registerRoutes(
   });
   
   // Schema for public booking - strict whitelist of allowed fields
+  // Supports both single-service (service/duration/price/total) and multi-service (servicesJson)
   const publicBookingSchema = z.object({
     client: z.string().min(1).max(100),
-    service: z.string().min(1).max(500), // Can be comma-separated list for multi-service
+    service: z.string().min(1).max(500).optional(), // Optional when using servicesJson
     staff: z.string().max(50).optional(), // Staff is optional - admin assigns later
-    duration: z.number().min(5).max(480),
-    price: z.number().min(0).max(100000),
-    total: z.number().min(0).max(100000),
+    duration: z.number().min(5).max(480).optional(), // Optional when using servicesJson
+    price: z.number().min(0).max(100000).optional(), // Optional when using servicesJson
+    total: z.number().min(0).max(100000).optional(), // Optional when using servicesJson
     date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     startTime: z.string().regex(/^\d{2}:\d{2}$/),
     phone: z.string().max(20).optional(),
     servicesJson: z.array(serviceItemSchema).optional(), // Multi-service support
-  });
+  }).refine(
+    (data) => data.servicesJson?.length || (data.service && data.duration && data.price && data.total),
+    { message: "Either servicesJson or service/duration/price/total fields are required" }
+  );
 
   // Helper: Find available staff for a SINGLE category and time slot
   async function findAvailableStaffForCategory(
@@ -386,8 +390,8 @@ export async function registerRoutes(
           group.totalDuration += svc.duration;
           group.totalPrice += svc.price;
         }
-      } else if (input.service) {
-        // Single service booking
+      } else if (input.service && input.duration && input.price && input.total) {
+        // Single service booking (validated by refine)
         const matchedService = allServices.find(s => s.name === input.service);
         const category = matchedService?.category || "Général";
         
@@ -406,21 +410,26 @@ export async function registerRoutes(
         const [category] = categoryGroups.keys();
         const group = categoryGroups.get(category);
         
+        // Use group values for duration (calculated from services) or fallback to input values
+        const effectiveDuration = group?.totalDuration || input.duration || 30;
+        const effectivePrice = group?.totalPrice || input.price || 0;
+        const effectiveTotal = input.total || effectivePrice;
+        
         // Find available staff for this category
         const assignedStaff = input.staff || await findAvailableStaffForCategory(
           category || "Général",
           input.date,
           input.startTime,
-          input.duration
+          effectiveDuration
         );
         
         const appointmentData: any = {
           client: input.client,
-          service: input.service,
+          service: input.service || group?.services.map(s => s.name).join(", "),
           staff: assignedStaff,
-          duration: input.duration,
-          price: input.price,
-          total: input.total,
+          duration: effectiveDuration,
+          price: effectivePrice,
+          total: effectiveTotal,
           date: input.date,
           startTime: input.startTime,
           paid: false,
@@ -437,9 +446,10 @@ export async function registerRoutes(
         
         // Calculate total service prices before discount to determine discount ratio
         const totalServicePrice = Array.from(categoryGroups.values()).reduce((sum, g) => sum + g.totalPrice, 0);
-        const hasDiscount = input.total < totalServicePrice;
-        const discountRatio = hasDiscount ? input.total / totalServicePrice : 1;
-        console.log("[PUBLIC BOOKING] Discount ratio:", discountRatio, "(total:", input.total, "vs services:", totalServicePrice, ")");
+        const effectiveTotal = input.total || totalServicePrice;
+        const hasDiscount = effectiveTotal < totalServicePrice;
+        const discountRatio = hasDiscount ? effectiveTotal / totalServicePrice : 1;
+        console.log("[PUBLIC BOOKING] Discount ratio:", discountRatio, "(total:", effectiveTotal, "vs services:", totalServicePrice, ")");
         
         let currentStartMinutes = timeToMinutes(input.startTime);
         const usedStaff: string[] = [];
