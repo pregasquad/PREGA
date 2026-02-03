@@ -175,15 +175,15 @@ Preferred communication style: Simple, everyday language.
 - **Routes**: `/api/staff/:id/goals`, `/api/staff/goals/summary`
 
 ### Notifications
-- **Wozzapi**: For WhatsApp appointment reminders, booking confirmations, and bulk broadcasts.
-  - Environment Variables: `WOZZAPI_TOKEN`, `WOZZAPI_SESSION_ID`
+- **Wawp.net**: For WhatsApp appointment reminders, booking confirmations, and bulk broadcasts.
+  - Environment Variables: `WAWP_INSTANCE_ID`, `WAWP_ACCESS_TOKEN`
   - Endpoints:
     - `POST /api/notifications/send` - Send custom WhatsApp message
     - `POST /api/notifications/appointment-reminder` - Send appointment reminder
     - `POST /api/notifications/booking-confirmation` - Send booking confirmation
     - `POST /api/notifications/broadcast` - Bulk WhatsApp broadcast to clients
-    - `GET /api/notifications/status` - Check Wozzapi connection status
-  - Features: Text messages, media messages, appointment reminders, booking confirmations, waitlist notifications, gift card notifications
+    - `GET /api/notifications/status` - Check Wawp connection status
+  - Features: Text messages, image messages, appointment reminders, booking confirmations, waitlist notifications, gift card notifications
 
 ### Development Tools
 - **Vite**: Frontend dev server and bundler.
