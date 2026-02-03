@@ -537,7 +537,7 @@ export async function registerRoutes(
       // Send WhatsApp confirmation for the overall booking (if phone provided)
       if (input.phone && createdAppointments.length > 0) {
         try {
-          const { sendBookingConfirmation } = await import("./wsapi");
+          const { sendBookingConfirmation } = await import("./wozzapi");
           let formattedPhone = input.phone.replace(/[^0-9]/g, "");
           if (formattedPhone.startsWith("0")) {
             formattedPhone = "212" + formattedPhone.substring(1);
@@ -1453,10 +1453,10 @@ export async function registerRoutes(
     }
   });
 
-  // WhatsApp Notifications (WSAPI.chat) - protected routes
+  // WhatsApp Notifications (Wozzapi) - protected routes
   app.post("/api/notifications/send", isPinAuthenticated, async (req, res) => {
     try {
-      const { sendWhatsAppMessage } = await import("./wsapi");
+      const { sendWhatsAppMessage } = await import("./wozzapi");
       const { phone, message } = z.object({
         phone: z.string(),
         message: z.string(),
@@ -1476,7 +1476,7 @@ export async function registerRoutes(
 
   app.post("/api/notifications/appointment-reminder", isPinAuthenticated, async (req, res) => {
     try {
-      const { sendAppointmentReminder } = await import("./wsapi");
+      const { sendAppointmentReminder } = await import("./wozzapi");
       const { clientPhone, clientName, appointmentDate, appointmentTime, serviceName } = z.object({
         clientPhone: z.string(),
         clientName: z.string(),
@@ -1499,7 +1499,7 @@ export async function registerRoutes(
 
   app.post("/api/notifications/booking-confirmation", isPinAuthenticated, async (req, res) => {
     try {
-      const { sendBookingConfirmation } = await import("./wsapi");
+      const { sendBookingConfirmation } = await import("./wozzapi");
       const { clientPhone, clientName, appointmentDate, appointmentTime, serviceName } = z.object({
         clientPhone: z.string(),
         clientName: z.string(),
@@ -1523,7 +1523,7 @@ export async function registerRoutes(
   // Bulk WhatsApp broadcast to selected clients (or all if none specified)
   app.post("/api/notifications/broadcast", isPinAuthenticated, requirePermission("admin_settings"), async (req, res) => {
     try {
-      const { sendWhatsAppMessage } = await import("./wsapi");
+      const { sendWhatsAppMessage } = await import("./wozzapi");
       const { message, clientIds } = z.object({
         message: z.string().min(1, "Message is required"),
         clientIds: z.array(z.number()).optional(),
@@ -1577,10 +1577,10 @@ export async function registerRoutes(
     }
   });
 
-  // Check WSAPI connection status
+  // Check Wozzapi connection status
   app.get("/api/notifications/status", isPinAuthenticated, async (_req, res) => {
     try {
-      const { getConnectionStatus } = await import("./wsapi");
+      const { getConnectionStatus } = await import("./wozzapi");
       const status = await getConnectionStatus();
       res.json(status);
     } catch (err: any) {
