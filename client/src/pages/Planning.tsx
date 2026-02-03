@@ -117,6 +117,10 @@ export default function Planning() {
   const boardRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const liveLineRef = useRef<HTMLDivElement>(null);
+  
+  // Track if user manually scrolled - pause auto-scroll for 30s after user interaction
+  const userScrollPauseRef = useRef<number>(0);
+  const isAutoScrollingRef = useRef<boolean>(false);
 
   // Update time using setInterval (more efficient than requestAnimationFrame)
   useEffect(() => {
@@ -224,7 +228,16 @@ export default function Planning() {
   }, [currentTime]);
 
   // BULLETPROOF SCROLL TO LIVE LINE - uses scrollIntoView on the actual element
-  const scrollToLiveLine = useCallback((smooth = false) => {
+  const scrollToLiveLine = useCallback((smooth = false, force = false) => {
+    // Check if user recently scrolled (pause for 30s) - unless forced or smooth (user-initiated)
+    const now = Date.now();
+    if (!force && !smooth && now - userScrollPauseRef.current < 30000) {
+      return false; // User scrolled recently, skip auto-scroll
+    }
+    
+    // Mark that we're auto-scrolling so scroll listener ignores it
+    isAutoScrollingRef.current = true;
+    
     // Method 1: Use the actual live line element
     if (liveLineRef.current) {
       liveLineRef.current.scrollIntoView({ 
@@ -232,6 +245,8 @@ export default function Planning() {
         inline: 'nearest',
         behavior: smooth ? 'smooth' : 'auto'
       });
+      // Reset auto-scrolling flag after a short delay
+      setTimeout(() => { isAutoScrollingRef.current = false; }, 100);
       return true;
     }
     
@@ -247,21 +262,29 @@ export default function Planning() {
           top: Math.max(0, targetScroll),
           behavior: smooth ? 'smooth' : 'auto'
         });
+        setTimeout(() => { isAutoScrollingRef.current = false; }, 100);
         return true;
       }
     }
     
+    isAutoScrollingRef.current = false;
     return false;
   }, [getCurrentTimePosition]);
 
-  // Sync horizontal scroll between header and board
+  // Sync horizontal scroll between header and board + detect user scrolling
   useEffect(() => {
     const board = boardRef.current;
     if (!board) return;
 
     const handleScroll = () => {
+      // Sync header scroll
       if (headerRef.current) {
         headerRef.current.scrollLeft = board.scrollLeft;
+      }
+      
+      // Detect user-initiated scroll (not auto-scroll)
+      if (!isAutoScrollingRef.current) {
+        userScrollPauseRef.current = Date.now();
       }
     };
 
@@ -399,17 +422,17 @@ export default function Planning() {
     return format(date, "yyyy-MM-dd") === format(workDayDate, "yyyy-MM-dd");
   }, [date, currentTime, businessSettings?.openingTime, businessSettings?.closingTime]);
   
-  // AGGRESSIVE AUTO-SCROLL: Try many times with different delays
+  // INITIAL AUTO-SCROLL: Force scroll on mount (bypasses user scroll pause)
   useLayoutEffect(() => {
     if (!isToday) return;
     
-    // Try scrolling multiple times
-    const attempts = [0, 50, 100, 200, 300, 500, 800, 1000, 1500, 2000, 3000];
+    // Force scroll on initial load with multiple attempts
+    const attempts = [0, 100, 300, 600, 1000, 2000];
     const timers: NodeJS.Timeout[] = [];
     
     attempts.forEach(delay => {
       const timer = setTimeout(() => {
-        scrollToLiveLine();
+        scrollToLiveLine(false, true); // force = true bypasses user pause
       }, delay);
       timers.push(timer);
     });
@@ -417,15 +440,23 @@ export default function Planning() {
     return () => timers.forEach(t => clearTimeout(t));
   }, [isToday, scrollToLiveLine]);
 
-  // ResizeObserver: scroll when content loads
+  // ResizeObserver: Only scroll on significant size changes (initial content load)
   useEffect(() => {
     if (!isToday) return;
     
     const board = boardRef.current;
     if (!board) return;
     
+    let initialHeight = board.scrollHeight;
+    let resizeCount = 0;
+    
     const observer = new ResizeObserver(() => {
-      scrollToLiveLine();
+      // Only scroll on first few resizes (initial content load)
+      if (resizeCount < 3 && board.scrollHeight !== initialHeight) {
+        initialHeight = board.scrollHeight;
+        resizeCount++;
+        scrollToLiveLine(false, true); // force initial positioning
+      }
     });
     observer.observe(board);
     
@@ -433,18 +464,19 @@ export default function Planning() {
   }, [isToday, scrollToLiveLine]);
 
   // FOLLOW LIVE LINE every 30 seconds when currentTime updates
+  // This respects user scroll pause - won't scroll if user scrolled in last 30s
   useEffect(() => {
     if (!isToday) return;
-    scrollToLiveLine();
+    scrollToLiveLine(); // normal call, respects user pause
   }, [isToday, currentTime, scrollToLiveLine]);
 
   // Scroll when visibility changes (returning from background in PWA)
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === 'visible' && isToday) {
-        setTimeout(scrollToLiveLine, 100);
-        setTimeout(scrollToLiveLine, 300);
-        setTimeout(scrollToLiveLine, 500);
+        // Reset user pause when returning to app - they expect to see current time
+        userScrollPauseRef.current = 0;
+        setTimeout(() => scrollToLiveLine(false, true), 100);
       }
     };
     
@@ -523,10 +555,10 @@ export default function Planning() {
   useEffect(() => {
     if (staffList.length > 0 && !dataLoadedRef.current && isToday) {
       dataLoadedRef.current = true;
-      // Use double rAF to ensure layout is complete
+      // Use double rAF to ensure layout is complete, force scroll
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          scrollToLiveLine();
+          scrollToLiveLine(false, true); // force = true for initial load
         });
       });
     }
