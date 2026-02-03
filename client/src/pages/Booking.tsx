@@ -542,12 +542,18 @@ export default function Booking() {
                   />
 
                   {packages.length > 0 && (
-                    <div className="space-y-3">
-                      <FormLabel className="flex items-center gap-2 text-sm font-medium">
-                        <Gift className="w-4 h-4 text-primary" />
-                        {t("booking.packages", { defaultValue: "Forfaits" })}
-                      </FormLabel>
-                      <div className="grid gap-3">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg">
+                          <Gift className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-base">{t("booking.packages", { defaultValue: "Nos Forfaits" })}</h3>
+                          <p className="text-xs text-muted-foreground">{t("booking.packagesSubtitle", { defaultValue: "Économisez avec nos offres" })}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-3 overflow-x-auto pb-2 -mx-2 px-2 scrollbar-hide">
                         {packages.map(pkg => {
                           const savings = pkg.originalPrice - pkg.discountedPrice;
                           const savingsPercent = pkg.originalPrice > 0 ? Math.round((savings / pkg.originalPrice) * 100) : 0;
@@ -559,43 +565,72 @@ export default function Booking() {
                               type="button"
                               onClick={() => isSelected ? handleClearPackage() : handleSelectPackage(pkg)}
                               className={cn(
-                                "w-full text-left p-4 rounded-2xl border-2 transition-all relative overflow-hidden",
-                                "bg-background/50 backdrop-blur-sm hover:bg-background/80",
+                                "flex-shrink-0 w-[200px] p-4 rounded-2xl transition-all relative",
                                 isSelected
-                                  ? "border-primary ring-2 ring-primary/20 shadow-lg bg-primary/5"
-                                  : "border-border/50 hover:border-primary/30"
+                                  ? "bg-gradient-to-br from-primary to-primary/80 text-white shadow-xl scale-[1.02]"
+                                  : "bg-gradient-to-br from-muted/50 to-muted/30 hover:from-primary/10 hover:to-primary/5"
                               )}
                             >
-                              {isSelected && (
-                                <div className="absolute top-2 right-2">
-                                  <CheckCircle2 className="w-5 h-5 text-primary" />
+                              {savingsPercent > 0 && (
+                                <div className={cn(
+                                  "absolute -top-2 -right-2 px-2 py-1 rounded-full text-xs font-bold shadow-md",
+                                  isSelected 
+                                    ? "bg-white text-primary" 
+                                    : "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white"
+                                )}>
+                                  -{savingsPercent}%
                                 </div>
                               )}
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-semibold text-base">{pkg.name}</span>
-                                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 text-xs font-bold flex items-center gap-1">
-                                      <Tag className="w-3 h-3" />
-                                      -{savingsPercent}%
-                                    </span>
-                                  </div>
+                              
+                              <div className="space-y-3">
+                                <div className={cn(
+                                  "w-8 h-8 rounded-lg flex items-center justify-center",
+                                  isSelected ? "bg-white/20" : "bg-primary/10"
+                                )}>
+                                  <Sparkles className={cn("w-4 h-4", isSelected ? "text-white" : "text-primary")} />
+                                </div>
+                                
+                                <div className="text-left">
+                                  <h4 className={cn("font-bold text-sm", !isSelected && "text-foreground")}>{pkg.name}</h4>
                                   {pkg.description && (
-                                    <p className="text-xs text-muted-foreground mt-1">{pkg.description}</p>
+                                    <p className={cn("text-xs mt-1 line-clamp-2", isSelected ? "text-white/80" : "text-muted-foreground")}>
+                                      {pkg.description}
+                                    </p>
                                   )}
                                 </div>
-                                <div className="text-right shrink-0">
-                                  <div className="text-primary font-bold text-lg">{pkg.discountedPrice} {t("common.currency")}</div>
-                                  <div className="text-xs text-muted-foreground line-through">{pkg.originalPrice} {t("common.currency")}</div>
+                                
+                                <div className="flex items-end gap-2">
+                                  <span className={cn("text-xl font-bold", !isSelected && "text-primary")}>
+                                    {pkg.discountedPrice}
+                                  </span>
+                                  <span className={cn("text-xs mb-1", isSelected ? "text-white/80" : "text-muted-foreground")}>
+                                    {t("common.currency")}
+                                  </span>
+                                  <span className={cn(
+                                    "text-xs line-through ml-auto mb-1",
+                                    isSelected ? "text-white/60" : "text-muted-foreground"
+                                  )}>
+                                    {pkg.originalPrice}
+                                  </span>
                                 </div>
+                                
+                                {isSelected && (
+                                  <div className="flex items-center gap-1 text-xs text-white/90">
+                                    <CheckCircle2 className="w-4 h-4" />
+                                    <span>{t("common.selected", { defaultValue: "Sélectionné" })}</span>
+                                  </div>
+                                )}
                               </div>
                             </button>
                           );
                         })}
                       </div>
-                      <p className="text-xs text-muted-foreground text-center">
-                        {t("booking.orSelectServices", { defaultValue: "Ou choisissez vos services individuellement ci-dessous" })}
-                      </p>
+                      
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <div className="h-px flex-1 bg-border/50" />
+                        <span>{t("booking.orSelectServices", { defaultValue: "ou choisir des services" })}</span>
+                        <div className="h-px flex-1 bg-border/50" />
+                      </div>
                     </div>
                   )}
 
