@@ -422,22 +422,23 @@ export default function Planning() {
     return format(date, "yyyy-MM-dd") === format(workDayDate, "yyyy-MM-dd");
   }, [date, currentTime, businessSettings?.openingTime, businessSettings?.closingTime]);
   
-  // INITIAL AUTO-SCROLL: Single scroll after content loads (no jumping)
+  // INITIAL AUTO-SCROLL: Scroll once when staff data loads
   const initialScrollDoneRef = useRef(false);
   
-  useLayoutEffect(() => {
-    if (!isToday || initialScrollDoneRef.current) return;
+  useEffect(() => {
+    // Only scroll when: viewing today, data loaded, and haven't scrolled yet
+    if (!isToday || initialScrollDoneRef.current || staffList.length === 0) return;
     
-    // Wait for content to load, then scroll once
+    // Wait a bit for DOM to render, then scroll once
     const timer = setTimeout(() => {
       if (!initialScrollDoneRef.current) {
         initialScrollDoneRef.current = true;
         scrollToLiveLine(false, true); // force = true bypasses user pause
       }
-    }, 500);
+    }, 300);
     
     return () => clearTimeout(timer);
-  }, [isToday, scrollToLiveLine]);
+  }, [isToday, staffList.length, scrollToLiveLine]);
 
   // FOLLOW LIVE LINE every 30 seconds when currentTime updates
   // This respects user scroll pause - won't scroll if user scrolled in last 30s
