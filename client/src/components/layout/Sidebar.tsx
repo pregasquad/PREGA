@@ -313,7 +313,7 @@ export function Sidebar() {
                         key={`${notif.id}-${index}`} 
                         className="p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
                         onClick={() => {
-                          setLocation(`/planning?date=${notif.date}&appointmentId=${notif.id}`);
+                          setLocation(`/planning?date=${notif.date}&appointmentId=${notif.id}&t=${Date.now()}`);
                           if (isMobile) setOpenMobile(false);
                         }}
                       >

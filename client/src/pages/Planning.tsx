@@ -570,7 +570,7 @@ export default function Planning() {
     const dateParam = params.get("date");
     const appointmentId = params.get("appointmentId");
     
-    if (dateParam && appointmentId && !pendingAppointmentId.current) {
+    if (dateParam && appointmentId) {
       pendingAppointmentId.current = appointmentId;
       try {
         const targetDate = parseISO(dateParam);
