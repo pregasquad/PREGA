@@ -151,7 +151,13 @@ export default function Booking() {
     
     fetch("/api/public/packages")
       .then(res => res.json())
-      .then(data => setPackages(data))
+      .then((data: Package[]) => {
+        // Filter only valid packages (discounted price must be less than original)
+        const validPackages = data.filter(pkg => 
+          pkg.discountedPrice < pkg.originalPrice && pkg.originalPrice > 0
+        );
+        setPackages(validPackages);
+      })
       .catch(console.error);
   }, []);
 

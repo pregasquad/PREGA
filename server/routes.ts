@@ -642,10 +642,14 @@ export async function registerRoutes(
       const packages = await storage.getPackages();
       const now = new Date();
       
-      // Filter only active packages (within valid dates) and sanitize response
+      // Filter only valid active packages (within valid dates, proper pricing) and sanitize response
       const activePackages = packages
         .filter(pkg => {
           if (!pkg.isActive) return false;
+          
+          // Validate pricing: discounted must be less than original
+          if (pkg.discountedPrice >= pkg.originalPrice || pkg.originalPrice <= 0) return false;
+          
           const validFrom = pkg.validFrom ? new Date(pkg.validFrom) : null;
           const validUntil = pkg.validUntil ? new Date(pkg.validUntil) : null;
           
