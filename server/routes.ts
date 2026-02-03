@@ -1520,6 +1520,30 @@ export async function registerRoutes(
     }
   });
 
+  // Send gift card notification via WhatsApp
+  app.post("/api/notifications/gift-card", isPinAuthenticated, requirePermission("manage_business_settings"), async (req, res) => {
+    try {
+      const { sendGiftCardNotification } = await import("./wawp");
+      const { recipientPhone, recipientName, giftCardCode, amount, senderName } = z.object({
+        recipientPhone: z.string().min(1, "Phone is required"),
+        recipientName: z.string().min(1, "Recipient name is required"),
+        giftCardCode: z.string().min(1, "Gift card code is required"),
+        amount: z.number().min(0, "Amount must be positive"),
+        senderName: z.string().optional(),
+      }).parse(req.body);
+      
+      const result = await sendGiftCardNotification(recipientPhone, recipientName, giftCardCode, amount, senderName);
+      
+      if (result.success) {
+        res.json({ success: true, messageId: result.messageId });
+      } else {
+        res.status(500).json({ success: false, error: result.error });
+      }
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: err.message });
+    }
+  });
+
   // Bulk WhatsApp broadcast to selected clients (or all if none specified)
   app.post("/api/notifications/broadcast", isPinAuthenticated, requirePermission("admin_settings"), async (req, res) => {
     try {
