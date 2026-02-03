@@ -658,11 +658,11 @@ export default function Booking() {
                               </div>
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent className="glass max-h-[350px] rounded-2xl border-2 border-primary/20 shadow-xl">
+                          <SelectContent className="bg-background max-h-[350px] rounded-2xl border-2 border-primary/20 shadow-xl overflow-hidden">
                             {(selectedCategory ? [selectedCategory] : filteredCategories).map(cat => (
                               <div key={cat}>
                                 {!selectedCategory && (
-                                  <div className="px-3 py-2 text-xs font-bold text-primary uppercase tracking-wider bg-primary/5 sticky top-0">
+                                  <div className="px-3 py-2 text-xs font-bold text-primary uppercase tracking-wider bg-primary/5 sticky top-0 z-10">
                                     {cat}
                                   </div>
                                 )}
