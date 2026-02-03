@@ -494,11 +494,11 @@ export default function Booking() {
           </div>
         </div>
 
-        <div className="glass-card p-6 md:p-8">
+        <div className="glass-card p-4 md:p-5">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <div className="space-y-4">
                   <FormField
                     control={form.control}
                     name="client"
@@ -511,7 +511,7 @@ export default function Booking() {
                         <FormControl>
                           <Input 
                             placeholder={t("booking.enterName")} 
-                            className="h-12 rounded-xl bg-background/50 backdrop-blur-sm border-border/50 focus:border-primary/50" 
+                            className="h-10 rounded-xl bg-background/50 border-border/50 focus:border-primary/50" 
                             {...field} 
                           />
                         </FormControl>
@@ -532,7 +532,7 @@ export default function Booking() {
                         <FormControl>
                           <Input 
                             placeholder="06XXXXXXXX" 
-                            className="h-12 rounded-xl bg-background/50 backdrop-blur-sm border-border/50 focus:border-primary/50" 
+                            className="h-10 rounded-xl bg-background/50 border-border/50 focus:border-primary/50" 
                             {...field} 
                           />
                         </FormControl>
@@ -542,18 +542,18 @@ export default function Booking() {
                   />
 
                   {packages.length > 0 && (
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg">
-                          <Gift className="w-5 h-5 text-white" />
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+                          <Gift className="w-4 h-4 text-white" />
                         </div>
                         <div>
-                          <h3 className="font-semibold text-base">{t("booking.packages", { defaultValue: "Nos Forfaits" })}</h3>
+                          <h3 className="font-semibold text-sm">{t("booking.packages", { defaultValue: "Nos Forfaits" })}</h3>
                           <p className="text-xs text-muted-foreground">{t("booking.packagesSubtitle", { defaultValue: "Économisez avec nos offres" })}</p>
                         </div>
                       </div>
                       
-                      <div className="flex gap-3 overflow-x-auto pb-2 -mx-2 px-2 scrollbar-hide">
+                      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
                         {packages.map(pkg => {
                           const savings = pkg.originalPrice - pkg.discountedPrice;
                           const savingsPercent = pkg.originalPrice > 0 ? Math.round((savings / pkg.originalPrice) * 100) : 0;
@@ -565,7 +565,7 @@ export default function Booking() {
                               type="button"
                               onClick={() => isSelected ? handleClearPackage() : handleSelectPackage(pkg)}
                               className={cn(
-                                "flex-shrink-0 w-[200px] p-4 rounded-2xl transition-all relative",
+                                "flex-shrink-0 w-[180px] p-3 rounded-xl transition-all relative",
                                 isSelected
                                   ? "bg-gradient-to-br from-primary to-primary/80 text-white shadow-xl scale-[1.02]"
                                   : "bg-gradient-to-br from-muted/50 to-muted/30 hover:from-primary/10 hover:to-primary/5"
@@ -582,32 +582,25 @@ export default function Booking() {
                                 </div>
                               )}
                               
-                              <div className="space-y-3">
-                                <div className={cn(
-                                  "w-8 h-8 rounded-lg flex items-center justify-center",
-                                  isSelected ? "bg-white/20" : "bg-primary/10"
-                                )}>
-                                  <Sparkles className={cn("w-4 h-4", isSelected ? "text-white" : "text-primary")} />
-                                </div>
-                                
+                              <div className="space-y-2">
                                 <div className="text-left">
                                   <h4 className={cn("font-bold text-sm", !isSelected && "text-foreground")}>{pkg.name}</h4>
                                   {pkg.description && (
-                                    <p className={cn("text-xs mt-1 line-clamp-2", isSelected ? "text-white/80" : "text-muted-foreground")}>
+                                    <p className={cn("text-xs line-clamp-1", isSelected ? "text-white/80" : "text-muted-foreground")}>
                                       {pkg.description}
                                     </p>
                                   )}
                                 </div>
                                 
-                                <div className="flex items-end gap-2">
-                                  <span className={cn("text-xl font-bold", !isSelected && "text-primary")}>
+                                <div className="flex items-end gap-1">
+                                  <span className={cn("text-lg font-bold", !isSelected && "text-primary")}>
                                     {pkg.discountedPrice}
                                   </span>
-                                  <span className={cn("text-xs mb-1", isSelected ? "text-white/80" : "text-muted-foreground")}>
+                                  <span className={cn("text-xs mb-0.5", isSelected ? "text-white/80" : "text-muted-foreground")}>
                                     {t("common.currency")}
                                   </span>
                                   <span className={cn(
-                                    "text-xs line-through ml-auto mb-1",
+                                    "text-xs line-through ml-auto mb-0.5",
                                     isSelected ? "text-white/60" : "text-muted-foreground"
                                   )}>
                                     {pkg.originalPrice}
@@ -616,7 +609,7 @@ export default function Booking() {
                                 
                                 {isSelected && (
                                   <div className="flex items-center gap-1 text-xs text-white/90">
-                                    <CheckCircle2 className="w-4 h-4" />
+                                    <CheckCircle2 className="w-3 h-3" />
                                     <span>{t("common.selected", { defaultValue: "Sélectionné" })}</span>
                                   </div>
                                 )}
@@ -626,10 +619,10 @@ export default function Booking() {
                         })}
                       </div>
                       
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <div className="h-px flex-1 bg-border/50" />
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground py-1">
+                        <div className="h-px flex-1 bg-border/30" />
                         <span>{t("booking.orSelectServices", { defaultValue: "ou choisir des services" })}</span>
-                        <div className="h-px flex-1 bg-border/50" />
+                        <div className="h-px flex-1 bg-border/30" />
                       </div>
                     </div>
                   )}
@@ -639,23 +632,21 @@ export default function Booking() {
                     name="service"
                     render={() => (
                       <FormItem>
-                        <FormLabel className="flex items-center gap-2 text-base font-semibold mb-3">
-                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                            <Scissors className="w-4 h-4 text-primary" />
-                          </div>
+                        <FormLabel className="flex items-center gap-2 text-sm font-semibold">
+                          <Scissors className="w-4 h-4 text-primary" />
                           {t("booking.requiredService")}
                         </FormLabel>
                         
                         {filteredCategories.length > 1 && (
-                          <div className="flex flex-wrap gap-2 mb-3">
+                          <div className="flex flex-wrap gap-1.5 mb-2">
                             <button
                               type="button"
                               onClick={() => setSelectedCategory(null)}
                               className={cn(
-                                "px-4 py-2 rounded-full text-sm font-medium transition-all",
+                                "px-3 py-1.5 rounded-full text-xs font-medium transition-all",
                                 !selectedCategory
-                                  ? "bg-primary text-primary-foreground shadow-md"
-                                  : "bg-background/60 hover:bg-background/80 border border-border/50"
+                                  ? "bg-primary text-primary-foreground"
+                                  : "bg-muted/50 hover:bg-muted border border-border/50"
                               )}
                             >
                               {t("common.all", { defaultValue: "Tous" })}
@@ -666,10 +657,10 @@ export default function Booking() {
                                 type="button"
                                 onClick={() => setSelectedCategory(cat)}
                                 className={cn(
-                                  "px-4 py-2 rounded-full text-sm font-medium transition-all",
+                                  "px-3 py-1.5 rounded-full text-xs font-medium transition-all",
                                   selectedCategory === cat
-                                    ? "bg-primary text-primary-foreground shadow-md"
-                                    : "bg-background/60 hover:bg-background/80 border border-border/50"
+                                    ? "bg-primary text-primary-foreground"
+                                    : "bg-muted/50 hover:bg-muted border border-border/50"
                                 )}
                               >
                                 {cat}
@@ -681,14 +672,13 @@ export default function Booking() {
                         <Select onValueChange={handleAddService} value="">
                           <FormControl>
                             <SelectTrigger className={cn(
-                              "h-14 rounded-2xl text-base font-medium",
+                              "h-11 rounded-xl text-sm font-medium",
                               "bg-gradient-to-r from-primary/5 to-primary/10",
                               "border-2 border-primary/30 hover:border-primary/50",
-                              "shadow-lg shadow-primary/5",
                               selectedServices.length === 0 && "animate-pulse"
                             )}>
-                              <div className="flex items-center gap-3">
-                                <Sparkles className="w-5 h-5 text-primary" />
+                              <div className="flex items-center gap-2">
+                                <Sparkles className="w-4 h-4 text-primary" />
                                 <SelectValue placeholder={t("booking.selectService")} />
                               </div>
                             </SelectTrigger>
@@ -782,14 +772,14 @@ export default function Booking() {
                   />
                 </div>
 
-                <div className="space-y-6">
+                <div className="space-y-4">
                   <div>
-                    <FormLabel className="flex items-center gap-2 mb-4 text-sm font-medium">
+                    <FormLabel className="flex items-center gap-2 mb-2 text-sm font-medium">
                       <CalendarDays className="w-4 h-4 text-primary" />
                       {t("booking.selectDate")}
                     </FormLabel>
                     <div className="flex justify-center">
-                      <div className="glass-subtle rounded-2xl p-2">
+                      <div className="bg-muted/30 rounded-xl p-1">
                         <Calendar
                           mode="single"
                           selected={date}
@@ -798,7 +788,7 @@ export default function Booking() {
                             setSelectedTime("");
                           }}
                           disabled={(d) => d < new Date(new Date().setHours(0,0,0,0))}
-                          className="rounded-xl"
+                          className="rounded-lg"
                         />
                       </div>
                     </div>
@@ -806,11 +796,11 @@ export default function Booking() {
 
                   {date && (
                     <div className="animate-fade-in">
-                      <FormLabel className="flex items-center gap-2 mb-4 text-sm font-medium">
+                      <FormLabel className="flex items-center gap-2 mb-2 text-sm font-medium">
                         <Clock className="w-4 h-4 text-primary" />
                         {t("booking.selectAvailableTime")}
                       </FormLabel>
-                      <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-[200px] overflow-y-auto p-1 calendar-scroll">
+                      <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5 max-h-[180px] overflow-y-auto p-1 calendar-scroll">
                         {getAvailableSlots.map(slot => (
                           <Button
                             key={slot}
@@ -818,10 +808,10 @@ export default function Booking() {
                             variant="outline"
                             size="sm"
                             className={cn(
-                              "h-10 rounded-xl transition-all font-medium",
-                              "bg-background/50 backdrop-blur-sm",
+                              "h-8 rounded-lg transition-all text-xs font-medium",
+                              "bg-background/50",
                               selectedTime === slot 
-                                ? "bg-primary text-primary-foreground border-primary shadow-lg" 
+                                ? "bg-primary text-primary-foreground border-primary" 
                                 : "border-border/50 hover:border-primary/50 hover:bg-background/80"
                             )}
                             onClick={() => setSelectedTime(slot)}
