@@ -422,45 +422,21 @@ export default function Planning() {
     return format(date, "yyyy-MM-dd") === format(workDayDate, "yyyy-MM-dd");
   }, [date, currentTime, businessSettings?.openingTime, businessSettings?.closingTime]);
   
-  // INITIAL AUTO-SCROLL: Force scroll on mount (bypasses user scroll pause)
+  // INITIAL AUTO-SCROLL: Single scroll after content loads (no jumping)
+  const initialScrollDoneRef = useRef(false);
+  
   useLayoutEffect(() => {
-    if (!isToday) return;
+    if (!isToday || initialScrollDoneRef.current) return;
     
-    // Force scroll on initial load with multiple attempts
-    const attempts = [0, 100, 300, 600, 1000, 2000];
-    const timers: NodeJS.Timeout[] = [];
-    
-    attempts.forEach(delay => {
-      const timer = setTimeout(() => {
+    // Wait for content to load, then scroll once
+    const timer = setTimeout(() => {
+      if (!initialScrollDoneRef.current) {
+        initialScrollDoneRef.current = true;
         scrollToLiveLine(false, true); // force = true bypasses user pause
-      }, delay);
-      timers.push(timer);
-    });
-    
-    return () => timers.forEach(t => clearTimeout(t));
-  }, [isToday, scrollToLiveLine]);
-
-  // ResizeObserver: Only scroll on significant size changes (initial content load)
-  useEffect(() => {
-    if (!isToday) return;
-    
-    const board = boardRef.current;
-    if (!board) return;
-    
-    let initialHeight = board.scrollHeight;
-    let resizeCount = 0;
-    
-    const observer = new ResizeObserver(() => {
-      // Only scroll on first few resizes (initial content load)
-      if (resizeCount < 3 && board.scrollHeight !== initialHeight) {
-        initialHeight = board.scrollHeight;
-        resizeCount++;
-        scrollToLiveLine(false, true); // force initial positioning
       }
-    });
-    observer.observe(board);
+    }, 500);
     
-    return () => observer.disconnect();
+    return () => clearTimeout(timer);
   }, [isToday, scrollToLiveLine]);
 
   // FOLLOW LIVE LINE every 30 seconds when currentTime updates
@@ -551,18 +527,12 @@ export default function Planning() {
     }
   }, [hasAuthError]);
 
-  // Scroll when data loads (staff or appointments)
+  // Mark data as loaded when staff loads (used by initial scroll timing)
   useEffect(() => {
-    if (staffList.length > 0 && !dataLoadedRef.current && isToday) {
+    if (staffList.length > 0 && !dataLoadedRef.current) {
       dataLoadedRef.current = true;
-      // Use double rAF to ensure layout is complete, force scroll
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          scrollToLiveLine(false, true); // force = true for initial load
-        });
-      });
     }
-  }, [staffList, isToday, scrollToLiveLine]);
+  }, [staffList]);
 
   const createMutation = useCreateAppointment();
   const updateMutation = useUpdateAppointment();
