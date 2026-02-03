@@ -175,8 +175,15 @@ Preferred communication style: Simple, everyday language.
 - **Routes**: `/api/staff/:id/goals`, `/api/staff/goals/summary`
 
 ### Notifications
-- **SendZen API**: For WhatsApp appointment reminders and booking confirmations.
-  - Endpoints: `/api/notifications/send`, `/api/notifications/appointment-reminder`, `/api/notifications/booking-confirmation`.
+- **WSAPI.chat**: For WhatsApp appointment reminders, booking confirmations, and bulk broadcasts.
+  - Environment Variables: `WSAPI_API_KEY`, `WSAPI_INSTANCE_ID`
+  - Endpoints:
+    - `POST /api/notifications/send` - Send custom WhatsApp message
+    - `POST /api/notifications/appointment-reminder` - Send appointment reminder
+    - `POST /api/notifications/booking-confirmation` - Send booking confirmation
+    - `POST /api/notifications/broadcast` - Bulk WhatsApp broadcast to clients
+    - `GET /api/notifications/status` - Check WSAPI connection status
+  - Features: Text messages, media messages, typing indicators, appointment reminders, booking confirmations, waitlist notifications, gift card notifications
 
 ### Development Tools
 - **Vite**: Frontend dev server and bundler.
