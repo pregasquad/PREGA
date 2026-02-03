@@ -3,13 +3,14 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslation } from "react-i18next";
 import { queryClient } from "@/lib/queryClient";
-import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { ar, enUS, fr } from "date-fns/locale";
-import { Clock, CheckCircle2, Scissors, User, Phone, CalendarDays, ChevronLeft, ChevronRight, Plus, Check, Gift, Tag } from "lucide-react";
+import { Clock, CheckCircle2, Scissors, User, Phone, CalendarDays, Sparkles, X, Users, Gift, Tag } from "lucide-react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
@@ -18,6 +19,11 @@ import { io, Socket } from "socket.io-client";
 
 const bookingSchema = z.object({
   client: z.string().min(1),
+  service: z.string().optional(),
+  staff: z.string().optional(),
+  duration: z.coerce.number(),
+  price: z.coerce.number(),
+  total: z.coerce.number(),
   phone: z.string().optional(),
 });
 
@@ -28,6 +34,13 @@ interface SelectedService {
 }
 
 type BookingFormValues = z.infer<typeof bookingSchema>;
+
+interface Staff {
+  id: number;
+  name: string;
+  color: string;
+  categories: string | null;
+}
 
 interface Service {
   id: number;
@@ -82,16 +95,14 @@ const TIME_SLOTS = [
   "23:00", "23:30", "00:00"
 ];
 
-type Step = 1 | 2 | 3 | 4;
-
 export default function Booking() {
   const { t, i18n } = useTranslation();
-  const [step, setStep] = useState<Step>(1);
   const [date, setDate] = useState<Date>();
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [isSuccess, setIsSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
+  const [staffList, setStaffList] = useState<Staff[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [appointments, setAppointments] = useState<MinimalAppointment[]>([]);
   const [selectedServices, setSelectedServices] = useState<SelectedService[]>([]);
@@ -127,6 +138,11 @@ export default function Booking() {
   }, []);
 
   useEffect(() => {
+    fetch("/api/public/staff")
+      .then(res => res.json())
+      .then(data => setStaffList(data))
+      .catch(console.error);
+    
     fetch("/api/public/services")
       .then(res => res.json())
       .then(data => setServices(data))
@@ -161,29 +177,41 @@ export default function Booking() {
     resolver: zodResolver(bookingSchema),
     defaultValues: {
       client: "",
+      service: "",
+      staff: "",
+      duration: 30,
+      price: 0,
+      total: 0,
       phone: "",
     },
   });
 
-  const totalDuration = useMemo(() => 
-    selectedServices.reduce((sum, s) => sum + s.duration, 0), 
-    [selectedServices]
-  );
+  const selectedStaff = form.watch("staff");
+  const selectedService = form.watch("service");
+  const serviceDuration = form.watch("duration");
 
-  const totalPrice = useMemo(() => 
-    selectedPackage 
-      ? selectedPackage.discountedPrice 
-      : selectedServices.reduce((sum, s) => sum + s.price, 0), 
-    [selectedServices, selectedPackage]
-  );
+  const selectedStaffData = useMemo(() => {
+    return staffList.find(s => s.name === selectedStaff);
+  }, [staffList, selectedStaff]);
 
-  const categories = useMemo(() => 
-    Array.from(new Set(services.map(s => s.category))),
-    [services]
-  );
+  const filteredServices = useMemo(() => {
+    if (!selectedStaffData || !selectedStaffData.categories) {
+      return services;
+    }
+    const staffCategories = new Set(
+      selectedStaffData.categories.split(",").map(c => c.trim())
+    );
+    return services.filter(s => staffCategories.has(s.category));
+  }, [services, selectedStaffData]);
+
+  const filteredCategories = useMemo(() => {
+    return Array.from(new Set(filteredServices.map(s => s.category)));
+  }, [filteredServices]);
 
   const getAvailableSlots = useMemo(() => {
     if (!date) return [];
+    
+    const duration = serviceDuration || 30;
     
     const now = new Date();
     const isToday = date.toDateString() === now.toDateString();
@@ -198,7 +226,7 @@ export default function Booking() {
       
       return true;
     });
-  }, [date]);
+  }, [date, serviceDuration]);
 
   const onSubmit = async (data: BookingFormValues) => {
     if (!date || !selectedTime || selectedServices.length === 0) return;
@@ -208,11 +236,13 @@ export default function Booking() {
     const serviceNames = selectedPackage 
       ? `${selectedPackage.name} (${selectedServices.map(s => s.name).join(", ")})`
       : selectedServices.map(s => s.name).join(", ");
+    const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration, 0);
+    const totalPrice = selectedPackage ? selectedPackage.discountedPrice : selectedServices.reduce((sum, s) => sum + s.price, 0);
     
     const appointmentData = {
       client: clientName,
       service: serviceNames,
-      staff: "",
+      staff: data.staff,
       duration: totalDuration,
       price: totalPrice,
       total: totalPrice,
@@ -237,6 +267,7 @@ export default function Booking() {
       const result: BookingResult = await res.json();
       setBookingResult(result);
       setIsSuccess(true);
+      setSelectedServices([]);
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
       trackEvent("booking_completed", "booking", serviceNames, totalPrice);
     } catch (error) {
@@ -246,16 +277,30 @@ export default function Booking() {
     }
   };
 
-  const handleAddService = (service: Service) => {
-    if (!selectedServices.some(s => s.name === service.name)) {
-      setSelectedServices([...selectedServices, { name: service.name, price: service.price, duration: service.duration }]);
-      setSelectedPackage(null);
+  const handleAddService = (serviceName: string) => {
+    const service = filteredServices.find(s => s.name === serviceName);
+    if (service && !selectedServices.some(s => s.name === serviceName)) {
+      const newSelectedServices = [...selectedServices, { name: service.name, price: service.price, duration: service.duration }];
+      setSelectedServices(newSelectedServices);
+      const totalDuration = newSelectedServices.reduce((sum, s) => sum + s.duration, 0);
+      const totalPrice = newSelectedServices.reduce((sum, s) => sum + s.price, 0);
+      form.setValue("service", newSelectedServices.map(s => s.name).join(", "));
+      form.setValue("duration", totalDuration);
+      form.setValue("price", totalPrice);
+      form.setValue("total", totalPrice);
     }
   };
 
-  const handleRemoveService = (serviceName: string) => {
-    setSelectedServices(selectedServices.filter(s => s.name !== serviceName));
+  const handleRemoveService = (index: number) => {
+    const newSelectedServices = selectedServices.filter((_, i) => i !== index);
+    setSelectedServices(newSelectedServices);
     setSelectedPackage(null);
+    const totalDuration = newSelectedServices.reduce((sum, s) => sum + s.duration, 0);
+    const totalPrice = newSelectedServices.reduce((sum, s) => sum + s.price, 0);
+    form.setValue("service", newSelectedServices.map(s => s.name).join(", "));
+    form.setValue("duration", totalDuration);
+    form.setValue("price", totalPrice);
+    form.setValue("total", totalPrice);
   };
 
   const handleSelectPackage = (pkg: Package) => {
@@ -268,36 +313,23 @@ export default function Booking() {
     
     setSelectedPackage(pkg);
     setSelectedServices(packageServices);
+    const totalDuration = packageServices.reduce((sum, s) => sum + s.duration, 0);
+    form.setValue("service", packageServices.map(s => s.name).join(", "));
+    form.setValue("duration", totalDuration);
+    form.setValue("price", pkg.discountedPrice);
+    form.setValue("total", pkg.discountedPrice);
   };
 
-  const canGoNext = () => {
-    switch (step) {
-      case 1: return selectedServices.length > 0;
-      case 2: return date !== undefined;
-      case 3: return selectedTime !== "";
-      case 4: return form.watch("client").length > 0;
-      default: return false;
-    }
+  const handleClearPackage = () => {
+    setSelectedPackage(null);
+    setSelectedServices([]);
+    form.setValue("service", "");
+    form.setValue("duration", 30);
+    form.setValue("price", 0);
+    form.setValue("total", 0);
   };
 
-  const goNext = () => {
-    if (step < 4 && canGoNext()) {
-      setStep((step + 1) as Step);
-    }
-  };
-
-  const goBack = () => {
-    if (step > 1) {
-      setStep((step - 1) as Step);
-    }
-  };
-
-  const stepTitles = {
-    1: t("booking.step1Title", { defaultValue: "Choisir un service" }),
-    2: t("booking.step2Title", { defaultValue: "Choisir une date" }),
-    3: t("booking.step3Title", { defaultValue: "Choisir l'heure" }),
-    4: t("booking.step4Title", { defaultValue: "Vos coordonnées" }),
-  };
+  const canSubmit = selectedServices.length > 0 && date && selectedTime && form.watch("client");
 
   if (isSuccess) {
     const hasMultipleAppointments = bookingResult?.multipleAppointments && bookingResult.appointments;
@@ -372,7 +404,7 @@ export default function Booking() {
                 </div>
                 <div className="flex justify-between items-center border-t border-border/50 pt-3 mt-3">
                   <span className="text-muted-foreground">{t("common.price")}</span>
-                  <span className="font-bold text-primary text-xl">{totalPrice} {t("common.currency")}</span>
+                  <span className="font-bold text-primary text-xl">{form.getValues("total")} {t("common.currency")}</span>
                 </div>
               </div>
             </div>
@@ -397,7 +429,7 @@ export default function Booking() {
                   <Scissors className="w-4 h-4" />
                   {t("booking.service")}
                 </span>
-                <span className="font-semibold text-right max-w-[180px]">{selectedServices.map(s => s.name).join(", ")}</span>
+                <span className="font-semibold text-right max-w-[180px]">{form.getValues("service")}</span>
               </div>
               {bookingResult?.staff && (
                 <div className="flex justify-between items-center">
@@ -415,7 +447,7 @@ export default function Booking() {
               )}
               <div className="flex justify-between items-center border-t border-border/50 pt-3 mt-3">
                 <span className="text-muted-foreground">{t("common.price")}</span>
-                <span className="font-bold text-primary text-xl">{totalPrice} {t("common.currency")}</span>
+                <span className="font-bold text-primary text-xl">{form.getValues("total")} {t("common.currency")}</span>
               </div>
             </div>
           )}
@@ -433,318 +465,337 @@ export default function Booking() {
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-accent/10" />
       <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/10 rounded-full blur-3xl opacity-60" />
       <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-accent/20 rounded-full blur-3xl opacity-60" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl opacity-40" />
       
-      <div className="max-w-lg mx-auto space-y-4 relative z-10 animate-fade-in">
-        <div className="flex justify-between items-center">
-          <div className="w-8" />
-          <div className="flex justify-center">
-            <img src="/prega_logo.png" alt="PregaSquad" className="w-16 h-16" />
-          </div>
+      <div className="max-w-4xl mx-auto space-y-6 relative z-10 animate-fade-in">
+        <div className="flex justify-between items-center mb-2">
+          {visitorCount > 0 && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground/80">
+              <Users className="w-4 h-4" />
+              <span>{visitorCount} {t("booking.activeVisitors", { defaultValue: "en ligne" })}</span>
+            </div>
+          )}
+          {visitorCount === 0 && <div />}
           <LanguageSwitcher />
         </div>
-
-        <div className="flex justify-center gap-2 py-2">
-          {[1, 2, 3, 4].map((s) => (
-            <div
-              key={s}
-              className={cn(
-                "w-12 h-1.5 rounded-full transition-all duration-300",
-                s === step ? "bg-primary" : s < step ? "bg-primary/60" : "bg-border"
-              )}
-            />
-          ))}
+        <div className="text-center space-y-3 py-4">
+          <div className="flex justify-center mb-4">
+            <img src="/prega_logo.png" alt="PregaSquad" className="w-24 h-24" />
+          </div>
+          <h1 className="text-3xl md:text-4xl font-display font-bold gradient-text">
+            {t("booking.title")}
+          </h1>
+          <p className="text-muted-foreground">{t("booking.subtitle")}</p>
         </div>
 
-        <div className="text-center mb-4">
-          <p className="text-sm text-muted-foreground">{t("booking.stepOf", { current: step, total: 4, defaultValue: `Étape ${step} sur 4` })}</p>
-          <h1 className="text-2xl font-display font-bold">{stepTitles[step]}</h1>
-        </div>
-
-        <div className="glass-card p-5 min-h-[400px]">
-          {step === 1 && (
-            <div className="space-y-4 animate-fade-in">
-              {packages.length > 0 && (
-                <div className="space-y-3">
-                  <p className="text-sm font-medium flex items-center gap-2">
-                    <Gift className="w-4 h-4 text-primary" />
-                    {t("booking.specialOffers", { defaultValue: "Offres spéciales" })}
-                  </p>
-                  {packages.map(pkg => {
-                    const savings = pkg.originalPrice - pkg.discountedPrice;
-                    const savingsPercent = pkg.originalPrice > 0 ? Math.round((savings / pkg.originalPrice) * 100) : 0;
-                    const isSelected = selectedPackage?.id === pkg.id;
-                    
-                    return (
-                      <button
-                        key={pkg.id}
-                        type="button"
-                        onClick={() => isSelected ? setSelectedPackage(null) : handleSelectPackage(pkg)}
-                        className={cn(
-                          "w-full text-left p-4 rounded-2xl border-2 transition-all",
-                          "bg-gradient-to-r from-emerald-500/5 to-primary/5",
-                          isSelected
-                            ? "border-emerald-500 ring-2 ring-emerald-500/20"
-                            : "border-emerald-500/30 hover:border-emerald-500/50"
-                        )}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold">{pkg.name}</span>
-                              <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 text-xs font-bold flex items-center gap-1">
-                                <Tag className="w-3 h-3" />
-                                -{savingsPercent}%
-                              </span>
-                            </div>
-                            {pkg.description && (
-                              <p className="text-xs text-muted-foreground mt-1">{pkg.description}</p>
-                            )}
-                          </div>
-                          <div className="text-right">
-                            <div className="text-primary font-bold">{pkg.discountedPrice} DH</div>
-                            <div className="text-xs text-muted-foreground line-through">{pkg.originalPrice} DH</div>
-                          </div>
-                        </div>
-                        {isSelected && (
-                          <div className="mt-2 pt-2 border-t border-emerald-500/20">
-                            <Check className="w-4 h-4 text-emerald-500 inline mr-1" />
-                            <span className="text-xs text-emerald-600">{t("booking.packageSelected", { defaultValue: "Forfait sélectionné" })}</span>
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })}
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-border/50" />
-                    </div>
-                    <div className="relative flex justify-center text-xs">
-                      <span className="bg-card px-2 text-muted-foreground">{t("booking.orChooseServices", { defaultValue: "ou choisir des services" })}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {categories.map(category => (
-                <div key={category} className="space-y-2">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{category}</p>
-                  <div className="grid gap-2">
-                    {services.filter(s => s.category === category).map(service => {
-                      const isSelected = selectedServices.some(s => s.name === service.name);
-                      return (
-                        <button
-                          key={service.id}
-                          type="button"
-                          onClick={() => isSelected ? handleRemoveService(service.name) : handleAddService(service)}
-                          className={cn(
-                            "w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all",
-                            "bg-background/50 backdrop-blur-sm",
-                            isSelected
-                              ? "border-primary bg-primary/5"
-                              : "border-border/50 hover:border-primary/30"
-                          )}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className={cn(
-                              "w-8 h-8 rounded-full flex items-center justify-center transition-all",
-                              isSelected ? "bg-primary text-primary-foreground" : "bg-muted"
-                            )}>
-                              {isSelected ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                            </div>
-                            <div className="text-left">
-                              <p className="font-medium">{service.name}</p>
-                              <p className="text-xs text-muted-foreground">{service.duration} min</p>
-                            </div>
-                          </div>
-                          <span className="font-bold text-primary">{service.price} DH</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {step === 2 && (
-            <div className="flex flex-col items-center animate-fade-in">
-              <Calendar
-                mode="single"
-                selected={date}
-                onSelect={(d) => {
-                  setDate(d);
-                  setSelectedTime("");
-                }}
-                disabled={(d) => d < new Date(new Date().setHours(0,0,0,0))}
-                className="rounded-xl"
-                locale={getDateLocale()}
-              />
-            </div>
-          )}
-
-          {step === 3 && (
-            <div className="space-y-4 animate-fade-in">
-              {date && (
-                <p className="text-center text-sm text-muted-foreground">
-                  {format(date, "EEEE d MMMM yyyy", { locale: getDateLocale() })}
-                </p>
-              )}
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                {getAvailableSlots.map(slot => (
-                  <Button
-                    key={slot}
-                    type="button"
-                    variant="outline"
-                    className={cn(
-                      "h-12 rounded-xl transition-all font-medium text-base",
-                      selectedTime === slot 
-                        ? "bg-primary text-primary-foreground border-primary shadow-lg" 
-                        : "border-border/50 hover:border-primary/50"
+        <div className="glass-card p-6 md:p-8">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="space-y-6">
+                  <FormField
+                    control={form.control}
+                    name="client"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-2 text-sm font-medium">
+                          <User className="w-4 h-4 text-primary" />
+                          {t("booking.fullName")}
+                        </FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder={t("booking.enterName")} 
+                            className="h-12 rounded-xl bg-background/50 backdrop-blur-sm border-border/50 focus:border-primary/50" 
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
                     )}
-                    onClick={() => setSelectedTime(slot)}
-                  >
-                    {slot}
-                  </Button>
-                ))}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-2 text-sm font-medium">
+                          <Phone className="w-4 h-4 text-primary" />
+                          {t("booking.phoneOptional")}
+                        </FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="06XXXXXXXX" 
+                            className="h-12 rounded-xl bg-background/50 backdrop-blur-sm border-border/50 focus:border-primary/50" 
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {packages.length > 0 && (
+                    <div className="space-y-3">
+                      <FormLabel className="flex items-center gap-2 text-sm font-medium">
+                        <Gift className="w-4 h-4 text-primary" />
+                        {t("booking.packages", { defaultValue: "Forfaits" })}
+                      </FormLabel>
+                      <div className="grid gap-3">
+                        {packages.map(pkg => {
+                          const savings = pkg.originalPrice - pkg.discountedPrice;
+                          const savingsPercent = pkg.originalPrice > 0 ? Math.round((savings / pkg.originalPrice) * 100) : 0;
+                          const isSelected = selectedPackage?.id === pkg.id;
+                          
+                          return (
+                            <button
+                              key={pkg.id}
+                              type="button"
+                              onClick={() => isSelected ? handleClearPackage() : handleSelectPackage(pkg)}
+                              className={cn(
+                                "w-full text-left p-4 rounded-2xl border-2 transition-all relative overflow-hidden",
+                                "bg-background/50 backdrop-blur-sm hover:bg-background/80",
+                                isSelected
+                                  ? "border-primary ring-2 ring-primary/20 shadow-lg bg-primary/5"
+                                  : "border-border/50 hover:border-primary/30"
+                              )}
+                            >
+                              {isSelected && (
+                                <div className="absolute top-2 right-2">
+                                  <CheckCircle2 className="w-5 h-5 text-primary" />
+                                </div>
+                              )}
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-semibold text-base">{pkg.name}</span>
+                                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 text-xs font-bold flex items-center gap-1">
+                                      <Tag className="w-3 h-3" />
+                                      -{savingsPercent}%
+                                    </span>
+                                  </div>
+                                  {pkg.description && (
+                                    <p className="text-xs text-muted-foreground mt-1">{pkg.description}</p>
+                                  )}
+                                </div>
+                                <div className="text-right shrink-0">
+                                  <div className="text-primary font-bold text-lg">{pkg.discountedPrice} {t("common.currency")}</div>
+                                  <div className="text-xs text-muted-foreground line-through">{pkg.originalPrice} {t("common.currency")}</div>
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <p className="text-xs text-muted-foreground text-center">
+                        {t("booking.orSelectServices", { defaultValue: "Ou choisissez vos services individuellement ci-dessous" })}
+                      </p>
+                    </div>
+                  )}
+
+                  <FormField
+                    control={form.control}
+                    name="service"
+                    render={() => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-2 text-sm font-medium">
+                          <Scissors className="w-4 h-4 text-primary" />
+                          {t("booking.requiredService")}
+                        </FormLabel>
+                        <Select onValueChange={handleAddService} value="">
+                          <FormControl>
+                            <SelectTrigger className="h-12 rounded-xl bg-background/50 backdrop-blur-sm border-border/50">
+                              <SelectValue placeholder={t("booking.selectService")} />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent className="glass max-h-[300px] rounded-xl">
+                            {filteredCategories.map(cat => (
+                              <div key={cat}>
+                                <div className="px-3 py-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                                  {cat}
+                                </div>
+                                {filteredServices.filter(s => s.category === cat).map(s => {
+                                  const isSelected = selectedServices.some(sel => sel.name === s.name);
+                                  return (
+                                    <SelectItem 
+                                      key={s.id} 
+                                      value={s.name} 
+                                      className={cn("rounded-lg", isSelected && "opacity-50")}
+                                      disabled={isSelected}
+                                    >
+                                      <div className="flex justify-between items-center w-full gap-4">
+                                        <span>{s.name}</span>
+                                        <span className="text-primary font-bold">{s.price} {t("common.currency")}</span>
+                                      </div>
+                                    </SelectItem>
+                                  );
+                                })}
+                              </div>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                            
+                            {selectedServices.length > 0 && (
+                              <div className="space-y-3 mt-3">
+                                <div className="flex flex-wrap gap-2">
+                                  {selectedServices.map((service, index) => (
+                                    <div 
+                                      key={index}
+                                      className="glass-subtle rounded-xl px-3 py-2 flex items-center gap-2 group animate-fade-in"
+                                    >
+                                      <span className="text-sm font-medium">{service.name}</span>
+                                      <span className="text-xs text-primary font-bold">{service.price} {t("common.currency")}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRemoveService(index)}
+                                        className="w-5 h-5 rounded-full bg-destructive/10 hover:bg-destructive/20 flex items-center justify-center transition-colors"
+                                      >
+                                        <X className="w-3 h-3 text-destructive" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                                <div className="glass-subtle rounded-xl p-3">
+                                  {selectedPackage && (
+                                    <div className="flex items-center gap-2 mb-2 pb-2 border-b border-border/50">
+                                      <Gift className="w-4 h-4 text-emerald-500" />
+                                      <span className="text-sm font-medium text-emerald-600">{selectedPackage.name}</span>
+                                      <span className="ml-auto px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 text-xs font-bold">
+                                        -{selectedPackage.originalPrice - selectedPackage.discountedPrice} {t("common.currency")}
+                                      </span>
+                                    </div>
+                                  )}
+                                  <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">{t("common.duration")}:</span>
+                                    <span className="font-medium">{form.getValues("duration")} {t("common.minutes")}</span>
+                                  </div>
+                                  <div className="flex justify-between text-sm mt-1">
+                                    <span className="text-muted-foreground">{t("common.price")}:</span>
+                                    <div className="text-right">
+                                      {selectedPackage && (
+                                        <span className="text-xs text-muted-foreground line-through mr-2">
+                                          {selectedPackage.originalPrice} {t("common.currency")}
+                                        </span>
+                                      )}
+                                      <span className="text-primary font-bold text-lg">{form.getValues("total")} {t("common.currency")}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="space-y-6">
+                  <div>
+                    <FormLabel className="flex items-center gap-2 mb-4 text-sm font-medium">
+                      <CalendarDays className="w-4 h-4 text-primary" />
+                      {t("booking.selectDate")}
+                    </FormLabel>
+                    <div className="flex justify-center">
+                      <div className="glass-subtle rounded-2xl p-2">
+                        <Calendar
+                          mode="single"
+                          selected={date}
+                          onSelect={(d) => {
+                            setDate(d);
+                            setSelectedTime("");
+                          }}
+                          disabled={(d) => d < new Date(new Date().setHours(0,0,0,0))}
+                          className="rounded-xl"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {date && (
+                    <div className="animate-fade-in">
+                      <FormLabel className="flex items-center gap-2 mb-4 text-sm font-medium">
+                        <Clock className="w-4 h-4 text-primary" />
+                        {t("booking.selectAvailableTime")}
+                      </FormLabel>
+                      <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-[200px] overflow-y-auto p-1 calendar-scroll">
+                        {getAvailableSlots.map(slot => (
+                          <Button
+                            key={slot}
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className={cn(
+                              "h-10 rounded-xl transition-all font-medium",
+                              "bg-background/50 backdrop-blur-sm",
+                              selectedTime === slot 
+                                ? "bg-primary text-primary-foreground border-primary shadow-lg" 
+                                : "border-border/50 hover:border-primary/50 hover:bg-background/80"
+                            )}
+                            onClick={() => setSelectedTime(slot)}
+                          >
+                            {slot}
+                          </Button>
+                        ))}
+                      </div>
+                      {getAvailableSlots.length === 0 && (
+                        <div className="glass-subtle rounded-xl p-6 text-center space-y-4">
+                          <p className="text-muted-foreground">
+                            {t("booking.noTimesAvailable")}
+                          </p>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="rounded-xl"
+                            onClick={async () => {
+                              const clientName = form.getValues("client");
+                              const phone = form.getValues("phone");
+                              if (!clientName) {
+                                alert(t("booking.enterName"));
+                                return;
+                              }
+                              try {
+                                await fetch("/api/waitlist", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({
+                                    clientName,
+                                    clientPhone: phone,
+                                    requestedDate: date ? format(date, "yyyy-MM-dd") : "",
+                                    requestedTime: null,
+                                    servicesDescription: selectedServices.map(s => s.name).join(", "),
+                                    staffName: form.getValues("staff"),
+                                    status: "waiting",
+                                  }),
+                                });
+                                alert(t("booking.waitlistSuccess") + " " + t("booking.waitlistMessage"));
+                              } catch (err) {
+                                console.error("Failed to join waitlist:", err);
+                              }
+                            }}
+                          >
+                            {t("booking.joinWaitlist")}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
-              {getAvailableSlots.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Clock className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                  <p>{t("booking.noTimesAvailable", { defaultValue: "Aucun créneau disponible" })}</p>
-                </div>
-              )}
-            </div>
-          )}
 
-          {step === 4 && (
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 animate-fade-in">
-                <div className="glass-subtle rounded-xl p-4 space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground flex items-center gap-2">
-                      <Scissors className="w-4 h-4" />
-                      {t("booking.services", { defaultValue: "Services" })}
-                    </span>
-                    <span className="font-medium text-right max-w-[180px]">
-                      {selectedServices.map(s => s.name).join(", ")}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground flex items-center gap-2">
-                      <CalendarDays className="w-4 h-4" />
-                      {t("common.date")}
-                    </span>
-                    <span className="font-medium">{date && format(date, "d MMM yyyy", { locale: getDateLocale() })}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground flex items-center gap-2">
-                      <Clock className="w-4 h-4" />
-                      {t("booking.time")}
-                    </span>
-                    <span className="font-medium">{selectedTime}</span>
-                  </div>
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="client"
-                  render={({ field }) => (
-                    <FormItem>
-                      <div className="flex items-center gap-2 text-sm font-medium mb-2">
-                        <User className="w-4 h-4 text-primary" />
-                        {t("booking.fullName")}
-                      </div>
-                      <FormControl>
-                        <Input 
-                          placeholder={t("booking.enterName")} 
-                          className="h-12 rounded-xl" 
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <div className="flex items-center gap-2 text-sm font-medium mb-2">
-                        <Phone className="w-4 h-4 text-primary" />
-                        {t("booking.phoneOptional")}
-                      </div>
-                      <FormControl>
-                        <Input 
-                          placeholder="06XXXXXXXX" 
-                          className="h-12 rounded-xl" 
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
+              <div className="border-t border-border/50 pt-6">
                 <Button
                   type="submit"
-                  className="w-full h-14 text-lg rounded-2xl font-semibold shadow-lg"
-                  disabled={isSubmitting || !form.watch("client")}
+                  className="w-full h-14 text-lg rounded-2xl font-semibold shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all"
+                  disabled={isSubmitting || !canSubmit}
                 >
                   {isSubmitting ? t("booking.bookingInProgress") : t("booking.confirmBooking")}
                 </Button>
-              </form>
-            </Form>
-          )}
+              </div>
+            </form>
+          </Form>
         </div>
 
-        {selectedServices.length > 0 && (
-          <div className="glass-subtle rounded-2xl p-4 flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">{selectedServices.length} service{selectedServices.length > 1 ? "s" : ""} · {totalDuration} min</p>
-              {selectedPackage && (
-                <p className="text-xs text-emerald-600 flex items-center gap-1">
-                  <Gift className="w-3 h-3" />
-                  {selectedPackage.name}
-                </p>
-              )}
-            </div>
-            <div className="text-right">
-              {selectedPackage && (
-                <p className="text-xs text-muted-foreground line-through">{selectedPackage.originalPrice} DH</p>
-              )}
-              <p className="text-xl font-bold text-primary">{totalPrice} DH</p>
-            </div>
-          </div>
-        )}
-
-        <div className="flex gap-3">
-          {step > 1 && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={goBack}
-              className="flex-1 h-12 rounded-xl"
-            >
-              <ChevronLeft className="w-4 h-4 mr-2" />
-              {t("common.back", { defaultValue: "Retour" })}
-            </Button>
-          )}
-          {step < 4 && (
-            <Button
-              type="button"
-              onClick={goNext}
-              disabled={!canGoNext()}
-              className="flex-1 h-12 rounded-xl"
-            >
-              {t("common.next", { defaultValue: "Suivant" })}
-              <ChevronRight className="w-4 h-4 ml-2" />
-            </Button>
-          )}
-        </div>
-
-        <p className="text-center text-xs text-muted-foreground pt-2">
+        <p className="text-center text-sm text-muted-foreground py-4">
           PREGASQUAD Beauty Salon
         </p>
       </div>
