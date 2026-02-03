@@ -39,18 +39,19 @@ export async function sendWhatsAppMessage(
     const chatId = formatPhoneNumber(to);
     console.log('Sending WhatsApp via Wawp to:', chatId);
     
-    const params = new URLSearchParams({
-      instance_id: instanceId,
-      access_token: accessToken,
-      chatId,
-      message
-    });
+    const formData = new URLSearchParams();
+    formData.append('instance_id', instanceId);
+    formData.append('access_token', accessToken);
+    formData.append('chatId', chatId);
+    formData.append('message', message);
     
-    const response = await fetch(`${WAWP_BASE_URL}/send?${params.toString()}`, {
+    const response = await fetch(`${WAWP_BASE_URL}/send`, {
       method: 'POST',
       headers: {
-        'Accept': 'application/json'
-      }
+        'Accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: formData.toString()
     });
 
     const data = await response.json();
@@ -83,24 +84,25 @@ export async function sendWhatsAppImage(
   try {
     const chatId = formatPhoneNumber(to);
     
-    const params = new URLSearchParams({
-      instance_id: instanceId,
-      access_token: accessToken,
-      chatId,
-      'file[url]': imageUrl,
-      'file[filename]': 'image.jpg',
-      'file[mimetype]': 'image/jpeg'
-    });
+    const formData = new URLSearchParams();
+    formData.append('instance_id', instanceId);
+    formData.append('access_token', accessToken);
+    formData.append('chatId', chatId);
+    formData.append('file[url]', imageUrl);
+    formData.append('file[filename]', 'image.jpg');
+    formData.append('file[mimetype]', 'image/jpeg');
     
     if (caption) {
-      params.append('caption', caption);
+      formData.append('caption', caption);
     }
     
-    const response = await fetch(`${WAWP_BASE_URL}/sendImage?${params.toString()}`, {
+    const response = await fetch(`${WAWP_BASE_URL}/sendImage`, {
       method: 'POST',
       headers: {
-        'Accept': 'application/json'
-      }
+        'Accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: formData.toString()
     });
 
     const data = await response.json();
