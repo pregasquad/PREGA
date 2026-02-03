@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Gift, Settings, Users, Trophy, Star, Copy, Plus, X, Check, Search, Minus, Edit2, Trash2 } from "lucide-react";
+import { Gift, Settings, Users, Trophy, Star, Copy, Plus, X, Check, Search, Minus, Edit2, Trash2, MessageSquare } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
@@ -256,6 +256,30 @@ export default function LoyaltyRewards() {
       toast({
         title: t("common.error"),
         description: t("loyalty.giftCardError"),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const sendGiftCardWhatsAppMutation = useMutation({
+    mutationFn: async (card: GiftCard) => {
+      return apiRequest("POST", "/api/notifications/gift-card", {
+        recipientPhone: card.recipientPhone,
+        recipientName: card.recipientName,
+        giftCardCode: card.code,
+        amount: card.currentBalance,
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: t("common.success"),
+        description: t("loyalty.giftCardWhatsAppSent", { defaultValue: "WhatsApp notification sent!" }),
+      });
+    },
+    onError: () => {
+      toast({
+        title: t("common.error"),
+        description: t("loyalty.giftCardWhatsAppError", { defaultValue: "Failed to send WhatsApp notification" }),
         variant: "destructive",
       });
     },
@@ -830,6 +854,18 @@ export default function LoyaltyRewards() {
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
+                              {card.recipientPhone && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-green-600 hover:text-green-700"
+                                  onClick={() => sendGiftCardWhatsAppMutation.mutate(card)}
+                                  disabled={sendGiftCardWhatsAppMutation.isPending}
+                                  title={t("loyalty.sendWhatsApp", { defaultValue: "Send WhatsApp" })}
+                                >
+                                  <MessageSquare className="w-3 h-3" />
+                                </Button>
+                              )}
                               <Button
                                 variant="ghost"
                                 size="sm"
