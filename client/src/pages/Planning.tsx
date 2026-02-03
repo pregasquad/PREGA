@@ -502,8 +502,9 @@ export default function Planning() {
     queryKey: ["/api/waitlist"],
   });
   
-  // Show loading state while essential data loads
-  const isDataLoading = loadingStaff || loadingServices;
+  // Show loading state only on initial load (not when cached data exists)
+  // This prevents flashing when navigating back with cached data
+  const isDataLoading = (loadingStaff && staffList.length === 0) || (loadingServices && services.length === 0);
   const hasAuthError = (staffError || servicesError) && staffList.length === 0;
   const isAdmin = sessionStorage.getItem("admin_authenticated") === "true";
 
