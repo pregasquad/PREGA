@@ -1,6 +1,6 @@
 let isDatabaseOffline = false;
 let lastStatusCheck = 0;
-const STATUS_CHECK_INTERVAL = 10000;
+const STATUS_CHECK_INTERVAL = 30000; // Check every 30 seconds for better performance
 
 export function setDatabaseOffline(offline: boolean): void {
   if (isDatabaseOffline !== offline) {

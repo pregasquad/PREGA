@@ -223,34 +223,6 @@ export default function Planning() {
     return position;
   }, [currentTime]);
 
-  // Check if we're viewing the current "work day" (accounting for overnight closing)
-  const isToday = useMemo(() => {
-    const now = new Date();
-    const hour = now.getHours();
-    const minutes = now.getMinutes();
-    const currentTotalMinutes = hour * 60 + minutes;
-    
-    // Determine overnight cutoff from business settings
-    let overnightCutoffMinutes = 2 * 60; // Default 2 AM fallback
-    
-    if (businessSettings?.openingTime && businessSettings?.closingTime) {
-      const [openH, openM] = businessSettings.openingTime.split(":").map(Number);
-      const [closeH, closeM] = businessSettings.closingTime.split(":").map(Number);
-      const openingMinutes = openH * 60 + openM;
-      const closingMinutes = closeH * 60 + closeM;
-      
-      // If closing time is before opening time, it's an overnight business
-      if (closingMinutes < openingMinutes) {
-        // The overnight cutoff is the closing time (e.g., 02:00 means 2 AM is end of previous day)
-        overnightCutoffMinutes = closingMinutes;
-      }
-    }
-    
-    // If we're past midnight but before the overnight cutoff, consider it still the previous work day
-    const workDayDate = currentTotalMinutes < overnightCutoffMinutes ? subDays(now, 1) : now;
-    return format(date, "yyyy-MM-dd") === format(workDayDate, "yyyy-MM-dd");
-  }, [date, currentTime, businessSettings?.openingTime, businessSettings?.closingTime]);
-
   // BULLETPROOF SCROLL TO LIVE LINE - uses scrollIntoView on the actual element
   const scrollToLiveLine = useCallback((smooth = false) => {
     // Method 1: Use the actual live line element
@@ -281,66 +253,6 @@ export default function Planning() {
     
     return false;
   }, [getCurrentTimePosition]);
-
-  // AGGRESSIVE AUTO-SCROLL: Try many times with different delays
-  useLayoutEffect(() => {
-    if (!isToday) return;
-    
-    // Try scrolling multiple times
-    const attempts = [0, 50, 100, 200, 300, 500, 800, 1000, 1500, 2000, 3000];
-    const timers: NodeJS.Timeout[] = [];
-    
-    attempts.forEach(delay => {
-      const timer = setTimeout(() => {
-        scrollToLiveLine();
-      }, delay);
-      timers.push(timer);
-    });
-    
-    return () => timers.forEach(t => clearTimeout(t));
-  }, [isToday, scrollToLiveLine]);
-
-  // ResizeObserver: scroll when content loads
-  useEffect(() => {
-    if (!isToday) return;
-    
-    const board = boardRef.current;
-    if (!board) return;
-    
-    const observer = new ResizeObserver(() => {
-      scrollToLiveLine();
-    });
-    observer.observe(board);
-    
-    return () => observer.disconnect();
-  }, [isToday, scrollToLiveLine]);
-
-  // FOLLOW LIVE LINE every 30 seconds when currentTime updates
-  useEffect(() => {
-    if (!isToday) return;
-    scrollToLiveLine();
-  }, [isToday, currentTime, scrollToLiveLine]);
-
-  // Scroll when visibility changes (returning from background in PWA)
-  useEffect(() => {
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible' && isToday) {
-        setTimeout(scrollToLiveLine, 100);
-        setTimeout(scrollToLiveLine, 300);
-        setTimeout(scrollToLiveLine, 500);
-      }
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibility);
-    window.addEventListener('focus', handleVisibility);
-    window.addEventListener('pageshow', handleVisibility);
-    
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibility);
-      window.removeEventListener('focus', handleVisibility);
-      window.removeEventListener('pageshow', handleVisibility);
-    };
-  }, [isToday, scrollToLiveLine]);
 
   // Sync horizontal scroll between header and board
   useEffect(() => {
@@ -458,6 +370,93 @@ export default function Planning() {
       }
     }
   }, [businessSettings?.openingTime, businessSettings?.closingTime]);
+  
+  // Check if we're viewing the current "work day" (accounting for overnight closing)
+  const isToday = useMemo(() => {
+    const now = new Date();
+    const hour = now.getHours();
+    const minutes = now.getMinutes();
+    const currentTotalMinutes = hour * 60 + minutes;
+    
+    // Determine overnight cutoff from business settings
+    let overnightCutoffMinutes = 2 * 60; // Default 2 AM fallback
+    
+    if (businessSettings?.openingTime && businessSettings?.closingTime) {
+      const [openH, openM] = businessSettings.openingTime.split(":").map(Number);
+      const [closeH, closeM] = businessSettings.closingTime.split(":").map(Number);
+      const openingMinutes = openH * 60 + openM;
+      const closingMinutes = closeH * 60 + closeM;
+      
+      // If closing time is before opening time, it's an overnight business
+      if (closingMinutes < openingMinutes) {
+        overnightCutoffMinutes = closingMinutes;
+      }
+    }
+    
+    // If we're past midnight but before the overnight cutoff, consider it still the previous work day
+    const workDayDate = currentTotalMinutes < overnightCutoffMinutes ? subDays(now, 1) : now;
+    return format(date, "yyyy-MM-dd") === format(workDayDate, "yyyy-MM-dd");
+  }, [date, currentTime, businessSettings?.openingTime, businessSettings?.closingTime]);
+  
+  // AGGRESSIVE AUTO-SCROLL: Try many times with different delays
+  useLayoutEffect(() => {
+    if (!isToday) return;
+    
+    // Try scrolling multiple times
+    const attempts = [0, 50, 100, 200, 300, 500, 800, 1000, 1500, 2000, 3000];
+    const timers: NodeJS.Timeout[] = [];
+    
+    attempts.forEach(delay => {
+      const timer = setTimeout(() => {
+        scrollToLiveLine();
+      }, delay);
+      timers.push(timer);
+    });
+    
+    return () => timers.forEach(t => clearTimeout(t));
+  }, [isToday, scrollToLiveLine]);
+
+  // ResizeObserver: scroll when content loads
+  useEffect(() => {
+    if (!isToday) return;
+    
+    const board = boardRef.current;
+    if (!board) return;
+    
+    const observer = new ResizeObserver(() => {
+      scrollToLiveLine();
+    });
+    observer.observe(board);
+    
+    return () => observer.disconnect();
+  }, [isToday, scrollToLiveLine]);
+
+  // FOLLOW LIVE LINE every 30 seconds when currentTime updates
+  useEffect(() => {
+    if (!isToday) return;
+    scrollToLiveLine();
+  }, [isToday, currentTime, scrollToLiveLine]);
+
+  // Scroll when visibility changes (returning from background in PWA)
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && isToday) {
+        setTimeout(scrollToLiveLine, 100);
+        setTimeout(scrollToLiveLine, 300);
+        setTimeout(scrollToLiveLine, 500);
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', handleVisibility);
+    window.addEventListener('pageshow', handleVisibility);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleVisibility);
+      window.removeEventListener('pageshow', handleVisibility);
+    };
+  }, [isToday, scrollToLiveLine]);
   
   const hours = useMemo(() => {
     if (businessSettings?.openingTime && businessSettings?.closingTime) {
