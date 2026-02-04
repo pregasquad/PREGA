@@ -96,8 +96,8 @@ const TIME_SLOTS = [
 ];
 
 const SALON_LOCATION = {
-  lat: 30.39984,
-  lng: -9.55542,
+  lat: 30.399840,
+  lng: -9.555420,
   name: "Salon PREGASQUAD",
   address: "PROJECT ANNASER, IMM 25, Agadir"
 };
@@ -482,20 +482,50 @@ export default function Booking() {
                 <p className="text-xs text-muted-foreground">{SALON_LOCATION.address}</p>
               </div>
             </div>
-            <a 
-              href="https://maps.app.goo.gl/w5YHp3VBZJ5JjBkK6"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full"
-            >
-              <Button 
-                variant="outline" 
-                className="w-full h-11 rounded-2xl gap-2 border-primary/30 hover:bg-primary/10 hover:border-primary/50"
+            <p className="text-xs text-muted-foreground mb-3 text-center">
+              {t("booking.chooseMapApp", { defaultValue: "Choisir votre application de navigation" })}
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              <a 
+                href={`https://www.google.com/maps/dir/?api=1&destination=${SALON_LOCATION.lat},${SALON_LOCATION.lng}`}
+                target="_blank"
+                rel="noopener noreferrer"
               >
-                <Navigation className="w-4 h-4 text-primary" />
-                {t("booking.getDirections", { defaultValue: "Itinéraire vers le salon" })}
-              </Button>
-            </a>
+                <Button 
+                  variant="outline" 
+                  className="w-full h-10 rounded-xl text-xs gap-1.5 border-primary/30 hover:bg-primary/10"
+                >
+                  <Navigation className="w-3.5 h-3.5" />
+                  Google
+                </Button>
+              </a>
+              <a 
+                href={`https://maps.apple.com/?daddr=${SALON_LOCATION.lat},${SALON_LOCATION.lng}&dirflg=d`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Button 
+                  variant="outline" 
+                  className="w-full h-10 rounded-xl text-xs gap-1.5 border-primary/30 hover:bg-primary/10"
+                >
+                  <Navigation className="w-3.5 h-3.5" />
+                  Apple
+                </Button>
+              </a>
+              <a 
+                href={`https://waze.com/ul?ll=${SALON_LOCATION.lat},${SALON_LOCATION.lng}&navigate=yes`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Button 
+                  variant="outline" 
+                  className="w-full h-10 rounded-xl text-xs gap-1.5 border-primary/30 hover:bg-primary/10"
+                >
+                  <Navigation className="w-3.5 h-3.5" />
+                  Waze
+                </Button>
+              </a>
+            </div>
           </div>
           
           <div className="flex flex-col gap-3 mt-4">
