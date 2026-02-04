@@ -213,6 +213,13 @@ export async function sendAppointmentReminder(
   return sendWhatsAppMessage(clientPhone, message);
 }
 
+// Salon location for WhatsApp messages
+const SALON_LOCATION = {
+  lat: 30.399840,
+  lng: -9.555420,
+  address: "PROJECT ANNASER, IMM 25, Agadir"
+};
+
 export async function sendBookingConfirmation(
   clientPhone: string,
   clientName: string,
@@ -222,12 +229,17 @@ export async function sendBookingConfirmation(
   salonName?: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const salon = salonName || 'PREGASQUAD';
+  const mapsLink = `https://www.google.com/maps/dir/?api=1&destination=${SALON_LOCATION.lat},${SALON_LOCATION.lng}`;
+  
   const message = `مرحباً ${clientName}! ✨
 
 تم تأكيد حجزك بنجاح:
 📅 التاريخ: ${appointmentDate}
 ⏰ الوقت: ${appointmentTime}
 💅 الخدمة: ${serviceName}
+
+📍 العنوان: ${SALON_LOCATION.address}
+🗺️ الموقع: ${mapsLink}
 
 شكراً لاختيارك ${salon}!
 نتطلع لرؤيتك. 💕`;
