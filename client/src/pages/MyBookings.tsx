@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,8 +46,19 @@ export default function MyBookings() {
   const [cancellingId, setCancellingId] = useState<number | null>(null);
   const [date, setDate] = useState<Date>(startOfToday());
   const [showPhoneInput, setShowPhoneInput] = useState(true);
+  
+  const gridRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const isRtl = i18n.language === "ar";
+  
+  const scrollToGrid = () => {
+    setTimeout(() => {
+      if (gridRef.current && scrollContainerRef.current) {
+        gridRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
+  };
 
   const getDateLocale = () => {
     switch (i18n.language) {
@@ -74,10 +85,17 @@ export default function MyBookings() {
       const data = await res.json();
       
       if (res.ok) {
-        setAppointments(data.appointments || []);
+        const appts = data.appointments || [];
+        setAppointments(appts);
         setCancellationHours(data.cancellationHours || 24);
         setHasSearched(true);
         setShowPhoneInput(false);
+        
+        // Auto-scroll to first appointment's date grid
+        if (appts.length > 0) {
+          setDate(parseISO(appts[0].date));
+          scrollToGrid();
+        }
       } else {
         toast({
           title: t("common.error"),
@@ -328,7 +346,7 @@ export default function MyBookings() {
       </div>
 
       {/* Main Content - Planning Grid Style */}
-      <div className="flex-1 overflow-auto p-4">
+      <div ref={scrollContainerRef} className="flex-1 overflow-auto p-4">
         {appointments.length === 0 ? (
           <div className="glass-card p-8 text-center max-w-md mx-auto mt-8">
             <CalendarIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -351,7 +369,7 @@ export default function MyBookings() {
             </p>
           </div>
         ) : (
-          <div className="glass-card rounded-2xl overflow-hidden">
+          <div ref={gridRef} className="glass-card rounded-2xl overflow-hidden">
             {/* Date Header */}
             <div className="px-4 py-3 bg-primary/5 border-b">
               <h2 className="font-semibold">
@@ -488,7 +506,10 @@ export default function MyBookings() {
                     "glass-card p-3 cursor-pointer hover:bg-muted/50 transition-all",
                     format(parseISO(appointment.date), "yyyy-MM-dd") === format(date, "yyyy-MM-dd") && "ring-2 ring-primary/50"
                   )}
-                  onClick={() => setDate(parseISO(appointment.date))}
+                  onClick={() => {
+                    setDate(parseISO(appointment.date));
+                    scrollToGrid();
+                  }}
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
