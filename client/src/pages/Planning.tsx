@@ -2394,7 +2394,7 @@ export default function Planning() {
       {/* Floating "Go to Now" button - iOS Liquid Glass Style */}
       {isToday && getCurrentTimePosition(hours, businessSettings?.openingTime, businessSettings?.closingTime) >= 0 && (
         <button
-          onClick={() => scrollToLiveLine(true)}
+          onClick={() => scrollToLiveLine(true, true)}
           className={cn(
             "fixed bottom-20 z-50 w-14 h-14 rounded-full liquid-gradient shadow-xl flex items-center justify-center text-white transition-all active:scale-95 live-indicator",
             isRtl ? "left-4" : "right-4"
