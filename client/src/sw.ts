@@ -160,5 +160,41 @@ self.addEventListener('notificationclick', function(event) {
   );
 });
 
+// Background sync for offline changes
+self.addEventListener('sync', (event: any) => {
+  console.log('[SW] Background sync triggered:', event.tag);
+  
+  if (event.tag === 'sync-appointments' || event.tag === 'sync-data') {
+    event.waitUntil(
+      self.clients.matchAll().then((clients) => {
+        clients.forEach((client) => {
+          client.postMessage({ type: 'SYNC_REQUIRED' });
+        });
+      })
+    );
+  }
+});
+
+// Message handling from main app
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
+// Handle offline navigation
+self.addEventListener('fetch', (event) => {
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(async () => {
+        const cached = await caches.match('/');
+        return cached || new Response('Offline', { status: 503 });
+      })
+    );
+  }
+});
+
 self.skipWaiting();
 self.clients.claim();
+
+console.log('[SW] Service worker loaded with offline support');

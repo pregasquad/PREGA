@@ -4,8 +4,23 @@ import App from "./App";
 import "./index.css";
 import "./i18n/config";
 import { initDatabaseStatusCheck } from "./lib/databaseStatus";
+import { syncPendingChanges, refreshAndCacheData, startAutoSync } from "./lib/syncService";
 
 initDatabaseStatusCheck();
+
+// Start auto-sync for offline changes
+startAutoSync(30000);
+
+// Listen for sync messages from service worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', async (event) => {
+    if (event.data?.type === 'SYNC_REQUIRED') {
+      console.log('[App] Sync requested by service worker');
+      await syncPendingChanges();
+      await refreshAndCacheData();
+    }
+  });
+}
 
 // Restore session from local storage before app render to prevent 401s
 if (typeof window !== 'undefined') {
