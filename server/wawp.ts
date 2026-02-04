@@ -3,17 +3,59 @@ const WAWP_BASE_URL = 'https://wawp.net/wp-json/awp/v1';
 // Known country codes with validation info
 // localLengthWithoutTrunk = length of number after country code (without national trunk 0)
 const COUNTRY_CODES: { [key: string]: { localLength: number; name: string } } = {
-  '33': { localLength: 9, name: 'France' },       // France: +33 6 12 34 56 78 (9 digits after country code)
-  '31': { localLength: 9, name: 'Netherlands' },  // Netherlands: +31 6 12345678
-  '212': { localLength: 9, name: 'Morocco' },     // Morocco: +212 612345678
-  '32': { localLength: 8, name: 'Belgium' },      // Belgium: +32 4 12 34 56 78
-  '34': { localLength: 9, name: 'Spain' },        // Spain: +34 612345678
-  '39': { localLength: 10, name: 'Italy' },       // Italy: +39 3 12 345 6789
-  '44': { localLength: 10, name: 'UK' },          // UK: +44 7911 123456
-  '49': { localLength: 11, name: 'Germany' },     // Germany: +49 170 1234567
-  '1': { localLength: 10, name: 'USA/Canada' },   // USA: +1 555 123 4567
-  '971': { localLength: 9, name: 'UAE' },         // UAE: +971 50 123 4567
+  // North Africa & Middle East
+  '212': { localLength: 9, name: 'Morocco' },      // Morocco: +212 612345678
+  '213': { localLength: 9, name: 'Algeria' },      // Algeria: +213 5 12 34 56 78
+  '216': { localLength: 8, name: 'Tunisia' },      // Tunisia: +216 12 345 678
+  '20': { localLength: 10, name: 'Egypt' },        // Egypt: +20 10 1234 5678
+  '971': { localLength: 9, name: 'UAE' },          // UAE: +971 50 123 4567
   '966': { localLength: 9, name: 'Saudi Arabia' }, // Saudi: +966 5 1234 5678
+  '974': { localLength: 8, name: 'Qatar' },        // Qatar: +974 3312 3456
+  '965': { localLength: 8, name: 'Kuwait' },       // Kuwait: +965 1234 5678
+  '973': { localLength: 8, name: 'Bahrain' },      // Bahrain: +973 3612 3456
+  '968': { localLength: 8, name: 'Oman' },         // Oman: +968 9123 4567
+  '962': { localLength: 9, name: 'Jordan' },       // Jordan: +962 7 9123 4567
+  '961': { localLength: 8, name: 'Lebanon' },      // Lebanon: +961 3 123 456
+  // Europe
+  '33': { localLength: 9, name: 'France' },        // France: +33 6 12 34 56 78
+  '34': { localLength: 9, name: 'Spain' },         // Spain: +34 612345678
+  '39': { localLength: 10, name: 'Italy' },        // Italy: +39 3 12 345 6789
+  '44': { localLength: 10, name: 'UK' },           // UK: +44 7911 123456
+  '49': { localLength: 11, name: 'Germany' },      // Germany: +49 170 1234567
+  '31': { localLength: 9, name: 'Netherlands' },   // Netherlands: +31 6 12345678
+  '32': { localLength: 8, name: 'Belgium' },       // Belgium: +32 4 12 34 56 78
+  '41': { localLength: 9, name: 'Switzerland' },   // Switzerland: +41 79 123 45 67
+  '43': { localLength: 10, name: 'Austria' },      // Austria: +43 664 123 4567
+  '45': { localLength: 8, name: 'Denmark' },       // Denmark: +45 12 34 56 78
+  '46': { localLength: 9, name: 'Sweden' },        // Sweden: +46 70 123 45 67
+  '47': { localLength: 8, name: 'Norway' },        // Norway: +47 123 45 678
+  '48': { localLength: 9, name: 'Poland' },        // Poland: +48 512 345 678
+  '351': { localLength: 9, name: 'Portugal' },     // Portugal: +351 912 345 678
+  '352': { localLength: 9, name: 'Luxembourg' },   // Luxembourg: +352 621 123 456
+  '353': { localLength: 9, name: 'Ireland' },      // Ireland: +353 87 123 4567
+  '358': { localLength: 10, name: 'Finland' },     // Finland: +358 40 123 4567
+  '30': { localLength: 10, name: 'Greece' },       // Greece: +30 694 123 4567
+  '36': { localLength: 9, name: 'Hungary' },       // Hungary: +36 20 123 4567
+  '40': { localLength: 9, name: 'Romania' },       // Romania: +40 721 234 567
+  '420': { localLength: 9, name: 'Czech Republic' }, // Czech: +420 601 234 567
+  '7': { localLength: 10, name: 'Russia' },        // Russia: +7 912 345 6789
+  '380': { localLength: 9, name: 'Ukraine' },      // Ukraine: +380 50 123 4567
+  '90': { localLength: 10, name: 'Turkey' },       // Turkey: +90 532 123 4567
+  // Americas
+  '1': { localLength: 10, name: 'USA/Canada' },    // USA: +1 555 123 4567
+  '52': { localLength: 10, name: 'Mexico' },       // Mexico: +52 55 1234 5678
+  '55': { localLength: 11, name: 'Brazil' },       // Brazil: +55 11 91234 5678
+  '54': { localLength: 10, name: 'Argentina' },    // Argentina: +54 11 1234 5678
+  // Asia & Others
+  '86': { localLength: 11, name: 'China' },        // China: +86 139 1234 5678
+  '91': { localLength: 10, name: 'India' },        // India: +91 98765 43210
+  '81': { localLength: 10, name: 'Japan' },        // Japan: +81 90 1234 5678
+  '82': { localLength: 10, name: 'South Korea' },  // South Korea: +82 10 1234 5678
+  '60': { localLength: 10, name: 'Malaysia' },     // Malaysia: +60 12 345 6789
+  '65': { localLength: 8, name: 'Singapore' },     // Singapore: +65 8123 4567
+  '27': { localLength: 9, name: 'South Africa' },  // South Africa: +27 82 123 4567
+  '61': { localLength: 9, name: 'Australia' },     // Australia: +61 4 1234 5678
+  '64': { localLength: 9, name: 'New Zealand' },   // New Zealand: +64 21 123 4567
 };
 
 // Default country code for local numbers without country prefix
