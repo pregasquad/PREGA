@@ -96,8 +96,8 @@ const TIME_SLOTS = [
 ];
 
 const SALON_LOCATION = {
-  lat: 30.499687,
-  lng: -9.602813,
+  lat: 30.39984,
+  lng: -9.55542,
   name: "Salon PREGASQUAD",
   address: "PROJECT ANNASER, IMM 25, Agadir"
 };
