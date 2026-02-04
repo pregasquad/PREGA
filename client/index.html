@@ -69,15 +69,23 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
-      window.addEventListener('load', function() {
-        setTimeout(function() {
+      (function() {
+        var hideLoader = function() {
           var loader = document.getElementById('app-loader');
-          if (loader) loader.classList.add('hide');
-          setTimeout(function() {
-            if (loader) loader.remove();
-          }, 300);
-        }, 100);
-      });
+          if (loader && !loader.classList.contains('hide')) {
+            loader.classList.add('hide');
+            setTimeout(function() {
+              if (loader) loader.remove();
+            }, 300);
+          }
+        };
+        // Hide on load event
+        window.addEventListener('load', function() {
+          setTimeout(hideLoader, 100);
+        });
+        // Fallback: hide after 5 seconds max to prevent stuck loader
+        setTimeout(hideLoader, 5000);
+      })();
     </script>
   </body>
 </html>

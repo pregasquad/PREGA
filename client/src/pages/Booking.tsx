@@ -126,8 +126,10 @@ export default function Booking() {
 
   // Defer socket connection to after initial render
   useEffect(() => {
+    let socket: Socket | null = null;
+    
     const timer = setTimeout(() => {
-      const socket: Socket = io(window.location.origin, {
+      socket = io(window.location.origin, {
         transports: ["websocket", "polling"],
         reconnection: true,
         reconnectionAttempts: 3,
@@ -135,20 +137,21 @@ export default function Booking() {
       });
       
       socket.on("connect", () => {
-        socket.emit("booking:join");
+        socket?.emit("booking:join");
       });
 
       socket.on("booking:viewers", (count: number) => {
         setVisitorCount(count);
       });
-
-      return () => {
-        socket.emit("booking:leave");
-        socket.disconnect();
-      };
     }, 1000);
     
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      if (socket) {
+        socket.emit("booking:leave");
+        socket.disconnect();
+      }
+    };
   }, []);
 
   // Fetch all data in parallel for faster loading
@@ -161,11 +164,10 @@ export default function Booking() {
           fetch("/api/public/packages")
         ]);
         
-        const [staffData, servicesData, packagesData] = await Promise.all([
-          staffRes.json(),
-          servicesRes.json(),
-          packagesRes.json()
-        ]);
+        // Validate responses before parsing JSON
+        const staffData = staffRes.ok ? await staffRes.json() : [];
+        const servicesData = servicesRes.ok ? await servicesRes.json() : [];
+        const packagesData = packagesRes.ok ? await packagesRes.json() : [];
         
         setStaffList(staffData);
         setServices(servicesData);
