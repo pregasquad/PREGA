@@ -472,30 +472,34 @@ export default function Booking() {
           )}
           
           {/* Salon Location & Directions */}
-          <div className="relative overflow-hidden rounded-2xl mt-4">
-            {/* Map-style background */}
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 dark:from-emerald-950/30 dark:via-teal-950/30 dark:to-cyan-950/30" />
-            <div className="absolute inset-0 opacity-20 dark:opacity-10" style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 30h60M30 0v60M0 15h60M15 0v60M0 45h60M45 0v60' stroke='%2310b981' stroke-width='0.5' fill='none' opacity='0.4'/%3E%3C/svg%3E")`,
-              backgroundSize: '60px 60px'
-            }} />
-            <div className="absolute top-2 right-2 w-16 h-16 rounded-full bg-emerald-400/20 blur-xl" />
-            <div className="absolute bottom-2 left-2 w-12 h-12 rounded-full bg-teal-400/20 blur-lg" />
+          <div 
+            className="relative overflow-hidden rounded-2xl mt-4 p-4 border border-emerald-300/50 dark:border-emerald-700/50"
+            style={{
+              background: `
+                linear-gradient(135deg, rgba(209, 250, 229, 0.8) 0%, rgba(204, 251, 241, 0.8) 50%, rgba(207, 250, 254, 0.8) 100%),
+                url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 50h100M50 0v100M0 25h100M25 0v100M0 75h100M75 0v100' stroke='%2310b981' stroke-width='1' fill='none' opacity='0.3'/%3E%3Ccircle cx='25' cy='25' r='3' fill='%2310b981' opacity='0.2'/%3E%3Ccircle cx='75' cy='75' r='3' fill='%2310b981' opacity='0.2'/%3E%3Ccircle cx='25' cy='75' r='2' fill='%2314b8a6' opacity='0.2'/%3E%3Ccircle cx='75' cy='25' r='2' fill='%2314b8a6' opacity='0.2'/%3E%3C/svg%3E")
+              `,
+              backgroundSize: 'cover, 100px 100px'
+            }}
+          >
+            {/* Decorative elements */}
+            <div className="absolute top-1 right-1 w-20 h-20 rounded-full bg-emerald-400/30 blur-2xl pointer-events-none" />
+            <div className="absolute bottom-1 left-1 w-16 h-16 rounded-full bg-teal-400/30 blur-xl pointer-events-none" />
             
-            <div className="relative glass-card p-4 border-emerald-200/50 dark:border-emerald-800/30">
+            <div className="relative">
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg">
+                <div className="w-11 h-11 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/30">
                   <MapPin className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sm text-emerald-900 dark:text-emerald-100">{SALON_LOCATION.name}</h4>
+                  <p className="text-xs text-emerald-700/70 dark:text-emerald-300/70">{SALON_LOCATION.address}</p>
+                </div>
               </div>
-              <div>
-                <h4 className="font-semibold text-sm">{SALON_LOCATION.name}</h4>
-                <p className="text-xs text-muted-foreground">{SALON_LOCATION.address}</p>
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground mb-3 text-center">
-              {t("booking.chooseMapApp", { defaultValue: "Choisir votre application de navigation" })}
-            </p>
-            <div className="grid grid-cols-3 gap-2">
+              <p className="text-xs text-emerald-600/80 dark:text-emerald-400/80 mb-3 text-center">
+                {t("booking.chooseMapApp", { defaultValue: "Choisir votre application de navigation" })}
+              </p>
+              <div className="grid grid-cols-3 gap-2">
               <a 
                 href={`https://www.google.com/maps/dir/?api=1&destination=${SALON_LOCATION.lat},${SALON_LOCATION.lng}`}
                 target="_blank"
@@ -535,7 +539,7 @@ export default function Booking() {
                   Waze
                 </Button>
               </a>
-            </div>
+              </div>
             </div>
           </div>
           
