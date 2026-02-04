@@ -551,18 +551,11 @@ export async function registerRoutes(
       if (input.phone && createdAppointments.length > 0) {
         try {
           const { sendBookingConfirmation } = await import("./wawp");
-          let formattedPhone = input.phone.replace(/[^0-9]/g, "");
-          if (formattedPhone.startsWith("0")) {
-            formattedPhone = "212" + formattedPhone.substring(1);
-          } else if (!formattedPhone.startsWith("212")) {
-            formattedPhone = "212" + formattedPhone;
-          }
-          
-          // Create a summary of all services booked
+          // Pass phone as-is - formatPhoneNumber in wawp.ts handles all international formats
           const allServiceNames = createdAppointments.map(a => a.service).join(" + ");
           
           await sendBookingConfirmation(
-            formattedPhone,
+            input.phone,
             input.client.split(" (")[0],
             input.date,
             input.startTime,
