@@ -94,7 +94,9 @@ function formatPhoneNumber(phone: string): string {
     }
   }
   
-  // Number doesn't have a recognized country code - apply default (Morocco)
+  // Number doesn't match a known country code
+  // Check if it looks like a local Moroccan number (only apply default for these)
+  
   // Handle local format with trunk 0: 0612345678 -> 212612345678
   if (cleaned.startsWith('0') && cleaned.length === 10) {
     cleaned = DEFAULT_COUNTRY_CODE + cleaned.substring(1);
@@ -103,6 +105,9 @@ function formatPhoneNumber(phone: string): string {
   else if (cleaned.length === 9 && !cleaned.startsWith('0')) {
     cleaned = DEFAULT_COUNTRY_CODE + cleaned;
   }
+  // For longer numbers (11+ digits), assume they already have a country code
+  // and pass through as-is - this handles unlisted countries
+  // For other lengths, also pass through (user responsibility)
   
   return cleaned + '@c.us';
 }
