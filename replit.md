@@ -117,6 +117,17 @@ Preferred communication style: Simple, everyday language.
   - `POST /api/public/page-views` - Increment and return visitor count for a page
 - **Security**: Rate limiting (10 req/min per IP), input validation with Zod, sanitized responses
 
+### Client Portal (My Bookings)
+- **Route**: `/my-bookings` - Clients can view and cancel their upcoming appointments
+- **Phone Lookup**: Clients enter their phone number (min 8 digits) to retrieve bookings
+- **Security**: Exact normalized phone matching (last 8-10 digits) prevents enumeration attacks
+- **Cancellation Rules**: Configurable time window (default 24 hours) stored in `business_settings.cancellationHours`
+- **Public API Endpoints**:
+  - `GET /api/public/my-bookings?phone=` - Fetch appointments by phone (future only)
+  - `POST /api/public/cancel-booking` - Cancel appointment (requires matching phone, respects time window)
+  - `GET /api/public/settings` - Get cancellation hours setting
+- **Features**: Real-time socket notification on cancellation, link from booking confirmation page
+
 ### Loyalty & Rewards System
 - **Loyalty Points**: Clients earn points per DH spent, redeemable for discounts
 - **Use Points Toggle**: Clients have a `usePoints` boolean field that can be enabled from Client Details > Loyalty tab
