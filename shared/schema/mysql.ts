@@ -80,6 +80,7 @@ export const appointments = mysqlTable("appointments", {
   duration: int("duration").notNull(),
   client: text("client").notNull(),
   clientId: int("client_id"),
+  phone: text("phone"),
   service: text("service"),
   servicesJson: text("services_json"),
   staff: text("staff").notNull(),
@@ -307,6 +308,7 @@ export const businessSettings = mysqlTable("business_settings", {
   loyaltyPointsValue: double("loyalty_points_value").notNull().default(0.1),
   referralBonusPoints: int("referral_bonus_points").notNull().default(100),
   referralBonusReferee: int("referral_bonus_referee").notNull().default(50),
+  cancellationHours: int("cancellation_hours").notNull().default(24),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 

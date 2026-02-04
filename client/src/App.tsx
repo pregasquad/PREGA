@@ -14,6 +14,7 @@ import { useAnalytics } from "./hooks/use-analytics";
 // Core pages - loaded immediately
 import Planning from "@/pages/Planning";
 import Booking from "@/pages/Booking";
+import MyBookings from "@/pages/MyBookings";
 import Charges from "@/pages/Charges";
 
 // Admin pages - lazy loaded for faster initial load
@@ -183,6 +184,7 @@ function Router() {
       </Route>
 
       <Route path="/booking" component={Booking} />
+      <Route path="/my-bookings" component={MyBookings} />
 
       <Route>
         <Suspense fallback={<PageLoader />}>

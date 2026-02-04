@@ -80,6 +80,7 @@ export const appointments = pgTable("appointments", {
   duration: integer("duration").notNull(),
   client: text("client").notNull(),
   clientId: integer("client_id"),
+  phone: text("phone"),
   service: text("service"),
   servicesJson: text("services_json"),
   staff: text("staff").notNull(),
@@ -308,6 +309,7 @@ export const businessSettings = pgTable("business_settings", {
   loyaltyPointsValue: doublePrecision("loyalty_points_value").notNull().default(0.1),
   referralBonusPoints: integer("referral_bonus_points").notNull().default(100),
   referralBonusReferee: integer("referral_bonus_referee").notNull().default(50),
+  cancellationHours: integer("cancellation_hours").notNull().default(24),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 

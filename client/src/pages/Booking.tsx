@@ -464,9 +464,16 @@ export default function Booking() {
             </div>
           )}
           
-          <Button onClick={() => window.location.reload()} className="w-full h-12 text-lg mt-4 rounded-2xl">
-            {t("booking.newBooking")}
-          </Button>
+          <div className="flex flex-col gap-3 mt-4">
+            <Button onClick={() => window.location.reload()} className="w-full h-12 text-lg rounded-2xl">
+              {t("booking.newBooking")}
+            </Button>
+            <a href="/my-bookings" className="w-full">
+              <Button variant="outline" className="w-full h-10 rounded-2xl">
+                {t("booking.viewMyBookings", { defaultValue: "Voir mes rendez-vous" })}
+              </Button>
+            </a>
+          </div>
         </div>
       </div>
     );

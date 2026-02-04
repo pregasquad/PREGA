@@ -433,6 +433,7 @@ export async function registerRoutes(
           date: input.date,
           startTime: input.startTime,
           paid: false,
+          phone: input.phone || null,
           servicesJson: input.servicesJson,
         };
         
@@ -518,6 +519,7 @@ export async function registerRoutes(
             date: input.date,
             startTime: currentStartTime,
             paid: false,
+            phone: input.phone || null,
             servicesJson: group.services,
           };
           
@@ -671,6 +673,154 @@ export async function registerRoutes(
       res.json(activePackages);
     } catch (err) {
       res.status(500).json({ error: "Failed to fetch packages" });
+    }
+  });
+
+  // Helper to normalize phone for exact matching (strip non-digits, ensure min length)
+  function normalizePhone(phone: string): string {
+    return phone.replace(/[^0-9]/g, '');
+  }
+  
+  // Public endpoint to get client's appointments by phone number
+  app.get("/api/public/my-bookings", publicRateLimitMiddleware, async (req, res) => {
+    try {
+      const { phone } = z.object({ phone: z.string().min(8).max(20) }).parse(req.query);
+      
+      const normalizedQuery = normalizePhone(phone);
+      
+      // Require minimum 8 digits for security
+      if (normalizedQuery.length < 8) {
+        return res.status(400).json({ error: "Phone number must have at least 8 digits" });
+      }
+      
+      // Get all appointments with this phone number (future only)
+      const allAppointments = await storage.getAppointments();
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const clientAppointments = allAppointments
+        .filter(a => {
+          if (!a.phone) return false;
+          // Exact normalized match (last 8+ digits must match)
+          const normalizedAppPhone = normalizePhone(a.phone);
+          // Match if both end with same digits (handles country code variations)
+          const minLength = Math.min(normalizedQuery.length, normalizedAppPhone.length, 10);
+          return normalizedAppPhone.slice(-minLength) === normalizedQuery.slice(-minLength);
+        })
+        .filter(a => {
+          // Only future/today appointments
+          const appointmentDate = new Date(a.date);
+          return appointmentDate >= today;
+        })
+        .sort((a, b) => {
+          // Sort by date + time ascending
+          const dateA = new Date(`${a.date}T${a.startTime}`);
+          const dateB = new Date(`${b.date}T${b.startTime}`);
+          return dateA.getTime() - dateB.getTime();
+        })
+        .map(a => ({
+          id: a.id,
+          client: a.client,
+          service: a.service,
+          staff: a.staff,
+          date: a.date,
+          startTime: a.startTime,
+          duration: a.duration,
+          total: a.total,
+          paid: a.paid,
+          status: a.staff ? (a.paid ? 'confirmed' : 'pending') : 'awaiting_assignment'
+        }));
+      
+      // Get cancellation hours from settings
+      const settings = await storage.getBusinessSettings();
+      const cancellationHours = settings?.cancellationHours ?? 24;
+      
+      res.json({ 
+        appointments: clientAppointments,
+        cancellationHours 
+      });
+    } catch (err) {
+      console.error("[PUBLIC MY-BOOKINGS] Error:", err);
+      res.status(400).json({ error: "Invalid phone number" });
+    }
+  });
+
+  // Public endpoint to cancel an appointment
+  app.post("/api/public/cancel-booking", publicRateLimitMiddleware, async (req, res) => {
+    try {
+      const { appointmentId, phone } = z.object({
+        appointmentId: z.number(),
+        phone: z.string().min(8).max(20)
+      }).parse(req.body);
+      
+      const normalizedReqPhone = normalizePhone(phone);
+      
+      // Require minimum 8 digits for security
+      if (normalizedReqPhone.length < 8) {
+        return res.status(400).json({ error: "Phone number must have at least 8 digits" });
+      }
+      
+      // Get the appointment
+      const appointments = await storage.getAppointments();
+      const appointment = appointments.find(a => a.id === appointmentId);
+      
+      if (!appointment) {
+        return res.status(404).json({ error: "Appointment not found" });
+      }
+      
+      // Verify phone number matches exactly
+      if (!appointment.phone) {
+        return res.status(403).json({ error: "Cannot cancel this appointment" });
+      }
+      
+      const normalizedAppPhone = normalizePhone(appointment.phone);
+      
+      // Exact match on last 8-10 digits (handles country code variations)
+      const minLength = Math.min(normalizedReqPhone.length, normalizedAppPhone.length, 10);
+      if (normalizedAppPhone.slice(-minLength) !== normalizedReqPhone.slice(-minLength)) {
+        return res.status(403).json({ error: "Phone number does not match" });
+      }
+      
+      // Check cancellation window
+      const settings = await storage.getBusinessSettings();
+      const cancellationHours = settings?.cancellationHours ?? 24;
+      
+      const appointmentDateTime = new Date(`${appointment.date}T${appointment.startTime}`);
+      const now = new Date();
+      const hoursUntilAppointment = (appointmentDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+      
+      if (hoursUntilAppointment < cancellationHours) {
+        return res.status(400).json({ 
+          error: `Cannot cancel appointments less than ${cancellationHours} hours in advance`,
+          hoursRemaining: Math.max(0, Math.floor(hoursUntilAppointment))
+        });
+      }
+      
+      // Delete the appointment
+      await storage.deleteAppointment(appointmentId);
+      
+      // Emit real-time notification for cancelled booking
+      io.emit("booking:cancelled", { id: appointmentId, client: appointment.client });
+      
+      res.json({ success: true, message: "Appointment cancelled successfully" });
+    } catch (err) {
+      console.error("[PUBLIC CANCEL-BOOKING] Error:", err);
+      res.status(400).json({ error: "Failed to cancel appointment" });
+    }
+  });
+
+  // Public endpoint to get cancellation settings
+  app.get("/api/public/settings", publicRateLimitMiddleware, async (_req, res) => {
+    try {
+      const settings = await storage.getBusinessSettings();
+      res.json({
+        cancellationHours: settings?.cancellationHours ?? 24,
+        businessName: settings?.businessName ?? "PREGA SQUAD",
+        currency: settings?.currency ?? "MAD",
+        currencySymbol: settings?.currencySymbol ?? "DH"
+      });
+    } catch (err) {
+      res.status(500).json({ error: "Failed to fetch settings" });
     }
   });
 
