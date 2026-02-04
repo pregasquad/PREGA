@@ -2009,59 +2009,15 @@ export default function Planning() {
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="staff"
-                  render={({ field }) => (
-                    <FormItem className="space-y-0">
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger className="h-11 rounded-xl text-xs border-0 bg-secondary/50">
-                            <SelectValue placeholder={t("planning.staff")} />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="rounded-2xl glass-card shadow-xl">
-                          {staffList.map(s => (
-                            <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="startTime"
-                  render={({ field }) => (
-                    <FormItem className="space-y-0">
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger className="h-11 rounded-xl text-xs border-0 bg-secondary/50">
-                            <SelectValue placeholder={t("planning.time")} />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="max-h-60 rounded-2xl glass-card shadow-xl">
-                          {hours.map(h => (
-                            <SelectItem key={h} value={h}>{h}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="duration"
-                  render={({ field }) => (
-                    <FormItem className="space-y-0">
-                      <FormControl>
-                        <Input type="number" inputMode="numeric" placeholder={t("common.duration")} className="h-11 rounded-xl text-xs border-0 bg-secondary/50" {...field} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
+                {/* Staff, time, and duration are pre-selected from calendar - show as info badge */}
+                <div className="col-span-3 flex items-center gap-2 px-3 py-2 bg-primary/5 rounded-xl border border-primary/10">
+                  <Clock className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-medium">{form.watch("startTime")}</span>
+                  <span className="text-muted-foreground">•</span>
+                  <span className="text-sm">{form.watch("staff")}</span>
+                  <span className="text-muted-foreground">•</span>
+                  <span className="text-sm text-muted-foreground">{form.watch("duration")}min</span>
+                </div>
 
                 {/* Packages Section - Dropdown */}
                 {activePackages.length > 0 && (
