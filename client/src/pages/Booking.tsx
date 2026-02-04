@@ -483,7 +483,7 @@ export default function Booking() {
               </div>
             </div>
             <a 
-              href={`https://www.google.com/maps/dir/?api=1&destination=${SALON_LOCATION.lat},${SALON_LOCATION.lng}`}
+              href="https://maps.app.goo.gl/w5YHp3VBZJ5JjBkK6"
               target="_blank"
               rel="noopener noreferrer"
               className="w-full"
