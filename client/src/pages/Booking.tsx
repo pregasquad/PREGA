@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { ar, enUS, fr } from "date-fns/locale";
-import { Clock, CheckCircle2, Scissors, User, Phone, CalendarDays, Sparkles, X, Users, Gift, Tag } from "lucide-react";
+import { Clock, CheckCircle2, Scissors, User, Phone, CalendarDays, Sparkles, X, Users, Gift, Tag, CalendarCheck } from "lucide-react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
@@ -496,13 +496,19 @@ export default function Booking() {
               <p className="text-xs text-muted-foreground hidden sm:block">{t("booking.subtitle")}</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {visitorCount > 0 && (
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground/80">
                 <Users className="w-3.5 h-3.5" />
                 <span>{visitorCount}</span>
               </div>
             )}
+            <a href="/my-bookings">
+              <Button variant="ghost" size="sm" className="h-8 px-2 sm:px-3 text-xs gap-1.5 hover:bg-primary/10">
+                <CalendarCheck className="w-4 h-4" />
+                <span className="hidden sm:inline">{t("booking.myBookings", { defaultValue: "Mes RDV" })}</span>
+              </Button>
+            </a>
             <LanguageSwitcher />
           </div>
         </div>
