@@ -472,10 +472,20 @@ export default function Booking() {
           )}
           
           {/* Salon Location & Directions */}
-          <div className="glass-card p-4 rounded-2xl mt-4">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <MapPin className="w-5 h-5 text-primary" />
+          <div className="relative overflow-hidden rounded-2xl mt-4">
+            {/* Map-style background */}
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 dark:from-emerald-950/30 dark:via-teal-950/30 dark:to-cyan-950/30" />
+            <div className="absolute inset-0 opacity-20 dark:opacity-10" style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 30h60M30 0v60M0 15h60M15 0v60M0 45h60M45 0v60' stroke='%2310b981' stroke-width='0.5' fill='none' opacity='0.4'/%3E%3C/svg%3E")`,
+              backgroundSize: '60px 60px'
+            }} />
+            <div className="absolute top-2 right-2 w-16 h-16 rounded-full bg-emerald-400/20 blur-xl" />
+            <div className="absolute bottom-2 left-2 w-12 h-12 rounded-full bg-teal-400/20 blur-lg" />
+            
+            <div className="relative glass-card p-4 border-emerald-200/50 dark:border-emerald-800/30">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg">
+                  <MapPin className="w-5 h-5 text-white" />
               </div>
               <div>
                 <h4 className="font-semibold text-sm">{SALON_LOCATION.name}</h4>
@@ -525,6 +535,7 @@ export default function Booking() {
                   Waze
                 </Button>
               </a>
+            </div>
             </div>
           </div>
           
