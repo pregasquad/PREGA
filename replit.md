@@ -61,6 +61,21 @@ Preferred communication style: Simple, everyday language.
   - Full app features (appointments, services, etc.) require database connection
 - **Security**: Offline setup only allows first user creation; subsequent users require authenticated access
 
+### Progressive Web App (PWA)
+- **Installability**: App can be installed on mobile devices via "Add to Home Screen"
+- **Service Worker**: `client/src/sw.ts` using Workbox for asset caching
+- **Caching Strategies**:
+  - Static assets: Cache-first with stale-while-revalidate
+  - API responses: Network-first with cache fallback
+  - Images/fonts: Cache-first with long expiration
+- **Offline Data**: IndexedDB storage via `client/src/lib/offlineDb.ts`
+  - Stores: appointments, services, categories, staff, clients, charges, products
+  - Sync queue for pending offline changes
+- **Auto-Sync**: Background sync when coming back online via `client/src/lib/syncService.ts`
+- **Offline Indicator**: Visual indicator in UI when offline with pending change count
+- **Push Notifications**: Web push support for appointment reminders
+- **Manifest**: `client/public/manifest.json` with app icons (192x192, 512x512)
+
 ### Project Structure
 - `client/`: React frontend (components, hooks, pages, i18n, lib)
 - `server/`: Express backend (routes, storage, Replit integrations)
