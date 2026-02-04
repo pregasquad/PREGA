@@ -1855,17 +1855,15 @@ export default function Planning() {
                   }
                 }
               }}
-              className="px-4 py-3 space-y-2.5 overflow-y-auto flex-1"
+              className="p-5 space-y-4 overflow-y-auto flex-1"
             >
-              {/* Compact header: Time/Staff + Price + Paid */}
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-primary/10 rounded-lg text-xs flex-shrink-0">
-                  <Clock className="w-3.5 h-3.5 text-primary" />
-                  <span className="font-medium">{form.watch("startTime")}</span>
-                  <span className="text-muted-foreground">•</span>
-                  <span>{form.watch("staff")}</span>
+              
+              {/* Price Row - FIRST - Glass Card */}
+              <div className="flex items-center gap-3 glass-subtle rounded-2xl p-4">
+                <div className="w-11 h-11 rounded-2xl liquid-gradient flex items-center justify-center shadow-lg">
+                  <CreditCard className="w-5 h-5 text-white" />
                 </div>
-                <div className="flex-1 flex items-center gap-1.5">
+                <div className="flex-1">
                   <input
                     type="number"
                     inputMode="decimal"
@@ -1877,16 +1875,16 @@ export default function Planning() {
                     placeholder="0"
                     onClick={(e) => e.stopPropagation()}
                     onFocus={(e) => e.target.select()}
-                    className="w-full text-lg h-9 font-bold border border-primary/30 bg-white dark:bg-slate-800 rounded-lg text-center focus:ring-1 focus:ring-primary focus:border-primary focus:outline-none"
+                    className="w-full text-2xl h-12 font-bold border-2 border-primary/50 bg-white dark:bg-slate-800 rounded-xl text-center shadow-sm focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none"
                     style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
                   />
-                  <span className="text-xs font-bold text-primary">DH</span>
                 </div>
+                <span className="text-base font-bold gradient-text">DH</span>
                 <FormField
                   control={form.control}
                   name="paid"
                   render={({ field }) => (
-                    <FormItem className="flex items-center gap-1.5 space-y-0 bg-secondary/50 rounded-lg px-2 py-1.5">
+                    <FormItem className="flex items-center gap-2 space-y-0 bg-white/80 dark:bg-slate-800/80 rounded-xl px-3 py-2 shadow-sm">
                       <FormControl>
                         <input
                           type="checkbox"
@@ -1895,19 +1893,19 @@ export default function Planning() {
                           className="w-4 h-4 accent-primary rounded"
                         />
                       </FormControl>
-                      <FormLabel className="!mt-0 text-xs">{t("common.paid")}</FormLabel>
+                      <FormLabel className="!mt-0 text-xs font-medium">{t("common.paid")}</FormLabel>
                     </FormItem>
                   )}
                 />
               </div>
 
-              {/* Compact Fields */}
-              <div className="grid grid-cols-1 gap-2">
+              {/* Compact Fields - Glass Style */}
+              <div className="grid grid-cols-3 gap-2.5">
                 <FormField
                   control={form.control}
                   name="client"
                   render={({ field }) => (
-                    <FormItem className="space-y-0">
+                    <FormItem className="col-span-3 space-y-0">
                       <Popover open={clientPopoverOpen} onOpenChange={setClientPopoverOpen}>
                         <PopoverTrigger asChild>
                           <FormControl>
@@ -2011,11 +2009,65 @@ export default function Planning() {
                   )}
                 />
 
+                <FormField
+                  control={form.control}
+                  name="staff"
+                  render={({ field }) => (
+                    <FormItem className="space-y-0">
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="h-11 rounded-xl text-xs border-0 bg-secondary/50">
+                            <SelectValue placeholder={t("planning.staff")} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="rounded-2xl glass-card shadow-xl">
+                          {staffList.map(s => (
+                            <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="startTime"
+                  render={({ field }) => (
+                    <FormItem className="space-y-0">
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="h-11 rounded-xl text-xs border-0 bg-secondary/50">
+                            <SelectValue placeholder={t("planning.time")} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="max-h-60 rounded-2xl glass-card shadow-xl">
+                          {hours.map(h => (
+                            <SelectItem key={h} value={h}>{h}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="duration"
+                  render={({ field }) => (
+                    <FormItem className="space-y-0">
+                      <FormControl>
+                        <Input type="number" inputMode="numeric" placeholder={t("common.duration")} className="h-11 rounded-xl text-xs border-0 bg-secondary/50" {...field} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
                 {/* Packages Section - Dropdown */}
                 {activePackages.length > 0 && (
-                  <div className="space-y-1">
-                    <Label className="flex items-center gap-1.5 text-xs font-medium">
-                      <Gift className="w-3 h-3 text-primary" />
+                  <div className="col-span-3 space-y-2">
+                    <Label className="flex items-center gap-2 text-xs font-medium">
+                      <Gift className="w-3.5 h-3.5 text-primary" />
                       {t("booking.packages", { defaultValue: "Forfaits" })}
                     </Label>
                     <Select
@@ -2059,59 +2111,75 @@ export default function Planning() {
 
                 {/* Applied Gift Card Balance */}
                 {appliedGiftCardBalance && (
-                  <div className="flex items-center justify-between p-2 bg-green-500/10 border border-green-500/20 rounded-lg">
-                    <div className="flex items-center gap-1.5 text-xs">
-                      <Gift className="w-3.5 h-3.5 text-green-600" />
-                      <span className="text-green-600 font-bold">-{Number(appliedGiftCardBalance.discountAmount ?? 0).toFixed(0)} DH</span>
+                  <div className="col-span-3 space-y-2">
+                    <Label className="flex items-center gap-2 text-xs font-medium">
+                      <Gift className="w-3.5 h-3.5 text-green-500" />
+                      {t("giftCard.balanceDiscount", "Solde Carte Cadeau")}
+                    </Label>
+                    <div className="flex items-center justify-between p-3 bg-green-500/10 border border-green-500/30 rounded-xl">
+                      <div className="flex items-center gap-2">
+                        <Gift className="w-4 h-4 text-green-600" />
+                        <span className="font-medium text-sm">{Number(appliedGiftCardBalance.amount ?? 0).toFixed(2)} DH</span>
+                        <span className="text-green-600 font-bold">-{Number(appliedGiftCardBalance.discountAmount ?? 0).toFixed(2)} DH</span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleClearGiftCardBalance}
+                        className="h-7 text-xs text-destructive hover:text-destructive"
+                      >
+                        <X className="w-3 h-3 mr-1" />
+                        {t("common.remove", "Retirer")}
+                      </Button>
                     </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleClearGiftCardBalance}
-                      className="h-6 px-2 text-xs text-destructive hover:text-destructive"
-                    >
-                      <X className="w-3 h-3" />
-                    </Button>
                   </div>
                 )}
 
                 {/* Applied Loyalty Points */}
                 {appliedLoyaltyPoints && (
-                  <div className="flex items-center justify-between p-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                    <div className="flex items-center gap-1.5 text-xs">
-                      <Star className="w-3.5 h-3.5 text-yellow-600" />
-                      <span className="text-yellow-600 font-bold">-{Number(appliedLoyaltyPoints.discountAmount ?? 0).toFixed(0)} DH</span>
+                  <div className="col-span-3 space-y-2">
+                    <Label className="flex items-center gap-2 text-xs font-medium">
+                      <Star className="w-3.5 h-3.5 text-yellow-500" />
+                      {t("clients.loyaltyPointsDiscount", "Points de fidélité")}
+                    </Label>
+                    <div className="flex items-center justify-between p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl">
+                      <div className="flex items-center gap-2">
+                        <Star className="w-4 h-4 text-yellow-600" />
+                        <span className="font-medium text-sm">{appliedLoyaltyPoints.points} {t("clients.points", "points")}</span>
+                        <span className="text-yellow-600 font-bold">-{Number(appliedLoyaltyPoints.discountAmount ?? 0).toFixed(2)} DH</span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          const currentTotal = parseFloat(totalInputValue || "0");
+                          const newTotal = currentTotal + appliedLoyaltyPoints.discountAmount;
+                          setTotalInputValue(String(newTotal));
+                          form.setValue("total", newTotal);
+                          setAppliedLoyaltyPoints(null);
+                        }}
+                        className="h-7 text-xs text-destructive hover:text-destructive"
+                      >
+                        <X className="w-3 h-3 mr-1" />
+                        {t("common.remove", "Retirer")}
+                      </Button>
                     </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        const currentTotal = parseFloat(totalInputValue || "0");
-                        const newTotal = currentTotal + appliedLoyaltyPoints.discountAmount;
-                        setTotalInputValue(String(newTotal));
-                        form.setValue("total", newTotal);
-                        setAppliedLoyaltyPoints(null);
-                      }}
-                      className="h-6 px-2 text-xs text-destructive hover:text-destructive"
-                    >
-                      <X className="w-3 h-3" />
-                    </Button>
                   </div>
                 )}
 
                 {/* Service - Multi-select with Pills */}
-                <div className="space-y-1.5">
+                <div className="col-span-3 space-y-2">
                   {/* Selected Services Pills */}
                   {selectedServices.length > 0 && (
-                    <div className="flex flex-wrap gap-1 p-1.5 bg-secondary/30 rounded-lg">
+                    <div className="flex flex-wrap gap-1.5 p-2 bg-secondary/30 rounded-xl">
                       {selectedServices.map((s, index) => (
                         <div
                           key={s.id}
-                          className="flex items-center gap-1 px-2 py-1 bg-primary/10 dark:bg-primary/20 rounded-full text-xs"
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 bg-primary/10 dark:bg-primary/20 rounded-full text-xs"
                         >
-                          <span className="font-medium truncate max-w-[100px]">{s.name}</span>
+                          <span className="font-medium">{s.name}</span>
                           <input
                             type="number"
                             inputMode="decimal"
@@ -2119,9 +2187,10 @@ export default function Planning() {
                             defaultValue={s.price}
                             onClick={(e) => e.stopPropagation()}
                             onFocus={(e) => e.target.select()}
-                            className="w-16 h-6 px-1 text-xs text-center font-bold rounded border border-primary/50 bg-white dark:bg-slate-800 focus:ring-1 focus:ring-primary focus:outline-none"
+                            className="w-20 h-7 px-2 text-sm text-center font-bold rounded-lg border-2 border-primary/50 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none"
                             style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
                           />
+                          <span className="text-muted-foreground text-[10px]">DH</span>
                           <button
                             type="button"
                             onClick={() => handleRemoveService(index)}
