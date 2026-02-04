@@ -108,6 +108,7 @@ export default function Booking() {
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [isSuccess, setIsSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
   const [staffList, setStaffList] = useState<Staff[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -123,49 +124,64 @@ export default function Booking() {
     i18n.changeLanguage("fr");
   }, []);
 
+  // Defer socket connection to after initial render
   useEffect(() => {
-    const socket: Socket = io(window.location.origin, {
-      transports: ["websocket", "polling"],
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000
-    });
+    const timer = setTimeout(() => {
+      const socket: Socket = io(window.location.origin, {
+        transports: ["websocket", "polling"],
+        reconnection: true,
+        reconnectionAttempts: 3,
+        reconnectionDelay: 2000
+      });
+      
+      socket.on("connect", () => {
+        socket.emit("booking:join");
+      });
+
+      socket.on("booking:viewers", (count: number) => {
+        setVisitorCount(count);
+      });
+
+      return () => {
+        socket.emit("booking:leave");
+        socket.disconnect();
+      };
+    }, 1000);
     
-    socket.on("connect", () => {
-      socket.emit("booking:join");
-    });
-
-    socket.on("booking:viewers", (count: number) => {
-      setVisitorCount(count);
-    });
-
-    return () => {
-      socket.emit("booking:leave");
-      socket.disconnect();
-    };
+    return () => clearTimeout(timer);
   }, []);
 
+  // Fetch all data in parallel for faster loading
   useEffect(() => {
-    fetch("/api/public/staff")
-      .then(res => res.json())
-      .then(data => setStaffList(data))
-      .catch(console.error);
-    
-    fetch("/api/public/services")
-      .then(res => res.json())
-      .then(data => setServices(data))
-      .catch(console.error);
-    
-    fetch("/api/public/packages")
-      .then(res => res.json())
-      .then((data: Package[]) => {
-        // Filter only valid packages (discounted price must be less than original)
-        const validPackages = data.filter(pkg => 
+    const loadData = async () => {
+      try {
+        const [staffRes, servicesRes, packagesRes] = await Promise.all([
+          fetch("/api/public/staff"),
+          fetch("/api/public/services"),
+          fetch("/api/public/packages")
+        ]);
+        
+        const [staffData, servicesData, packagesData] = await Promise.all([
+          staffRes.json(),
+          servicesRes.json(),
+          packagesRes.json()
+        ]);
+        
+        setStaffList(staffData);
+        setServices(servicesData);
+        
+        const validPackages = (packagesData as Package[]).filter(pkg => 
           pkg.discountedPrice < pkg.originalPrice && pkg.originalPrice > 0
         );
         setPackages(validPackages);
-      })
-      .catch(console.error);
+      } catch (error) {
+        console.error("Failed to load booking data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadData();
   }, []);
 
   const formattedDate = date ? format(date, "yyyy-MM-dd") : "";
@@ -349,6 +365,36 @@ export default function Booking() {
   };
 
   const canSubmit = selectedServices.length > 0 && date && selectedTime && form.watch("client");
+
+  // Loading skeleton for faster perceived performance
+  if (isLoading) {
+    return (
+      <div className="min-h-screen p-3 md:p-4 relative overflow-hidden" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-accent/10" />
+        <div className="max-w-4xl mx-auto space-y-4 relative z-10">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-muted animate-pulse" />
+              <div className="space-y-2">
+                <div className="h-6 w-48 bg-muted rounded animate-pulse" />
+                <div className="h-3 w-32 bg-muted rounded animate-pulse" />
+              </div>
+            </div>
+          </div>
+          <div className="glass-card p-4 md:p-6 space-y-6">
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div className="h-10 bg-muted rounded animate-pulse" />
+                <div className="h-10 bg-muted rounded animate-pulse" />
+                <div className="h-20 bg-muted rounded animate-pulse" />
+              </div>
+              <div className="h-64 bg-muted rounded animate-pulse" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (isSuccess) {
     const hasMultipleAppointments = bookingResult?.multipleAppointments && bookingResult.appointments;
