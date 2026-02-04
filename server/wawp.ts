@@ -229,7 +229,8 @@ export async function sendBookingConfirmation(
   salonName?: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const salon = salonName || 'PREGASQUAD';
-  const mapsLink = `https://www.google.com/maps/dir/?api=1&destination=${SALON_LOCATION.lat},${SALON_LOCATION.lng}`;
+  // Universal maps link - works with Google Maps, Apple Maps, Waze and others
+  const mapsLink = `https://maps.google.com/maps?q=${SALON_LOCATION.lat},${SALON_LOCATION.lng}`;
   
   const message = `مرحباً ${clientName}! ✨
 
@@ -239,7 +240,7 @@ export async function sendBookingConfirmation(
 💅 الخدمة: ${serviceName}
 
 📍 العنوان: ${SALON_LOCATION.address}
-🗺️ الموقع: ${mapsLink}
+🗺️ افتح الموقع: ${mapsLink}
 
 شكراً لاختيارك ${salon}!
 نتطلع لرؤيتك. 💕`;
