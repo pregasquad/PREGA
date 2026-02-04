@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { ar, enUS, fr } from "date-fns/locale";
-import { Clock, CheckCircle2, Scissors, User, Phone, CalendarDays, Sparkles, X, Users, Gift, Tag, CalendarCheck } from "lucide-react";
+import { Clock, CheckCircle2, Scissors, User, Phone, CalendarDays, Sparkles, X, Users, Gift, Tag, CalendarCheck, Navigation, MapPin } from "lucide-react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
@@ -94,6 +94,13 @@ const TIME_SLOTS = [
   "20:00", "20:30", "21:00", "21:30", "22:00", "22:30",
   "23:00", "23:30", "00:00"
 ];
+
+const SALON_LOCATION = {
+  lat: 30.499687,
+  lng: -9.602813,
+  name: "Salon PREGASQUAD",
+  address: "PROJECT ANNASER, IMM 25, Agadir"
+};
 
 export default function Booking() {
   const { t, i18n } = useTranslation();
@@ -463,6 +470,33 @@ export default function Booking() {
               </div>
             </div>
           )}
+          
+          {/* Salon Location & Directions */}
+          <div className="glass-card p-4 rounded-2xl mt-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <MapPin className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-sm">{SALON_LOCATION.name}</h4>
+                <p className="text-xs text-muted-foreground">{SALON_LOCATION.address}</p>
+              </div>
+            </div>
+            <a 
+              href={`https://www.google.com/maps/dir/?api=1&destination=${SALON_LOCATION.lat},${SALON_LOCATION.lng}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full"
+            >
+              <Button 
+                variant="outline" 
+                className="w-full h-11 rounded-2xl gap-2 border-primary/30 hover:bg-primary/10 hover:border-primary/50"
+              >
+                <Navigation className="w-4 h-4 text-primary" />
+                {t("booking.getDirections", { defaultValue: "Itinéraire vers le salon" })}
+              </Button>
+            </a>
+          </div>
           
           <div className="flex flex-col gap-3 mt-4">
             <Button onClick={() => window.location.reload()} className="w-full h-12 text-lg rounded-2xl">
