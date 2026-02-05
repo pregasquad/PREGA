@@ -32,6 +32,12 @@ function notifyListeners(status: SyncStatus, pendingCount: number) {
 
 type OfflineStoreName = 'appointments' | 'services' | 'categories' | 'staff' | 'clients' | 'charges' | 'products' | 'staffDeductions' | 'staffCommissions' | 'businessSettings';
 
+// Extract ID from URL pattern like /api/appointments/123
+function extractIdFromUrl(url: string): number | null {
+  const match = url.match(/\/(\d+)(?:\?|$)/);
+  return match ? parseInt(match[1], 10) : null;
+}
+
 // Determine which store to use based on URL or explicit _store field
 function getStoreFromUrl(url: string, body?: any): OfflineStoreName {
   if (body?._store) return body._store as OfflineStoreName;
@@ -105,6 +111,7 @@ export async function syncPendingChanges(): Promise<{ success: number; failed: n
         
         // Handle PUT (update) - update offline item with server data if available
         if (item.method === 'PUT') {
+          const itemId = bodyToSend?.id || extractIdFromUrl(item.url);
           try {
             const serverData = await response.json();
             if (serverData && serverData.id) {
@@ -112,7 +119,24 @@ export async function syncPendingChanges(): Promise<{ success: number; failed: n
               console.log(`[Sync] Updated offline ${storeName} with server data`);
             }
           } catch (e) {
-            // Update might not return data, that's ok
+            // Server returned 204 or empty response - keep local updated data
+            if (itemId && bodyToSend) {
+              const existingData = await getFromOfflineStore(storeName);
+              const existingItem = existingData.find((d: any) => d.id === itemId);
+              if (existingItem) {
+                await addItemToOfflineStore(storeName, { ...existingItem, ...bodyToSend, id: itemId });
+                console.log(`[Sync] Retained local ${storeName} update for ID ${itemId}`);
+              }
+            }
+          }
+        }
+        
+        // Handle DELETE - ensure item is removed from offline store
+        if (item.method === 'DELETE') {
+          const deleteId = bodyToSend?.id || extractIdFromUrl(item.url);
+          if (deleteId) {
+            await deleteItemFromOfflineStore(storeName, deleteId).catch(() => {});
+            console.log(`[Sync] Deleted offline ${storeName} ${deleteId}`);
           }
         }
         

@@ -282,7 +282,7 @@ export function useDeleteAppointment() {
         await deleteItemFromOfflineStore('appointments', id);
         // Only queue sync if it's a real server ID (positive)
         if (id > 0) {
-          await addToSyncQueue({ method: 'DELETE', url, body: { _store: 'appointments' } });
+          await addToSyncQueue({ method: 'DELETE', url, body: { id, _store: 'appointments' } });
         }
         return { id, _offline: true };
       }
@@ -299,7 +299,7 @@ export function useDeleteAppointment() {
         if (error.name === 'TypeError' || error.message.includes('fetch')) {
           await deleteItemFromOfflineStore('appointments', id);
           if (id > 0) {
-            await addToSyncQueue({ method: 'DELETE', url, body: { _store: 'appointments' } });
+            await addToSyncQueue({ method: 'DELETE', url, body: { id, _store: 'appointments' } });
           }
           return { id, _offline: true };
         }
@@ -645,7 +645,7 @@ export function useDeleteService() {
       
       if (!navigator.onLine) {
         await deleteItemFromOfflineStore('services', id);
-        if (id > 0) await addToSyncQueue({ method: 'DELETE', url, body: { _store: 'services' } });
+        if (id > 0) await addToSyncQueue({ method: 'DELETE', url, body: { id, _store: 'services' } });
         return { id, _offline: true };
       }
 
@@ -660,7 +660,7 @@ export function useDeleteService() {
       } catch (error: any) {
         if (error.name === 'TypeError' || error.message.includes('fetch')) {
           await deleteItemFromOfflineStore('services', id);
-          if (id > 0) await addToSyncQueue({ method: 'DELETE', url, body: { _store: 'services' } });
+          if (id > 0) await addToSyncQueue({ method: 'DELETE', url, body: { id, _store: 'services' } });
           return { id, _offline: true };
         }
         throw error;
@@ -833,7 +833,7 @@ export function useDeleteStaff() {
       
       if (!navigator.onLine) {
         await deleteItemFromOfflineStore('staff', id);
-        if (id > 0) await addToSyncQueue({ method: 'DELETE', url, body: { _store: 'staff' } });
+        if (id > 0) await addToSyncQueue({ method: 'DELETE', url, body: { id, _store: 'staff' } });
         return { id, _offline: true };
       }
 
@@ -845,7 +845,7 @@ export function useDeleteStaff() {
       } catch (error: any) {
         if (error.name === 'TypeError' || error.message.includes('fetch')) {
           await deleteItemFromOfflineStore('staff', id);
-          if (id > 0) await addToSyncQueue({ method: 'DELETE', url, body: { _store: 'staff' } });
+          if (id > 0) await addToSyncQueue({ method: 'DELETE', url, body: { id, _store: 'staff' } });
           return { id, _offline: true };
         }
         throw error;
@@ -1013,7 +1013,7 @@ export function useDeleteClient() {
       
       if (!navigator.onLine) {
         await deleteItemFromOfflineStore('clients', id);
-        if (id > 0) await addToSyncQueue({ method: 'DELETE', url, body: { _store: 'clients' } });
+        if (id > 0) await addToSyncQueue({ method: 'DELETE', url, body: { id, _store: 'clients' } });
         return { id, _offline: true };
       }
 
@@ -1025,7 +1025,7 @@ export function useDeleteClient() {
       } catch (error: any) {
         if (error.name === 'TypeError' || error.message.includes('fetch')) {
           await deleteItemFromOfflineStore('clients', id);
-          if (id > 0) await addToSyncQueue({ method: 'DELETE', url, body: { _store: 'clients' } });
+          if (id > 0) await addToSyncQueue({ method: 'DELETE', url, body: { id, _store: 'clients' } });
           return { id, _offline: true };
         }
         throw error;
