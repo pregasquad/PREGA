@@ -32,6 +32,29 @@ export function getIO() {
   return io;
 }
 
+// Helper function to check low stock and send push notification
+async function checkAndNotifyLowStock(productId: number) {
+  try {
+    const products = await storage.getProducts();
+    const product = products.find((p: any) => p.id === productId);
+    if (!product) return;
+    
+    const quantity = Number(product.quantity || 0);
+    const threshold = Number(product.lowStockThreshold || 0);
+    
+    if (quantity <= threshold && threshold > 0) {
+      await sendPushNotification(
+        "⚠️ Low Stock Alert",
+        `${product.name} is low on stock (${quantity} remaining)`,
+        "/inventory"
+      );
+      console.log(`[Push] Sent low stock notification for ${product.name}`);
+    }
+  } catch (error) {
+    console.error("[Push] Error checking low stock:", error);
+  }
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -995,6 +1018,8 @@ export async function registerRoutes(
             const product = await storage.getProducts().then(prods => prods.find(p => p.id === service.linkedProductId));
             if (product && product.quantity > 0) {
               await storage.updateProductQuantity(product.id, product.quantity - 1);
+              // Check and notify if product is now low on stock
+              checkAndNotifyLowStock(product.id);
             }
           }
         }
@@ -1478,6 +1503,8 @@ export async function registerRoutes(
 
   app.patch("/api/products/:id", isPinAuthenticated, requirePermission("manage_inventory"), async (req, res) => {
     const item = await storage.updateProduct(Number(req.params.id), req.body);
+    // Check and notify if product is now low on stock
+    checkAndNotifyLowStock(Number(req.params.id));
     res.json(item);
   });
 
@@ -1497,6 +1524,8 @@ export async function registerRoutes(
     if (typeof quantity !== "number") return res.status(400).json({ message: "Invalid quantity" });
     try {
       const updated = await storage.updateProductQuantity(parseInt(req.params.id), quantity);
+      // Check and notify if product is now low on stock
+      checkAndNotifyLowStock(parseInt(req.params.id));
       res.json(updated);
     } catch (e) {
       res.status(404).json({ message: "Product not found" });
