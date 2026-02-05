@@ -100,7 +100,7 @@ export default function Reports() {
     }, {} as Record<string, number>);
 
     const serviceData = Object.entries(serviceCounts)
-      .map(([name, value]) => ({ name, value }))
+      .map(([name, value]) => ({ name, value: value as number }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 5);
 
@@ -131,7 +131,7 @@ export default function Reports() {
         paidEarnings,
         unpaidEarnings: totalEarnings - paidEarnings,
         serviceBreakdown: Object.entries(serviceBreakdown)
-          .map(([service, data]) => ({ service, ...data }))
+          .map(([service, data]) => ({ service, ...(data as { count: number; revenue: number }) }))
           .sort((a, b) => b.revenue - a.revenue)
       };
     });
