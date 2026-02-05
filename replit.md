@@ -13,7 +13,7 @@ The application is built with a clear separation of concerns between its fronten
 
 ### Frontend
 - **Framework**: React 18 with TypeScript.
-- **UI/UX**: Modern glassmorphism design with an iOS liquid glass aesthetic, warm orange palette, full dark mode, responsive design, and smooth CSS animations. Utilizes `shadcn/ui` (built on Radix UI) and Tailwind CSS for styling.
+- **UI/UX**: iOS 26 Liquid Glass design with cyan/teal/sky water-inspired color palette, full dark mode, responsive design, and smooth CSS animations. Utilizes `shadcn/ui` (built on Radix UI) and Tailwind CSS for styling.
 - **State Management**: TanStack Query for server state.
 - **Routing**: Wouter.
 - **Forms**: React Hook Form with Zod validation.
