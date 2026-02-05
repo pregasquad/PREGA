@@ -179,7 +179,7 @@ export async function registerRoutes(
     date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     startTime: z.string().regex(/^\d{2}:\d{2}$/),
     phone: z.string().max(20).optional(),
-    servicesJson: z.array(serviceItemSchema).optional(), // Multi-service support
+    servicesJson: z.array(serviceItemSchema).optional().nullable(), // Multi-service support
   }).refine(
     (data) => data.servicesJson?.length || (data.service && data.duration && data.price && data.total),
     { message: "Either servicesJson or service/duration/price/total fields are required" }

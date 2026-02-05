@@ -191,7 +191,7 @@ const serviceItemSchema = z.object({
 
 export const insertAppointmentSchema = createInsertSchema(appointments).omit({ id: true }).extend({
   service: z.string().optional().nullable(),
-  servicesJson: z.array(serviceItemSchema).optional(),
+  servicesJson: z.array(serviceItemSchema).optional().nullable(),
 });
 export const insertServiceSchema = createInsertSchema(services).omit({ id: true });
 export const insertCategorySchema = createInsertSchema(categories).omit({ id: true });
