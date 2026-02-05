@@ -43,7 +43,7 @@ The application is built with a clear separation of concerns between its fronten
   - **Service Worker**: Workbox for asset caching (static assets, API responses, images/fonts).
   - **Full Offline CRUD**: All data operations (Appointments, Services, Categories, Staff, Clients) work offline with automatic synchronization upon reconnect.
   - **IndexedDB**: Stores offline data and a sync queue for pending changes.
-  - **Sync Service**: Manages automatic data sync with retry logic and conflict resolution.
+  - **Sync Service**: Manages automatic data sync with retry logic and timestamp-based conflict detection (compares `updatedAt` before applying offline updates).
   - **Notifications**: Web push support for appointment reminders.
 
 ### Core Features
