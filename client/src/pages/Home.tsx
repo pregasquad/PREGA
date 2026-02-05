@@ -170,17 +170,18 @@ export default function Home() {
   ];
 
   return (
-    <div className="space-y-8 p-6 animate-fade-in" dir={isRtl ? "rtl" : "ltr"}>
-      <div className="flex items-center justify-between gap-4">
+    <div className="space-y-4 md:space-y-8 p-3 md:p-6 animate-fade-in min-h-screen pb-20" dir={isRtl ? "rtl" : "ltr"}>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-display font-bold">{t("home.dashboard")}</h1>
-          <p className="text-muted-foreground mt-2">{t("home.overview")}</p>
+          <h1 className="text-xl md:text-3xl font-display font-bold">{t("home.dashboard")}</h1>
+          <p className="text-muted-foreground text-sm md:text-base mt-1">{t("home.overview")}</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button
             variant="outline"
             size="icon"
+            className="h-8 w-8 md:h-10 md:w-10"
             onClick={() => {
               queryClient.invalidateQueries();
               toast({ title: t("common.refreshed"), description: t("common.dataUpdated") });
@@ -194,18 +195,19 @@ export default function Home() {
           <Button 
             variant="outline" 
             size="sm"
-            className="gap-2 text-destructive hover:bg-destructive/10 hover:border-destructive/30"
+            className="gap-1 md:gap-2 text-destructive hover:bg-destructive/10 hover:border-destructive/30 text-xs md:text-sm h-8 md:h-9"
             onClick={handleAdminLogout}
           >
-            <LogOut className="w-4 h-4" />
-            {t("home.logout")}
+            <LogOut className="w-3 h-3 md:w-4 md:h-4" />
+            <span className="hidden sm:inline">{t("home.logout")}</span>
           </Button>
           
           <Dialog open={isStaffDialogOpen} onOpenChange={setIsStaffDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="gap-2">
-                <UserPlus className="w-4 h-4" />
-                {t("home.addStaff")}
+              <Button className="gap-1 md:gap-2 text-xs md:text-sm h-8 md:h-9">
+                <UserPlus className="w-3 h-3 md:w-4 md:h-4" />
+                <span className="hidden sm:inline">{t("home.addStaff")}</span>
+                <span className="sm:hidden">+</span>
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -303,27 +305,27 @@ export default function Home() {
         </Card>
       )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8">
           <Card className="hover-elevate">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-primary" />
+            <CardHeader className="p-3 md:p-6 pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm md:text-base">
+                <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-primary" />
                 {t("home.todayAppointments")}
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-3 md:p-6 pt-0">
               {appointments.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8">{t("home.noAppointmentsToday")}</p>
+                <p className="text-muted-foreground text-center py-4 md:py-8 text-sm">{t("home.noAppointmentsToday")}</p>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-2 md:space-y-4">
                   {appointments.slice(0, 5).map((app: any) => (
-                    <div key={app.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                      <div>
-                        <p className="font-bold">{app.client}</p>
-                        <p className="text-xs text-muted-foreground">{app.service}</p>
+                    <div key={app.id} className="flex items-center justify-between p-2 md:p-3 rounded-lg bg-muted/50">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-sm md:text-base truncate">{app.client || t("common.noClient")}</p>
+                        <p className="text-xs text-muted-foreground truncate">{app.service}</p>
                       </div>
-                      <div className={isRtl ? "text-left" : "text-right"}>
-                        <p className="text-sm font-medium">{app.startTime}</p>
+                      <div className={`shrink-0 ${isRtl ? "text-left ml-2" : "text-right ml-2"}`}>
+                        <p className="text-xs md:text-sm font-medium">{app.startTime}</p>
                         <p className="text-xs text-primary font-bold">{app.total} {t("common.currency")}</p>
                       </div>
                     </div>
@@ -334,30 +336,30 @@ export default function Home() {
           </Card>
 
           <Card className="hover-elevate">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="w-5 h-5 text-primary" />
+            <CardHeader className="p-3 md:p-6 pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm md:text-base">
+                <Package className="w-4 h-4 md:w-5 md:h-5 text-primary" />
                 {t("home.teamStatus")}
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+            <CardContent className="p-3 md:p-6 pt-0">
+              <div className="space-y-2 md:space-y-4">
                 {staff.map((s: any) => {
                   const staffApps = appointments.filter((a: any) => a.staff === s.name).length;
                   return (
-                    <div key={s.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                      <div className="flex items-center gap-3">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: s.color }} />
-                        <span className="font-medium">{s.name}</span>
+                    <div key={s.id} className="flex items-center justify-between p-2 md:p-3 rounded-lg bg-muted/50 gap-2">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
+                        <span className="font-medium text-sm md:text-base truncate">{s.name}</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm bg-background px-2 py-1 rounded-md border border-border">
-                          {staffApps} {t("home.appointmentsToday")}
+                      <div className="flex items-center gap-1 shrink-0">
+                        <span className="text-xs md:text-sm bg-background px-1.5 md:px-2 py-0.5 md:py-1 rounded-md border border-border whitespace-nowrap">
+                          {staffApps}
                         </span>
                         <Dialog open={!!editingStaff && editingStaff.id === s.id} onOpenChange={(open) => !open && setEditingStaff(null)}>
                           <DialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingStaff(s)}>
-                              <Pencil className="h-4 w-4" />
+                            <Button variant="ghost" size="icon" className="h-7 w-7 md:h-8 md:w-8" onClick={() => setEditingStaff(s)}>
+                              <Pencil className="h-3 w-3 md:h-4 md:w-4" />
                             </Button>
                           </DialogTrigger>
                           <DialogContent>
@@ -374,14 +376,14 @@ export default function Home() {
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          className="h-7 w-7 md:h-8 md:w-8 text-destructive hover:text-destructive"
                           onClick={() => {
                             if (confirm(t("home.deleteConfirm"))) {
                               deleteStaffMutation.mutate(s.id);
                             }
                           }}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
                         </Button>
                       </div>
                     </div>
