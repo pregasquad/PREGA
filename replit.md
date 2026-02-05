@@ -59,6 +59,11 @@ The application is built with a clear separation of concerns between its fronten
 - **Waitlist System**: Allows clients to join a waitlist for full slots, with real-time notifications and auto-expiry.
 - **Booking History Page**: Dedicated page for managing and filtering all bookings, including quick staff assignment and highlighting unassigned bookings.
 - **Staff Management**: Weekly schedules, break management, time-off requests, and performance goals with revenue/appointment targets and bonus systems.
+- **AI Service Recommendations**: Personalized service suggestions based on client booking history:
+  - **Timing Recommendations**: "You usually book color every 8 weeks" - analyzes service frequency patterns.
+  - **Popular Pairings**: Suggests services commonly booked together based on co-occurrence analysis.
+  - **Upsell Suggestions**: "Add treatment today?" - recommends complementary services.
+  - Displayed on public booking page (after phone entry) and My Bookings portal.
 
 ## External Dependencies
 

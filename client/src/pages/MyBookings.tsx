@@ -8,9 +8,10 @@ import { format, parseISO, differenceInHours, addDays, startOfToday, isSameDay }
 import { ar, enUS, fr } from "date-fns/locale";
 import { 
   Phone, Calendar as CalendarIcon, Clock, User, Scissors, CheckCircle2, AlertCircle, 
-  X, Loader2, ArrowLeft, ChevronLeft, ChevronRight, RefreshCw, Search 
+  X, Loader2, ArrowLeft, ChevronLeft, ChevronRight, RefreshCw, Search, Plus
 } from "lucide-react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { ServiceRecommendations } from "@/components/ServiceRecommendations";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
@@ -545,6 +546,28 @@ export default function MyBookings() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Personalized Recommendations */}
+        {hasSearched && phone && (
+          <div className="mt-6">
+            <ServiceRecommendations
+              phone={phone}
+              onAddService={(serviceName) => {
+                window.location.href = `/booking?service=${encodeURIComponent(serviceName)}&phone=${encodeURIComponent(phone)}`;
+              }}
+              className="glass-card p-4 rounded-2xl"
+            />
+            
+            <div className="mt-4 text-center">
+              <a href={`/booking?phone=${encodeURIComponent(phone)}`}>
+                <Button variant="outline" className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  {t("myBookings.bookNewAppointment", { defaultValue: "Réserver un nouveau RDV" })}
+                </Button>
+              </a>
             </div>
           </div>
         )}

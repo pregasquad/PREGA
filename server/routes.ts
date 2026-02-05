@@ -822,6 +822,21 @@ export async function registerRoutes(
     }
   });
 
+  // Public endpoint to get AI-powered service recommendations based on client history
+  app.get("/api/public/recommendations", publicRateLimitMiddleware, async (req, res) => {
+    try {
+      const { phone } = z.object({ phone: z.string().min(6).max(20) }).parse(req.query);
+      
+      const { getClientRecommendations } = await import("./services/recommendations");
+      const recommendations = await getClientRecommendations(phone);
+      
+      res.json({ recommendations });
+    } catch (err) {
+      console.error("[PUBLIC RECOMMENDATIONS] Error:", err);
+      res.status(400).json({ error: "Failed to get recommendations", recommendations: [] });
+    }
+  });
+
   // Appointments - protected routes
   app.get(api.appointments.list.path, isPinAuthenticated, async (req, res) => {
     const { date } = z.object({ date: z.string().optional() }).parse(req.query);

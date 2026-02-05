@@ -12,6 +12,7 @@ import { format } from "date-fns";
 import { ar, enUS, fr } from "date-fns/locale";
 import { Clock, CheckCircle2, Scissors, User, Phone, CalendarDays, Sparkles, X, Users, Gift, Tag, CalendarCheck, Navigation, MapPin } from "lucide-react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { ServiceRecommendations } from "@/components/ServiceRecommendations";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
 import { trackEvent } from "@/lib/analytics";
@@ -685,6 +686,12 @@ export default function Booking() {
                         <FormMessage />
                       </FormItem>
                     )}
+                  />
+
+                  <ServiceRecommendations
+                    phone={form.watch("phone") || ""}
+                    onAddService={handleAddService}
+                    selectedServices={selectedServices.map(s => s.name)}
                   />
 
                   {packages.length > 0 && (
