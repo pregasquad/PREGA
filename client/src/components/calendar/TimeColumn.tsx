@@ -7,28 +7,29 @@ interface TimeColumnProps {
 export default function TimeColumn({
   startHour = 9,
   endHour = 21,
-  hourHeight = 80,
+  hourHeight = 60,
 }: TimeColumnProps) {
   const hours = Array.from(
-    { length: endHour - startHour },
+    { length: endHour - startHour + 1 },
     (_, i) => i + startHour
   );
 
   const formatHour = (hour: number) => {
-    const h = hour % 12 || 12;
-    const ampm = hour < 12 ? "AM" : "PM";
-    return `${h}:00 ${ampm}`;
+    if (hour === 0 || hour === 24) return "12 AM";
+    if (hour === 12) return "12 PM";
+    if (hour < 12) return `${hour} AM`;
+    return `${hour - 12} PM`;
   };
 
   return (
-    <div className="w-16 shrink-0 border-r border-gray-100 bg-gray-50/50">
-      {hours.map((hour) => (
+    <div className="w-14 shrink-0 relative">
+      {hours.map((hour, index) => (
         <div
           key={hour}
-          className="relative border-b border-gray-50"
-          style={{ height: hourHeight }}
+          className="relative"
+          style={{ height: index === hours.length - 1 ? 20 : hourHeight }}
         >
-          <span className="absolute -top-2.5 right-3 text-[11px] font-medium text-gray-400">
+          <span className="absolute -top-[7px] right-2 text-[11px] font-normal text-[#8e8e93] tracking-tight">
             {formatHour(hour)}
           </span>
         </div>
