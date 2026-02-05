@@ -74,10 +74,51 @@ export async function syncPendingChanges(): Promise<{ success: number; failed: n
       const tempId = bodyToSend?._tempId;
       const storeName = getStoreFromUrl(item.url, bodyToSend);
       
+      // Extract offline timestamp for conflict detection
+      const offlineUpdatedAt = bodyToSend?._offlineUpdatedAt || bodyToSend?.updatedAt;
+      
       // Clean metadata from body before sending to server
       if (bodyToSend) {
         delete bodyToSend._tempId;
         delete bodyToSend._store;
+        delete bodyToSend._offlineUpdatedAt;
+      }
+
+      // Conflict detection for PUT operations
+      if (item.method === 'PUT' && offlineUpdatedAt) {
+        const itemId = bodyToSend?.id || extractIdFromUrl(item.url);
+        if (itemId) {
+          try {
+            // Fetch current server version to check for conflicts
+            const checkUrl = item.url.replace(/\/\d+$/, `/${itemId}`);
+            const serverCheck = await fetch(checkUrl, { 
+              method: 'GET', 
+              credentials: 'include' 
+            });
+            
+            if (serverCheck.ok) {
+              const serverData = await serverCheck.json();
+              const serverUpdatedAt = serverData?.updatedAt;
+              
+              if (serverUpdatedAt && offlineUpdatedAt) {
+                const serverTime = new Date(serverUpdatedAt).getTime();
+                const offlineTime = new Date(offlineUpdatedAt).getTime();
+                
+                // Server version is newer - skip this update and use server data
+                if (serverTime > offlineTime) {
+                  console.log(`[Sync] Conflict detected for ${storeName} ${itemId}: server is newer, skipping offline update`);
+                  await removeFromSyncQueue(item.id);
+                  await addItemToOfflineStore(storeName, serverData);
+                  success++;
+                  continue; // Skip to next queue item
+                }
+              }
+            }
+          } catch (e) {
+            // If conflict check fails, proceed with update anyway
+            console.warn(`[Sync] Conflict check failed for ${storeName}, proceeding with update`);
+          }
+        }
       }
 
       const response = await fetch(item.url, {

@@ -204,7 +204,7 @@ export function useUpdateAppointment() {
         await addToSyncQueue({
           method: 'PUT',
           url,
-          body: { id, ...data, _store: 'appointments' },
+          body: { id, ...data, _store: 'appointments', _offlineUpdatedAt: updatedData.updatedAt },
         });
         return { id, ...updatedData, _offline: true };
       }
@@ -223,7 +223,7 @@ export function useUpdateAppointment() {
       } catch (error: any) {
         if (error.name === 'TypeError' || error.message.includes('fetch')) {
           await updateItemInOfflineStore('appointments', id, updatedData);
-          await addToSyncQueue({ method: 'PUT', url, body: { id, ...data, _store: 'appointments' } });
+          await addToSyncQueue({ method: 'PUT', url, body: { id, ...data, _store: 'appointments', _offlineUpdatedAt: updatedData.updatedAt } });
           return { id, ...updatedData, _offline: true };
         }
         throw error;
@@ -477,10 +477,11 @@ export function useUpdateService() {
     mutationFn: async ({ id, ...data }: { id: number } & Partial<InsertService>) => {
       const url = buildUrl(api.services.update.path, { id });
       
+      const offlineUpdatedAt = new Date().toISOString();
       if (!navigator.onLine) {
-        await updateItemInOfflineStore('services', id, data);
-        await addToSyncQueue({ method: 'PUT', url, body: { id, ...data, _store: 'services' } });
-        return { id, ...data, _offline: true };
+        await updateItemInOfflineStore('services', id, { ...data, updatedAt: offlineUpdatedAt });
+        await addToSyncQueue({ method: 'PUT', url, body: { id, ...data, _store: 'services', _offlineUpdatedAt: offlineUpdatedAt } });
+        return { id, ...data, updatedAt: offlineUpdatedAt, _offline: true };
       }
 
       try {
@@ -496,9 +497,10 @@ export function useUpdateService() {
         return result;
       } catch (error: any) {
         if (error.name === 'TypeError' || error.message.includes('fetch')) {
-          await updateItemInOfflineStore('services', id, data);
-          await addToSyncQueue({ method: 'PUT', url, body: { id, ...data, _store: 'services' } });
-          return { id, ...data, _offline: true };
+          const fallbackUpdatedAt = new Date().toISOString();
+          await updateItemInOfflineStore('services', id, { ...data, updatedAt: fallbackUpdatedAt });
+          await addToSyncQueue({ method: 'PUT', url, body: { id, ...data, _store: 'services', _offlineUpdatedAt: fallbackUpdatedAt } });
+          return { id, ...data, updatedAt: fallbackUpdatedAt, _offline: true };
         }
         throw error;
       }
@@ -591,11 +593,12 @@ export function useUpdateCategory() {
   return useMutation({
     mutationFn: async ({ id, ...data }: { id: number } & Partial<InsertCategory>) => {
       const url = buildUrl(api.categories.update.path, { id });
+      const offlineUpdatedAt = new Date().toISOString();
       
       if (!navigator.onLine) {
-        await updateItemInOfflineStore('categories', id, data);
-        await addToSyncQueue({ method: 'PUT', url, body: { id, ...data, _store: 'categories' } });
-        return { id, ...data, _offline: true };
+        await updateItemInOfflineStore('categories', id, { ...data, updatedAt: offlineUpdatedAt });
+        await addToSyncQueue({ method: 'PUT', url, body: { id, ...data, _store: 'categories', _offlineUpdatedAt: offlineUpdatedAt } });
+        return { id, ...data, updatedAt: offlineUpdatedAt, _offline: true };
       }
 
       try {
@@ -611,9 +614,9 @@ export function useUpdateCategory() {
         return result;
       } catch (error: any) {
         if (error.name === 'TypeError' || error.message.includes('fetch')) {
-          await updateItemInOfflineStore('categories', id, data);
-          await addToSyncQueue({ method: 'PUT', url, body: { id, ...data, _store: 'categories' } });
-          return { id, ...data, _offline: true };
+          await updateItemInOfflineStore('categories', id, { ...data, updatedAt: offlineUpdatedAt });
+          await addToSyncQueue({ method: 'PUT', url, body: { id, ...data, _store: 'categories', _offlineUpdatedAt: offlineUpdatedAt } });
+          return { id, ...data, updatedAt: offlineUpdatedAt, _offline: true };
         }
         throw error;
       }
@@ -779,11 +782,12 @@ export function useUpdateStaff() {
   return useMutation({
     mutationFn: async ({ id, ...data }: { id: number } & Partial<InsertStaff>) => {
       const url = buildUrl(api.staff.update.path, { id });
+      const offlineUpdatedAt = new Date().toISOString();
       
       if (!navigator.onLine) {
-        await updateItemInOfflineStore('staff', id, data);
-        await addToSyncQueue({ method: 'PUT', url, body: { id, ...data, _store: 'staff' } });
-        return { id, ...data, _offline: true };
+        await updateItemInOfflineStore('staff', id, { ...data, updatedAt: offlineUpdatedAt });
+        await addToSyncQueue({ method: 'PUT', url, body: { id, ...data, _store: 'staff', _offlineUpdatedAt: offlineUpdatedAt } });
+        return { id, ...data, updatedAt: offlineUpdatedAt, _offline: true };
       }
 
       try {
@@ -799,9 +803,9 @@ export function useUpdateStaff() {
         return result;
       } catch (error: any) {
         if (error.name === 'TypeError' || error.message.includes('fetch')) {
-          await updateItemInOfflineStore('staff', id, data);
-          await addToSyncQueue({ method: 'PUT', url, body: { id, ...data, _store: 'staff' } });
-          return { id, ...data, _offline: true };
+          await updateItemInOfflineStore('staff', id, { ...data, updatedAt: offlineUpdatedAt });
+          await addToSyncQueue({ method: 'PUT', url, body: { id, ...data, _store: 'staff', _offlineUpdatedAt: offlineUpdatedAt } });
+          return { id, ...data, updatedAt: offlineUpdatedAt, _offline: true };
         }
         throw error;
       }
@@ -959,11 +963,12 @@ export function useUpdateClient() {
   return useMutation({
     mutationFn: async ({ id, ...data }: { id: number } & Partial<InsertClient>) => {
       const url = buildUrl(api.clients.update.path, { id });
+      const offlineUpdatedAt = new Date().toISOString();
       
       if (!navigator.onLine) {
-        await updateItemInOfflineStore('clients', id, data);
-        await addToSyncQueue({ method: 'PUT', url, body: { id, ...data, _store: 'clients' } });
-        return { id, ...data, _offline: true };
+        await updateItemInOfflineStore('clients', id, { ...data, updatedAt: offlineUpdatedAt });
+        await addToSyncQueue({ method: 'PUT', url, body: { id, ...data, _store: 'clients', _offlineUpdatedAt: offlineUpdatedAt } });
+        return { id, ...data, updatedAt: offlineUpdatedAt, _offline: true };
       }
 
       try {
@@ -979,9 +984,9 @@ export function useUpdateClient() {
         return result;
       } catch (error: any) {
         if (error.name === 'TypeError' || error.message.includes('fetch')) {
-          await updateItemInOfflineStore('clients', id, data);
-          await addToSyncQueue({ method: 'PUT', url, body: { id, ...data, _store: 'clients' } });
-          return { id, ...data, _offline: true };
+          await updateItemInOfflineStore('clients', id, { ...data, updatedAt: offlineUpdatedAt });
+          await addToSyncQueue({ method: 'PUT', url, body: { id, ...data, _store: 'clients', _offlineUpdatedAt: offlineUpdatedAt } });
+          return { id, ...data, updatedAt: offlineUpdatedAt, _offline: true };
         }
         throw error;
       }
