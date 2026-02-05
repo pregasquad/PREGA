@@ -1631,32 +1631,32 @@ export default function Planning() {
         </Collapsible>
       )}
 
-      {/* Board with sticky header - Fresha Style */}
-      <div className="flex-1 min-h-0 flex flex-col bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden" dir={isRtl ? "rtl" : "ltr"}>
-        {/* Sticky Staff Headers - Fresha Style */}
+      {/* Board with sticky header - Glass Container */}
+      <div className="flex-1 min-h-0 flex flex-col glass-card rounded-3xl overflow-hidden" dir={isRtl ? "rtl" : "ltr"}>
+        {/* Sticky Staff Headers - iOS Liquid Glass Style */}
         <div 
           ref={headerRef}
-          className="grid bg-gray-50 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 z-50 shrink-0 overflow-x-hidden"
+          className="grid glass border-b border-white/20 dark:border-white/5 z-50 shrink-0 overflow-x-hidden"
           style={{ 
             gridTemplateColumns: `60px repeat(${staffList.length}, minmax(100px, 1fr))`,
           }}
         >
-          <div className={cn("py-3 px-1", isRtl ? "border-l border-gray-200 dark:border-slate-700" : "border-r border-gray-200 dark:border-slate-700")}></div>
+          <div className={cn("bg-white/30 dark:bg-white/5 py-2 px-1", isRtl ? "border-l border-white/20 dark:border-white/5" : "border-r border-white/20 dark:border-white/5")}></div>
           {staffList.map((s, staffIndex) => (
             <div 
               key={s.id} 
-              className={cn("py-3 px-2 text-center text-xs", isRtl ? "border-l border-gray-100 dark:border-slate-700" : "border-r border-gray-100 dark:border-slate-700")}
+              className={cn("py-2 px-1 font-semibold text-center text-xs", isRtl ? "border-l border-white/10 dark:border-white/5" : "border-r border-white/10 dark:border-white/5")}
             >
               <div className="flex items-center justify-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.color }} />
-                <span className="text-gray-900 dark:text-gray-100 truncate font-medium">{s.name}</span>
+                <div className="w-2.5 h-2.5 rounded-full shadow-sm ring-2 ring-white/30" style={{ backgroundColor: s.color }} />
+                <span className="text-foreground/90 truncate font-medium">{s.name}</span>
               </div>
             </div>
           ))}
         </div>
 
         {/* Scrollable content */}
-        <div ref={boardRef} className="flex-1 min-h-0 overflow-auto relative free-scroll planning-scroll bg-white dark:bg-slate-900">
+        <div ref={boardRef} className="flex-1 min-h-0 overflow-auto relative free-scroll planning-scroll bg-white/80 dark:bg-slate-900/80">
           <div 
             className="grid relative"
             style={{ 
@@ -1664,7 +1664,7 @@ export default function Planning() {
               gridAutoRows: '52px'
             }}
           >
-            {/* Current Time Line - Fresha Style */}
+            {/* Current Time Line - iOS Liquid Glass Style */}
             {isToday && getCurrentTimePosition(hours, businessSettings?.openingTime, businessSettings?.closingTime) >= 0 && (
               <div 
                 ref={liveLineRef}
@@ -1675,14 +1675,36 @@ export default function Planning() {
                   right: 0,
                 }}
               >
+                {/* Main container with glow effect */}
                 <div className="flex items-center">
+                  {/* Time indicator badge on left - Liquid Glass Circle */}
                   <div 
                     className="shrink-0 z-[50] flex items-center justify-center"
                     style={{ width: '60px' }}
                   >
-                    <div className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-sm" />
+                    <div className="relative">
+                      <div className="w-10 h-10 rounded-full liquid-gradient shadow-xl flex items-center justify-center border-2 border-white/50 live-indicator">
+                        <Scissors className="w-5 h-5 text-white drop-shadow-md" />
+                      </div>
+                      <div className="absolute -inset-1 rounded-full liquid-gradient blur-lg opacity-40 animate-pulse" />
+                    </div>
                   </div>
-                  <div className="flex-1 h-0.5 bg-rose-500" />
+                  {/* Thick glowing line - Liquid gradient */}
+                  <div className="flex-1 relative">
+                    <div 
+                      className="h-1 rounded-full shadow-lg"
+                      style={{
+                        background: 'linear-gradient(to right, hsl(211, 100%, 50%), hsl(187, 100%, 50%), hsl(163, 100%, 45%))',
+                        boxShadow: '0 0 16px rgba(59, 130, 246, 0.5), 0 0 32px rgba(59, 130, 246, 0.25)',
+                      }}
+                    />
+                    <div 
+                      className="absolute inset-0 h-1 rounded-full opacity-50 blur-sm"
+                      style={{
+                        background: 'linear-gradient(to right, hsl(211, 100%, 50%), hsl(187, 100%, 50%))',
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
             )}
@@ -1694,8 +1716,8 @@ export default function Planning() {
             <React.Fragment key={hour}>
               <div 
                 className={cn(
-                  "bg-gray-50 dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-2 py-1 text-xs font-medium text-gray-400 dark:text-gray-500 sticky z-30 flex items-center justify-end",
-                  isRtl ? "right-0 border-l border-gray-200 dark:border-slate-700" : "left-0 border-r border-gray-200 dark:border-slate-700"
+                  "bg-white/60 dark:bg-slate-800/60 border-b border-slate-200/50 dark:border-slate-700/50 px-2 py-1 text-sm font-medium text-slate-500 dark:text-slate-400 sticky z-30 flex items-center justify-center",
+                  isRtl ? "right-0 border-l border-primary/20" : "left-0 border-r border-primary/20"
                 )}
                 style={{ gridColumn: 1, gridRow: rowNum }}
               >
@@ -1712,7 +1734,7 @@ export default function Planning() {
                   return (
                     <div
                       key={`${s.id}-${hour}-covered`}
-                      className={cn("border-b border-gray-100 dark:border-slate-700 min-h-[52px] bg-transparent", isRtl ? "border-l border-gray-100 dark:border-slate-700" : "border-r border-gray-100 dark:border-slate-700")}
+                      className={cn("border-b border-slate-100/50 dark:border-slate-800/50 min-h-[52px] bg-transparent", isRtl ? "border-l border-slate-100/50 dark:border-slate-800/50" : "border-r border-slate-100/50 dark:border-slate-800/50")}
                       style={{ gridColumn: colNum, gridRow: rowNum }}
                     />
                   );
@@ -1735,12 +1757,11 @@ export default function Planning() {
                     >
                       <div 
                         className={cn(
-                          "h-full bg-white dark:bg-slate-800 rounded-lg overflow-hidden border border-gray-100 dark:border-slate-600 shadow-sm hover:shadow-md transition-shadow flex",
+                          "appointment-card h-full px-1.5 py-1 text-white cursor-grab active:cursor-grabbing flex flex-col justify-center relative overflow-hidden",
                           isDragging && "opacity-50 scale-95"
                         )}
                         style={{ 
-                          borderLeftWidth: '4px',
-                          borderLeftColor: s.color,
+                          background: `linear-gradient(135deg, ${s.color}ee, ${s.color}cc)`,
                           cursor: canEditCardboard ? 'grab' : 'default'
                         }}
                         draggable={canEditCardboard}
@@ -1748,24 +1769,25 @@ export default function Planning() {
                         onDragEnd={handleDragEnd}
                         onClick={(e) => handleAppointmentClick(e, booking)}
                       >
-                        <div className="flex-1 px-2 py-1.5 min-w-0 overflow-hidden">
-                          <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{booking.client || "—"}</div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">{booking.service}</div>
-                          <div className="flex items-center justify-between mt-1">
-                            <span className="text-[10px] text-gray-400 dark:text-gray-500">{booking.startTime} · {booking.duration}′</span>
-                            <div className="flex items-center gap-1">
-                              <span className="font-semibold text-xs text-gray-700 dark:text-gray-300">{booking.total}</span>
+                        <div className="water-shimmer absolute inset-0 opacity-30" />
+                        <div className="relative z-10 space-y-0.5">
+                          <div className="font-bold text-[11px] truncate">{booking.client || "—"}</div>
+                          <div className="text-[10px] opacity-95 truncate font-medium">{booking.service}</div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-[9px] opacity-80">{booking.startTime} · {booking.duration}′</span>
+                            <div className="flex items-center gap-0.5">
+                              <span className="font-bold text-[9px]">{booking.total}</span>
                               {booking.paid ? (
-                                <span className="w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center" title="Paid">
-                                  <Check className="w-2.5 h-2.5 text-white" />
+                                <span className="w-3.5 h-3.5 bg-green-500 rounded-full flex items-center justify-center" title="Paid">
+                                  <Check className="w-2 h-2 text-white" />
                                 </span>
                               ) : (
                                 <button
                                   onClick={(e) => handleMarkAsPaid(e, booking)}
-                                  className="w-4 h-4 bg-gray-100 dark:bg-slate-600 hover:bg-gray-200 dark:hover:bg-slate-500 rounded-full flex items-center justify-center transition-colors"
+                                  className="w-3.5 h-3.5 bg-white/25 hover:bg-white/40 rounded-full flex items-center justify-center transition-colors"
                                   title="Mark as paid"
                                 >
-                                  <CreditCard className="w-2.5 h-2.5 text-gray-500 dark:text-gray-300" />
+                                  <CreditCard className="w-2 h-2" />
                                 </button>
                               )}
                             </div>
@@ -1780,10 +1802,10 @@ export default function Planning() {
                   <div
                     key={`${s.id}-${hour}`}
                     className={cn(
-                      "border-b border-gray-100 dark:border-slate-700 min-h-[52px] transition-all duration-200 bg-transparent",
-                      isRtl ? "border-l border-gray-100 dark:border-slate-700" : "border-r border-gray-100 dark:border-slate-700",
-                      "hover:bg-teal-50 dark:hover:bg-teal-900/20 cursor-pointer",
-                      isDragOver && "bg-teal-100 dark:bg-teal-900/30 ring-2 ring-teal-500/50 ring-inset"
+                      "border-b border-slate-100/50 dark:border-slate-800/50 min-h-[52px] transition-all duration-300 bg-transparent",
+                      isRtl ? "border-l border-slate-100/50 dark:border-slate-800/50" : "border-r border-slate-100/50 dark:border-slate-800/50",
+                      "hover:bg-primary/5 dark:hover:bg-primary/10 cursor-pointer",
+                      isDragOver && "bg-primary/10 dark:bg-primary/20 ring-2 ring-primary/50 ring-inset"
                     )}
                     style={{ 
                       gridColumn: colNum,
