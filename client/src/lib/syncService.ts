@@ -6,6 +6,8 @@ import {
   saveToOfflineStore,
   getFromOfflineStore,
   addToSyncQueue,
+  addItemToOfflineStore,
+  deleteItemFromOfflineStore,
   initOfflineDb,
 } from './offlineDb';
 
@@ -46,20 +48,47 @@ export async function syncPendingChanges(): Promise<{ success: number; failed: n
 
   for (const item of queue) {
     try {
+      // Remove _tempId from request body (server doesn't need it)
+      const bodyToSend = item.body ? { ...item.body } : undefined;
+      const tempId = bodyToSend?._tempId;
+      if (bodyToSend?._tempId) {
+        delete bodyToSend._tempId;
+      }
+
       const response = await fetch(item.url, {
         method: item.method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: item.body ? JSON.stringify(item.body) : undefined,
+        body: bodyToSend ? JSON.stringify(bodyToSend) : undefined,
         credentials: 'include',
       });
 
       if (response.ok || response.status === 201 || response.status === 204) {
         await removeFromSyncQueue(item.id);
+        
+        // If this was an appointment creation, replace offline item with server data
+        if (item.url.includes('/appointments') && item.method === 'POST' && tempId) {
+          try {
+            const serverData = await response.json();
+            // Delete the offline appointment and add the real one
+            await deleteItemFromOfflineStore('appointments', tempId);
+            if (serverData && serverData.id) {
+              await addItemToOfflineStore('appointments', serverData);
+            }
+            console.log(`[Sync] Replaced offline appointment ${tempId} with server ID ${serverData?.id}`);
+          } catch (e) {
+            console.warn('[Sync] Could not replace offline appointment:', e);
+          }
+        }
+        
         success++;
       } else if (response.status >= 400 && response.status < 500) {
         await removeFromSyncQueue(item.id);
+        // Also remove the failed offline item to avoid duplicates
+        if (item.body?._tempId) {
+          await deleteItemFromOfflineStore('appointments', item.body._tempId).catch(() => {});
+        }
         failed++;
         console.error(`Sync failed for ${item.url}: ${response.status}`);
       } else {

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
 import { type InsertAppointment, type InsertService, type InsertCategory, type InsertClient, type InsertStaff, type InsertStaffSchedule, type InsertStaffBreak, type InsertStaffTimeOff } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import { getFromOfflineStore, saveToOfflineStore, addItemToOfflineStore, addToSyncQueue } from "@/lib/offlineDb";
 
 export function useAppointments(date?: string) {
   return useQuery({
@@ -10,12 +11,39 @@ export function useAppointments(date?: string) {
       const url = date 
         ? `${api.appointments.list.path}?date=${date}` 
         : api.appointments.list.path;
-      const res = await fetch(url, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch appointments");
-      return api.appointments.list.responses[200].parse(await res.json());
+      
+      // Try online first
+      if (navigator.onLine) {
+        try {
+          const res = await fetch(url, { credentials: "include" });
+          if (res.ok) {
+            const data = api.appointments.list.responses[200].parse(await res.json());
+            // Cache for offline use
+            if (!date) {
+              await saveToOfflineStore('appointments', data).catch(() => {});
+            }
+            return data;
+          }
+        } catch (e) {
+          console.log("[Offline] Network error, using cached data");
+        }
+      }
+      
+      // Fall back to offline data
+      const offlineData = await getFromOfflineStore<any>('appointments');
+      if (offlineData.length > 0) {
+        // Filter by date if needed
+        if (date) {
+          return offlineData.filter((apt: any) => apt.date === date);
+        }
+        return offlineData;
+      }
+      
+      throw new Error("No data available - please connect to the internet");
     },
-    staleTime: 5 * 60 * 1000, // Data stays fresh for 5 minutes - socket.io handles real-time updates
-    refetchOnWindowFocus: false, // Don't refetch on tab focus (socket handles updates)
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: false, // Don't retry if offline
   });
 }
 
@@ -24,21 +52,64 @@ export function useCreateAppointment() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (data: InsertAppointment) => {
-      const res = await fetch(api.appointments.create.path, {
-        method: api.appointments.create.method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-        credentials: "include",
-      });
-      if (!res.ok) {
-        if (res.status === 400) {
-          const error = api.appointments.create.responses[400].parse(await res.json());
-          throw new Error(error.message);
-        }
-        throw new Error("Failed to create appointment");
+    mutationFn: async (data: InsertAppointment & { _tempId?: number }) => {
+      // Use tempId from onMutate context if available, otherwise generate one
+      const tempId = data._tempId || -Date.now();
+      const { _tempId, ...appointmentData } = data;
+      
+      const optimisticAppointment = {
+        ...appointmentData,
+        id: tempId,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        createdBy: null,
+        updatedBy: null,
+        _offline: true,
+      };
+
+      // If offline, save locally and queue for sync
+      if (!navigator.onLine) {
+        await addItemToOfflineStore('appointments', optimisticAppointment);
+        await addToSyncQueue({
+          method: 'POST',
+          url: api.appointments.create.path,
+          body: { ...appointmentData, _tempId: tempId },
+        });
+        return optimisticAppointment;
       }
-      return api.appointments.create.responses[201].parse(await res.json());
+
+      // Online - try to create on server
+      try {
+        const res = await fetch(api.appointments.create.path, {
+          method: api.appointments.create.method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(appointmentData),
+          credentials: "include",
+        });
+        if (!res.ok) {
+          if (res.status === 400) {
+            const error = api.appointments.create.responses[400].parse(await res.json());
+            throw new Error(error.message);
+          }
+          throw new Error("Failed to create appointment");
+        }
+        const result = api.appointments.create.responses[201].parse(await res.json());
+        // Cache the new appointment
+        await addItemToOfflineStore('appointments', result).catch(() => {});
+        return result;
+      } catch (error: any) {
+        // Network error - save offline
+        if (error.name === 'TypeError' || error.message.includes('fetch')) {
+          await addItemToOfflineStore('appointments', optimisticAppointment);
+          await addToSyncQueue({
+            method: 'POST',
+            url: api.appointments.create.path,
+            body: { ...appointmentData, _tempId: tempId },
+          });
+          return optimisticAppointment;
+        }
+        throw error;
+      }
     },
     onMutate: async (newAppointment) => {
       const dateQueryKey = [api.appointments.list.path, newAppointment.date];
@@ -51,6 +122,9 @@ export function useCreateAppointment() {
       const previousAllData = queryClient.getQueryData(allQueryKey);
       
       const tempId = -Date.now();
+      // Attach tempId to the data so mutationFn uses the same ID
+      (newAppointment as any)._tempId = tempId;
+      
       const optimisticAppointment = {
         ...newAppointment,
         id: tempId,
@@ -74,7 +148,11 @@ export function useCreateAppointment() {
         queryClient.setQueryData(context.dateQueryKey, (old: any) => old ? old.map((apt: any) => apt.id === context.tempId ? data : apt) : [data]);
         queryClient.setQueryData(context.allQueryKey, (old: any) => old ? old.map((apt: any) => apt.id === context.tempId ? data : apt) : [data]);
       }
-      toast({ title: "Success", description: "Appointment booked successfully" });
+      const isOffline = (data as any)?._offline;
+      toast({ 
+        title: isOffline ? "Saved Offline" : "Success", 
+        description: isOffline ? "Appointment saved locally. Will sync when online." : "Appointment booked successfully" 
+      });
     },
     onError: (err, _variables, context) => {
       if (context) {
@@ -190,11 +268,24 @@ export function useServices() {
   return useQuery({
     queryKey: [api.services.list.path],
     queryFn: async () => {
-      const res = await fetch(api.services.list.path, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch services");
-      return api.services.list.responses[200].parse(await res.json());
+      if (navigator.onLine) {
+        try {
+          const res = await fetch(api.services.list.path, { credentials: "include" });
+          if (res.ok) {
+            const data = api.services.list.responses[200].parse(await res.json());
+            await saveToOfflineStore('services', data).catch(() => {});
+            return data;
+          }
+        } catch (e) {
+          console.log("[Offline] Network error, using cached services");
+        }
+      }
+      const offlineData = await getFromOfflineStore<any>('services');
+      if (offlineData.length > 0) return offlineData;
+      throw new Error("No services available offline");
     },
-    staleTime: 5 * 60 * 1000, // Services rarely change - cache for 5 minutes
+    staleTime: 5 * 60 * 1000,
+    retry: false,
   });
 }
 
@@ -202,11 +293,24 @@ export function useCategories() {
   return useQuery({
     queryKey: [api.categories.list.path],
     queryFn: async () => {
-      const res = await fetch(api.categories.list.path, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch categories");
-      return api.categories.list.responses[200].parse(await res.json());
+      if (navigator.onLine) {
+        try {
+          const res = await fetch(api.categories.list.path, { credentials: "include" });
+          if (res.ok) {
+            const data = api.categories.list.responses[200].parse(await res.json());
+            await saveToOfflineStore('categories', data).catch(() => {});
+            return data;
+          }
+        } catch (e) {
+          console.log("[Offline] Network error, using cached categories");
+        }
+      }
+      const offlineData = await getFromOfflineStore<any>('categories');
+      if (offlineData.length > 0) return offlineData;
+      throw new Error("No categories available offline");
     },
-    staleTime: 5 * 60 * 1000, // Categories rarely change - cache for 5 minutes
+    staleTime: 5 * 60 * 1000,
+    retry: false,
   });
 }
 
@@ -336,11 +440,24 @@ export function useStaff() {
   return useQuery({
     queryKey: [api.staff.list.path],
     queryFn: async () => {
-      const res = await fetch(api.staff.list.path, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch staff");
-      return api.staff.list.responses[200].parse(await res.json());
+      if (navigator.onLine) {
+        try {
+          const res = await fetch(api.staff.list.path, { credentials: "include" });
+          if (res.ok) {
+            const data = api.staff.list.responses[200].parse(await res.json());
+            await saveToOfflineStore('staff', data).catch(() => {});
+            return data;
+          }
+        } catch (e) {
+          console.log("[Offline] Network error, using cached staff");
+        }
+      }
+      const offlineData = await getFromOfflineStore<any>('staff');
+      if (offlineData.length > 0) return offlineData;
+      throw new Error("No staff available offline");
     },
-    staleTime: 5 * 60 * 1000, // Staff rarely changes - cache for 5 minutes
+    staleTime: 5 * 60 * 1000,
+    retry: false,
   });
 }
 
@@ -419,11 +536,24 @@ export function useClients() {
   return useQuery({
     queryKey: [api.clients.list.path],
     queryFn: async () => {
-      const res = await fetch(api.clients.list.path, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch clients");
-      return api.clients.list.responses[200].parse(await res.json());
+      if (navigator.onLine) {
+        try {
+          const res = await fetch(api.clients.list.path, { credentials: "include" });
+          if (res.ok) {
+            const data = api.clients.list.responses[200].parse(await res.json());
+            await saveToOfflineStore('clients', data).catch(() => {});
+            return data;
+          }
+        } catch (e) {
+          console.log("[Offline] Network error, using cached clients");
+        }
+      }
+      const offlineData = await getFromOfflineStore<any>('clients');
+      if (offlineData.length > 0) return offlineData;
+      throw new Error("No clients available offline");
     },
-    staleTime: 5 * 60 * 1000, // Cache clients for 5 minutes
+    staleTime: 5 * 60 * 1000,
+    retry: false,
   });
 }
 
