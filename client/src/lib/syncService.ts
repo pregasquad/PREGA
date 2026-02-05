@@ -41,6 +41,11 @@ function extractIdFromUrl(url: string): number | null {
 // Determine which store to use based on URL or explicit _store field
 function getStoreFromUrl(url: string, body?: any): OfflineStoreName {
   if (body?._store) return body._store as OfflineStoreName;
+  // Check kebab-case endpoints first (more specific)
+  if (url.includes('/staff-deductions')) return 'staffDeductions';
+  if (url.includes('/staff-commissions')) return 'staffCommissions';
+  if (url.includes('/business-settings')) return 'businessSettings';
+  // Then check regular endpoints
   if (url.includes('/appointments')) return 'appointments';
   if (url.includes('/services')) return 'services';
   if (url.includes('/categories')) return 'categories';
@@ -85,38 +90,88 @@ export async function syncPendingChanges(): Promise<{ success: number; failed: n
       }
 
       // Conflict detection for PUT operations
-      if (item.method === 'PUT' && offlineUpdatedAt) {
+      if (item.method === 'PUT') {
         const itemId = bodyToSend?.id || extractIdFromUrl(item.url);
         if (itemId) {
           try {
-            // Fetch current server version to check for conflicts
-            const checkUrl = item.url.replace(/\/\d+$/, `/${itemId}`);
-            const serverCheck = await fetch(checkUrl, { 
-              method: 'GET', 
-              credentials: 'include' 
-            });
+            // Build GET URL based on store type for reliable endpoint construction
+            const storeToEndpoint: Record<string, string> = {
+              'appointments': '/api/appointments',
+              'services': '/api/services',
+              'categories': '/api/categories',
+              'staff': '/api/staff',
+              'clients': '/api/clients',
+              'charges': '/api/charges',
+              'products': '/api/products',
+              'staffDeductions': '/api/staff-deductions',
+              'staffCommissions': '/api/staff-commissions',
+              'businessSettings': '/api/business-settings',
+            };
+            // Get base endpoint, fallback to extracting from item.url
+            let baseEndpoint = storeToEndpoint[storeName];
+            if (!baseEndpoint) {
+              // Try to extract base endpoint from item.url (e.g., /api/appointments/123 -> /api/appointments)
+              const urlMatch = item.url.match(/^(\/api\/[^\/]+)/);
+              if (urlMatch) {
+                baseEndpoint = urlMatch[1];
+                console.warn(`[Sync] Unknown store ${storeName}, using URL-derived endpoint: ${baseEndpoint}`);
+              } else {
+                console.warn(`[Sync] Unknown store ${storeName} and could not parse URL, skipping conflict check`);
+              }
+            }
             
-            if (serverCheck.ok) {
-              const serverData = await serverCheck.json();
-              const serverUpdatedAt = serverData?.updatedAt;
+            if (baseEndpoint) {
+              const checkUrl = `${baseEndpoint}/${itemId}`;
               
-              if (serverUpdatedAt && offlineUpdatedAt) {
-                const serverTime = new Date(serverUpdatedAt).getTime();
-                const offlineTime = new Date(offlineUpdatedAt).getTime();
+              const serverCheck = await fetch(checkUrl, { 
+                method: 'GET', 
+                credentials: 'include' 
+              });
+              
+              if (serverCheck.ok) {
+                const serverData = await serverCheck.json();
+                const serverUpdatedAt = serverData?.updatedAt;
                 
-                // Server version is newer - skip this update and use server data
-                if (serverTime > offlineTime) {
-                  console.log(`[Sync] Conflict detected for ${storeName} ${itemId}: server is newer, skipping offline update`);
-                  await removeFromSyncQueue(item.id);
-                  await addItemToOfflineStore(storeName, serverData);
-                  success++;
-                  continue; // Skip to next queue item
+                // Only do conflict check if we have both timestamps
+                if (serverUpdatedAt && offlineUpdatedAt) {
+                  const serverTime = new Date(serverUpdatedAt).getTime();
+                  const offlineTime = new Date(offlineUpdatedAt).getTime();
+                  
+                  // Server version is newer - skip this update and use server data
+                  if (serverTime > offlineTime) {
+                    console.log(`[Sync] Conflict detected for ${storeName} ${itemId}: server is newer (${serverUpdatedAt} > ${offlineUpdatedAt}), using server data`);
+                    await removeFromSyncQueue(item.id);
+                    await addItemToOfflineStore(storeName, serverData);
+                    success++;
+                    continue; // Skip to next queue item
+                  }
+                  console.log(`[Sync] No conflict for ${storeName} ${itemId}: offline is newer or equal, applying update`);
+                } else if (!offlineUpdatedAt) {
+                  // No offline timestamp - apply update but log warning
+                  console.warn(`[Sync] No offline timestamp for ${storeName} ${itemId}, applying update without conflict check`);
                 }
+              } else if (serverCheck.status === 404) {
+                // Item doesn't exist on server - skip this update
+                console.log(`[Sync] Item ${storeName} ${itemId} not found on server, removing from queue`);
+                await removeFromSyncQueue(item.id);
+                await deleteItemFromOfflineStore(storeName, itemId).catch(() => {});
+                failed++;
+                continue;
               }
             }
           } catch (e) {
-            // If conflict check fails, proceed with update anyway
-            console.warn(`[Sync] Conflict check failed for ${storeName}, proceeding with update`);
+            // If conflict check fails due to network, requeue for later
+            console.warn(`[Sync] Conflict check failed for ${storeName} ${itemId}:`, e);
+            item.retries++;
+            if (item.retries >= MAX_RETRIES) {
+              await removeFromSyncQueue(item.id);
+              failed++;
+              console.error(`[Sync] Giving up on ${storeName} ${itemId} after ${MAX_RETRIES} retries`);
+              continue;
+            } else {
+              await updateSyncQueueItem(item);
+              continue; // Skip to next item, will retry later
+            }
           }
         }
       }
@@ -183,13 +238,73 @@ export async function syncPendingChanges(): Promise<{ success: number; failed: n
         
         success++;
       } else if (response.status >= 400 && response.status < 500) {
-        await removeFromSyncQueue(item.id);
-        // Clean up failed offline item to avoid stale data
-        if (tempId) {
+        // For POST with tempId, clean up the failed offline item
+        if (item.method === 'POST' && tempId) {
+          await removeFromSyncQueue(item.id);
           await deleteItemFromOfflineStore(storeName, tempId).catch(() => {});
+          failed++;
+          console.error(`[Sync] POST failed for ${item.url}: ${response.status}, cleaned up temp item`);
+        } else if (item.method === 'PUT') {
+          // For PUT failures, try to fetch server data to reconcile
+          const itemId = bodyToSend?.id || extractIdFromUrl(item.url);
+          let reconciled = false;
+          if (itemId) {
+            try {
+              // Try to get fresh server data to reconcile local state
+              const storeToEndpoint: Record<string, string> = {
+                'appointments': '/api/appointments',
+                'services': '/api/services',
+                'categories': '/api/categories',
+                'staff': '/api/staff',
+                'clients': '/api/clients',
+                'charges': '/api/charges',
+                'products': '/api/products',
+                'staffDeductions': '/api/staff-deductions',
+                'staffCommissions': '/api/staff-commissions',
+                'businessSettings': '/api/business-settings',
+              };
+              // Get base endpoint, fallback to extracting from item.url
+              let baseEndpoint = storeToEndpoint[storeName];
+              if (!baseEndpoint) {
+                const urlMatch = item.url.match(/^(\/api\/[^\/]+)/);
+                if (urlMatch) baseEndpoint = urlMatch[1];
+              }
+              if (baseEndpoint) {
+                const refreshUrl = `${baseEndpoint}/${itemId}`;
+                const refreshRes = await fetch(refreshUrl, { method: 'GET', credentials: 'include' });
+                if (refreshRes.ok) {
+                  const serverData = await refreshRes.json();
+                  await addItemToOfflineStore(storeName, serverData);
+                  console.log(`[Sync] PUT failed for ${storeName} ${itemId}, reconciled with server data`);
+                  reconciled = true;
+                }
+              }
+            } catch (e) {
+              console.warn(`[Sync] PUT failed and could not reconcile ${storeName} ${itemId}`);
+            }
+          }
+          if (reconciled) {
+            await removeFromSyncQueue(item.id);
+            failed++;
+            console.error(`[Sync] PUT failed for ${item.url}: ${response.status}, reconciled`);
+          } else {
+            // Could not reconcile - keep in queue for retry
+            item.retries++;
+            if (item.retries >= MAX_RETRIES) {
+              await removeFromSyncQueue(item.id);
+              failed++;
+              console.error(`[Sync] PUT failed for ${item.url}: ${response.status}, giving up after ${MAX_RETRIES} retries`);
+            } else {
+              await updateSyncQueueItem(item);
+              console.warn(`[Sync] PUT failed for ${item.url}: ${response.status}, will retry (attempt ${item.retries})`);
+            }
+          }
+        } else {
+          // For DELETE and other methods, just remove from queue
+          await removeFromSyncQueue(item.id);
+          failed++;
+          console.error(`[Sync] ${item.method} failed for ${item.url}: ${response.status}`);
         }
-        failed++;
-        console.error(`Sync failed for ${item.url}: ${response.status}`);
       } else {
         item.retries++;
         if (item.retries >= MAX_RETRIES) {
