@@ -290,6 +290,159 @@
   animation: liquidShine 1.5s ease-in-out;
 }
 
+/* iOS 26 Liquid Glass Modal */
+.liquid-glass-modal {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(248, 250, 252, 0.98) 100%
+  );
+  backdrop-filter: blur(40px) saturate(200%);
+  -webkit-backdrop-filter: blur(40px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 
+    0 25px 80px -20px rgba(0, 0, 0, 0.25),
+    0 10px 40px -10px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.dark .liquid-glass-modal {
+  background: linear-gradient(
+    180deg,
+    rgba(30, 41, 59, 0.95) 0%,
+    rgba(15, 23, 42, 0.98) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 
+    0 25px 80px -20px rgba(0, 0, 0, 0.6),
+    0 10px 40px -10px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Liquid Glass Modal Header - Water effect */
+.liquid-glass-header {
+  background: linear-gradient(
+    135deg,
+    rgba(56, 189, 248, 0.15) 0%,
+    rgba(34, 211, 238, 0.1) 25%,
+    rgba(167, 243, 208, 0.1) 50%,
+    rgba(56, 189, 248, 0.08) 75%,
+    rgba(255, 255, 255, 0.9) 100%
+  );
+  border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+}
+
+.dark .liquid-glass-header {
+  background: linear-gradient(
+    135deg,
+    rgba(56, 189, 248, 0.1) 0%,
+    rgba(34, 211, 238, 0.08) 25%,
+    rgba(20, 184, 166, 0.08) 50%,
+    rgba(56, 189, 248, 0.05) 75%,
+    rgba(30, 41, 59, 0.95) 100%
+  );
+  border-bottom: 1px solid rgba(56, 189, 248, 0.15);
+}
+
+/* Liquid glass shimmer animation */
+@keyframes liquidShimmer {
+  0% { transform: translateX(-100%) rotate(15deg); }
+  100% { transform: translateX(200%) rotate(15deg); }
+}
+
+.liquid-glass-shimmer {
+  background: linear-gradient(
+    120deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.4) 25%,
+    rgba(56, 189, 248, 0.2) 50%,
+    rgba(255, 255, 255, 0.4) 75%,
+    transparent 100%
+  );
+  animation: liquidShimmer 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Reflection overlay */
+.liquid-glass-reflection {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.3) 0%,
+    rgba(255, 255, 255, 0.1) 30%,
+    transparent 60%
+  );
+  pointer-events: none;
+}
+
+/* Liquid glass form field */
+.liquid-glass-field {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.7) 0%,
+    rgba(248, 250, 252, 0.8) 100%
+  );
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.dark .liquid-glass-field {
+  background: linear-gradient(
+    135deg,
+    rgba(51, 65, 85, 0.7) 0%,
+    rgba(30, 41, 59, 0.8) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Liquid glass chip/badge */
+.liquid-glass-chip {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.dark .liquid-glass-chip {
+  background: rgba(51, 65, 85, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Liquid glass button */
+.liquid-glass-button {
+  background: linear-gradient(
+    135deg,
+    rgba(56, 189, 248, 0.9) 0%,
+    rgba(34, 211, 238, 0.9) 100%
+  );
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 
+    0 8px 24px rgba(56, 189, 248, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  color: white;
+  font-weight: 600;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.liquid-glass-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 12px 32px rgba(56, 189, 248, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
 /* Warm/Liquid Gradients */
 .liquid-gradient {
   background: linear-gradient(135deg, 

@@ -1835,19 +1835,23 @@ export default function Planning() {
         }
       }}>
         <DialogContent 
-          className="w-[calc(100vw-24px)] max-w-[420px] max-h-[90vh] p-0 border-0 shadow-2xl glass-card rounded-3xl overflow-hidden animate-fade-in-scale flex flex-col" 
+          className="w-[calc(100vw-24px)] max-w-[420px] max-h-[90vh] p-0 border-0 rounded-3xl overflow-hidden animate-fade-in-scale flex flex-col liquid-glass-modal" 
           dir={isRtl ? "rtl" : "ltr"}
         >
-          <div className="liquid-gradient px-5 py-4 text-white relative overflow-hidden shrink-0">
-            <div className="water-shimmer absolute inset-0 opacity-20" />
+          {/* iOS 26 Liquid Glass Header */}
+          <div className="liquid-glass-header px-5 py-4 relative overflow-hidden shrink-0">
+            <div className="liquid-glass-shimmer absolute inset-0" />
+            <div className="liquid-glass-reflection absolute inset-0" />
             <DialogHeader className="relative z-10">
-              <DialogTitle className="text-lg font-semibold flex items-center gap-2">
-                <Sparkles className="w-5 h-5" />
+              <DialogTitle className="text-lg font-semibold flex items-center gap-2 text-slate-800 dark:text-white">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-400 to-cyan-500 flex items-center justify-center shadow-lg">
+                  <Sparkles className="w-4 h-4 text-white" />
+                </div>
                 {editingAppointment ? t("planning.editBooking") : t("planning.newBooking")}
               </DialogTitle>
               {editingAppointment?.createdBy && (
-                <p className="text-xs text-white/70 mt-1">
-                  {t("planning.createdBy")}: <span className="font-medium text-white">{editingAppointment.createdBy}</span>
+                <p className="text-xs text-slate-600 dark:text-white/70 mt-1">
+                  {t("planning.createdBy")}: <span className="font-medium text-slate-800 dark:text-white">{editingAppointment.createdBy}</span>
                 </p>
               )}
             </DialogHeader>
@@ -1868,9 +1872,9 @@ export default function Planning() {
               className="p-5 space-y-4 overflow-y-auto flex-1"
             >
               
-              {/* Price Row - FIRST - Glass Card */}
-              <div className="flex items-center gap-3 glass-subtle rounded-2xl p-4">
-                <div className="w-11 h-11 rounded-2xl liquid-gradient flex items-center justify-center shadow-lg">
+              {/* Price Row - iOS 26 Liquid Glass Style */}
+              <div className="flex items-center gap-3 liquid-glass-field rounded-2xl p-4">
+                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/25">
                   <CreditCard className="w-5 h-5 text-white" />
                 </div>
                 <div className="flex-1">
@@ -1885,22 +1889,22 @@ export default function Planning() {
                     placeholder="0"
                     onClick={(e) => e.stopPropagation()}
                     onFocus={(e) => e.target.select()}
-                    className="w-full text-2xl h-12 font-bold border-2 border-primary/50 bg-white dark:bg-slate-800 rounded-xl text-center shadow-sm focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none"
+                    className="w-full text-2xl h-12 font-bold border border-white/30 dark:border-white/10 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-xl text-center shadow-inner focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 focus:outline-none transition-all"
                     style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
                   />
                 </div>
-                <span className="text-base font-bold gradient-text">DH</span>
+                <span className="text-base font-bold text-emerald-600 dark:text-emerald-400">DH</span>
                 <FormField
                   control={form.control}
                   name="paid"
                   render={({ field }) => (
-                    <FormItem className="flex items-center gap-2 space-y-0 bg-white/80 dark:bg-slate-800/80 rounded-xl px-3 py-2 shadow-sm">
+                    <FormItem className="flex items-center gap-2 space-y-0 liquid-glass-chip rounded-xl px-3 py-2">
                       <FormControl>
                         <input
                           type="checkbox"
                           checked={field.value}
                           onChange={field.onChange}
-                          className="w-4 h-4 accent-primary rounded"
+                          className="w-4 h-4 accent-emerald-500 rounded"
                         />
                       </FormControl>
                       <FormLabel className="!mt-0 text-xs font-medium">{t("common.paid")}</FormLabel>
