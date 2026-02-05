@@ -407,7 +407,7 @@ export default function MyBookings() {
                             appointment.paid || appointment.status === 'confirmed' 
                               ? "bg-emerald-500/10 border border-emerald-500/30" 
                               : appointment.status === 'awaiting_assignment'
-                              ? "bg-amber-500/10 border border-amber-500/30"
+                              ? "bg-sky-500/10 border border-sky-500/30"
                               : "bg-primary/10 border border-primary/30"
                           )}
                           style={{
@@ -443,7 +443,7 @@ export default function MyBookings() {
                                   {t("myBookings.confirmed", { defaultValue: "Confirmé" })}
                                 </span>
                               ) : appointment.status === 'awaiting_assignment' ? (
-                                <span className="inline-flex items-center gap-1 text-xs text-amber-600">
+                                <span className="inline-flex items-center gap-1 text-xs text-sky-600">
                                   <AlertCircle className="w-3 h-3" />
                                   {t("myBookings.awaitingAssignment", { defaultValue: "En attente" })}
                                 </span>
@@ -539,7 +539,7 @@ export default function MyBookings() {
                       {appointment.paid || appointment.status === 'confirmed' ? (
                         <CheckCircle2 className="w-4 h-4 text-emerald-500 ml-auto" />
                       ) : (
-                        <Clock className="w-4 h-4 text-amber-500 ml-auto" />
+                        <Clock className="w-4 h-4 text-sky-500 ml-auto" />
                       )}
                     </div>
                   </div>

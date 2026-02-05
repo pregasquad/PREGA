@@ -57,7 +57,7 @@ interface MessageTemplate {
 
 const ROLE_LABELS: Record<string, { label: string, color: string }> = {
   owner: { label: "Owner", color: "bg-red-500" },
-  manager: { label: "Manager", color: "bg-orange-500" },
+  manager: { label: "Manager", color: "bg-cyan-500" },
   receptionist: { label: "Receptionist", color: "bg-green-500" }
 };
 
@@ -758,7 +758,7 @@ export default function AdminSettings() {
                             ) : (
                               <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white text-lg font-bold bg-gradient-to-br ${
                                 role.role === "owner" ? "from-red-400 to-red-600" :
-                                role.role === "manager" ? "from-orange-400 to-orange-600" :
+                                role.role === "manager" ? "from-cyan-400 to-cyan-600" :
                                 "from-green-400 to-green-600"
                               }`}>
                                 {role.name.charAt(0).toUpperCase()}
@@ -844,7 +844,7 @@ export default function AdminSettings() {
                 </div>
                 <div className="p-4 border rounded-lg space-y-2">
                   <div className="flex items-center gap-2">
-                    <Badge className="bg-orange-500 text-white">{t("admin.manager")}</Badge>
+                    <Badge className="bg-cyan-500 text-white">{t("admin.manager")}</Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">{t("admin.managerDesc")}</p>
                 </div>

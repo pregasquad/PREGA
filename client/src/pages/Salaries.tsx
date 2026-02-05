@@ -464,7 +464,7 @@ export default function Salaries() {
               <span>{t("salaries.totalCommissionsDue")}</span>
               <span className="text-green-600">{formatCurrency(totalCommissions)}</span>
             </div>
-            <div className="flex justify-between text-sm text-orange-600">
+            <div className="flex justify-between text-sm text-sky-600">
               <span>{t("salaries.totalDeductions")}</span>
               <span>-{formatCurrency(totalDeductions)}</span>
             </div>
@@ -744,15 +744,15 @@ export default function Salaries() {
           <CollapsibleContent>
             <CardContent className="p-3 pt-0 space-y-2">
               {filteredDeductions.map((deduction) => (
-                <div key={deduction.id} className="p-3 bg-orange-50 rounded-lg flex justify-between items-center">
+                <div key={deduction.id} className="p-3 bg-sky-50 rounded-lg flex justify-between items-center">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium">{deduction.staffName}</span>
-                      <span className="text-xs px-1.5 py-0.5 bg-orange-100 rounded text-orange-700">{getDeductionTypeLabel(deduction.type)}</span>
+                      <span className="text-xs px-1.5 py-0.5 bg-sky-100 rounded text-sky-700">{getDeductionTypeLabel(deduction.type)}</span>
                     </div>
                     <div className="text-sm text-muted-foreground truncate">{deduction.description}</div>
                     <div className="flex gap-2 text-sm mt-0.5">
-                      <span className="text-orange-600 font-semibold">{formatCurrency(deduction.amount)}</span>
+                      <span className="text-sky-600 font-semibold">{formatCurrency(deduction.amount)}</span>
                       <span className="text-muted-foreground">{format(parseISO(deduction.date), "d/M/yy")}</span>
                     </div>
                   </div>

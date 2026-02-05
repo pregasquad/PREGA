@@ -17,11 +17,11 @@ export function OfflineIndicator() {
       className={cn(
         'fixed bottom-4 left-4 z-50 flex items-center gap-2 px-3 py-2 rounded-full shadow-lg text-sm transition-all',
         !isOnline
-          ? 'bg-amber-500/90 text-white backdrop-blur-sm'
+          ? 'bg-sky-500/90 text-white backdrop-blur-sm'
           : syncStatus === 'syncing'
           ? 'bg-blue-500/90 text-white backdrop-blur-sm'
           : pendingCount > 0
-          ? 'bg-orange-500/90 text-white backdrop-blur-sm'
+          ? 'bg-cyan-500/90 text-white backdrop-blur-sm'
           : 'bg-green-500/90 text-white backdrop-blur-sm'
       )}
     >

@@ -240,13 +240,13 @@ export default function Reports() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-gradient-to-br from-orange-500 to-amber-600 text-white border-0 shadow-lg shadow-orange-500/20">
+        <Card className="bg-gradient-to-br from-cyan-500 to-teal-600 text-white border-0 shadow-lg shadow-cyan-500/20">
           <CardContent className="p-6">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-orange-100 font-medium text-sm">{t("reports.totalRevenue")}</p>
+                <p className="text-cyan-100 font-medium text-sm">{t("reports.totalRevenue")}</p>
                 <h3 className="text-4xl font-bold mt-2">{formatCurrency(stats.totalRevenue)} DH</h3>
-                <div className="mt-4 flex items-center text-orange-100 text-sm">
+                <div className="mt-4 flex items-center text-cyan-100 text-sm">
                   <span>{t("reports.collected")} {formatCurrency(stats.paidRevenue)} DH</span>
                 </div>
               </div>
@@ -281,13 +281,13 @@ export default function Reports() {
               <div>
                 <p className="text-muted-foreground font-medium text-sm">{t("reports.activeStaff")}</p>
                 <h3 className="text-4xl font-bold mt-2 text-foreground">{staffList.length}</h3>
-                <div className="mt-4 flex items-center text-orange-600 text-sm font-medium">
+                <div className="mt-4 flex items-center text-cyan-600 text-sm font-medium">
                   <Users className="w-4 h-4 ml-1" />
                   <span>{t("reports.members")}</span>
                 </div>
               </div>
-              <div className="p-3 bg-orange-100 rounded-xl">
-                <Users className="w-6 h-6 text-orange-600" />
+              <div className="p-3 bg-cyan-100 rounded-xl">
+                <Users className="w-6 h-6 text-cyan-600" />
               </div>
             </div>
           </CardContent>
@@ -331,7 +331,7 @@ export default function Reports() {
                     </div>
                     <div className="bg-background rounded-lg p-3 border">
                       <p className="text-xs text-muted-foreground">{t("reports.uncollected")}</p>
-                      <p className="text-lg font-bold text-orange-500">{formatCurrency(staff.unpaidEarnings)} DH</p>
+                      <p className="text-lg font-bold text-sky-500">{formatCurrency(staff.unpaidEarnings)} DH</p>
                     </div>
                   </div>
 

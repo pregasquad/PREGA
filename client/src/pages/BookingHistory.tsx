@@ -195,7 +195,7 @@ export default function BookingHistory() {
                 <SelectContent>
                   <SelectItem value="all">{t("bookingHistory.allStaff")}</SelectItem>
                   <SelectItem value="À assigner">
-                    <span className="text-orange-600">{t("bookingHistory.toAssignOption")}</span>
+                    <span className="text-sky-600">{t("bookingHistory.toAssignOption")}</span>
                   </SelectItem>
                   {staffList.map((staff) => (
                     <SelectItem key={staff.id} value={staff.name}>
@@ -241,7 +241,7 @@ export default function BookingHistory() {
                       <TableRow 
                         key={appt.id}
                         className={cn(
-                          isUnassigned && "bg-orange-500/5"
+                          isUnassigned && "bg-sky-500/5"
                         )}
                       >
                         <TableCell>
@@ -283,7 +283,7 @@ export default function BookingHistory() {
                           >
                             <SelectTrigger className={cn(
                               "h-8 text-xs",
-                              isUnassigned && "border-orange-500/50 text-orange-600"
+                              isUnassigned && "border-sky-500/50 text-sky-600"
                             )}>
                               <div className="flex items-center gap-2">
                                 {isUnassigned ? (
@@ -296,7 +296,7 @@ export default function BookingHistory() {
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="À assigner">
-                                <span className="text-orange-600">{t("bookingHistory.toAssignOption")}</span>
+                                <span className="text-sky-600">{t("bookingHistory.toAssignOption")}</span>
                               </SelectItem>
                               {staffList.map((staff) => (
                                 <SelectItem key={staff.id} value={staff.name}>

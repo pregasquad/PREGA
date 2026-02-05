@@ -362,9 +362,9 @@ export default function Clients() {
 
   const getLoyaltyTier = (points: number) => {
     if (points >= 1000) return { name: t("clients.vip"), color: "bg-yellow-500", icon: Crown };
-    if (points >= 500) return { name: t("clients.gold"), color: "bg-amber-500", icon: Award };
+    if (points >= 500) return { name: t("clients.gold"), color: "bg-sky-500", icon: Award };
     if (points >= 100) return { name: t("clients.silver"), color: "bg-gray-400", icon: Star };
-    return { name: t("clients.bronze"), color: "bg-orange-600", icon: Star };
+    return { name: t("clients.bronze"), color: "bg-cyan-600", icon: Star };
   };
 
   const filteredClients = clients.filter(
@@ -472,8 +472,8 @@ export default function Clients() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <User className="w-5 h-5 text-orange-600" />
+              <div className="p-2 bg-cyan-100 rounded-lg">
+                <User className="w-5 h-5 text-cyan-600" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">{t("clients.totalAppointments")}</p>
@@ -515,8 +515,8 @@ export default function Clients() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <CalendarIcon className="w-5 h-5 text-orange-600" />
+              <div className="p-2 bg-cyan-100 rounded-lg">
+                <CalendarIcon className="w-5 h-5 text-cyan-600" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">{t("clients.totalAppointments")}</p>

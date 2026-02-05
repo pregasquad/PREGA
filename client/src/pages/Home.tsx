@@ -164,9 +164,9 @@ export default function Home() {
 
   const stats = [
     { label: t("home.todayRevenue"), value: `${todayStats.totalRevenue} DH`, icon: Banknote, color: "text-emerald-500", highlight: true },
-    { label: t("home.todayAppointments"), value: todayStats.count, icon: CalendarCheck, color: "text-orange-500" },
+    { label: t("home.todayAppointments"), value: todayStats.count, icon: CalendarCheck, color: "text-cyan-500" },
     { label: t("home.paidToday"), value: `${todayStats.paidRevenue} DH`, icon: CreditCard, color: "text-green-500" },
-    { label: t("home.unpaidToday"), value: `${todayStats.unpaidRevenue} DH`, icon: TrendingUp, color: todayStats.unpaidRevenue > 0 ? "text-amber-500" : "text-muted-foreground" },
+    { label: t("home.unpaidToday"), value: `${todayStats.unpaidRevenue} DH`, icon: TrendingUp, color: todayStats.unpaidRevenue > 0 ? "text-sky-500" : "text-muted-foreground" },
   ];
 
   return (

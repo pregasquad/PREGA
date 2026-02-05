@@ -454,7 +454,7 @@ export default function Booking() {
                     </span>
                     <span className={cn(
                       "font-semibold text-sm",
-                      appt.staff === "À assigner" ? "text-orange-500" : "text-emerald-500"
+                      appt.staff === "À assigner" ? "text-sky-500" : "text-emerald-500"
                     )}>
                       {appt.staff}
                     </span>
@@ -506,7 +506,7 @@ export default function Booking() {
                   </span>
                   <span className={cn(
                     "font-semibold",
-                    bookingResult.staff === "À assigner" ? "text-orange-500" : "text-emerald-500"
+                    bookingResult.staff === "À assigner" ? "text-sky-500" : "text-emerald-500"
                   )}>
                     {bookingResult.staff}
                   </span>
@@ -690,7 +690,7 @@ export default function Booking() {
                   {packages.length > 0 && (
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-teal-500 flex items-center justify-center">
                           <Gift className="w-4 h-4 text-white" />
                         </div>
                         <div>

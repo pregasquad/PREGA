@@ -1517,7 +1517,7 @@ export default function Planning() {
           </div>
 
           {isNonWorkingDay && (
-            <div className="glass-card px-3 py-1.5 flex items-center gap-2 text-amber-600 dark:text-amber-400">
+            <div className="glass-card px-3 py-1.5 flex items-center gap-2 text-sky-600 dark:text-sky-400">
               <AlertCircle className="w-4 h-4" />
               <span className="text-xs font-medium">{t("planning.nonWorkingDay", "Off Day")}</span>
             </div>
@@ -1552,7 +1552,7 @@ export default function Planning() {
                       <span className="font-medium text-sm truncate">{entry.clientName}</span>
                       <span className={cn(
                         "px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0",
-                        entry.status === "waiting" && "bg-amber-100 text-amber-700",
+                        entry.status === "waiting" && "bg-sky-100 text-sky-700",
                         entry.status === "notified" && "bg-blue-100 text-blue-700",
                         entry.status === "booked" && "bg-green-100 text-green-700",
                         entry.status === "expired" && "bg-gray-100 text-gray-500"

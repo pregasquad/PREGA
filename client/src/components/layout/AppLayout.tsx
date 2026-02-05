@@ -115,7 +115,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <SidebarTrigger />
               <div className="flex items-center gap-2 md:hidden">
                 <img src="/logo.png" alt="PREGA SQUAD" className="w-8 h-8 rounded-full object-cover" />
-                <span className="text-sm font-bold text-orange-500">PREGA SQUAD</span>
+                <span className="text-sm font-bold text-cyan-500">PREGA SQUAD</span>
               </div>
             </div>
             <div className="flex items-center gap-2">
