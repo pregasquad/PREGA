@@ -1773,23 +1773,27 @@ export default function Planning() {
                         <div className="water-shimmer absolute inset-0 opacity-30" />
                         {span === 1 ? (
                           /* Compact single-row layout for 30min appointments */
-                          <div className="relative z-10 flex items-center justify-between w-full gap-1 min-w-0">
-                            <span className="font-semibold text-xs truncate flex-1" title={booking.service}>
+                          <div className="relative z-10 flex items-center justify-between w-full gap-1.5 min-w-0">
+                            <span className="font-semibold text-xs truncate flex-1" title={`${booking.service}${booking.client ? ` - ${booking.client}` : ''}`}>
                               {booking.service}
                             </span>
-                            <span className="text-[10px] font-bold bg-white/20 px-1 rounded shrink-0">{booking.total}</span>
+                            <span className="text-[10px] font-bold bg-white/20 px-1.5 py-0.5 rounded shrink-0">{booking.total}</span>
                             <span className="text-[10px] opacity-90 shrink-0">{booking.startTime}</span>
                             {booking.paid ? (
-                              <span className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center shrink-0" title="Paid">
-                                <Check className="w-2.5 h-2.5 text-white" />
+                              <span 
+                                className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center shrink-0" 
+                                role="status"
+                                aria-label={t("common.paid")}
+                              >
+                                <Check className="w-3 h-3 text-white" />
                               </span>
                             ) : (
                               <button
                                 onClick={(e) => handleMarkAsPaid(e, booking)}
-                                className="w-4 h-4 bg-white/30 hover:bg-white/50 rounded-full flex items-center justify-center transition-colors shrink-0"
-                                title="Mark as paid"
+                                className="w-6 h-6 bg-white/30 hover:bg-white/50 rounded-full flex items-center justify-center transition-colors shrink-0"
+                                aria-label={t("planning.markAsPaid")}
                               >
-                                <CreditCard className="w-2.5 h-2.5" />
+                                <CreditCard className="w-3 h-3" />
                               </button>
                             )}
                           </div>
@@ -1815,14 +1819,18 @@ export default function Planning() {
                               <div className="flex items-center gap-1">
                                 <span className="text-[10px] opacity-80">{booking.duration}′</span>
                                 {booking.paid ? (
-                                  <span className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center shadow-md" title="Paid">
+                                  <span 
+                                    className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center shadow-md" 
+                                    role="status"
+                                    aria-label={t("common.paid")}
+                                  >
                                     <Check className="w-3 h-3 text-white" />
                                   </span>
                                 ) : (
                                   <button
                                     onClick={(e) => handleMarkAsPaid(e, booking)}
-                                    className="w-5 h-5 bg-white/30 hover:bg-white/50 rounded-full flex items-center justify-center transition-colors shadow-md"
-                                    title="Mark as paid"
+                                    className="w-6 h-6 bg-white/30 hover:bg-white/50 rounded-full flex items-center justify-center transition-colors shadow-md"
+                                    aria-label={t("planning.markAsPaid")}
                                   >
                                     <CreditCard className="w-3 h-3" />
                                   </button>
