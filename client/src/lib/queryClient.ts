@@ -25,7 +25,7 @@ const urlToStoreMap: Record<string, string> = {
 
 function getStoreNameFromUrl(url: string): string | null {
   for (const [pattern, store] of Object.entries(urlToStoreMap)) {
-    if (url === pattern || url.startsWith(pattern + '?')) {
+    if (url === pattern || url.startsWith(pattern + '?') || url.startsWith(pattern + '/')) {
       return store;
     }
   }

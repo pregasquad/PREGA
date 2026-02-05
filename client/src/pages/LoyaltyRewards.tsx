@@ -95,11 +95,6 @@ export default function LoyaltyRewards() {
 
   const { data: businessSettings } = useQuery<BusinessSettings>({
     queryKey: ["/api/business-settings"],
-    queryFn: async () => {
-      const res = await fetch("/api/business-settings");
-      if (!res.ok) throw new Error("Failed to fetch settings");
-      return res.json();
-    },
   });
 
   const { data: giftCards = [], isLoading: giftCardsLoading } = useQuery<GiftCard[]>({

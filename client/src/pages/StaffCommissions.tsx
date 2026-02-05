@@ -40,13 +40,7 @@ export default function StaffCommissions() {
   });
 
   const { data: staffCommissions = [], refetch: refetchStaffCommissions } = useQuery<StaffCommission[]>({
-    queryKey: ["/api/staff-commissions/staff", selectedStaffId],
-    queryFn: async () => {
-      if (!selectedStaffId) return [];
-      const res = await fetch(`/api/staff-commissions/staff/${selectedStaffId}`);
-      if (!res.ok) return [];
-      return res.json();
-    },
+    queryKey: [`/api/staff-commissions/staff/${selectedStaffId}`],
     enabled: !!selectedStaffId,
   });
 

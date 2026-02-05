@@ -142,10 +142,6 @@ export default function AdminSettings() {
 
   const { data: businessSettings, isLoading: isLoadingBusiness } = useQuery<BusinessSettings>({
     queryKey: ["/api/business-settings"],
-    queryFn: async () => {
-      const res = await fetch("/api/business-settings");
-      return res.json();
-    }
   });
 
   // Update business form when data loads
