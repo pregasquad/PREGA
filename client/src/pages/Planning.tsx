@@ -1789,8 +1789,12 @@ export default function Planning() {
                               </span>
                             ) : (
                               <button
-                                onClick={(e) => handleMarkAsPaid(e, booking)}
-                                className="w-6 h-6 bg-white/30 hover:bg-white/50 rounded-full flex items-center justify-center transition-colors shrink-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  e.preventDefault();
+                                  handleMarkAsPaid(e, booking);
+                                }}
+                                className="w-6 h-6 bg-white/30 hover:bg-white/50 rounded-full flex items-center justify-center transition-colors shrink-0 relative z-20 pointer-events-auto"
                                 aria-label={t("planning.markAsPaid")}
                               >
                                 <CreditCard className="w-3 h-3" />
@@ -1828,8 +1832,12 @@ export default function Planning() {
                                   </span>
                                 ) : (
                                   <button
-                                    onClick={(e) => handleMarkAsPaid(e, booking)}
-                                    className="w-6 h-6 bg-white/30 hover:bg-white/50 rounded-full flex items-center justify-center transition-colors shadow-md"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      e.preventDefault();
+                                      handleMarkAsPaid(e, booking);
+                                    }}
+                                    className="w-6 h-6 bg-white/30 hover:bg-white/50 rounded-full flex items-center justify-center transition-colors shadow-md relative z-20 pointer-events-auto"
                                     aria-label={t("planning.markAsPaid")}
                                   >
                                     <CreditCard className="w-3 h-3" />
