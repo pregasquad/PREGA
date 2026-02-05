@@ -1768,8 +1768,8 @@ export default function Planning() {
                     >
                       <div 
                         className={cn(
-                          "appointment-card h-full px-2 py-1 text-white cursor-grab active:cursor-grabbing relative overflow-hidden rounded-lg shadow-lg",
-                          span === 1 ? "flex items-center gap-2" : "flex flex-col justify-between",
+                          "appointment-card h-full px-2 text-white cursor-grab active:cursor-grabbing relative overflow-hidden rounded-lg shadow-lg",
+                          span === 1 ? "flex items-center gap-2 py-1" : "flex flex-col py-1.5",
                           isDragging && "opacity-50 scale-95"
                         )}
                         style={{ 
