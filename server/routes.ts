@@ -82,9 +82,14 @@ export async function registerRoutes(
 
   // === API ROUTES ===
 
-  // Health check for Koyeb (public)
+  // Health check for Koyeb and UptimeRobot (public)
   app.get("/api/health", (_req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+  
+  // Simple health check for UptimeRobot
+  app.get("/health", (_req, res) => {
+    res.status(200).send("OK");
   });
 
   // === PUBLIC BOOKING API ROUTES ===
