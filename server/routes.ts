@@ -5,7 +5,7 @@ import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import { setupAuth, registerAuthRoutes, isPinAuthenticated, requirePermission, checkRateLimit, recordFailedAttempt, clearAttempts } from "./replit_integrations/auth";
-import { vapidPublicKey, sendPushNotification } from "./push";
+import { vapidPublicKey, sendPushNotification, checkAndNotifyExpiringProducts, checkAndNotifyLowStock as broadcastLowStockNotifications } from "./push";
 import { db, schema, isDatabaseOffline, checkDatabaseConnection } from "./db";
 import { eq } from "drizzle-orm";
 import { insertAdminRoleSchema, ROLE_PERMISSIONS } from "@shared/schema";
@@ -1968,6 +1968,33 @@ export async function registerRoutes(
         "/planning"
       );
       res.json({ success: true, results });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/push/check-expiry", isPinAuthenticated, async (_req, res) => {
+    try {
+      await checkAndNotifyExpiringProducts();
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/push/check-stock", isPinAuthenticated, async (_req, res) => {
+    try {
+      await broadcastLowStockNotifications();
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/products/expiring", isPinAuthenticated, async (_req, res) => {
+    try {
+      const expiringProducts = await storage.getExpiringProducts();
+      res.json(expiringProducts);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }

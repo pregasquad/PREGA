@@ -2,7 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
-import { initializeDatabase, warmupDatabase, ensurePushSubscriptionsTable, ensureAppointmentsAuditColumns, ensureForeignKeyConstraints, ensureAdminRolesPhotoColumn } from "./db";
+import { initializeDatabase, warmupDatabase, ensurePushSubscriptionsTable, ensureAppointmentsAuditColumns, ensureForeignKeyConstraints, ensureAdminRolesPhotoColumn, ensureProductExpiryColumns } from "./db";
 
 const app = express();
 const httpServer = createServer(app);
@@ -79,6 +79,7 @@ const startServer = async () => {
       await ensurePushSubscriptionsTable();
       await ensureAppointmentsAuditColumns();
       await ensureAdminRolesPhotoColumn();
+      await ensureProductExpiryColumns();
       await ensureForeignKeyConstraints();
     }
   } else {

@@ -48,6 +48,8 @@ export const products = mysqlTable("products", {
   name: varchar("name", { length: 255 }).notNull().unique(),
   quantity: int("quantity").notNull().default(0),
   lowStockThreshold: int("low_stock_threshold").notNull().default(5),
+  expiryDate: text("expiry_date"),
+  expiryWarningDays: int("expiry_warning_days").notNull().default(30),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -55,6 +57,8 @@ export const insertProductSchema = createInsertSchema(products).omit({ id: true,
   name: z.string().min(1, "Product name is required"),
   quantity: z.number().int().min(0, "Quantity must be non-negative").optional(),
   lowStockThreshold: z.number().int().min(0).optional(),
+  expiryDate: z.string().optional().nullable(),
+  expiryWarningDays: z.number().int().min(1).optional(),
 });
 export type InsertProduct = z.infer<typeof insertProductSchema>;
 export type Product = typeof products.$inferSelect;

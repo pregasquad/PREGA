@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Minus, Package, Trash2, Edit2, UserPlus, RefreshCw } from "lucide-react";
+import { Plus, Minus, Package, Trash2, Edit2, UserPlus, RefreshCw, Calendar, AlertTriangle } from "lucide-react";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -29,8 +29,27 @@ export default function Inventory() {
 
   const productForm = useForm({
     resolver: zodResolver(insertProductSchema),
-    defaultValues: { name: "", quantity: 0, lowStockThreshold: 5 }
+    defaultValues: { name: "", quantity: 0, lowStockThreshold: 5, expiryDate: "", expiryWarningDays: 30 }
   });
+
+  const getExpiryStatus = (product: Product) => {
+    if (!product.expiryDate) return null;
+    const today = new Date();
+    const expiryDate = new Date(product.expiryDate);
+    const warningDays = product.expiryWarningDays || 30;
+    const warningDate = new Date(today);
+    warningDate.setDate(warningDate.getDate() + warningDays);
+    
+    if (expiryDate <= today) return 'expired';
+    if (expiryDate <= warningDate) return 'warning';
+    return 'ok';
+  };
+
+  const formatExpiryDate = (dateStr: string | null | undefined) => {
+    if (!dateStr) return null;
+    const date = new Date(dateStr);
+    return date.toLocaleDateString(i18n.language === 'ar' ? 'ar-MA' : 'fr-FR');
+  };
 
   const staffForm = useForm({
     resolver: zodResolver(insertStaffSchema),
@@ -203,6 +222,30 @@ export default function Inventory() {
                   <span className="text-muted-foreground">{product.lowStockThreshold || 2}</span>
                 </div>
                 
+                {product.expiryDate && (
+                  <div className={`flex items-center gap-2 text-xs rounded-md p-2 ${
+                    getExpiryStatus(product) === 'expired' 
+                      ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400' 
+                      : getExpiryStatus(product) === 'warning'
+                        ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
+                        : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                  }`}>
+                    {getExpiryStatus(product) === 'expired' ? (
+                      <AlertTriangle className="h-3 w-3" />
+                    ) : (
+                      <Calendar className="h-3 w-3" />
+                    )}
+                    <span>
+                      {getExpiryStatus(product) === 'expired' 
+                        ? t("inventory.expired") 
+                        : getExpiryStatus(product) === 'warning'
+                          ? t("inventory.expiresSoon")
+                          : t("inventory.expires")}
+                      : {formatExpiryDate(product.expiryDate)}
+                    </span>
+                  </div>
+                )}
+                
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
@@ -224,7 +267,10 @@ export default function Inventory() {
                     size="icon"
                     onClick={() => {
                       setEditingProduct(product);
-                      productForm.reset(product);
+                      productForm.reset({
+                        ...product,
+                        expiryDate: product.expiryDate || '',
+                      });
                     }}
                   >
                     <Edit2 className="h-4 w-4" />
@@ -258,6 +304,39 @@ export default function Inventory() {
                                   {...field} 
                                   value={field.value || 5}
                                   onChange={e => field.onChange(parseInt(e.target.value) || 5)} 
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={productForm.control}
+                          name="expiryDate"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{t("inventory.expiryDate")}</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="date" 
+                                  {...field} 
+                                  value={field.value || ''}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={productForm.control}
+                          name="expiryWarningDays"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{t("inventory.expiryWarningDays")}</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="number" 
+                                  {...field} 
+                                  value={field.value || 30}
+                                  onChange={e => field.onChange(parseInt(e.target.value) || 30)} 
                                 />
                               </FormControl>
                             </FormItem>

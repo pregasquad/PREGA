@@ -203,7 +203,12 @@
     "reorderLevel": "مستوى إعادة الطلب",
     "usageHistory": "سجل الاستخدام",
     "adjustStock": "تعديل المخزون",
-    "confirmDelete": "هل أنت متأكد من حذف هذا المنتج؟"
+    "confirmDelete": "هل أنت متأكد من حذف هذا المنتج؟",
+    "expiryDate": "تاريخ انتهاء الصلاحية",
+    "expiryWarningDays": "أيام التحذير",
+    "expires": "ينتهي في",
+    "expiresSoon": "ينتهي قريباً",
+    "expired": "منتهي الصلاحية"
   },
   "expenses": {
     "title": "المصاريف",

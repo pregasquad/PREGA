@@ -64,6 +64,7 @@ export interface IStorage extends IAuthStorage {
   createProduct(product: InsertProduct): Promise<Product>;
   deleteProduct(id: number): Promise<void>;
   getLowStockProducts(): Promise<Product[]>;
+  getExpiringProducts(): Promise<Product[]>;
 
   getClients(): Promise<Client[]>;
   getClient(id: number): Promise<Client | undefined>;
@@ -447,6 +448,21 @@ export class DatabaseStorage implements IStorage {
       const quantity = Number(p.quantity || 0);
       const threshold = Number(p.lowStockThreshold || 0);
       return quantity <= threshold;
+    });
+  }
+
+  async getExpiringProducts(): Promise<Product[]> {
+    const s = schema();
+    const allProducts = await db().select().from(s.products);
+    const today = new Date();
+    
+    return allProducts.filter((p: any) => {
+      if (!p.expiryDate) return false;
+      const expiryDate = new Date(p.expiryDate);
+      const warningDays = Number(p.expiryWarningDays || 30);
+      const warningDate = new Date(today);
+      warningDate.setDate(warningDate.getDate() + warningDays);
+      return expiryDate <= warningDate;
     });
   }
 

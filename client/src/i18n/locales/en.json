@@ -203,7 +203,12 @@
     "reorderLevel": "Reorder Level",
     "usageHistory": "Usage History",
     "adjustStock": "Adjust Stock",
-    "confirmDelete": "Are you sure you want to delete this product?"
+    "confirmDelete": "Are you sure you want to delete this product?",
+    "expiryDate": "Expiry Date",
+    "expiryWarningDays": "Warning Days",
+    "expires": "Expires",
+    "expiresSoon": "Expires Soon",
+    "expired": "Expired"
   },
   "expenses": {
     "title": "Expenses",

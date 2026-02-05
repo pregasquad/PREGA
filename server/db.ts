@@ -415,3 +415,48 @@ export async function ensureAdminRolesPhotoColumn(): Promise<void> {
     console.error("Failed to ensure admin_roles photo_url column:", error);
   }
 }
+
+export async function ensureProductExpiryColumns(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      
+      const [expiryRows] = await connection.query(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_NAME = 'products' AND COLUMN_NAME = 'expiry_date'
+      `);
+      
+      if ((expiryRows as any[]).length === 0) {
+        await connection.query(`ALTER TABLE products ADD COLUMN expiry_date TEXT`);
+        console.log("Added expiry_date column to products table");
+      }
+      
+      const [warningRows] = await connection.query(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_NAME = 'products' AND COLUMN_NAME = 'expiry_warning_days'
+      `);
+      
+      if ((warningRows as any[]).length === 0) {
+        await connection.query(`ALTER TABLE products ADD COLUMN expiry_warning_days INT NOT NULL DEFAULT 30`);
+        console.log("Added expiry_warning_days column to products table");
+      }
+      
+      connection.release();
+    } else {
+      await pool.query(`
+        DO $$ 
+        BEGIN 
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'products' AND column_name = 'expiry_date') THEN
+            ALTER TABLE products ADD COLUMN expiry_date TEXT;
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'products' AND column_name = 'expiry_warning_days') THEN
+            ALTER TABLE products ADD COLUMN expiry_warning_days INTEGER NOT NULL DEFAULT 30;
+          END IF;
+        END $$;
+      `);
+    }
+    console.log("Product expiry columns ready");
+  } catch (error) {
+    console.error("Failed to ensure product expiry columns:", error);
+  }
+}
