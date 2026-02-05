@@ -1169,6 +1169,17 @@ export default function Planning() {
 
   const handleMarkAsPaid = async (e: React.MouseEvent, app: any) => {
     e.stopPropagation();
+    
+    // Check if this is a temporary appointment that hasn't synced yet
+    if (app.id < 0) {
+      toast({ 
+        title: t("common.pleaseWait") || "Please wait", 
+        description: t("planning.appointmentSyncing") || "Appointment is still syncing. Please try again in a moment.",
+        variant: "default"
+      });
+      return;
+    }
+    
     try {
       await apiRequest("PUT", `/api/appointments/${app.id}`, {
         ...app,
