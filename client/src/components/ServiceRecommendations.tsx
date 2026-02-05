@@ -140,6 +140,9 @@ export function ServiceRecommendations({
                       if (res.ok) {
                         setRecommendations(prev => prev.filter(r => r.serviceId !== rec.serviceId));
                         onServiceAdded?.();
+                      } else {
+                        const data = await res.json().catch(() => ({}));
+                        console.error("Failed to add service:", data.error);
                       }
                     } catch (err) {
                       console.error("Failed to add service:", err);

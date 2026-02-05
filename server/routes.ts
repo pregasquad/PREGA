@@ -873,7 +873,7 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Service not found" });
       }
 
-      let existingServices: { id: number; name: string; price: number; duration: number }[] = [];
+      let existingServices: { id?: number; name: string; price: number; duration: number }[] = [];
       if (appointment.servicesJson) {
         try {
           const parsed = typeof appointment.servicesJson === 'string' 
@@ -885,7 +885,9 @@ export async function registerRoutes(
         } catch {}
       }
 
-      const alreadyHasService = existingServices.some(s => s.id === serviceId || s.name.toLowerCase() === serviceToAdd.name.toLowerCase());
+      const alreadyHasService = existingServices.some(s => 
+        (s.id && s.id === serviceId) || s.name.toLowerCase() === serviceToAdd.name.toLowerCase()
+      );
       if (alreadyHasService) {
         return res.status(400).json({ error: "Service already in appointment" });
       }
@@ -898,14 +900,15 @@ export async function registerRoutes(
       });
 
       const totalDuration = existingServices.reduce((sum, s) => sum + s.duration, 0);
-      const totalPrice = existingServices.reduce((sum, s) => sum + s.price, 0);
+      const originalTotal = appointment.total || 0;
+      const newTotal = originalTotal + serviceToAdd.price;
       const serviceNames = existingServices.map(s => s.name).join(", ");
 
       await storage.updateAppointment(appointmentId, {
         servicesJson: JSON.stringify(existingServices) as any,
         service: serviceNames,
         duration: totalDuration,
-        total: totalPrice
+        total: newTotal
       });
 
       res.json({ success: true, message: "Service added to appointment" });
