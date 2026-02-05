@@ -2,7 +2,22 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
 import { type InsertAppointment, type InsertService, type InsertCategory, type InsertClient, type InsertStaff, type InsertStaffSchedule, type InsertStaffBreak, type InsertStaffTimeOff } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
-import { getFromOfflineStore, saveToOfflineStore, addItemToOfflineStore, addToSyncQueue } from "@/lib/offlineDb";
+import { getFromOfflineStore, saveToOfflineStore, addItemToOfflineStore, addToSyncQueue, updateItemInOfflineStore, deleteItemFromOfflineStore } from "@/lib/offlineDb";
+
+type OfflineStoreName = 'appointments' | 'services' | 'categories' | 'staff' | 'clients' | 'charges' | 'products';
+
+// Helper to check if we should use offline mode
+function shouldUseOffline(): boolean {
+  return !navigator.onLine;
+}
+
+// Helper for offline-aware fetch
+async function offlineFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  if (!navigator.onLine) {
+    throw new Error('OFFLINE');
+  }
+  return fetch(url, { ...options, credentials: 'include' });
+}
 
 export function useAppointments(date?: string) {
   return useQuery({
@@ -73,7 +88,7 @@ export function useCreateAppointment() {
         await addToSyncQueue({
           method: 'POST',
           url: api.appointments.create.path,
-          body: { ...appointmentData, _tempId: tempId },
+          body: { ...appointmentData, _tempId: tempId, _store: 'appointments' },
         });
         return optimisticAppointment;
       }
@@ -104,7 +119,7 @@ export function useCreateAppointment() {
           await addToSyncQueue({
             method: 'POST',
             url: api.appointments.create.path,
-            body: { ...appointmentData, _tempId: tempId },
+            body: { ...appointmentData, _tempId: tempId, _store: 'appointments' },
           });
           return optimisticAppointment;
         }
@@ -181,14 +196,38 @@ export function useUpdateAppointment() {
   return useMutation({
     mutationFn: async ({ id, ...data }: { id: number } & Partial<InsertAppointment>) => {
       const url = buildUrl(api.appointments.update.path, { id });
-      const res = await fetch(url, {
-        method: api.appointments.update.method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to update appointment");
-      return api.appointments.update.responses[200].parse(await res.json());
+      const updatedData = { ...data, updatedAt: new Date().toISOString() };
+      
+      // Offline mode
+      if (!navigator.onLine) {
+        await updateItemInOfflineStore('appointments', id, updatedData);
+        await addToSyncQueue({
+          method: 'PUT',
+          url,
+          body: { id, ...data, _store: 'appointments' },
+        });
+        return { id, ...updatedData, _offline: true };
+      }
+      
+      try {
+        const res = await fetch(url, {
+          method: api.appointments.update.method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("Failed to update appointment");
+        const result = api.appointments.update.responses[200].parse(await res.json());
+        await addItemToOfflineStore('appointments', result).catch(() => {});
+        return result;
+      } catch (error: any) {
+        if (error.name === 'TypeError' || error.message.includes('fetch')) {
+          await updateItemInOfflineStore('appointments', id, updatedData);
+          await addToSyncQueue({ method: 'PUT', url, body: { id, ...data, _store: 'appointments' } });
+          return { id, ...updatedData, _offline: true };
+        }
+        throw error;
+      }
     },
     onMutate: async ({ id, ...data }) => {
       await queryClient.cancelQueries({ queryKey: [api.appointments.list.path] });
@@ -202,11 +241,17 @@ export function useUpdateAppointment() {
       return { previousAppointments };
     },
     onSuccess: (data) => {
-      queryClient.setQueriesData(
-        { queryKey: [api.appointments.list.path] },
-        (old: any) => old ? old.map((apt: any) => apt.id === data.id ? data : apt) : old
-      );
-      toast({ title: "Success", description: "Appointment updated" });
+      const isOffline = (data as any)?._offline;
+      if (!isOffline) {
+        queryClient.setQueriesData(
+          { queryKey: [api.appointments.list.path] },
+          (old: any) => old ? old.map((apt: any) => apt.id === data.id ? data : apt) : old
+        );
+      }
+      toast({ 
+        title: isOffline ? "Saved Offline" : "Success", 
+        description: isOffline ? "Changes saved locally. Will sync when online." : "Appointment updated" 
+      });
     },
     onError: (err, _variables, context) => {
       if (context?.previousAppointments) {
@@ -217,7 +262,9 @@ export function useUpdateAppointment() {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: [api.appointments.list.path] });
+      if (navigator.onLine) {
+        queryClient.invalidateQueries({ queryKey: [api.appointments.list.path] });
+      }
     },
   });
 }
@@ -229,12 +276,35 @@ export function useDeleteAppointment() {
   return useMutation({
     mutationFn: async (id: number) => {
       const url = buildUrl(api.appointments.delete.path, { id });
-      const res = await fetch(url, {
-        method: api.appointments.delete.method,
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to delete appointment");
-      return id;
+      
+      // Offline mode
+      if (!navigator.onLine) {
+        await deleteItemFromOfflineStore('appointments', id);
+        // Only queue sync if it's a real server ID (positive)
+        if (id > 0) {
+          await addToSyncQueue({ method: 'DELETE', url, body: { _store: 'appointments' } });
+        }
+        return { id, _offline: true };
+      }
+      
+      try {
+        const res = await fetch(url, {
+          method: api.appointments.delete.method,
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("Failed to delete appointment");
+        await deleteItemFromOfflineStore('appointments', id).catch(() => {});
+        return { id };
+      } catch (error: any) {
+        if (error.name === 'TypeError' || error.message.includes('fetch')) {
+          await deleteItemFromOfflineStore('appointments', id);
+          if (id > 0) {
+            await addToSyncQueue({ method: 'DELETE', url, body: { _store: 'appointments' } });
+          }
+          return { id, _offline: true };
+        }
+        throw error;
+      }
     },
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: [api.appointments.list.path] });
@@ -247,8 +317,12 @@ export function useDeleteAppointment() {
       
       return { previousAppointments };
     },
-    onSuccess: () => {
-      toast({ title: "Deleted", description: "Appointment removed" });
+    onSuccess: (result) => {
+      const isOffline = (result as any)?._offline;
+      toast({ 
+        title: "Deleted", 
+        description: isOffline ? "Deleted locally. Will sync when online." : "Appointment removed" 
+      });
     },
     onError: (err, _variables, context) => {
       if (context?.previousAppointments) {
@@ -259,7 +333,9 @@ export function useDeleteAppointment() {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: [api.appointments.list.path] });
+      if (navigator.onLine) {
+        queryClient.invalidateQueries({ queryKey: [api.appointments.list.path] });
+      }
     },
   });
 }
@@ -319,21 +395,75 @@ export function useCreateService() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (data: InsertService) => {
-      const res = await fetch(api.services.create.path, {
-        method: api.services.create.method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-        credentials: "include",
+    mutationFn: async (data: InsertService & { _tempId?: number }) => {
+      const tempId = data._tempId || -Date.now();
+      const { _tempId, ...serviceData } = data;
+      
+      const optimisticService = {
+        ...serviceData,
+        id: tempId,
+        createdAt: new Date().toISOString(),
+        _offline: true,
+      };
+
+      if (!navigator.onLine) {
+        await addItemToOfflineStore('services', optimisticService);
+        await addToSyncQueue({
+          method: 'POST',
+          url: api.services.create.path,
+          body: { ...serviceData, _tempId: tempId, _store: 'services' },
+        });
+        return optimisticService;
+      }
+
+      try {
+        const res = await fetch(api.services.create.path, {
+          method: api.services.create.method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(serviceData),
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("Failed to create service");
+        const result = api.services.create.responses[201].parse(await res.json());
+        await addItemToOfflineStore('services', result).catch(() => {});
+        return result;
+      } catch (error: any) {
+        if (error.name === 'TypeError' || error.message.includes('fetch')) {
+          await addItemToOfflineStore('services', optimisticService);
+          await addToSyncQueue({
+            method: 'POST',
+            url: api.services.create.path,
+            body: { ...serviceData, _tempId: tempId, _store: 'services' },
+          });
+          return optimisticService;
+        }
+        throw error;
+      }
+    },
+    onMutate: async (newService) => {
+      await queryClient.cancelQueries({ queryKey: [api.services.list.path] });
+      const previous = queryClient.getQueryData([api.services.list.path]);
+      const tempId = -Date.now();
+      (newService as any)._tempId = tempId;
+      queryClient.setQueryData([api.services.list.path], (old: any) => 
+        old ? [...old, { ...newService, id: tempId }] : [{ ...newService, id: tempId }]
+      );
+      return { previous, tempId };
+    },
+    onSuccess: (data, _vars, context) => {
+      if (context) {
+        queryClient.setQueryData([api.services.list.path], (old: any) => 
+          old ? old.map((s: any) => s.id === context.tempId ? data : s) : [data]
+        );
+      }
+      const isOffline = (data as any)?._offline;
+      toast({ 
+        title: isOffline ? "Saved Offline" : "Success", 
+        description: isOffline ? "Service saved locally. Will sync when online." : "Service created" 
       });
-      if (!res.ok) throw new Error("Failed to create service");
-      return api.services.create.responses[201].parse(await res.json());
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.services.list.path] });
-      toast({ title: "Success", description: "Service created" });
-    },
-    onError: (err) => {
+    onError: (err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData([api.services.list.path], context.previous);
       toast({ title: "Error", description: err.message, variant: "destructive" });
     },
   });
@@ -346,20 +476,50 @@ export function useUpdateService() {
   return useMutation({
     mutationFn: async ({ id, ...data }: { id: number } & Partial<InsertService>) => {
       const url = buildUrl(api.services.update.path, { id });
-      const res = await fetch(url, {
-        method: api.services.update.method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-        credentials: "include",
+      
+      if (!navigator.onLine) {
+        await updateItemInOfflineStore('services', id, data);
+        await addToSyncQueue({ method: 'PUT', url, body: { id, ...data, _store: 'services' } });
+        return { id, ...data, _offline: true };
+      }
+
+      try {
+        const res = await fetch(url, {
+          method: api.services.update.method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("Failed to update service");
+        const result = await res.json();
+        await addItemToOfflineStore('services', result).catch(() => {});
+        return result;
+      } catch (error: any) {
+        if (error.name === 'TypeError' || error.message.includes('fetch')) {
+          await updateItemInOfflineStore('services', id, data);
+          await addToSyncQueue({ method: 'PUT', url, body: { id, ...data, _store: 'services' } });
+          return { id, ...data, _offline: true };
+        }
+        throw error;
+      }
+    },
+    onMutate: async ({ id, ...data }) => {
+      await queryClient.cancelQueries({ queryKey: [api.services.list.path] });
+      const previous = queryClient.getQueryData([api.services.list.path]);
+      queryClient.setQueryData([api.services.list.path], (old: any) => 
+        old ? old.map((s: any) => s.id === id ? { ...s, ...data } : s) : old
+      );
+      return { previous };
+    },
+    onSuccess: (data) => {
+      const isOffline = (data as any)?._offline;
+      toast({ 
+        title: isOffline ? "Saved Offline" : "Success", 
+        description: isOffline ? "Changes saved locally. Will sync when online." : "Service updated" 
       });
-      if (!res.ok) throw new Error("Failed to update service");
-      return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.services.list.path] });
-      toast({ title: "Success", description: "Service updated" });
-    },
-    onError: (err) => {
+    onError: (err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData([api.services.list.path], context.previous);
       toast({ title: "Error", description: err.message, variant: "destructive" });
     },
   });
@@ -370,21 +530,55 @@ export function useCreateCategory() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (data: InsertCategory) => {
-      const res = await fetch(api.categories.create.path, {
-        method: api.categories.create.method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to create category");
-      return api.categories.create.responses[201].parse(await res.json());
+    mutationFn: async (data: InsertCategory & { _tempId?: number }) => {
+      const tempId = data._tempId || -Date.now();
+      const { _tempId, ...categoryData } = data;
+      
+      const optimisticCategory = { ...categoryData, id: tempId, createdAt: new Date().toISOString(), _offline: true };
+
+      if (!navigator.onLine) {
+        await addItemToOfflineStore('categories', optimisticCategory);
+        await addToSyncQueue({ method: 'POST', url: api.categories.create.path, body: { ...categoryData, _tempId: tempId, _store: 'categories' } });
+        return optimisticCategory;
+      }
+
+      try {
+        const res = await fetch(api.categories.create.path, {
+          method: api.categories.create.method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(categoryData),
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("Failed to create category");
+        const result = api.categories.create.responses[201].parse(await res.json());
+        await addItemToOfflineStore('categories', result).catch(() => {});
+        return result;
+      } catch (error: any) {
+        if (error.name === 'TypeError' || error.message.includes('fetch')) {
+          await addItemToOfflineStore('categories', optimisticCategory);
+          await addToSyncQueue({ method: 'POST', url: api.categories.create.path, body: { ...categoryData, _tempId: tempId, _store: 'categories' } });
+          return optimisticCategory;
+        }
+        throw error;
+      }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.categories.list.path] });
-      toast({ title: "Success", description: "Category created" });
+    onMutate: async (newCategory) => {
+      await queryClient.cancelQueries({ queryKey: [api.categories.list.path] });
+      const previous = queryClient.getQueryData([api.categories.list.path]);
+      const tempId = -Date.now();
+      (newCategory as any)._tempId = tempId;
+      queryClient.setQueryData([api.categories.list.path], (old: any) => old ? [...old, { ...newCategory, id: tempId }] : [{ ...newCategory, id: tempId }]);
+      return { previous, tempId };
     },
-    onError: (err) => {
+    onSuccess: (data, _vars, context) => {
+      if (context) {
+        queryClient.setQueryData([api.categories.list.path], (old: any) => old ? old.map((c: any) => c.id === context.tempId ? data : c) : [data]);
+      }
+      const isOffline = (data as any)?._offline;
+      toast({ title: isOffline ? "Saved Offline" : "Success", description: isOffline ? "Category saved locally." : "Category created" });
+    },
+    onError: (err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData([api.categories.list.path], context.previous);
       toast({ title: "Error", description: err.message, variant: "destructive" });
     },
   });
@@ -397,20 +591,45 @@ export function useUpdateCategory() {
   return useMutation({
     mutationFn: async ({ id, ...data }: { id: number } & Partial<InsertCategory>) => {
       const url = buildUrl(api.categories.update.path, { id });
-      const res = await fetch(url, {
-        method: api.categories.update.method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to update category");
-      return res.json();
+      
+      if (!navigator.onLine) {
+        await updateItemInOfflineStore('categories', id, data);
+        await addToSyncQueue({ method: 'PUT', url, body: { id, ...data, _store: 'categories' } });
+        return { id, ...data, _offline: true };
+      }
+
+      try {
+        const res = await fetch(url, {
+          method: api.categories.update.method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("Failed to update category");
+        const result = await res.json();
+        await addItemToOfflineStore('categories', result).catch(() => {});
+        return result;
+      } catch (error: any) {
+        if (error.name === 'TypeError' || error.message.includes('fetch')) {
+          await updateItemInOfflineStore('categories', id, data);
+          await addToSyncQueue({ method: 'PUT', url, body: { id, ...data, _store: 'categories' } });
+          return { id, ...data, _offline: true };
+        }
+        throw error;
+      }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.categories.list.path] });
-      toast({ title: "Success", description: "Category updated" });
+    onMutate: async ({ id, ...data }) => {
+      await queryClient.cancelQueries({ queryKey: [api.categories.list.path] });
+      const previous = queryClient.getQueryData([api.categories.list.path]);
+      queryClient.setQueryData([api.categories.list.path], (old: any) => old ? old.map((c: any) => c.id === id ? { ...c, ...data } : c) : old);
+      return { previous };
     },
-    onError: (err) => {
+    onSuccess: (data) => {
+      const isOffline = (data as any)?._offline;
+      toast({ title: isOffline ? "Saved Offline" : "Success", description: isOffline ? "Changes saved locally." : "Category updated" });
+    },
+    onError: (err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData([api.categories.list.path], context.previous);
       toast({ title: "Error", description: err.message, variant: "destructive" });
     },
   });
@@ -423,15 +642,48 @@ export function useDeleteService() {
   return useMutation({
     mutationFn: async (id: number) => {
       const url = buildUrl(api.services.delete.path, { id });
-      const res = await fetch(url, {
-        method: api.services.delete.method,
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to delete service");
+      
+      if (!navigator.onLine) {
+        await deleteItemFromOfflineStore('services', id);
+        if (id > 0) await addToSyncQueue({ method: 'DELETE', url, body: { _store: 'services' } });
+        return { id, _offline: true };
+      }
+
+      try {
+        const res = await fetch(url, {
+          method: api.services.delete.method,
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("Failed to delete service");
+        await deleteItemFromOfflineStore('services', id).catch(() => {});
+        return { id };
+      } catch (error: any) {
+        if (error.name === 'TypeError' || error.message.includes('fetch')) {
+          await deleteItemFromOfflineStore('services', id);
+          if (id > 0) await addToSyncQueue({ method: 'DELETE', url, body: { _store: 'services' } });
+          return { id, _offline: true };
+        }
+        throw error;
+      }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.services.list.path] });
-      toast({ title: "Deleted", description: "Service removed" });
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: [api.services.list.path] });
+      const previous = queryClient.getQueryData([api.services.list.path]);
+      queryClient.setQueryData([api.services.list.path], (old: any) => 
+        old ? old.filter((s: any) => s.id !== id) : old
+      );
+      return { previous };
+    },
+    onSuccess: (result) => {
+      const isOffline = (result as any)?._offline;
+      toast({ 
+        title: "Deleted", 
+        description: isOffline ? "Deleted locally. Will sync when online." : "Service removed" 
+      });
+    },
+    onError: (err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData([api.services.list.path], context.previous);
+      toast({ title: "Error", description: err.message, variant: "destructive" });
     },
   });
 }
@@ -466,21 +718,55 @@ export function useCreateStaff() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (data: InsertStaff) => {
-      const res = await fetch(api.staff.create.path, {
-        method: api.staff.create.method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to create staff");
-      return api.staff.create.responses[201].parse(await res.json());
+    mutationFn: async (data: InsertStaff & { _tempId?: number }) => {
+      const tempId = data._tempId || -Date.now();
+      const { _tempId, ...staffData } = data;
+      
+      const optimisticStaff = { ...staffData, id: tempId, createdAt: new Date().toISOString(), _offline: true };
+
+      if (!navigator.onLine) {
+        await addItemToOfflineStore('staff', optimisticStaff);
+        await addToSyncQueue({ method: 'POST', url: api.staff.create.path, body: { ...staffData, _tempId: tempId, _store: 'staff' } });
+        return optimisticStaff;
+      }
+
+      try {
+        const res = await fetch(api.staff.create.path, {
+          method: api.staff.create.method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(staffData),
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("Failed to create staff");
+        const result = api.staff.create.responses[201].parse(await res.json());
+        await addItemToOfflineStore('staff', result).catch(() => {});
+        return result;
+      } catch (error: any) {
+        if (error.name === 'TypeError' || error.message.includes('fetch')) {
+          await addItemToOfflineStore('staff', optimisticStaff);
+          await addToSyncQueue({ method: 'POST', url: api.staff.create.path, body: { ...staffData, _tempId: tempId, _store: 'staff' } });
+          return optimisticStaff;
+        }
+        throw error;
+      }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.staff.list.path] });
-      toast({ title: "Success", description: "Staff member added" });
+    onMutate: async (newStaff) => {
+      await queryClient.cancelQueries({ queryKey: [api.staff.list.path] });
+      const previous = queryClient.getQueryData([api.staff.list.path]);
+      const tempId = -Date.now();
+      (newStaff as any)._tempId = tempId;
+      queryClient.setQueryData([api.staff.list.path], (old: any) => old ? [...old, { ...newStaff, id: tempId }] : [{ ...newStaff, id: tempId }]);
+      return { previous, tempId };
     },
-    onError: (err) => {
+    onSuccess: (data, _vars, context) => {
+      if (context) {
+        queryClient.setQueryData([api.staff.list.path], (old: any) => old ? old.map((s: any) => s.id === context.tempId ? data : s) : [data]);
+      }
+      const isOffline = (data as any)?._offline;
+      toast({ title: isOffline ? "Saved Offline" : "Success", description: isOffline ? "Staff saved locally." : "Staff member added" });
+    },
+    onError: (err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData([api.staff.list.path], context.previous);
       toast({ title: "Error", description: err.message, variant: "destructive" });
     },
   });
@@ -493,20 +779,45 @@ export function useUpdateStaff() {
   return useMutation({
     mutationFn: async ({ id, ...data }: { id: number } & Partial<InsertStaff>) => {
       const url = buildUrl(api.staff.update.path, { id });
-      const res = await fetch(url, {
-        method: api.staff.update.method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to update staff");
-      return res.json();
+      
+      if (!navigator.onLine) {
+        await updateItemInOfflineStore('staff', id, data);
+        await addToSyncQueue({ method: 'PUT', url, body: { id, ...data, _store: 'staff' } });
+        return { id, ...data, _offline: true };
+      }
+
+      try {
+        const res = await fetch(url, {
+          method: api.staff.update.method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("Failed to update staff");
+        const result = await res.json();
+        await addItemToOfflineStore('staff', result).catch(() => {});
+        return result;
+      } catch (error: any) {
+        if (error.name === 'TypeError' || error.message.includes('fetch')) {
+          await updateItemInOfflineStore('staff', id, data);
+          await addToSyncQueue({ method: 'PUT', url, body: { id, ...data, _store: 'staff' } });
+          return { id, ...data, _offline: true };
+        }
+        throw error;
+      }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.staff.list.path] });
-      toast({ title: "Success", description: "Staff member updated" });
+    onMutate: async ({ id, ...data }) => {
+      await queryClient.cancelQueries({ queryKey: [api.staff.list.path] });
+      const previous = queryClient.getQueryData([api.staff.list.path]);
+      queryClient.setQueryData([api.staff.list.path], (old: any) => old ? old.map((s: any) => s.id === id ? { ...s, ...data } : s) : old);
+      return { previous };
     },
-    onError: (err) => {
+    onSuccess: (data) => {
+      const isOffline = (data as any)?._offline;
+      toast({ title: isOffline ? "Saved Offline" : "Success", description: isOffline ? "Changes saved locally." : "Staff member updated" });
+    },
+    onError: (err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData([api.staff.list.path], context.previous);
       toast({ title: "Error", description: err.message, variant: "destructive" });
     },
   });
@@ -519,15 +830,40 @@ export function useDeleteStaff() {
   return useMutation({
     mutationFn: async (id: number) => {
       const url = buildUrl(api.staff.delete.path, { id });
-      const res = await fetch(url, {
-        method: api.staff.delete.method,
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to delete staff");
+      
+      if (!navigator.onLine) {
+        await deleteItemFromOfflineStore('staff', id);
+        if (id > 0) await addToSyncQueue({ method: 'DELETE', url, body: { _store: 'staff' } });
+        return { id, _offline: true };
+      }
+
+      try {
+        const res = await fetch(url, { method: api.staff.delete.method, credentials: "include" });
+        if (!res.ok) throw new Error("Failed to delete staff");
+        await deleteItemFromOfflineStore('staff', id).catch(() => {});
+        return { id };
+      } catch (error: any) {
+        if (error.name === 'TypeError' || error.message.includes('fetch')) {
+          await deleteItemFromOfflineStore('staff', id);
+          if (id > 0) await addToSyncQueue({ method: 'DELETE', url, body: { _store: 'staff' } });
+          return { id, _offline: true };
+        }
+        throw error;
+      }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.staff.list.path] });
-      toast({ title: "Deleted", description: "Staff member removed" });
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: [api.staff.list.path] });
+      const previous = queryClient.getQueryData([api.staff.list.path]);
+      queryClient.setQueryData([api.staff.list.path], (old: any) => old ? old.filter((s: any) => s.id !== id) : old);
+      return { previous };
+    },
+    onSuccess: (result) => {
+      const isOffline = (result as any)?._offline;
+      toast({ title: "Deleted", description: isOffline ? "Deleted locally." : "Staff member removed" });
+    },
+    onError: (err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData([api.staff.list.path], context.previous);
+      toast({ title: "Error", description: err.message, variant: "destructive" });
     },
   });
 }
@@ -562,21 +898,55 @@ export function useCreateClient() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (data: InsertClient) => {
-      const res = await fetch(api.clients.create.path, {
-        method: api.clients.create.method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to create client");
-      return api.clients.create.responses[201].parse(await res.json());
+    mutationFn: async (data: InsertClient & { _tempId?: number }) => {
+      const tempId = data._tempId || -Date.now();
+      const { _tempId, ...clientData } = data;
+      
+      const optimisticClient = { ...clientData, id: tempId, createdAt: new Date().toISOString(), _offline: true };
+
+      if (!navigator.onLine) {
+        await addItemToOfflineStore('clients', optimisticClient);
+        await addToSyncQueue({ method: 'POST', url: api.clients.create.path, body: { ...clientData, _tempId: tempId, _store: 'clients' } });
+        return optimisticClient;
+      }
+
+      try {
+        const res = await fetch(api.clients.create.path, {
+          method: api.clients.create.method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(clientData),
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("Failed to create client");
+        const result = api.clients.create.responses[201].parse(await res.json());
+        await addItemToOfflineStore('clients', result).catch(() => {});
+        return result;
+      } catch (error: any) {
+        if (error.name === 'TypeError' || error.message.includes('fetch')) {
+          await addItemToOfflineStore('clients', optimisticClient);
+          await addToSyncQueue({ method: 'POST', url: api.clients.create.path, body: { ...clientData, _tempId: tempId, _store: 'clients' } });
+          return optimisticClient;
+        }
+        throw error;
+      }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.clients.list.path] });
-      toast({ title: "Success", description: "Client added" });
+    onMutate: async (newClient) => {
+      await queryClient.cancelQueries({ queryKey: [api.clients.list.path] });
+      const previous = queryClient.getQueryData([api.clients.list.path]);
+      const tempId = -Date.now();
+      (newClient as any)._tempId = tempId;
+      queryClient.setQueryData([api.clients.list.path], (old: any) => old ? [...old, { ...newClient, id: tempId }] : [{ ...newClient, id: tempId }]);
+      return { previous, tempId };
     },
-    onError: (err) => {
+    onSuccess: (data, _vars, context) => {
+      if (context) {
+        queryClient.setQueryData([api.clients.list.path], (old: any) => old ? old.map((c: any) => c.id === context.tempId ? data : c) : [data]);
+      }
+      const isOffline = (data as any)?._offline;
+      toast({ title: isOffline ? "Saved Offline" : "Success", description: isOffline ? "Client saved locally." : "Client added" });
+    },
+    onError: (err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData([api.clients.list.path], context.previous);
       toast({ title: "Error", description: err.message, variant: "destructive" });
     },
   });
@@ -589,20 +959,45 @@ export function useUpdateClient() {
   return useMutation({
     mutationFn: async ({ id, ...data }: { id: number } & Partial<InsertClient>) => {
       const url = buildUrl(api.clients.update.path, { id });
-      const res = await fetch(url, {
-        method: api.clients.update.method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to update client");
-      return res.json();
+      
+      if (!navigator.onLine) {
+        await updateItemInOfflineStore('clients', id, data);
+        await addToSyncQueue({ method: 'PUT', url, body: { id, ...data, _store: 'clients' } });
+        return { id, ...data, _offline: true };
+      }
+
+      try {
+        const res = await fetch(url, {
+          method: api.clients.update.method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("Failed to update client");
+        const result = await res.json();
+        await addItemToOfflineStore('clients', result).catch(() => {});
+        return result;
+      } catch (error: any) {
+        if (error.name === 'TypeError' || error.message.includes('fetch')) {
+          await updateItemInOfflineStore('clients', id, data);
+          await addToSyncQueue({ method: 'PUT', url, body: { id, ...data, _store: 'clients' } });
+          return { id, ...data, _offline: true };
+        }
+        throw error;
+      }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.clients.list.path] });
-      toast({ title: "Success", description: "Client updated" });
+    onMutate: async ({ id, ...data }) => {
+      await queryClient.cancelQueries({ queryKey: [api.clients.list.path] });
+      const previous = queryClient.getQueryData([api.clients.list.path]);
+      queryClient.setQueryData([api.clients.list.path], (old: any) => old ? old.map((c: any) => c.id === id ? { ...c, ...data } : c) : old);
+      return { previous };
     },
-    onError: (err) => {
+    onSuccess: (data) => {
+      const isOffline = (data as any)?._offline;
+      toast({ title: isOffline ? "Saved Offline" : "Success", description: isOffline ? "Changes saved locally." : "Client updated" });
+    },
+    onError: (err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData([api.clients.list.path], context.previous);
       toast({ title: "Error", description: err.message, variant: "destructive" });
     },
   });
@@ -615,15 +1010,40 @@ export function useDeleteClient() {
   return useMutation({
     mutationFn: async (id: number) => {
       const url = buildUrl(api.clients.delete.path, { id });
-      const res = await fetch(url, {
-        method: api.clients.delete.method,
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to delete client");
+      
+      if (!navigator.onLine) {
+        await deleteItemFromOfflineStore('clients', id);
+        if (id > 0) await addToSyncQueue({ method: 'DELETE', url, body: { _store: 'clients' } });
+        return { id, _offline: true };
+      }
+
+      try {
+        const res = await fetch(url, { method: api.clients.delete.method, credentials: "include" });
+        if (!res.ok) throw new Error("Failed to delete client");
+        await deleteItemFromOfflineStore('clients', id).catch(() => {});
+        return { id };
+      } catch (error: any) {
+        if (error.name === 'TypeError' || error.message.includes('fetch')) {
+          await deleteItemFromOfflineStore('clients', id);
+          if (id > 0) await addToSyncQueue({ method: 'DELETE', url, body: { _store: 'clients' } });
+          return { id, _offline: true };
+        }
+        throw error;
+      }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.clients.list.path] });
-      toast({ title: "Deleted", description: "Client removed" });
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: [api.clients.list.path] });
+      const previous = queryClient.getQueryData([api.clients.list.path]);
+      queryClient.setQueryData([api.clients.list.path], (old: any) => old ? old.filter((c: any) => c.id !== id) : old);
+      return { previous };
+    },
+    onSuccess: (result) => {
+      const isOffline = (result as any)?._offline;
+      toast({ title: "Deleted", description: isOffline ? "Deleted locally." : "Client removed" });
+    },
+    onError: (err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData([api.clients.list.path], context.previous);
+      toast({ title: "Error", description: err.message, variant: "destructive" });
     },
   });
 }
@@ -632,11 +1052,24 @@ export function useProducts() {
   return useQuery({
     queryKey: ["/api/products"],
     queryFn: async () => {
-      const res = await fetch("/api/products", { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch products");
-      return res.json();
+      if (navigator.onLine) {
+        try {
+          const res = await fetch("/api/products", { credentials: "include" });
+          if (res.ok) {
+            const data = await res.json();
+            await saveToOfflineStore('products', data).catch(() => {});
+            return data;
+          }
+        } catch (e) {
+          console.log("[Offline] Network error, using cached products");
+        }
+      }
+      const offlineData = await getFromOfflineStore<any>('products');
+      if (offlineData.length > 0) return offlineData;
+      throw new Error("No products available offline");
     },
     staleTime: 5 * 60 * 1000,
+    retry: false,
   });
 }
 
