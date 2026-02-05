@@ -66,11 +66,17 @@
   
   --radius: 1rem;
 
-  /* Liquid Glass Effect Variables */
-  --glass-bg: rgba(255, 255, 255, 0.72);
-  --glass-border: rgba(255, 255, 255, 0.5);
-  --glass-shadow: 0 8px 32px rgba(135, 90, 31, 0.08);
+  /* iOS 26 Liquid Glass Effect Variables */
+  --glass-bg: rgba(255, 255, 255, 0.15);
+  --glass-bg-solid: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.35);
+  --glass-border-highlight: rgba(255, 255, 255, 0.6);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  --glass-shadow-lg: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
   --glass-blur: 20px;
+  --glass-blur-lg: 40px;
+  --glass-specular: rgba(255, 255, 255, 0.4);
+  --glass-refraction: rgba(255, 255, 255, 0.08);
 }
 
 .dark {
@@ -114,10 +120,15 @@
   --sidebar-border: 20 47% 15%;
   --sidebar-ring: 24 100% 55%;
 
-  /* Dark Glass Variables */
-  --glass-bg: rgba(30, 41, 59, 0.72);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  /* iOS 26 Dark Liquid Glass Variables */
+  --glass-bg: rgba(30, 41, 59, 0.25);
+  --glass-bg-solid: rgba(30, 41, 59, 0.9);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --glass-border-highlight: rgba(255, 255, 255, 0.2);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --glass-shadow-lg: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  --glass-specular: rgba(255, 255, 255, 0.15);
+  --glass-refraction: rgba(255, 255, 255, 0.03);
 }
 
 @layer base {
@@ -147,35 +158,136 @@
   }
 }
 
-/* iOS Liquid Glass Effects */
+/* iOS 26 Liquid Glass Effects */
 .glass {
+  position: relative;
   background: var(--glass-bg);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%);
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow);
 }
 
+/* Main glass card with refraction & specular highlights */
 .glass-card {
+  position: relative;
   background: var(--glass-bg);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%);
   border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow), 
-              inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  box-shadow: 
+    var(--glass-shadow),
+    inset 0 1px 0 var(--glass-specular),
+    inset 0 -1px 0 var(--glass-refraction);
   border-radius: var(--radius);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Specular highlight on top edge */
+.glass-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    var(--glass-border-highlight) 50%, 
+    transparent 100%
+  );
+  border-radius: 100%;
+  pointer-events: none;
+}
+
+/* Inner refraction glow */
+.glass-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    var(--glass-refraction) 0%,
+    transparent 50%,
+    var(--glass-refraction) 100%
+  );
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.glass-card:hover {
+  box-shadow: 
+    var(--glass-shadow-lg),
+    inset 0 1px 0 var(--glass-specular),
+    inset 0 -1px 0 var(--glass-refraction);
+  border-color: var(--glass-border-highlight);
+}
+
+/* Subtle glass for form fields & inputs */
 .glass-subtle {
-  background: rgba(255, 255, 255, 0.5);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .dark .glass-subtle {
-  background: rgba(30, 41, 59, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Elevated glass panel with stronger effect */
+.glass-elevated {
+  position: relative;
+  background: var(--glass-bg-solid);
+  backdrop-filter: blur(var(--glass-blur-lg)) saturate(200%);
+  -webkit-backdrop-filter: blur(var(--glass-blur-lg)) saturate(200%);
+  border: 1px solid var(--glass-border-highlight);
+  box-shadow: 
+    var(--glass-shadow-lg),
+    inset 0 2px 0 var(--glass-specular);
+  border-radius: calc(var(--radius) * 1.5);
+}
+
+/* Liquid shine animation on hover */
+@keyframes liquidShine {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.glass-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-shine::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    120deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.1) 40%,
+    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0.1) 60%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.glass-shine:hover::before {
+  opacity: 1;
+  animation: liquidShine 1.5s ease-in-out;
 }
 
 /* Warm/Liquid Gradients */
@@ -362,25 +474,68 @@
 }
 
 /* Appointment Card Styles - iOS Liquid Glass */
+/* iOS 26 Liquid Glass Appointment Card */
 .appointment-card {
-  @apply rounded-2xl p-3 transition-all duration-200;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  @apply rounded-2xl p-3 transition-all duration-300;
+  position: relative;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--glass-border);
   box-shadow: 
-    0 4px 16px rgba(0, 0, 0, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    0 4px 20px rgba(0, 0, 0, 0.1),
+    0 1px 3px rgba(0, 0, 0, 0.05),
+    inset 0 1px 0 var(--glass-specular),
+    inset 0 -1px 0 var(--glass-refraction);
+  overflow: hidden;
+}
+
+/* Specular highlight on appointment card */
+.appointment-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 15%;
+  right: 15%;
+  height: 1px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(255, 255, 255, 0.5) 50%, 
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+/* Subtle refraction overlay */
+.appointment-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    transparent 40%,
+    transparent 60%,
+    rgba(255, 255, 255, 0.05) 100%
+  );
+  pointer-events: none;
+  border-radius: inherit;
 }
 
 .appointment-card:hover {
-  transform: translateY(-2px) scale(1.01);
+  transform: translateY(-3px) scale(1.02);
+  border-color: var(--glass-border-highlight);
   box-shadow: 
-    0 8px 24px rgba(0, 0, 0, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    0 12px 40px rgba(0, 0, 0, 0.15),
+    0 4px 12px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 var(--glass-specular),
+    inset 0 -1px 0 var(--glass-refraction);
 }
 
 .appointment-card:active {
   transform: scale(0.98);
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 var(--glass-specular);
 }
 
 /* iOS Style Input */
