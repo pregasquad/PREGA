@@ -1171,9 +1171,14 @@ export default function Planning() {
     e.stopPropagation();
     try {
       await apiRequest("PUT", `/api/appointments/${app.id}`, {
-        paid: true
+        ...app,
+        paid: true,
+        updatedAt: new Date().toISOString(),
+        _store: 'appointments',
+        _offlineUpdatedAt: new Date().toISOString(),
       });
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments/all"] });
       toast({ title: t("planning.paymentConfirmed"), description: t("planning.paymentConfirmedDesc") });
     } catch (error) {
       console.error("Payment error:", error);
@@ -1226,13 +1231,18 @@ export default function Planning() {
     }
 
     try {
-      await apiRequest("PUT", `/api/appointments/${draggedAppointment.id}`, {
+      const updateData = {
         ...draggedAppointment,
         servicesJson: parsedServicesJson,
         staff: staffName,
         startTime: newTime,
-      });
+        updatedAt: new Date().toISOString(),
+        _store: 'appointments',
+        _offlineUpdatedAt: new Date().toISOString(),
+      };
+      await apiRequest("PUT", `/api/appointments/${draggedAppointment.id}`, updateData);
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments/all"] });
       toast({ 
         title: t("planning.appointmentMoved"), 
         description: `${draggedAppointment.client} → ${staffName} @ ${newTime}` 
