@@ -837,6 +837,84 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/public/add-service-to-appointment", publicRateLimitMiddleware, async (req, res) => {
+    try {
+      const { appointmentId, phone, serviceId } = z.object({
+        appointmentId: z.number(),
+        phone: z.string().min(8).max(20),
+        serviceId: z.number()
+      }).parse(req.body);
+
+      const normalizedReqPhone = normalizePhone(phone);
+      if (normalizedReqPhone.length < 8) {
+        return res.status(400).json({ error: "Phone number must have at least 8 digits" });
+      }
+
+      const appointments = await storage.getAppointments();
+      const appointment = appointments.find(a => a.id === appointmentId);
+
+      if (!appointment) {
+        return res.status(404).json({ error: "Appointment not found" });
+      }
+
+      if (!appointment.phone) {
+        return res.status(403).json({ error: "Cannot modify this appointment" });
+      }
+
+      const normalizedAppPhone = normalizePhone(appointment.phone);
+      const minLength = Math.min(normalizedReqPhone.length, normalizedAppPhone.length, 10);
+      if (normalizedReqPhone.slice(-minLength) !== normalizedAppPhone.slice(-minLength)) {
+        return res.status(403).json({ error: "Phone number does not match" });
+      }
+
+      const services = await storage.getServices();
+      const serviceToAdd = services.find(s => s.id === serviceId);
+      if (!serviceToAdd) {
+        return res.status(404).json({ error: "Service not found" });
+      }
+
+      let existingServices: { id: number; name: string; price: number; duration: number }[] = [];
+      if (appointment.servicesJson) {
+        try {
+          const parsed = typeof appointment.servicesJson === 'string' 
+            ? JSON.parse(appointment.servicesJson) 
+            : appointment.servicesJson;
+          if (Array.isArray(parsed)) {
+            existingServices = parsed;
+          }
+        } catch {}
+      }
+
+      const alreadyHasService = existingServices.some(s => s.id === serviceId || s.name.toLowerCase() === serviceToAdd.name.toLowerCase());
+      if (alreadyHasService) {
+        return res.status(400).json({ error: "Service already in appointment" });
+      }
+
+      existingServices.push({
+        id: serviceToAdd.id,
+        name: serviceToAdd.name,
+        price: serviceToAdd.price,
+        duration: serviceToAdd.duration
+      });
+
+      const totalDuration = existingServices.reduce((sum, s) => sum + s.duration, 0);
+      const totalPrice = existingServices.reduce((sum, s) => sum + s.price, 0);
+      const serviceNames = existingServices.map(s => s.name).join(", ");
+
+      await storage.updateAppointment(appointmentId, {
+        servicesJson: JSON.stringify(existingServices) as any,
+        service: serviceNames,
+        duration: totalDuration,
+        total: totalPrice
+      });
+
+      res.json({ success: true, message: "Service added to appointment" });
+    } catch (err) {
+      console.error("[ADD SERVICE TO APPOINTMENT] Error:", err);
+      res.status(400).json({ error: "Failed to add service" });
+    }
+  });
+
   // Appointments - protected routes
   app.get(api.appointments.list.path, isPinAuthenticated, async (req, res) => {
     const { date } = z.object({ date: z.string().optional() }).parse(req.query);

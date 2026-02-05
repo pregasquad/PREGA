@@ -551,12 +551,20 @@ export default function MyBookings() {
         )}
 
         {/* Personalized Recommendations */}
-        {hasSearched && phone && (
+        {hasSearched && phone && appointments.length > 0 && (
           <div className="mt-6">
             <ServiceRecommendations
               phone={phone}
+              appointmentId={appointments[0]?.id}
               onAddService={(serviceName) => {
                 window.location.href = `/booking?service=${encodeURIComponent(serviceName)}&phone=${encodeURIComponent(phone)}`;
+              }}
+              onServiceAdded={() => {
+                handleSearch();
+                toast({
+                  title: t("myBookings.serviceAdded", { defaultValue: "Service ajouté" }),
+                  description: t("myBookings.serviceAddedDesc", { defaultValue: "Le service a été ajouté à votre prochain RDV" })
+                });
               }}
               className="glass-card p-4 rounded-2xl"
             />

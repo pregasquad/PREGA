@@ -19,21 +19,26 @@ interface ServiceRecommendation {
 
 interface ServiceRecommendationsProps {
   phone: string;
-  onAddService: (serviceName: string) => void;
+  onAddService: (serviceName: string, serviceId?: number) => void;
   selectedServices?: string[];
   className?: string;
+  appointmentId?: number;
+  onServiceAdded?: () => void;
 }
 
 export function ServiceRecommendations({ 
   phone, 
   onAddService, 
   selectedServices = [],
-  className 
+  className,
+  appointmentId,
+  onServiceAdded
 }: ServiceRecommendationsProps) {
   const { t } = useTranslation();
   const [recommendations, setRecommendations] = useState<ServiceRecommendation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [addingServiceId, setAddingServiceId] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchRecommendations = async () => {
@@ -118,9 +123,39 @@ export function ServiceRecommendations({
                 size="sm"
                 variant="outline"
                 className="shrink-0 h-8 px-3 rounded-lg border-primary/30 hover:bg-primary/10"
-                onClick={() => onAddService(rec.serviceName)}
+                disabled={addingServiceId === rec.serviceId}
+                onClick={async () => {
+                  if (appointmentId && rec.serviceId) {
+                    setAddingServiceId(rec.serviceId);
+                    try {
+                      const res = await fetch("/api/public/add-service-to-appointment", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          appointmentId,
+                          phone,
+                          serviceId: rec.serviceId
+                        })
+                      });
+                      if (res.ok) {
+                        setRecommendations(prev => prev.filter(r => r.serviceId !== rec.serviceId));
+                        onServiceAdded?.();
+                      }
+                    } catch (err) {
+                      console.error("Failed to add service:", err);
+                    } finally {
+                      setAddingServiceId(null);
+                    }
+                  } else {
+                    onAddService(rec.serviceName, rec.serviceId);
+                  }
+                }}
               >
-                <Plus className="w-3.5 h-3.5 mr-1" />
+                {addingServiceId === rec.serviceId ? (
+                  <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                ) : (
+                  <Plus className="w-3.5 h-3.5 mr-1" />
+                )}
                 {t("recommendations.add", { defaultValue: "Ajouter" })}
               </Button>
             </div>
