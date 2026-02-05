@@ -348,6 +348,7 @@ export async function refreshAndCacheData(): Promise<void> {
     { url: '/api/staff-deductions', store: 'staffDeductions' as const },
     { url: '/api/staff-commissions', store: 'staffCommissions' as const },
     { url: '/api/products', store: 'products' as const },
+    { url: '/api/business-settings', store: 'businessSettings' as const },
   ];
 
   const promises = endpoints.map(async ({ url, store }) => {

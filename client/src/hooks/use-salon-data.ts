@@ -4,7 +4,7 @@ import { type InsertAppointment, type InsertService, type InsertCategory, type I
 import { useToast } from "@/hooks/use-toast";
 import { getFromOfflineStore, saveToOfflineStore, addItemToOfflineStore, addToSyncQueue, updateItemInOfflineStore, deleteItemFromOfflineStore } from "@/lib/offlineDb";
 
-type OfflineStoreName = 'appointments' | 'services' | 'categories' | 'staff' | 'clients' | 'charges' | 'products';
+type OfflineStoreName = 'appointments' | 'services' | 'categories' | 'staff' | 'clients' | 'charges' | 'products' | 'staffDeductions' | 'staffCommissions' | 'businessSettings';
 
 // Helper to check if we should use offline mode
 function shouldUseOffline(): boolean {

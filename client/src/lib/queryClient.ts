@@ -20,6 +20,7 @@ const urlToStoreMap: Record<string, string> = {
   '/api/staff-deductions': 'staffDeductions',
   '/api/staff-commissions': 'staffCommissions',
   '/api/products': 'products',
+  '/api/business-settings': 'businessSettings',
 };
 
 function getStoreNameFromUrl(url: string): string | null {
@@ -42,6 +43,7 @@ function getStoreAndIdFromMutationUrl(url: string): { store: string | null; id: 
     { pattern: /^\/api\/staff-deductions\/(\d+)$/, store: 'staffDeductions' },
     { pattern: /^\/api\/staff-commissions\/(\d+)$/, store: 'staffCommissions' },
     { pattern: /^\/api\/products\/(\d+)$/, store: 'products' },
+    { pattern: /^\/api\/business-settings\/(\d+)$/, store: 'businessSettings' },
   ];
 
   for (const { pattern, store } of patterns) {
@@ -61,6 +63,7 @@ function getStoreAndIdFromMutationUrl(url: string): { store: string | null; id: 
     { pattern: /^\/api\/staff-deductions$/, store: 'staffDeductions' },
     { pattern: /^\/api\/staff-commissions$/, store: 'staffCommissions' },
     { pattern: /^\/api\/products$/, store: 'products' },
+    { pattern: /^\/api\/business-settings$/, store: 'businessSettings' },
   ];
 
   for (const { pattern, store } of createPatterns) {
