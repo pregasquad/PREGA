@@ -59,7 +59,7 @@ export async function getClientRecommendations(phone: string): Promise<ServiceRe
     .orderBy(desc(s.appointments.date));
 
   if (clientAppointments.length === 0) {
-    return getDefaultRecommendations();
+    return [];
   }
 
   const allServices: ServiceRecord[] = await db().select().from(s.services);
@@ -329,23 +329,3 @@ function getUpsellRecommendations(
   return recommendations;
 }
 
-async function getDefaultRecommendations(): Promise<ServiceRecommendation[]> {
-  const s = schema();
-  const allServices: ServiceRecord[] = await db().select().from(s.services);
-  
-  const popularServices = allServices
-    .filter(svc => svc.price > 0)
-    .sort((a, b) => b.price - a.price)
-    .slice(0, 2);
-
-  return popularServices.map(svc => ({
-    type: "popular_pairing" as const,
-    serviceName: svc.name,
-    serviceId: svc.id,
-    price: svc.price,
-    duration: svc.duration,
-    message: `Découvrez notre ${svc.name}`,
-    messageKey: "recommendations.discover",
-    priority: 20,
-  }));
-}
