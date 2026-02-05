@@ -125,30 +125,38 @@ export async function syncPendingChanges(): Promise<{ success: number; failed: n
               
               const serverCheck = await fetch(checkUrl, { 
                 method: 'GET', 
-                credentials: 'include' 
+                credentials: 'include',
+                headers: { 'Accept': 'application/json' }
               });
               
               if (serverCheck.ok) {
-                const serverData = await serverCheck.json();
-                const serverUpdatedAt = serverData?.updatedAt;
-                
-                // Only do conflict check if we have both timestamps
-                if (serverUpdatedAt && offlineUpdatedAt) {
-                  const serverTime = new Date(serverUpdatedAt).getTime();
-                  const offlineTime = new Date(offlineUpdatedAt).getTime();
+                // Verify response is JSON before parsing
+                const contentType = serverCheck.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                  console.warn(`[Sync] Conflict check got non-JSON response for ${storeName} ${itemId}, skipping check`);
+                  // Continue with the update without conflict check
+                } else {
+                  const serverData = await serverCheck.json();
+                  const serverUpdatedAt = serverData?.updatedAt;
                   
-                  // Server version is newer - skip this update and use server data
-                  if (serverTime > offlineTime) {
-                    console.log(`[Sync] Conflict detected for ${storeName} ${itemId}: server is newer (${serverUpdatedAt} > ${offlineUpdatedAt}), using server data`);
-                    await removeFromSyncQueue(item.id);
-                    await addItemToOfflineStore(storeName, serverData);
-                    success++;
-                    continue; // Skip to next queue item
+                  // Only do conflict check if we have both timestamps
+                  if (serverUpdatedAt && offlineUpdatedAt) {
+                    const serverTime = new Date(serverUpdatedAt).getTime();
+                    const offlineTime = new Date(offlineUpdatedAt).getTime();
+                    
+                    // Server version is newer - skip this update and use server data
+                    if (serverTime > offlineTime) {
+                      console.log(`[Sync] Conflict detected for ${storeName} ${itemId}: server is newer (${serverUpdatedAt} > ${offlineUpdatedAt}), using server data`);
+                      await removeFromSyncQueue(item.id);
+                      await addItemToOfflineStore(storeName, serverData);
+                      success++;
+                      continue; // Skip to next queue item
+                    }
+                    console.log(`[Sync] No conflict for ${storeName} ${itemId}: offline is newer or equal, applying update`);
+                  } else if (!offlineUpdatedAt) {
+                    // No offline timestamp - apply update but log warning
+                    console.warn(`[Sync] No offline timestamp for ${storeName} ${itemId}, applying update without conflict check`);
                   }
-                  console.log(`[Sync] No conflict for ${storeName} ${itemId}: offline is newer or equal, applying update`);
-                } else if (!offlineUpdatedAt) {
-                  // No offline timestamp - apply update but log warning
-                  console.warn(`[Sync] No offline timestamp for ${storeName} ${itemId}, applying update without conflict check`);
                 }
               } else if (serverCheck.status === 404) {
                 // Item doesn't exist on server - skip this update
