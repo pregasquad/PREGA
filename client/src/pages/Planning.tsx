@@ -1814,49 +1814,47 @@ export default function Planning() {
                           </div>
                         ) : (
                           /* Multi-row layout for longer appointments */
-                          <>
-                            <div className="relative z-10 min-w-0 flex-1 flex flex-col">
+                          <div className="relative z-10 flex flex-col justify-between h-full w-full">
+                            <div className="min-w-0 flex-1 flex flex-col justify-center">
                               <div 
-                                className="font-semibold text-sm truncate drop-shadow-sm leading-tight" 
+                                className="font-semibold text-xs leading-tight line-clamp-2" 
                                 title={booking.service}
                               >
                                 {booking.service}
                               </div>
                               {booking.client && (
-                                <div className="text-[11px] opacity-90 truncate drop-shadow-sm" title={booking.client}>
+                                <div className="text-[10px] opacity-90 truncate mt-0.5" title={booking.client}>
                                   {booking.client}
                                 </div>
                               )}
                             </div>
-                            <div className="relative z-10 flex items-center justify-between gap-1 shrink-0">
-                              <span className="text-[10px] opacity-90 font-medium whitespace-nowrap">{booking.total}</span>
-                              <span className="text-[10px] opacity-85 whitespace-nowrap">{booking.startTime}</span>
-                              <div className="flex items-center gap-1">
-                                <span className="text-[10px] opacity-80">{booking.duration}′</span>
-                                {booking.paid ? (
-                                  <span 
-                                    className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center shadow-md" 
-                                    role="status"
-                                    aria-label={t("common.paid")}
-                                  >
-                                    <Check className="w-3 h-3 text-white" />
-                                  </span>
-                                ) : (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      e.preventDefault();
-                                      handleMarkAsPaid(e, booking);
-                                    }}
-                                    className="w-6 h-6 bg-white/30 hover:bg-white/50 rounded-full flex items-center justify-center transition-colors shadow-md relative z-20 pointer-events-auto"
-                                    aria-label={t("planning.markAsPaid")}
-                                  >
-                                    <CreditCard className="w-3 h-3" />
-                                  </button>
-                                )}
-                              </div>
+                            <div className="flex items-center gap-1 shrink-0 mt-1">
+                              {booking.paid ? (
+                                <span 
+                                  className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center shrink-0" 
+                                  role="status"
+                                  aria-label={t("common.paid")}
+                                >
+                                  <Check className="w-2.5 h-2.5 text-white" />
+                                </span>
+                              ) : (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    e.preventDefault();
+                                    handleMarkAsPaid(e, booking);
+                                  }}
+                                  className="w-5 h-5 bg-white/30 hover:bg-white/50 rounded-full flex items-center justify-center transition-colors shrink-0 relative z-20 pointer-events-auto"
+                                  aria-label={t("planning.markAsPaid")}
+                                >
+                                  <CreditCard className="w-2.5 h-2.5" />
+                                </button>
+                              )}
+                              <span className="text-[10px] opacity-80 shrink-0">{booking.duration}′</span>
+                              <span className="text-[10px] opacity-90 shrink-0">{booking.startTime}</span>
+                              <span className="text-[10px] font-bold bg-white/20 px-1 py-0.5 rounded shrink-0 ml-auto">{booking.total}</span>
                             </div>
-                          </>
+                          </div>
                         )}
                       </div>
                     </div>
