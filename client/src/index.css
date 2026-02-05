@@ -21,8 +21,8 @@
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
   --font-display: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
 
-  /* iOS Liquid Glass Theme - Light Mode */
-  --background: 220 20% 97%;
+  /* iOS 26 Liquid Glass Theme - Light Mode */
+  --background: 210 40% 98%;
   --foreground: 222 47% 11%;
   
   /* Card: Frosted glass effect base */
@@ -33,36 +33,37 @@
   --popover: 0 0% 100%;
   --popover-foreground: 222 47% 11%;
   
-  /* Primary: Elegant Orange (iOS style) */
-  --primary: 24 100% 50%;
+  /* Primary: iOS Cyan/Teal (Liquid Glass) */
+  --primary: 192 91% 48%;
   --primary-foreground: 0 0% 100%;
   
-  /* Secondary: Soft Warm Gray */
-  --secondary: 30 14% 96%;
-  --secondary-foreground: 20 47% 11%;
+  /* Secondary: Cool Slate */
+  --secondary: 210 40% 96%;
+  --secondary-foreground: 222 47% 11%;
   
-  --muted: 30 14% 96%;
-  --muted-foreground: 24 9% 46%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 215 16% 47%;
   
-  --accent: 24 100% 95%;
-  --accent-foreground: 24 100% 35%;
+  /* Accent: Teal/Cyan highlight */
+  --accent: 192 91% 95%;
+  --accent-foreground: 192 91% 35%;
   
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
   
-  --border: 30 13% 91%;
-  --input: 30 13% 91%;
-  --ring: 24 100% 50%;
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
+  --ring: 192 91% 48%;
   
-  /* Sidebar: Dark elegant */
-  --sidebar-background: 20 47% 11%;
-  --sidebar-foreground: 30 40% 98%;
-  --sidebar-primary: 24 100% 50%;
+  /* Sidebar: Dark glass with blue tint */
+  --sidebar-background: 222 47% 11%;
+  --sidebar-foreground: 210 40% 98%;
+  --sidebar-primary: 192 91% 48%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 20 47% 18%;
-  --sidebar-accent-foreground: 30 40% 98%;
-  --sidebar-border: 20 47% 20%;
-  --sidebar-ring: 24 100% 50%;
+  --sidebar-accent: 217 33% 17%;
+  --sidebar-accent-foreground: 210 40% 98%;
+  --sidebar-border: 217 33% 17%;
+  --sidebar-ring: 192 91% 48%;
   
   --radius: 1rem;
 
@@ -77,48 +78,56 @@
   --glass-blur-lg: 40px;
   --glass-specular: rgba(255, 255, 255, 0.4);
   --glass-refraction: rgba(255, 255, 255, 0.08);
+  
+  /* iOS 26 Water Colors */
+  --water-cyan: 192 91% 48%;
+  --water-teal: 173 80% 40%;
+  --water-sky: 199 89% 48%;
+  --water-emerald: 160 84% 39%;
 }
 
 .dark {
-  --background: 20 47% 6%;
-  --foreground: 30 40% 98%;
+  /* iOS 26 Liquid Glass Theme - Dark Mode */
+  --background: 222 47% 6%;
+  --foreground: 210 40% 98%;
   
   /* Card: Dark glass effect */
-  --card: 20 47% 10%;
-  --card-foreground: 30 40% 98%;
+  --card: 217 33% 10%;
+  --card-foreground: 210 40% 98%;
   
   /* Popover/Dropdown: Dark glass */
-  --popover: 20 47% 10%;
-  --popover-foreground: 30 40% 98%;
+  --popover: 217 33% 10%;
+  --popover-foreground: 210 40% 98%;
   
-  --primary: 24 100% 55%;
+  /* Primary: Cyan/Teal (Liquid Glass) */
+  --primary: 192 91% 50%;
   --primary-foreground: 0 0% 100%;
   
-  --secondary: 20 47% 15%;
-  --secondary-foreground: 30 40% 98%;
+  --secondary: 217 33% 15%;
+  --secondary-foreground: 210 40% 98%;
   
-  --muted: 20 47% 15%;
-  --muted-foreground: 24 20% 65%;
+  --muted: 217 33% 15%;
+  --muted-foreground: 215 20% 65%;
   
-  --accent: 20 47% 18%;
-  --accent-foreground: 24 100% 70%;
+  --accent: 217 33% 18%;
+  --accent-foreground: 192 91% 70%;
   
   --destructive: 0 62% 50%;
   --destructive-foreground: 0 0% 100%;
   
-  --border: 20 47% 18%;
-  --input: 20 47% 18%;
-  --ring: 24 100% 55%;
+  --border: 217 33% 18%;
+  --input: 217 33% 18%;
+  --ring: 192 91% 50%;
   
-  /* Sidebar: Darker elegant */
-  --sidebar-background: 20 47% 4%;
-  --sidebar-foreground: 30 40% 98%;
-  --sidebar-primary: 24 100% 55%;
+  /* Sidebar: Dark elegant with blue tint */
+  --sidebar-background: 222 47% 4%;
+  --sidebar-foreground: 210 40% 98%;
+  --sidebar-primary: 192 91% 50%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 20 47% 12%;
-  --sidebar-accent-foreground: 30 40% 98%;
-  --sidebar-border: 20 47% 15%;
-  --sidebar-ring: 24 100% 55%;
+  --sidebar-accent: 217 33% 12%;
+  --sidebar-accent-foreground: 210 40% 98%;
+  --sidebar-border: 217 33% 15%;
+  --sidebar-ring: 192 91% 50%;
 
   /* iOS 26 Dark Liquid Glass Variables */
   --glass-bg: rgba(30, 41, 59, 0.25);
@@ -129,6 +138,12 @@
   --glass-shadow-lg: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   --glass-specular: rgba(255, 255, 255, 0.15);
   --glass-refraction: rgba(255, 255, 255, 0.03);
+  
+  /* iOS 26 Water Colors - Dark Mode */
+  --water-cyan: 192 91% 50%;
+  --water-teal: 173 80% 45%;
+  --water-sky: 199 89% 50%;
+  --water-emerald: 160 84% 45%;
 }
 
 @layer base {
@@ -443,30 +458,47 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
-/* Warm/Liquid Gradients */
+/* iOS 26 Water/Liquid Gradients */
 .liquid-gradient {
   background: linear-gradient(135deg, 
-    hsl(24, 100%, 50%) 0%, 
-    hsl(32, 100%, 55%) 25%,
-    hsl(40, 100%, 55%) 50%,
-    hsl(45, 100%, 50%) 75%,
-    hsl(50, 100%, 45%) 100%
+    hsl(192, 91%, 48%) 0%, 
+    hsl(173, 80%, 40%) 25%,
+    hsl(160, 84%, 39%) 50%,
+    hsl(192, 91%, 48%) 75%,
+    hsl(199, 89%, 48%) 100%
   );
 }
 
 .liquid-gradient-subtle {
   background: linear-gradient(135deg, 
-    hsl(24, 100%, 95%) 0%, 
-    hsl(32, 100%, 96%) 50%,
-    hsl(40, 100%, 97%) 100%
+    hsl(192, 91%, 97%) 0%, 
+    hsl(173, 80%, 97%) 50%,
+    hsl(199, 89%, 98%) 100%
   );
 }
 
 .dark .liquid-gradient-subtle {
   background: linear-gradient(135deg, 
-    hsl(24, 50%, 15%) 0%, 
-    hsl(32, 50%, 12%) 50%,
-    hsl(20, 47%, 10%) 100%
+    hsl(217, 33%, 15%) 0%, 
+    hsl(222, 47%, 12%) 50%,
+    hsl(217, 33%, 10%) 100%
+  );
+}
+
+/* Water shimmer gradient */
+.water-gradient {
+  background: linear-gradient(135deg, 
+    hsl(192, 91%, 48%) 0%, 
+    hsl(199, 89%, 48%) 50%,
+    hsl(173, 80%, 40%) 100%
+  );
+}
+
+/* Accent gradient for important elements */
+.accent-gradient {
+  background: linear-gradient(135deg, 
+    hsl(192, 91%, 48%) 0%, 
+    hsl(160, 84%, 39%) 100%
   );
 }
 
@@ -747,7 +779,7 @@
 
 /* Gradient Text */
 .gradient-text {
-  background: linear-gradient(135deg, hsl(24, 100%, 50%), hsl(40, 100%, 50%));
+  background: linear-gradient(135deg, hsl(192, 91%, 48%), hsl(160, 84%, 39%));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
