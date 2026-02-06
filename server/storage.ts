@@ -79,10 +79,12 @@ export interface IStorage extends IAuthStorage {
 
   getCharges(): Promise<Charge[]>;
   createCharge(charge: InsertCharge): Promise<Charge>;
+  updateCharge(id: number, data: Partial<InsertCharge>): Promise<void>;
   deleteCharge(id: number): Promise<void>;
 
   getStaffDeductions(): Promise<StaffDeduction[]>;
   createStaffDeduction(deduction: InsertStaffDeduction): Promise<StaffDeduction>;
+  updateStaffDeduction(id: number, data: Partial<InsertStaffDeduction>): Promise<void>;
   deleteStaffDeduction(id: number): Promise<void>;
   clearStaffDeduction(id: number): Promise<void>;
 
@@ -661,6 +663,11 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
+  async updateCharge(id: number, data: Partial<InsertCharge>): Promise<void> {
+    const s = schema();
+    await db().update(s.charges).set(data).where(eq(s.charges.id, id));
+  }
+
   async deleteCharge(id: number): Promise<void> {
     const s = schema();
     await db().delete(s.charges).where(eq(s.charges.id, id));
@@ -683,6 +690,11 @@ export class DatabaseStorage implements IStorage {
     }
     const [created] = await db().insert(s.staffDeductions).values(deduction).returning();
     return created;
+  }
+
+  async updateStaffDeduction(id: number, data: Partial<InsertStaffDeduction>): Promise<void> {
+    const s = schema();
+    await db().update(s.staffDeductions).set(data).where(eq(s.staffDeductions.id, id));
   }
 
   async deleteStaffDeduction(id: number): Promise<void> {

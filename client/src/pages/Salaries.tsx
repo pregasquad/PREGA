@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { DollarSign, Users, CalendarIcon, TrendingUp, Building2, RefreshCw, Plus, Trash2, Receipt, UserMinus, ChevronDown, CheckCircle } from "lucide-react";
+import { DollarSign, Users, CalendarIcon, TrendingUp, Building2, RefreshCw, Plus, Trash2, Receipt, UserMinus, ChevronDown, CheckCircle, Pencil } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
@@ -39,6 +39,9 @@ export default function Salaries() {
   const [showDeductionDialog, setShowDeductionDialog] = useState(false);
   const [expensesOpen, setExpensesOpen] = useState(false);
   const [deductionsOpen, setDeductionsOpen] = useState(false);
+  const [unclearedOpen, setUnclearedOpen] = useState(false);
+  const [editingCharge, setEditingCharge] = useState<Charge | null>(null);
+  const [editingDeduction, setEditingDeduction] = useState<StaffDeduction | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [newCharge, setNewCharge] = useState({ type: "rent", name: "", amount: 0, date: format(new Date(), "yyyy-MM-dd") });
   const [newDeduction, setNewDeduction] = useState<{ staffName: string; type: "advance" | "loan" | "penalty" | "other"; description: string; amount: number; date: string }>({ staffName: "", type: "advance", description: "", amount: 0, date: format(new Date(), "yyyy-MM-dd") });
@@ -154,6 +157,28 @@ export default function Salaries() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/staff-deductions"] });
       toast({ title: t("salaries.cleared") });
+    },
+  });
+
+  const updateChargeMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      await apiRequest("PATCH", `/api/charges/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/charges"] });
+      setEditingCharge(null);
+      toast({ title: t("common.save") });
+    },
+  });
+
+  const updateDeductionMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      await apiRequest("PATCH", `/api/staff-deductions/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff-deductions"] });
+      setEditingDeduction(null);
+      toast({ title: t("common.save") });
     },
   });
 
@@ -282,6 +307,7 @@ export default function Salaries() {
   });
 
   const filteredDeductions = deductions.filter(d => {
+    if (d.cleared) return false;
     const deductionDate = startOfDay(parseISO(d.date));
     const staffMatch = selectedStaff === "all" || d.staffName === selectedStaff;
     return staffMatch &&
@@ -345,40 +371,53 @@ export default function Salaries() {
       </div>
 
       {unclearedDeductions.length > 0 && (
-        <Card className="border-orange-300 bg-orange-50 dark:bg-orange-950/30 dark:border-orange-800">
-          <CardContent className="p-3 space-y-2">
-            <div className="flex items-center gap-2">
-              <Receipt className="h-4 w-4 text-orange-600" />
-              <span className="font-bold text-orange-700 dark:text-orange-400">{t("salaries.unclearedDeductions")}</span>
-              <span className="text-orange-600 font-bold ms-auto">{formatCurrency(totalUncleared)} DH</span>
-            </div>
-            <p className="text-xs text-orange-600/70 dark:text-orange-400/70">{t("salaries.unclearedDeductionsDesc")}</p>
-            <div className="space-y-1.5">
-              {unclearedDeductions.map((d) => (
-                <div key={d.id} className="flex items-center justify-between gap-2 p-2 bg-white/60 dark:bg-white/5 rounded-lg">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">{d.staffName}</span>
-                      <span className="text-xs px-1.5 py-0.5 bg-orange-100 dark:bg-orange-900/40 rounded text-orange-700 dark:text-orange-400">{getDeductionTypeLabel(d.type)}</span>
-                    </div>
-                    <div className="text-xs text-muted-foreground truncate">{d.description} - {format(parseISO(d.date), "d/M/yy")}</div>
-                  </div>
-                  <span className="text-orange-600 font-semibold text-sm whitespace-nowrap">{formatCurrency(d.amount)} DH</span>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-7 text-xs border-green-300 text-green-700 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-950/30 shrink-0"
-                    disabled={clearDeductionMutation.isPending}
-                    onClick={() => clearDeductionMutation.mutate(d.id)}
-                  >
-                    <CheckCircle className="h-3 w-3 me-1" />
-                    {t("salaries.markAsCleared")}
-                  </Button>
+        <Collapsible open={unclearedOpen} onOpenChange={setUnclearedOpen}>
+          <Card className="border-orange-300 bg-orange-50 dark:bg-orange-950/30 dark:border-orange-800">
+            <CollapsibleTrigger asChild>
+              <CardHeader className="flex flex-row items-center justify-between p-3 pb-2 cursor-pointer hover:bg-orange-100/50 dark:hover:bg-orange-900/20 transition-colors">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Receipt className="h-4 w-4 text-orange-600" />
+                  <span className="text-orange-700 dark:text-orange-400">{t("salaries.unclearedDeductions")}</span>
+                  <span className="text-sm font-normal text-orange-600/70">({unclearedDeductions.length})</span>
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <span className="text-orange-600 font-bold text-sm">{formatCurrency(totalUncleared)} DH</span>
+                  <ChevronDown className={`h-4 w-4 text-orange-600 transition-transform ${unclearedOpen ? "rotate-180" : ""}`} />
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="p-3 pt-0 space-y-2">
+                <p className="text-xs text-orange-600/70 dark:text-orange-400/70 mb-2">{t("salaries.unclearedDeductionsDesc")}</p>
+                {unclearedDeductions.map((d) => (
+                  <div key={d.id} className="p-3 bg-white/60 dark:bg-white/5 rounded-lg flex items-center justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">{d.staffName}</span>
+                        <span className="text-xs px-1.5 py-0.5 bg-orange-100 dark:bg-orange-900/40 rounded text-orange-700 dark:text-orange-400">{getDeductionTypeLabel(d.type)}</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground truncate">{d.description}</div>
+                      <div className="flex gap-2 text-sm mt-0.5">
+                        <span className="text-orange-600 font-semibold">{formatCurrency(d.amount)} DH</span>
+                        <span className="text-muted-foreground">{format(parseISO(d.date), "d/M/yy")}</span>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 text-xs border-green-300 text-green-700 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-950/30 shrink-0"
+                      disabled={clearDeductionMutation.isPending}
+                      onClick={() => clearDeductionMutation.mutate(d.id)}
+                    >
+                      <CheckCircle className="h-3 w-3 me-1" />
+                      {t("salaries.markAsCleared")}
+                    </Button>
+                  </div>
+                ))}
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
       )}
 
       <div className="flex gap-2 flex-wrap">
@@ -687,14 +726,24 @@ export default function Salaries() {
                       <span className="text-muted-foreground">{format(parseISO(charge.date), "d/M/yy")}</span>
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 shrink-0"
-                    onClick={() => deleteChargeMutation.mutate(charge.id)}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setEditingCharge(charge)}
+                    >
+                      <Pencil className="h-4 w-4 text-blue-600" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => deleteChargeMutation.mutate(charge.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
                 </div>
               ))}
               {filteredCharges.length === 0 && (
@@ -810,14 +859,24 @@ export default function Salaries() {
                       <span className="text-muted-foreground">{format(parseISO(deduction.date), "d/M/yy")}</span>
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 shrink-0"
-                    onClick={() => deleteDeductionMutation.mutate(deduction.id)}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setEditingDeduction(deduction)}
+                    >
+                      <Pencil className="h-4 w-4 text-blue-600" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => deleteDeductionMutation.mutate(deduction.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
                 </div>
               ))}
               {filteredDeductions.length === 0 && (
@@ -829,6 +888,133 @@ export default function Salaries() {
           </CollapsibleContent>
         </Card>
       </Collapsible>
+
+      <Dialog open={!!editingCharge} onOpenChange={(open) => !open && setEditingCharge(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("common.edit")} - {t("salaries.expensesAndCosts")}</DialogTitle>
+          </DialogHeader>
+          {editingCharge && (
+            <div className="space-y-4">
+              <div>
+                <Label>{t("salaries.expenseType")}</Label>
+                <Select value={editingCharge.type} onValueChange={(v) => setEditingCharge({ ...editingCharge, type: v })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="rent">{t("salaries.rent")}</SelectItem>
+                    <SelectItem value="utilities">{t("salaries.utilities")}</SelectItem>
+                    <SelectItem value="products">{t("salaries.products")}</SelectItem>
+                    <SelectItem value="equipment">{t("salaries.equipment")}</SelectItem>
+                    <SelectItem value="maintenance">{t("salaries.maintenance")}</SelectItem>
+                    <SelectItem value="other">{t("salaries.other")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>{t("common.description")}</Label>
+                <Input
+                  value={editingCharge.name}
+                  onChange={(e) => setEditingCharge({ ...editingCharge, name: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>{t("salaries.amountDH")}</Label>
+                <Input
+                  type="number"
+                  value={editingCharge.amount || ""}
+                  onChange={(e) => setEditingCharge({ ...editingCharge, amount: parseFloat(e.target.value) || 0 })}
+                />
+              </div>
+              <div>
+                <Label>{t("common.date")}</Label>
+                <Input
+                  type="date"
+                  value={editingCharge.date}
+                  onChange={(e) => setEditingCharge({ ...editingCharge, date: e.target.value })}
+                />
+              </div>
+              <Button
+                className="w-full"
+                onClick={() => updateChargeMutation.mutate({ id: editingCharge.id, data: { type: editingCharge.type, name: editingCharge.name, amount: editingCharge.amount, date: editingCharge.date } })}
+                disabled={!editingCharge.name || !editingCharge.amount || updateChargeMutation.isPending}
+              >
+                {t("common.save")}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editingDeduction} onOpenChange={(open) => !open && setEditingDeduction(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("common.edit")} - {t("salaries.staffDeductions")}</DialogTitle>
+          </DialogHeader>
+          {editingDeduction && (
+            <div className="space-y-4">
+              <div>
+                <Label>{t("salaries.staff")}</Label>
+                <Select value={editingDeduction.staffName} onValueChange={(v) => setEditingDeduction({ ...editingDeduction, staffName: v })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {staff.map((s) => (
+                      <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>{t("salaries.deductionType")}</Label>
+                <Select value={editingDeduction.type} onValueChange={(v) => setEditingDeduction({ ...editingDeduction, type: v })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="advance">{t("salaries.advance")}</SelectItem>
+                    <SelectItem value="loan">{t("salaries.loan")}</SelectItem>
+                    <SelectItem value="penalty">{t("salaries.penalty")}</SelectItem>
+                    <SelectItem value="other">{t("salaries.other")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>{t("common.description")}</Label>
+                <Input
+                  value={editingDeduction.description}
+                  onChange={(e) => setEditingDeduction({ ...editingDeduction, description: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>{t("salaries.amountDH")}</Label>
+                <Input
+                  type="number"
+                  value={editingDeduction.amount || ""}
+                  onChange={(e) => setEditingDeduction({ ...editingDeduction, amount: parseFloat(e.target.value) || 0 })}
+                />
+              </div>
+              <div>
+                <Label>{t("common.date")}</Label>
+                <Input
+                  type="date"
+                  value={editingDeduction.date}
+                  onChange={(e) => setEditingDeduction({ ...editingDeduction, date: e.target.value })}
+                />
+              </div>
+              <Button
+                className="w-full"
+                onClick={() => updateDeductionMutation.mutate({ id: editingDeduction.id, data: { staffName: editingDeduction.staffName, type: editingDeduction.type, description: editingDeduction.description, amount: editingDeduction.amount, date: editingDeduction.date } })}
+                disabled={!editingDeduction.staffName || !editingDeduction.description || !editingDeduction.amount || updateDeductionMutation.isPending}
+              >
+                {t("common.save")}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

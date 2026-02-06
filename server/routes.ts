@@ -1554,6 +1554,16 @@ export async function registerRoutes(
     }
   });
 
+  app.patch("/api/charges/:id", isPinAuthenticated, requirePermission("manage_expenses"), async (req, res) => {
+    try {
+      await storage.updateCharge(Number(req.params.id), req.body);
+      res.status(200).json({ success: true });
+    } catch (err) {
+      console.error("Error updating charge:", err);
+      res.status(500).json({ message: "Failed to update charge" });
+    }
+  });
+
   app.delete("/api/charges/:id", isPinAuthenticated, requirePermission("manage_expenses"), async (req, res) => {
     try {
       await storage.deleteCharge(Number(req.params.id));
@@ -1580,6 +1590,15 @@ export async function registerRoutes(
       res.status(201).json(item);
     } catch (err) {
       res.status(400).json({ message: "Failed to create deduction" });
+    }
+  });
+
+  app.patch("/api/staff-deductions/:id", isPinAuthenticated, requirePermission("manage_salaries"), async (req, res) => {
+    try {
+      await storage.updateStaffDeduction(Number(req.params.id), req.body);
+      res.status(200).json({ success: true });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to update deduction" });
     }
   });
 
