@@ -848,7 +848,7 @@ export default function Booking() {
                             {(selectedCategory ? [selectedCategory] : filteredCategories).map(cat => (
                               <div key={cat}>
                                 {!selectedCategory && (
-                                  <div className="px-3 py-2 text-xs font-bold text-primary uppercase tracking-wider bg-primary/5 sticky top-0 z-10">
+                                  <div className="px-3 py-2 text-xs font-bold text-orange-600 uppercase tracking-wider bg-gradient-to-r from-orange-100 to-amber-50 dark:from-orange-950/40 dark:to-amber-950/20 dark:text-orange-400 sticky top-0 z-10 border-b border-orange-200/60 dark:border-orange-800/40">
                                     {cat}
                                   </div>
                                 )}
