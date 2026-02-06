@@ -158,7 +158,8 @@ export async function registerRoutes(
       name: s.name,
       category: s.category,
       duration: s.duration,
-      price: s.price
+      price: s.price,
+      isStartingPrice: s.isStartingPrice ?? false
     }));
     res.json(sanitizedItems);
   });
