@@ -461,6 +461,36 @@ export async function ensureProductExpiryColumns(): Promise<void> {
   }
 }
 
+export async function ensureDeductionClearedColumns(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      const [rows] = await connection.query(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_NAME = 'staff_deductions' AND COLUMN_NAME = 'cleared'
+      `);
+      if ((rows as any[]).length === 0) {
+        await connection.query(`ALTER TABLE staff_deductions ADD COLUMN cleared BOOLEAN NOT NULL DEFAULT FALSE`);
+        await connection.query(`ALTER TABLE staff_deductions ADD COLUMN cleared_at TIMESTAMP NULL`);
+      }
+      connection.release();
+    } else {
+      await pool.query(`
+        DO $$ 
+        BEGIN 
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'staff_deductions' AND column_name = 'cleared') THEN
+            ALTER TABLE staff_deductions ADD COLUMN cleared BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE staff_deductions ADD COLUMN cleared_at TIMESTAMP;
+          END IF;
+        END $$;
+      `);
+    }
+    console.log("Deduction cleared columns ready");
+  } catch (error) {
+    console.error("Failed to ensure deduction cleared columns:", error);
+  }
+}
+
 export async function ensureServiceStartingPriceColumn(): Promise<void> {
   try {
     if (dbDialect === 'mysql') {

@@ -308,7 +308,12 @@
     "loan": "قرض",
     "penalty": "غرامة",
     "deductionDescription": "وصف الخصم",
-    "noDeductionsForPeriod": "لا توجد خصومات للفترة المحددة"
+    "noDeductionsForPeriod": "لا توجد خصومات للفترة المحددة",
+    "unclearedDeductions": "خصومات غير مستردة",
+    "unclearedDeductionsDesc": "تبقى هذه الخصومات ظاهرة حتى تأكيد استرداد المبلغ",
+    "markAsCleared": "تم الاسترداد",
+    "cleared": "تم الاسترداد",
+    "noUnclearedDeductions": "تم استرداد جميع الخصومات"
   },
   "staffPerformance": {
     "title": "أداء الموظفين",

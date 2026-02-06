@@ -1592,6 +1592,16 @@ export async function registerRoutes(
     }
   });
 
+  app.patch("/api/staff-deductions/:id/clear", isPinAuthenticated, requirePermission("manage_salaries"), async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      await storage.clearStaffDeduction(id);
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to clear deduction" });
+    }
+  });
+
   // Clients - protected routes
   app.get("/api/clients", isPinAuthenticated, async (_req, res) => {
     const items = await storage.getClients();

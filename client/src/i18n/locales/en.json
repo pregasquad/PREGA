@@ -308,7 +308,12 @@
     "loan": "Loan",
     "penalty": "Penalty",
     "deductionDescription": "Deduction description",
-    "noDeductionsForPeriod": "No deductions for the selected period"
+    "noDeductionsForPeriod": "No deductions for the selected period",
+    "unclearedDeductions": "Uncleared Deductions",
+    "unclearedDeductionsDesc": "These deductions stay visible until you confirm the money is paid back",
+    "markAsCleared": "Paid Back",
+    "cleared": "Cleared",
+    "noUnclearedDeductions": "All deductions have been cleared"
   },
   "staffPerformance": {
     "title": "Staff Performance",

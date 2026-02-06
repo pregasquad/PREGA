@@ -158,6 +158,8 @@ export const staffDeductions = pgTable("staff_deductions", {
   description: text("description").notNull(),
   amount: doublePrecision("amount").notNull(),
   date: text("date").notNull(),
+  cleared: boolean("cleared").notNull().default(false),
+  clearedAt: timestamp("cleared_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

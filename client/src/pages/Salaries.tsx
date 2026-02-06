@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { DollarSign, Users, CalendarIcon, TrendingUp, Building2, RefreshCw, Plus, Trash2, Receipt, UserMinus, ChevronDown } from "lucide-react";
+import { DollarSign, Users, CalendarIcon, TrendingUp, Building2, RefreshCw, Plus, Trash2, Receipt, UserMinus, ChevronDown, CheckCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
@@ -146,6 +146,23 @@ export default function Salaries() {
       queryClient.invalidateQueries({ queryKey: ["/api/staff-deductions"] });
     },
   });
+
+  const clearDeductionMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("PATCH", `/api/staff-deductions/${id}/clear`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff-deductions"] });
+      toast({ title: t("salaries.cleared") });
+    },
+  });
+
+  const unclearedDeductions = deductions.filter(d => !d.cleared);
+  const totalUnclearedByStaff = unclearedDeductions.reduce((acc, d) => {
+    acc[d.staffName] = (acc[d.staffName] || 0) + d.amount;
+    return acc;
+  }, {} as Record<string, number>);
+  const totalUncleared = unclearedDeductions.reduce((sum, d) => sum + d.amount, 0);
 
   const getDateRange = () => {
     switch (period) {
@@ -326,6 +343,43 @@ export default function Salaries() {
           <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
         </Button>
       </div>
+
+      {unclearedDeductions.length > 0 && (
+        <Card className="border-orange-300 bg-orange-50 dark:bg-orange-950/30 dark:border-orange-800">
+          <CardContent className="p-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <Receipt className="h-4 w-4 text-orange-600" />
+              <span className="font-bold text-orange-700 dark:text-orange-400">{t("salaries.unclearedDeductions")}</span>
+              <span className="text-orange-600 font-bold ms-auto">{formatCurrency(totalUncleared)} DH</span>
+            </div>
+            <p className="text-xs text-orange-600/70 dark:text-orange-400/70">{t("salaries.unclearedDeductionsDesc")}</p>
+            <div className="space-y-1.5">
+              {unclearedDeductions.map((d) => (
+                <div key={d.id} className="flex items-center justify-between gap-2 p-2 bg-white/60 dark:bg-white/5 rounded-lg">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">{d.staffName}</span>
+                      <span className="text-xs px-1.5 py-0.5 bg-orange-100 dark:bg-orange-900/40 rounded text-orange-700 dark:text-orange-400">{getDeductionTypeLabel(d.type)}</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground truncate">{d.description} - {format(parseISO(d.date), "d/M/yy")}</div>
+                  </div>
+                  <span className="text-orange-600 font-semibold text-sm whitespace-nowrap">{formatCurrency(d.amount)} DH</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs border-green-300 text-green-700 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-950/30 shrink-0"
+                    disabled={clearDeductionMutation.isPending}
+                    onClick={() => clearDeductionMutation.mutate(d.id)}
+                  >
+                    <CheckCircle className="h-3 w-3 me-1" />
+                    {t("salaries.markAsCleared")}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="flex gap-2 flex-wrap">
         <Select value={period} onValueChange={(v) => setPeriod(v as PeriodType)}>

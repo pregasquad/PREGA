@@ -308,7 +308,12 @@
     "loan": "Prêt",
     "penalty": "Pénalité",
     "deductionDescription": "Description de la déduction",
-    "noDeductionsForPeriod": "Aucune déduction pour la période sélectionnée"
+    "noDeductionsForPeriod": "Aucune déduction pour la période sélectionnée",
+    "unclearedDeductions": "Déductions Non Récupérées",
+    "unclearedDeductionsDesc": "Ces déductions restent affichées jusqu'à confirmation du remboursement",
+    "markAsCleared": "Récupéré",
+    "cleared": "Récupéré",
+    "noUnclearedDeductions": "Toutes les déductions ont été récupérées"
   },
   "staffPerformance": {
     "title": "Performance Staff",

@@ -84,6 +84,7 @@ export interface IStorage extends IAuthStorage {
   getStaffDeductions(): Promise<StaffDeduction[]>;
   createStaffDeduction(deduction: InsertStaffDeduction): Promise<StaffDeduction>;
   deleteStaffDeduction(id: number): Promise<void>;
+  clearStaffDeduction(id: number): Promise<void>;
 
   getExpenseCategories(): Promise<ExpenseCategory[]>;
   createExpenseCategory(category: InsertExpenseCategory): Promise<ExpenseCategory>;
@@ -687,6 +688,11 @@ export class DatabaseStorage implements IStorage {
   async deleteStaffDeduction(id: number): Promise<void> {
     const s = schema();
     await db().delete(s.staffDeductions).where(eq(s.staffDeductions.id, id));
+  }
+
+  async clearStaffDeduction(id: number): Promise<void> {
+    const s = schema();
+    await db().update(s.staffDeductions).set({ cleared: true, clearedAt: new Date() }).where(eq(s.staffDeductions.id, id));
   }
 
   async getExpenseCategories(): Promise<ExpenseCategory[]> {
