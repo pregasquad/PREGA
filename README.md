@@ -1,6 +1,20 @@
 # PREGA SQUAD - Salon Management System
 
-A comprehensive full-stack application designed to streamline beauty salon operations. Manage appointments, services, staff, clients, inventory, and finances — all from one place.
+PREGA SQUAD is an all-in-one salon management platform built to simplify and modernize how beauty salons operate day to day. From scheduling appointments and managing staff to tracking inventory, handling finances, and rewarding loyal clients — everything is in one place.
+
+The app features a beautiful, modern interface inspired by iOS Liquid Glass design with a cyan/teal color palette, full dark mode support, and seamless responsiveness across desktop, tablet, and mobile devices. It works as a Progressive Web App (PWA), meaning it can be installed on any phone or computer and continues to work even without an internet connection — syncing all changes automatically when you're back online.
+
+Whether you're a solo stylist or running a team of professionals, PREGA SQUAD gives you the tools to stay organized, serve your clients better, and grow your business with real data and insights.
+
+### Highlights
+- Schedule and manage appointments with a visual drag-and-drop calendar
+- Let clients book online through a public booking page
+- Track client history, loyalty points, gift cards, and referrals
+- Manage staff schedules, commissions, goals, and performance
+- Monitor inventory with low-stock and expiry date alerts
+- Analyze revenue, expenses, and salon profitability
+- Works offline — install on your phone and use anywhere
+- Available in French, English, and Arabic with full RTL support
 
 ## Features
 
