@@ -114,14 +114,14 @@ export async function addItemToOfflineStore<T extends { id?: any }>(
   }
 }
 
-export async function updateItemInOfflineStore<T extends { id?: any }>(
+export async function updateItemInOfflineStore(
   storeName: keyof OfflineStore,
   id: any,
-  updates: Partial<T>
+  updates: Record<string, any>
 ): Promise<void> {
   try {
     const database = await initOfflineDb();
-    const existing = await getFromOfflineStore<T>(storeName);
+    const existing = await getFromOfflineStore<any>(storeName);
     const updated = existing.map(item => 
       item.id === id ? { ...item, ...updates } : item
     );
