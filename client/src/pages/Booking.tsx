@@ -97,10 +97,9 @@ const TIME_SLOTS = [
   "23:00", "23:30", "00:00"
 ];
 
-const SALON_LOCATION = {
+const DEFAULT_SALON_LOCATION = {
   lat: 30.399840,
   lng: -9.555420,
-  name: "Salon PREGASQUAD",
   address: "PROJECT ANNASER, IMM 25, Agadir"
 };
 
@@ -111,6 +110,7 @@ export default function Booking() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [businessName, setBusinessName] = useState("PREGA SQUAD");
   
   const [staffList, setStaffList] = useState<Staff[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -160,16 +160,23 @@ export default function Booking() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [staffRes, servicesRes, packagesRes] = await Promise.all([
+        const [staffRes, servicesRes, packagesRes, settingsRes] = await Promise.all([
           fetch("/api/public/staff"),
           fetch("/api/public/services"),
-          fetch("/api/public/packages")
+          fetch("/api/public/packages"),
+          fetch("/api/public/settings")
         ]);
         
-        // Validate responses before parsing JSON
         const staffData = staffRes.ok ? await staffRes.json() : [];
         const servicesData = servicesRes.ok ? await servicesRes.json() : [];
         const packagesData = packagesRes.ok ? await packagesRes.json() : [];
+        
+        if (settingsRes.ok) {
+          const settingsData = await settingsRes.json();
+          if (settingsData?.businessName) {
+            setBusinessName(settingsData.businessName);
+          }
+        }
         
         setStaffList(staffData);
         setServices(servicesData);
@@ -542,8 +549,8 @@ export default function Booking() {
                   <MapPin className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h4 className="font-semibold text-sm text-emerald-900 dark:text-emerald-100">{SALON_LOCATION.name}</h4>
-                  <p className="text-xs text-emerald-700/70 dark:text-emerald-300/70">{SALON_LOCATION.address}</p>
+                  <h4 className="font-semibold text-sm text-emerald-900 dark:text-emerald-100">Salon {businessName}</h4>
+                  <p className="text-xs text-emerald-700/70 dark:text-emerald-300/70">{DEFAULT_SALON_LOCATION.address}</p>
                 </div>
               </div>
               <p className="text-xs text-emerald-600/80 dark:text-emerald-400/80 mb-3 text-center">
@@ -551,7 +558,7 @@ export default function Booking() {
               </p>
               <div className="grid grid-cols-3 gap-2">
               <a 
-                href={`https://www.google.com/maps/dir/?api=1&destination=${SALON_LOCATION.lat},${SALON_LOCATION.lng}`}
+                href={`https://www.google.com/maps/dir/?api=1&destination=${DEFAULT_SALON_LOCATION.lat},${DEFAULT_SALON_LOCATION.lng}`}
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -564,7 +571,7 @@ export default function Booking() {
                 </Button>
               </a>
               <a 
-                href={`https://maps.apple.com/?daddr=${SALON_LOCATION.lat},${SALON_LOCATION.lng}&dirflg=d`}
+                href={`https://maps.apple.com/?daddr=${DEFAULT_SALON_LOCATION.lat},${DEFAULT_SALON_LOCATION.lng}&dirflg=d`}
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -577,7 +584,7 @@ export default function Booking() {
                 </Button>
               </a>
               <a 
-                href={`https://waze.com/ul?ll=${SALON_LOCATION.lat},${SALON_LOCATION.lng}&navigate=yes`}
+                href={`https://waze.com/ul?ll=${DEFAULT_SALON_LOCATION.lat},${DEFAULT_SALON_LOCATION.lng}&navigate=yes`}
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -617,7 +624,7 @@ export default function Booking() {
       <div className="max-w-4xl mx-auto space-y-4 relative z-10 animate-fade-in">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/prega_logo.png" alt="PregaSquad" className="w-12 h-12" />
+            <img src="/prega_logo.png" alt={businessName} className="w-12 h-12" />
             <div>
               <h1 className="text-xl md:text-2xl font-display font-bold gradient-text leading-tight">
                 {t("booking.title")}
@@ -1033,7 +1040,7 @@ export default function Booking() {
         </div>
 
         <p className="text-center text-sm text-muted-foreground py-4">
-          PREGASQUAD Beauty Salon
+          {businessName} Beauty Salon
         </p>
       </div>
     </div>

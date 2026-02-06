@@ -8,6 +8,17 @@ import { PushNotifications } from "@/components/PushNotifications";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { initOfflineDb } from "@/lib/offlineDb";
 import { startAutoSync, refreshAndCacheData } from "@/lib/syncService";
+import { useBusinessName } from "@/hooks/use-salon-data";
+
+function MobileBusinessName() {
+  const businessName = useBusinessName();
+  return (
+    <div className="flex items-center gap-2 md:hidden">
+      <img src="/logo.png" alt={businessName} className="w-8 h-8 rounded-full object-cover" />
+      <span className="text-sm font-bold text-cyan-500">{businessName}</span>
+    </div>
+  );
+}
 
 function SwipeableContent({ children, isRtl }: { children: React.ReactNode; isRtl: boolean }) {
   const { openMobile, setOpenMobile, isMobile } = useSidebar();
@@ -113,10 +124,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <header className="flex h-12 items-center justify-between px-4 border-b bg-background shrink-0 z-20">
             <div className="flex items-center gap-3">
               <SidebarTrigger />
-              <div className="flex items-center gap-2 md:hidden">
-                <img src="/logo.png" alt="PREGA SQUAD" className="w-8 h-8 rounded-full object-cover" />
-                <span className="text-sm font-bold text-cyan-500">PREGA SQUAD</span>
-              </div>
+              <MobileBusinessName />
             </div>
             <div className="flex items-center gap-2">
               <PushNotifications />

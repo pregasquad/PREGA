@@ -9,6 +9,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { setDatabaseOffline, isEffectivelyOffline } from "@/lib/databaseStatus";
+import { useBusinessName } from "@/hooks/use-salon-data";
 
 async function hashPin(pin: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -79,6 +80,7 @@ const ROLE_GLOW: Record<string, string> = {
 export function FirstLogin({ children }: FirstLoginProps) {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const businessName = useBusinessName();
   const [location] = useLocation();
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -369,9 +371,9 @@ export function FirstLogin({ children }: FirstLoginProps) {
         <div className="flex flex-col items-center gap-8 text-center">
           {/* Logo section */}
           <div className="flex flex-col items-center gap-3">
-            <img src="/prega_logo.png" alt="PregaSquad" className="w-24 h-24" />
+            <img src="/prega_logo.png" alt={businessName} className="w-24 h-24" />
             <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-white dark:via-slate-200 dark:to-slate-400 bg-clip-text text-transparent tracking-tight">
-              PREGA SQUAD
+              {businessName}
             </h1>
           </div>
 

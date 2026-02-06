@@ -19,6 +19,50 @@ async function offlineFetch(url: string, options: RequestInit = {}): Promise<Res
   return fetch(url, { ...options, credentials: 'include' });
 }
 
+export function useBusinessSettings() {
+  return useQuery<{
+    businessName: string;
+    currency: string;
+    currencySymbol: string;
+    openingTime: string;
+    closingTime: string;
+    workingDays: number[];
+  }>({
+    queryKey: ["/api/business-settings"],
+    queryFn: async () => {
+      if (navigator.onLine) {
+        try {
+          const res = await fetch("/api/business-settings", { credentials: "include" });
+          if (res.ok) {
+            const data = await res.json();
+            await saveToOfflineStore('businessSettings', [data]).catch(() => {});
+            return data;
+          }
+          if (res.status === 401) {
+            const publicRes = await fetch("/api/public/settings");
+            if (publicRes.ok) {
+              const publicData = await publicRes.json();
+              return { businessName: publicData.businessName || "PREGA SQUAD", currency: publicData.currency || "MAD", currencySymbol: publicData.currencySymbol || "DH", openingTime: "09:00", closingTime: "19:00", workingDays: [1, 2, 3, 4, 5, 6] };
+            }
+          }
+        } catch (e) {
+          console.log("[Offline] Network error, using cached business settings");
+        }
+      }
+      const offlineData = await getFromOfflineStore<any>('businessSettings');
+      if (offlineData.length > 0) return offlineData[0];
+      return { businessName: "PREGA SQUAD", currency: "MAD", currencySymbol: "DH", openingTime: "09:00", closingTime: "19:00", workingDays: [1, 2, 3, 4, 5, 6] };
+    },
+    staleTime: 10 * 60 * 1000,
+    retry: false,
+  });
+}
+
+export function useBusinessName() {
+  const { data } = useBusinessSettings();
+  return data?.businessName || "PREGA SQUAD";
+}
+
 export function useAppointments(date?: string) {
   return useQuery({
     queryKey: [api.appointments.list.path, date],

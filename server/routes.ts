@@ -1962,8 +1962,10 @@ export async function registerRoutes(
 
   app.post("/api/push/test", isPinAuthenticated, async (_req, res) => {
     try {
+      const settings = await storage.getBusinessSettings();
+      const businessName = settings?.businessName ?? "PREGA SQUAD";
       const results = await sendPushNotification(
-        "PREGA SQUAD",
+        businessName,
         "Les notifications fonctionnent correctement!",
         "/planning"
       );

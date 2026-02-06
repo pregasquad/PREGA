@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import { useTranslation } from "react-i18next";
+import { useBusinessName } from "@/hooks/use-salon-data";
 import { 
   Home,
   CalendarDays, 
@@ -242,18 +243,24 @@ export function Sidebar() {
     window.location.href = "/";
   };
 
+  function SidebarBusinessName() {
+    const businessName = useBusinessName();
+    return (
+      <div className="flex items-center gap-3">
+        <img src="/logo.png" alt={businessName} className="w-12 h-12 rounded-full object-cover" />
+        <div>
+          <h1 className="text-lg font-display font-bold text-cyan-500">{businessName}</h1>
+          <p className="text-[10px] text-muted-foreground tracking-wide">Be Humble</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <ShadcnSidebar side={isRtl ? "right" : "left"} dir={isRtl ? "rtl" : "ltr"} className="hidden md:flex">
       <SidebarHeader className="p-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="PREGA SQUAD" className="w-12 h-12 rounded-full object-cover" />
-            <div>
-              <h1 className="text-lg font-display font-bold text-cyan-500">PREGA SQUAD</h1>
-              <p className="text-[10px] text-muted-foreground tracking-wide">Be Humble</p>
-            </div>
-          </div>
+          <SidebarBusinessName />
           
           <Popover>
             <PopoverTrigger asChild>
