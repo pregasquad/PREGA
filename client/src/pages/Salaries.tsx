@@ -464,7 +464,7 @@ export default function Salaries() {
               <span>{t("salaries.totalCommissionsDue")}</span>
               <span className="text-green-600">{formatCurrency(totalCommissions)}</span>
             </div>
-            <div className="flex justify-between text-sm text-sky-600">
+            <div className="flex justify-between text-sm text-red-600">
               <span>{t("salaries.totalDeductions")}</span>
               <span>-{formatCurrency(totalDeductions)}</span>
             </div>
