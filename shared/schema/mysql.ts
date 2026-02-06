@@ -106,6 +106,7 @@ export const services = mysqlTable("services", {
   linkedProductIds: json("linked_product_ids").$type<number[]>().default([]),
   commissionPercent: double("commission_percent").notNull().default(50),
   loyaltyPointsMultiplier: int("loyalty_points_multiplier").notNull().default(1),
+  isStartingPrice: boolean("is_starting_price").notNull().default(false),
 });
 
 export const categories = mysqlTable("categories", {

@@ -2365,7 +2365,7 @@ export default function Planning() {
                                     >
                                       <span className="truncate">{s.name}</span>
                                       <div className="flex items-center gap-2">
-                                        <span className="text-xs font-bold gradient-text">{s.price} DH</span>
+                                        <span className="text-xs font-bold gradient-text">{s.isStartingPrice ? `${t("services.startingFrom")} ` : ''}{s.price} DH</span>
                                         <Plus className="w-4 h-4 text-primary" />
                                       </div>
                                     </div>

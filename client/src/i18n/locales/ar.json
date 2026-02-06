@@ -138,7 +138,9 @@
     "serviceDeleted": "تم حذف الخدمة بنجاح",
     "categoryAdded": "تم إضافة الفئة بنجاح",
     "categoryUpdated": "تم تحديث الفئة بنجاح",
-    "categoryDeleted": "تم حذف الفئة بنجاح"
+    "categoryDeleted": "تم حذف الفئة بنجاح",
+    "startingPrice": "سعر متغير (ابتداءً من)",
+    "startingFrom": "ابتداءً من"
   },
   "clients": {
     "title": "العملاء",

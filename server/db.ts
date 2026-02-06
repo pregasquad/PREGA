@@ -460,3 +460,32 @@ export async function ensureProductExpiryColumns(): Promise<void> {
     console.error("Failed to ensure product expiry columns:", error);
   }
 }
+
+export async function ensureServiceStartingPriceColumn(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      const [rows] = await connection.query(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_NAME = 'services' AND COLUMN_NAME = 'is_starting_price'
+      `);
+      if ((rows as any[]).length === 0) {
+        await connection.query(`ALTER TABLE services ADD COLUMN is_starting_price BOOLEAN NOT NULL DEFAULT FALSE`);
+        console.log("Added is_starting_price column to services table");
+      }
+      connection.release();
+    } else {
+      await pool.query(`
+        DO $$ 
+        BEGIN 
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'services' AND column_name = 'is_starting_price') THEN
+            ALTER TABLE services ADD COLUMN is_starting_price BOOLEAN NOT NULL DEFAULT FALSE;
+          END IF;
+        END $$;
+      `);
+    }
+    console.log("Service starting price column ready");
+  } catch (error) {
+    console.error("Failed to ensure service starting price column:", error);
+  }
+}

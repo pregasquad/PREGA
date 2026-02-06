@@ -138,7 +138,9 @@
     "serviceDeleted": "Service supprimé avec succès",
     "categoryAdded": "Catégorie ajoutée avec succès",
     "categoryUpdated": "Catégorie mise à jour avec succès",
-    "categoryDeleted": "Catégorie supprimée avec succès"
+    "categoryDeleted": "Catégorie supprimée avec succès",
+    "startingPrice": "Prix variable (à partir de)",
+    "startingFrom": "À partir de"
   },
   "clients": {
     "title": "Clients",

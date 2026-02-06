@@ -77,7 +77,7 @@ export default function Services() {
 
   const sForm = useForm({
     resolver: zodResolver(serviceFormSchema),
-    defaultValues: { name: "", price: 0, duration: 30, category: "", linkedProductId: null, linkedProductIds: [] as number[], commissionPercent: 50 }
+    defaultValues: { name: "", price: 0, duration: 30, category: "", linkedProductId: null, linkedProductIds: [] as number[], commissionPercent: 50, isStartingPrice: false }
   });
 
   const cForm = useForm({
@@ -257,6 +257,23 @@ export default function Services() {
                       </FormItem>
                     )}
                   />
+                  <FormField
+                    control={sForm.control}
+                    name="isStartingPrice"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <FormLabel className="text-sm font-normal cursor-pointer">
+                          {t("services.startingPrice")}
+                        </FormLabel>
+                      </FormItem>
+                    )}
+                  />
                   <Button type="submit" className="w-full" disabled={createService.isPending}>{t("common.add")}</Button>
                 </form>
               </Form>
@@ -295,7 +312,7 @@ export default function Services() {
                         <div key={service.id} className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border border-border group">
                           <div>
                             <h4 className="font-semibold">{service.name}</h4>
-                            <p className="text-sm text-muted-foreground">{service.duration} {t("common.minutes")} • {service.price} DH • {t("services.commission")} {service.commissionPercent ?? 50}%</p>
+                            <p className="text-sm text-muted-foreground">{service.duration} {t("common.minutes")} • {service.isStartingPrice ? `${t("services.startingFrom")} ` : ''}{service.price} DH • {t("services.commission")} {service.commissionPercent ?? 50}%</p>
                             {(((service.linkedProductIds as number[] | null | undefined) || []).length > 0 || service.linkedProductId) && (
                               <div className="text-xs text-primary flex items-center gap-1 mt-1 flex-wrap">
                                 <Package className="w-3 h-3" />
@@ -344,6 +361,23 @@ export default function Services() {
                   <FormItem><FormLabel>{t("common.duration")}</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>
                 )} />
               </div>
+              <FormField
+                control={editSForm.control}
+                name="isStartingPrice"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={!!field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormLabel className="text-sm font-normal cursor-pointer">
+                      {t("services.startingPrice")}
+                    </FormLabel>
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={editSForm.control}
                 name="linkedProductIds"

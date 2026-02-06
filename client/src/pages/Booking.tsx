@@ -49,6 +49,7 @@ interface Service {
   category: string;
   duration: number;
   price: number;
+  isStartingPrice?: boolean;
 }
 
 interface MinimalAppointment {
@@ -861,7 +862,7 @@ export default function Booking() {
                                           <span className="font-medium">{s.name}</span>
                                           <span className="text-xs text-muted-foreground">{s.duration} min</span>
                                         </div>
-                                        <span className="text-primary font-bold text-lg">{s.price} {t("common.currency")}</span>
+                                        <span className="text-primary font-bold text-lg">{s.isStartingPrice ? `${t("services.startingFrom")} ` : ''}{s.price} {t("common.currency")}</span>
                                       </div>
                                     </SelectItem>
                                   );

@@ -253,7 +253,7 @@ export default function Packages() {
                         className="flex-1 flex justify-between cursor-pointer text-sm"
                       >
                         <span>{service.name}</span>
-                        <span className="text-muted-foreground">{service.price} {t("common.currency")}</span>
+                        <span className="text-muted-foreground">{service.isStartingPrice ? `${t("services.startingFrom")} ` : ''}{service.price} {t("common.currency")}</span>
                       </label>
                     </div>
                   ))}
