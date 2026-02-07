@@ -1657,15 +1657,15 @@ export default function Planning() {
           {staffList.map((s, staffIndex) => (
             <div 
               key={s.id} 
-              className={cn("py-2 px-1 font-semibold text-center text-xs", isRtl ? "border-l border-white/10 dark:border-white/5" : "border-r border-white/10 dark:border-white/5")}
+              className={cn("py-1 px-1 font-semibold text-center text-[10px]", isRtl ? "border-l border-white/10 dark:border-white/5" : "border-r border-white/10 dark:border-white/5")}
             >
-              <div className="flex flex-col items-center justify-center gap-1.5">
+              <div className="flex flex-col items-center justify-center gap-1">
                 {s.photoUrl ? (
                   <div className="relative">
                     <img 
                       src={s.photoUrl} 
                       alt={s.name}
-                      className="w-10 h-10 rounded-full object-cover border-2 shadow-sm"
+                      className="w-8 h-8 rounded-full object-cover border shadow-sm"
                       style={{ borderColor: s.color }}
                       onError={(e) => {
                         (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=${s.color.replace('#', '')}&color=fff`;
@@ -1674,13 +1674,13 @@ export default function Planning() {
                   </div>
                 ) : (
                   <div 
-                    className="w-10 h-10 rounded-full shadow-sm flex items-center justify-center text-white font-bold text-sm border-2" 
+                    className="w-8 h-8 rounded-full shadow-sm flex items-center justify-center text-white font-bold text-[10px] border" 
                     style={{ backgroundColor: s.color, borderColor: s.color }}
                   >
                     {s.name.charAt(0).toUpperCase()}
                   </div>
                 )}
-                <span className="text-foreground/90 truncate font-medium max-w-[80px]">{s.name}</span>
+                <span className="text-foreground/90 truncate font-medium max-w-[70px] leading-tight">{s.name}</span>
               </div>
             </div>
           ))}
