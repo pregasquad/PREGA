@@ -67,6 +67,7 @@ export const insertClientSchema = createInsertSchema(clients).omit({ id: true, c
   name: z.string().min(1, "Client name is required"),
   phone: z.string().optional(),
   email: z.string().email().optional().or(z.literal("")),
+  photoUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")).nullable(),
   birthday: z.string().optional(),
   notes: z.string().optional(),
   referredBy: z.number().int().optional(),
@@ -122,6 +123,7 @@ export const staff = pgTable("staff", {
   phone: text("phone"),
   email: text("email"),
   baseSalary: doublePrecision("base_salary").notNull().default(0),
+  photoUrl: text("photo_url"),
   categories: text("categories"),
 });
 
@@ -209,6 +211,7 @@ export const insertStaffSchema = createInsertSchema(staff).omit({ id: true }).ex
   color: z.string().regex(/^#[0-9a-f]{6}$/i, "Must be valid hex color"),
   phone: z.string().optional(),
   email: z.string().email().optional().or(z.literal("")),
+  photoUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")).nullable(),
   baseSalary: z.number().min(0).optional(),
   categories: z.string().optional(),
 });

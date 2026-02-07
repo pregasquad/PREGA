@@ -1658,9 +1658,28 @@ export default function Planning() {
               key={s.id} 
               className={cn("py-2 px-1 font-semibold text-center text-xs", isRtl ? "border-l border-white/10 dark:border-white/5" : "border-r border-white/10 dark:border-white/5")}
             >
-              <div className="flex items-center justify-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full shadow-sm ring-2 ring-white/30" style={{ backgroundColor: s.color }} />
-                <span className="text-foreground/90 truncate font-medium">{s.name}</span>
+              <div className="flex flex-col items-center justify-center gap-1.5">
+                {s.photoUrl ? (
+                  <div className="relative">
+                    <img 
+                      src={s.photoUrl} 
+                      alt={s.name}
+                      className="w-10 h-10 rounded-full object-cover border-2 shadow-sm"
+                      style={{ borderColor: s.color }}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=${s.color.replace('#', '')}&color=fff`;
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div 
+                    className="w-10 h-10 rounded-full shadow-sm flex items-center justify-center text-white font-bold text-sm border-2" 
+                    style={{ backgroundColor: s.color, borderColor: s.color }}
+                  >
+                    {s.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <span className="text-foreground/90 truncate font-medium max-w-[80px]">{s.name}</span>
               </div>
             </div>
           ))}

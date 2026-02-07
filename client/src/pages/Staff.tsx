@@ -144,7 +144,7 @@ export default function Staff() {
                   {t("staff.photoUrl", { defaultValue: "Profile Photo URL" })}
                 </FormLabel>
                 <FormControl>
-                  <Input {...field} placeholder="https://example.com/photo.jpg" />
+                  <Input {...field} value={field.value || ""} placeholder="https://example.com/photo.jpg" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
