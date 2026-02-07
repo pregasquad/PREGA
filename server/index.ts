@@ -15,13 +15,14 @@ declare module "http" {
 
 app.use(
   express.json({
+    limit: "10mb",
     verify: (req, _res, buf) => {
       req.rawBody = buf;
     },
   }),
 );
 
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ limit: "10mb", extended: false }));
 
 // Disable caching for development only (production uses proper caching for speed)
 if (process.env.NODE_ENV !== 'production') {
