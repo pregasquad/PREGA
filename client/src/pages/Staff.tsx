@@ -401,12 +401,13 @@ export default function Staff() {
                       ) : null}
                     </div>
                   </div>
-                  <div className="flex gap-1">
+                  <div className="flex gap-1 shrink-0">
                     <Button 
                       variant="ghost" 
                       size="icon"
                       onClick={() => openScheduleTab(staff, "schedule")}
                       title={t("schedule.manageSchedule", "Manage Schedule")}
+                      className="h-8 w-8"
                     >
                       <Calendar className="h-4 w-4" />
                     </Button>
@@ -415,6 +416,7 @@ export default function Staff() {
                       size="icon"
                       onClick={() => openScheduleTab(staff, "breaks")}
                       title={t("schedule.addBreak", "Add Break")}
+                      className="h-8 w-8"
                     >
                       <Coffee className="h-4 w-4" />
                     </Button>
@@ -423,6 +425,7 @@ export default function Staff() {
                       size="icon"
                       onClick={() => openScheduleTab(staff, "timeoff")}
                       title={t("schedule.requestTimeOff", "Day Off")}
+                      className="h-8 w-8"
                     >
                       <CalendarOff className="h-4 w-4" />
                     </Button>
@@ -430,6 +433,7 @@ export default function Staff() {
                       variant="ghost" 
                       size="icon"
                       onClick={() => handleEdit(staff)}
+                      className="h-8 w-8"
                     >
                       <Edit2 className="h-4 w-4" />
                     </Button>
@@ -437,7 +441,7 @@ export default function Staff() {
                       variant="ghost" 
                       size="icon"
                       onClick={() => handleDelete(staff.id)}
-                      className="text-destructive hover:text-destructive"
+                      className="text-destructive hover:text-destructive h-8 w-8"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

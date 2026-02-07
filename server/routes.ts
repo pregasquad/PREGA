@@ -13,8 +13,25 @@ import bcrypt from "bcryptjs";
 import multer from "multer";
 import { offlineStorage } from "./offline-storage";
 
+import path from "path";
+import fs from "fs";
+
+const storage_disk = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    const uploadPath = path.resolve(process.cwd(), "uploads");
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    cb(null, uploadPath);
+  },
+  filename: (_req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  },
+});
+
 const photoUpload = multer({
-  storage: multer.memoryStorage(),
+  storage: storage_disk,
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
@@ -108,12 +125,12 @@ export async function registerRoutes(
     if (!req.file) {
       return res.status(400).json({ message: "No file uploaded" });
     }
-    // In a real app, we'd save to disk or cloud storage. 
-    // Here we use data URL for simplicity as the storage is already set up for URLs.
-    const base64 = req.file.buffer.toString("base64");
-    const dataUrl = `data:${req.file.mimetype};base64,${base64}`;
-    res.json({ url: dataUrl });
+    const url = `/uploads/${req.file.filename}`;
+    res.json({ url });
   });
+
+  // Serve static files from uploads directory
+  app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
 
   // === API ROUTES ===
 
