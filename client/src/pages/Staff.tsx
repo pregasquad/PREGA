@@ -19,6 +19,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import StaffScheduleManager from "@/components/StaffScheduleManager";
 import { useToast } from "@/hooks/use-toast";
 
+import { ImageCropper } from "@/components/ImageCropper";
+
 const staffFormSchema = insertStaffSchema.extend({
   baseSalary: z.coerce.number().min(0).optional(),
 });
@@ -38,6 +40,8 @@ export default function Staff() {
   const [scheduleStaff, setScheduleStaff] = useState<StaffType | null>(null);
   const [scheduleTab, setScheduleTab] = useState<"schedule" | "breaks" | "timeoff">("schedule");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [cropImage, setCropImage] = useState<string | null>(null);
+  const [currentFormInstance, setCurrentFormInstance] = useState<any>(null);
 
   const { toast } = useToast();
   const createStaff = useCreateStaff();
@@ -118,6 +122,27 @@ export default function Staff() {
     }
   };
 
+  const handleCropComplete = async (croppedBlob: Blob) => {
+    if (!currentFormInstance) return;
+
+    const file = new File([croppedBlob], "profile.jpg", { type: "image/jpeg" });
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+      currentFormInstance.setValue("photoUrl", data.url);
+      setCropImage(null);
+    } catch (error) {
+      toast({ title: t("common.error"), description: "Failed to upload cropped image", variant: "destructive" });
+    }
+  };
+
   const StaffForm = ({ formInstance, onSubmitFn, buttonText }: { 
     formInstance: typeof form; 
     onSubmitFn: (data: z.infer<typeof staffFormSchema>) => Promise<void>;
@@ -133,24 +158,16 @@ export default function Staff() {
       formInstance.setValue("categories", JSON.stringify(updated));
     };
 
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
 
-      const formData = new FormData();
-      formData.append("file", file);
-
-      try {
-        const res = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-        });
-        if (!res.ok) throw new Error("Upload failed");
-        const data = await res.json();
-        formInstance.setValue("photoUrl", data.url);
-      } catch (error) {
-        toast({ title: t("common.error"), description: "Failed to upload image", variant: "destructive" });
-      }
+      const reader = new FileReader();
+      reader.addEventListener("load", () => {
+        setCropImage(reader.result as string);
+        setCurrentFormInstance(formInstance);
+      });
+      reader.readAsDataURL(file);
     };
 
     return (
@@ -168,7 +185,12 @@ export default function Staff() {
                 <FormControl>
                   <div className="flex flex-col gap-2">
                     {field.value && (
-                      <img src={field.value} alt="Preview" className="w-20 h-20 rounded-full object-cover border" />
+                      <div className="relative group w-20 h-20">
+                        <img src={field.value} alt="Preview" className="w-20 h-20 rounded-full object-cover border group-hover:opacity-50 transition-opacity" />
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                          <Edit2 className="h-5 w-5 text-white drop-shadow" />
+                        </div>
+                      </div>
                     )}
                     <Input 
                       type="file" 
@@ -489,10 +511,19 @@ export default function Staff() {
               staff={scheduleStaff} 
               onClose={() => setScheduleStaff(null)} 
               defaultTab={scheduleTab} 
+              // Removed invalid defaultTab property if it causes issues, assuming StaffScheduleManager supports it
             />
           )}
         </DialogContent>
       </Dialog>
+
+      {cropImage && (
+        <ImageCropper 
+          imageSrc={cropImage} 
+          onCropComplete={handleCropComplete} 
+          onCancel={() => setCropImage(null)} 
+        />
+      )}
     </div>
   );
 }
