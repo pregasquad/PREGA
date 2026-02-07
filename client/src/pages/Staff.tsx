@@ -49,6 +49,7 @@ export default function Staff() {
       color: "#f97316", 
       phone: "", 
       email: "", 
+      photoUrl: "",
       baseSalary: 0,
       categories: ""
     }
@@ -61,6 +62,7 @@ export default function Staff() {
       color: "#f97316", 
       phone: "", 
       email: "", 
+      photoUrl: "",
       baseSalary: 0,
       categories: ""
     }
@@ -86,6 +88,7 @@ export default function Staff() {
       color: staff.color,
       phone: staff.phone || "",
       email: staff.email || "",
+      photoUrl: staff.photoUrl || "",
       baseSalary: staff.baseSalary || 0,
       categories: staff.categories || ""
     });
@@ -131,6 +134,23 @@ export default function Staff() {
     return (
       <Form {...formInstance}>
         <form onSubmit={formInstance.handleSubmit(onSubmitFn)} className="space-y-4">
+          <FormField
+            control={formInstance.control}
+            name="photoUrl"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  {t("staff.photoUrl", { defaultValue: "Profile Photo URL" })}
+                </FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="https://example.com/photo.jpg" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
           <FormField
             control={formInstance.control}
             name="name"
@@ -302,12 +322,21 @@ export default function Staff() {
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div 
-                      className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg"
-                      style={{ backgroundColor: staff.color }}
-                    >
-                      {getInitial(staff.name)}
-                    </div>
+                    {staff.photoUrl ? (
+                      <img 
+                        src={staff.photoUrl} 
+                        alt={staff.name}
+                        className="w-12 h-12 rounded-full object-cover border-2"
+                        style={{ borderColor: staff.color }}
+                      />
+                    ) : (
+                      <div 
+                        className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg"
+                        style={{ backgroundColor: staff.color }}
+                      >
+                        {getInitial(staff.name)}
+                      </div>
+                    )}
                     <div>
                       <CardTitle className="text-lg">{staff.name}</CardTitle>
                       {staff.baseSalary ? (
