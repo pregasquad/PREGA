@@ -1803,7 +1803,7 @@ export default function Planning() {
                         <div className="water-shimmer absolute inset-0 opacity-30" />
                         {span === 1 ? (
                           /* Compact single-row layout for 30min appointments */
-                          <div className="relative z-10 flex items-center w-full gap-1 min-w-0">
+                          <div className="relative z-10 flex items-center w-full gap-1 min-w-0 pointer-events-auto">
                             {booking.paid ? (
                               <span 
                                 className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center shrink-0" 
@@ -1819,7 +1819,7 @@ export default function Planning() {
                                   e.preventDefault();
                                   handleMarkAsPaid(e, booking);
                                 }}
-                                className="w-5 h-5 bg-white/30 hover:bg-white/50 rounded-full flex items-center justify-center transition-colors shrink-0 relative z-20 pointer-events-auto"
+                                className="w-5 h-5 bg-white/30 hover:bg-white/50 rounded-full flex items-center justify-center transition-colors shrink-0 relative z-20"
                                 aria-label={t("planning.markAsPaid")}
                               >
                                 <CreditCard className="w-2.5 h-2.5" />
@@ -1847,7 +1847,7 @@ export default function Planning() {
                                 </div>
                               )}
                             </div>
-                            <div className="flex items-center gap-1 shrink-0 mt-1">
+                            <div className="flex items-center gap-1 shrink-0 mt-1 pointer-events-auto">
                               {booking.paid ? (
                                 <span 
                                   className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center shrink-0" 
@@ -1863,7 +1863,7 @@ export default function Planning() {
                                     e.preventDefault();
                                     handleMarkAsPaid(e, booking);
                                   }}
-                                  className="w-5 h-5 bg-white/30 hover:bg-white/50 rounded-full flex items-center justify-center transition-colors shrink-0 relative z-20 pointer-events-auto"
+                                  className="w-5 h-5 bg-white/30 hover:bg-white/50 rounded-full flex items-center justify-center transition-colors shrink-0 relative z-20"
                                   aria-label={t("planning.markAsPaid")}
                                 >
                                   <CreditCard className="w-2.5 h-2.5" />
