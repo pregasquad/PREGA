@@ -1,4 +1,4 @@
-import type { Express, RequestHandler } from "express";
+import express, { type Express, RequestHandler } from "express";
 import type { Server } from "http";
 import { Server as SocketIOServer } from "socket.io";
 import { storage } from "./storage";
