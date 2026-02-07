@@ -17,6 +17,7 @@ import type { Staff as StaffType } from "@shared/schema";
 import { useTranslation } from "react-i18next";
 import { Checkbox } from "@/components/ui/checkbox";
 import StaffScheduleManager from "@/components/StaffScheduleManager";
+import { useToast } from "@/hooks/use-toast";
 
 const staffFormSchema = insertStaffSchema.extend({
   baseSalary: z.coerce.number().min(0).optional(),
@@ -38,6 +39,7 @@ export default function Staff() {
   const [scheduleTab, setScheduleTab] = useState<"schedule" | "breaks" | "timeoff">("schedule");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 
+  const { toast } = useToast();
   const createStaff = useCreateStaff();
   const updateStaff = useUpdateStaff();
   const deleteStaff = useDeleteStaff();
