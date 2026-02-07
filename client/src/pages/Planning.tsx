@@ -1171,7 +1171,8 @@ export default function Planning() {
     e.stopPropagation();
     
     // Check if this is a temporary appointment that hasn't synced yet
-    if (app.id < 0) {
+    const appId = typeof app.id === 'string' ? parseInt(app.id) : app.id;
+    if (appId < 0) {
       toast({ 
         title: t("common.pleaseWait") || "Please wait", 
         description: t("planning.appointmentSyncing") || "Appointment is still syncing. Please try again in a moment.",
@@ -1181,7 +1182,7 @@ export default function Planning() {
     }
     
     try {
-      await apiRequest("PUT", `/api/appointments/${app.id}`, {
+      await apiRequest("PUT", `/api/appointments/${appId}`, {
         ...app,
         paid: true,
         updatedAt: new Date().toISOString(),

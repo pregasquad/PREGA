@@ -131,6 +131,26 @@ export default function Staff() {
       formInstance.setValue("categories", JSON.stringify(updated));
     };
 
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      try {
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+        if (!res.ok) throw new Error("Upload failed");
+        const data = await res.json();
+        formInstance.setValue("photoUrl", data.url);
+      } catch (error) {
+        toast({ title: t("common.error"), description: "Failed to upload image", variant: "destructive" });
+      }
+    };
+
     return (
       <Form {...formInstance}>
         <form onSubmit={formInstance.handleSubmit(onSubmitFn)} className="space-y-4">
@@ -141,10 +161,20 @@ export default function Staff() {
               <FormItem>
                 <FormLabel className="flex items-center gap-2">
                   <User className="h-4 w-4" />
-                  {t("staff.photoUrl", { defaultValue: "Profile Photo URL" })}
+                  {t("staff.photoUrl", { defaultValue: "Profile Photo" })}
                 </FormLabel>
                 <FormControl>
-                  <Input {...field} value={field.value || ""} placeholder="https://example.com/photo.jpg" />
+                  <div className="flex flex-col gap-2">
+                    {field.value && (
+                      <img src={field.value} alt="Preview" className="w-20 h-20 rounded-full object-cover border" />
+                    )}
+                    <Input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handleFileChange} 
+                    />
+                    <Input {...field} type="hidden" />
+                  </div>
                 </FormControl>
                 <FormMessage />
               </FormItem>

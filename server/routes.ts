@@ -103,6 +103,18 @@ export async function registerRoutes(
   await setupAuth(app);
   registerAuthRoutes(app);
 
+  // === UPLOAD ROUTE ===
+  app.post("/api/upload", requirePermission("manage_staff"), photoUpload.single("file"), (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+    // In a real app, we'd save to disk or cloud storage. 
+    // Here we use data URL for simplicity as the storage is already set up for URLs.
+    const base64 = req.file.buffer.toString("base64");
+    const dataUrl = `data:${req.file.mimetype};base64,${base64}`;
+    res.json({ url: dataUrl });
+  });
+
   // === API ROUTES ===
 
   // Health check for Koyeb and UptimeRobot (public)
