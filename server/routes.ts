@@ -2227,7 +2227,7 @@ export async function registerRoutes(
     res.status(204).send();
   });
 
-  // Upload admin role photo - protected (stores as base64 in database)
+  // Upload admin role photo - protected (stores in Supabase if available, otherwise local base64)
   app.post("/api/admin-roles/:id/photo", isPinAuthenticated, requirePermission("admin_settings"), photoUpload.single("photo"), async (req, res) => {
     try {
       const id = Number(req.params.id);
@@ -2240,9 +2240,48 @@ export async function registerRoutes(
       if (!role) {
         return res.status(404).json({ message: "Admin role not found" });
       }
-      
-      const base64 = req.file.buffer.toString("base64");
-      const photoUrl = `data:${req.file.mimetype};base64,${base64}`;
+
+      let photoUrl = "";
+
+      if (supabase) {
+        try {
+          const fileName = `admin-roles/${id}-${Date.now()}${path.extname(req.file.originalname)}`;
+          
+          const { data, error } = await supabase.storage
+            .from(supabaseBucket)
+            .upload(fileName, fs.createReadStream(req.file.path), {
+              contentType: req.file.mimetype,
+              upsert: true,
+              duplex: 'half'
+            });
+
+          if (error) throw error;
+
+          const { data: { publicUrl } } = supabase.storage
+            .from(supabaseBucket)
+            .getPublicUrl(fileName);
+          
+          photoUrl = publicUrl;
+          
+          // Clean up local file after successful upload
+          fs.unlink(req.file.path, (err) => {
+            if (err) console.error("Error deleting local file:", err);
+          });
+        } catch (supabaseError: any) {
+          console.error("Supabase upload error, falling back to local base64:", supabaseError);
+          const base64 = fs.readFileSync(req.file.path).toString("base64");
+          photoUrl = `data:${req.file.mimetype};base64,${base64}`;
+          fs.unlink(req.file.path, (err) => {
+            if (err) console.error("Error deleting local file:", err);
+          });
+        }
+      } else {
+        const base64 = fs.readFileSync(req.file.path).toString("base64");
+        photoUrl = `data:${req.file.mimetype};base64,${base64}`;
+        fs.unlink(req.file.path, (err) => {
+          if (err) console.error("Error deleting local file:", err);
+        });
+      }
       
       const updatedRole = await storage.updateAdminRole(id, { photoUrl });
       
