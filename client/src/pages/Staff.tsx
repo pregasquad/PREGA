@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, Edit2, User, Phone, Mail, DollarSign, Palette, Tag, Calendar, Coffee, CalendarOff } from "lucide-react";
+import { Plus, Trash2, Edit2, User, Phone, Mail, DollarSign, Palette, Tag, Calendar, Coffee, CalendarOff, Upload } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormMessage, FormLabel } from "@/components/ui/form";
@@ -20,6 +20,8 @@ import StaffScheduleManager from "@/components/StaffScheduleManager";
 import { useToast } from "@/hooks/use-toast";
 
 import { ImageCropper } from "@/components/ImageCropper";
+import { ObjectUploader } from "@/components/ObjectUploader";
+import { useUpload } from "@/hooks/use-upload";
 
 const staffFormSchema = insertStaffSchema.extend({
   baseSalary: z.coerce.number().min(0).optional(),
@@ -158,16 +160,16 @@ export default function Staff() {
       formInstance.setValue("categories", JSON.stringify(updated));
     };
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
+    const { getUploadParameters } = useUpload();
 
-      const reader = new FileReader();
-      reader.addEventListener("load", () => {
-        setCropImage(reader.result as string);
-        setCurrentFormInstance(formInstance);
-      });
-      reader.readAsDataURL(file);
+    const handleUploadComplete = (result: any) => {
+      if (result.successful && result.successful.length > 0) {
+        const file = result.successful[0];
+        // Use the object path served by our proxy route
+        const objectPath = file.response.body.objectPath;
+        formInstance.setValue("photoUrl", objectPath);
+        toast({ title: t("common.success"), description: "Photo uploaded successfully" });
+      }
     };
 
     return (
@@ -192,11 +194,16 @@ export default function Staff() {
                         </div>
                       </div>
                     )}
-                    <Input 
-                      type="file" 
-                      accept="image/*" 
-                      onChange={handleFileChange} 
-                    />
+                    <div className="flex gap-2">
+                      <ObjectUploader
+                        onGetUploadParameters={getUploadParameters}
+                        onComplete={handleUploadComplete}
+                        buttonClassName="w-full gap-2"
+                      >
+                        <Upload className="h-4 w-4" />
+                        {t("staff.uploadPhoto", { defaultValue: "Upload from Phone/Computer" })}
+                      </ObjectUploader>
+                    </div>
                     <Input {...field} type="hidden" />
                   </div>
                 </FormControl>
