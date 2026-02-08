@@ -139,7 +139,7 @@ export async function registerRoutes(
   registerObjectStorageRoutes(app);
 
   // === UPLOAD ROUTE ===
-  app.post("/api/upload", requirePermission("manage_staff"), multer({ 
+  app.post("/api/upload", isPinAuthenticated, requirePermission("manage_staff"), multer({ 
     storage: multer.memoryStorage(),
     limits: {
       fileSize: 10 * 1024 * 1024, // 10MB limit
@@ -150,35 +150,49 @@ export async function registerRoutes(
       return res.status(400).json({ message: "No file uploaded" });
     }
 
-    if (!supabase) {
-      console.log("Supabase not configured, falling back to local storage");
-      return res.status(500).json({ message: "Supabase storage not configured" });
-    }
-
     try {
       const file = req.file;
       console.log(`Uploading file: ${file.originalname} (${file.size} bytes)`);
-      const fileExt = path.extname(file.originalname);
-      const fileName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${fileExt}`;
-      const filePath = `staff/${fileName}`;
+      
+      if (supabase) {
+        const fileExt = path.extname(file.originalname);
+        const fileName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${fileExt}`;
+        const filePath = `staff/${fileName}`;
 
-      const { data, error } = await supabase.storage
-        .from(supabaseBucket)
-        .upload(filePath, file.buffer, {
-          contentType: file.mimetype,
-          upsert: false
-        });
+        const { data, error } = await supabase.storage
+          .from(supabaseBucket)
+          .upload(filePath, file.buffer, {
+            contentType: file.mimetype,
+            upsert: false
+          });
 
-      if (error) throw error;
+        if (error) throw error;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from(supabaseBucket)
-        .getPublicUrl(filePath);
+        const { data: { publicUrl } } = supabase.storage
+          .from(supabaseBucket)
+          .getPublicUrl(filePath);
 
-      res.json({ url: publicUrl });
+        return res.json({ url: publicUrl });
+      } else {
+        // Fallback to local storage if Supabase is not configured
+        const uploadPath = path.resolve(process.cwd(), "uploads");
+        if (!fs.existsSync(uploadPath)) {
+          fs.mkdirSync(uploadPath, { recursive: true });
+        }
+        
+        const fileExt = path.extname(file.originalname);
+        const fileName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${fileExt}`;
+        const filePath = path.join(uploadPath, fileName);
+        
+        fs.writeFileSync(filePath, file.buffer);
+        const publicUrl = `/uploads/${fileName}`;
+        
+        console.log(`Saved file locally: ${publicUrl}`);
+        return res.json({ url: publicUrl });
+      }
     } catch (error: any) {
-      console.error("Supabase upload error:", error);
-      res.status(500).json({ message: error.message || "Failed to upload to Supabase" });
+      console.error("Upload error:", error);
+      res.status(500).json({ message: error.message || "Failed to upload file" });
     }
   });
 
