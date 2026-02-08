@@ -36,8 +36,6 @@ Thumbs.db
 npm-debug.log*
 
 # Replit
-.replit
-replit.nix
 .config/
 
 # Database files
