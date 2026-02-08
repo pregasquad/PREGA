@@ -151,11 +151,12 @@ export default function Planning() {
   // Refresh data - rely on socket.io for real-time updates, use long interval as fallback
   // Socket.io in Sidebar handles instant notifications, this is just a safety net
   useEffect(() => {
-    // Mobile: refresh every 3 minutes, Desktop: every 2 minutes (socket handles real-time)
-    const refreshInterval = isMobile ? 180000 : 120000;
+    // Mobile: refresh every 1 minute, Desktop: every 45 seconds for better sync
+    const refreshInterval = isMobile ? 60000 : 45000;
     
     const intervalId = setInterval(() => {
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
     }, refreshInterval);
     
     // Refresh on visibility change (when returning to PWA) - throttled

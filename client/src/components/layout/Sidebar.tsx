@@ -178,6 +178,7 @@ export function Sidebar() {
       // Instantly refresh appointments data
       queryClient.invalidateQueries({ queryKey: ["/api/appointments/all"] });
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
       
       // Play notification sound
       playNotificationSound();
