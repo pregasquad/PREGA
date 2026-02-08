@@ -208,21 +208,24 @@ export default function Staff() {
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
-      if (file) {
-        const response = await uploadFile(file);
-        if (response) {
-          formInstance.setValue("photoUrl", response.objectPath);
-          toast({ title: t("common.success"), description: "Photo uploaded successfully" });
-        }
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      try {
+        const res = await apiRequest("POST", "/api/upload", formData);
+        const data = await res.json();
+        formInstance.setValue("photoUrl", data.url);
+        toast({ title: t("common.success"), description: "Photo uploaded successfully" });
+      } catch (error) {
+        console.error("Upload failed:", error);
+        toast({ title: t("common.error"), description: "Photo upload failed", variant: "destructive" });
       }
     };
 
     const handlePhotoClick = () => {
-      const input = document.createElement("input");
-      input.type = "file";
-      input.accept = "image/*";
-      input.onchange = (e) => handleFileUpload(e as any);
-      input.click();
+      // Handled inline in the button now
     };
 
     return (
@@ -252,7 +255,13 @@ export default function Staff() {
                         type="button" 
                         variant="outline" 
                         className="w-full gap-2"
-                        onClick={handlePhotoClick}
+                        onClick={() => {
+                          const input = document.createElement("input");
+                          input.type = "file";
+                          input.accept = "image/*";
+                          input.onchange = (e) => handleFileUpload(e as any);
+                          input.click();
+                        }}
                       >
                         <Upload className="h-4 w-4" />
                         {t("staff.uploadPhoto", { defaultValue: "Upload Photo" })}
