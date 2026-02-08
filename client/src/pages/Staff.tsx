@@ -128,19 +128,36 @@ export default function Staff() {
     if (!currentFormInstance) return;
 
     const file = new File([croppedBlob], "profile.jpg", { type: "image/jpeg" });
-    const formData = new FormData();
-    formData.append("file", file);
-
+    
     try {
-      const res = await fetch("/api/upload", {
+      // Step 1: Request presigned URL
+      const reqRes = await fetch("/api/uploads/request-url", {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: file.name,
+          size: file.size,
+          contentType: file.type,
+        }),
       });
-      if (!res.ok) throw new Error("Upload failed");
-      const data = await res.json();
-      currentFormInstance.setValue("photoUrl", data.url);
+      
+      if (!reqRes.ok) throw new Error("Failed to get upload URL");
+      const { uploadURL, objectPath } = await reqRes.json();
+
+      // Step 2: Upload directly to cloud storage
+      const uploadRes = await fetch(uploadURL, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": file.type },
+      });
+
+      if (!uploadRes.ok) throw new Error("Cloud upload failed");
+
+      currentFormInstance.setValue("photoUrl", objectPath);
       setCropImage(null);
+      toast({ title: t("common.success"), description: "Photo updated" });
     } catch (error) {
+      console.error("Upload error:", error);
       toast({ title: t("common.error"), description: "Failed to upload cropped image", variant: "destructive" });
     }
   };
@@ -160,7 +177,7 @@ export default function Staff() {
       formInstance.setValue("categories", JSON.stringify(updated));
     };
 
-    const { getUploadParameters } = useUpload();
+    const { uploadFile, getUploadParameters } = useUpload();
 
     const handleUploadComplete = (result: any) => {
       if (result.successful && result.successful.length > 0) {
@@ -170,6 +187,25 @@ export default function Staff() {
         formInstance.setValue("photoUrl", objectPath);
         toast({ title: t("common.success"), description: "Photo uploaded successfully" });
       }
+    };
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        const response = await uploadFile(file);
+        if (response) {
+          formInstance.setValue("photoUrl", response.objectPath);
+          toast({ title: t("common.success"), description: "Photo uploaded successfully" });
+        }
+      }
+    };
+
+    const handlePhotoClick = () => {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*";
+      input.onchange = (e) => handleFileUpload(e as any);
+      input.click();
     };
 
     return (
@@ -195,14 +231,15 @@ export default function Staff() {
                       </div>
                     )}
                     <div className="flex gap-2">
-                      <ObjectUploader
-                        onGetUploadParameters={getUploadParameters}
-                        onComplete={handleUploadComplete}
-                        buttonClassName="w-full gap-2"
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        className="w-full gap-2"
+                        onClick={handlePhotoClick}
                       >
                         <Upload className="h-4 w-4" />
-                        {t("staff.uploadPhoto", { defaultValue: "Upload from Phone/Computer" })}
-                      </ObjectUploader>
+                        {t("staff.uploadPhoto", { defaultValue: "Upload Photo" })}
+                      </Button>
                     </div>
                     <Input {...field} type="hidden" />
                   </div>

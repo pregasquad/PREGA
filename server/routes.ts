@@ -72,6 +72,8 @@ async function checkAndNotifyLowStock(productId: number) {
   }
 }
 
+import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -119,6 +121,9 @@ export async function registerRoutes(
   // Setup Auth
   await setupAuth(app);
   registerAuthRoutes(app);
+
+  // Register Object Storage routes
+  registerObjectStorageRoutes(app);
 
   // === UPLOAD ROUTE ===
   app.post("/api/upload", requirePermission("manage_staff"), photoUpload.single("file"), (req, res) => {
