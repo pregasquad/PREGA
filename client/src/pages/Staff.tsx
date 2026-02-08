@@ -127,56 +127,28 @@ export default function Staff() {
   const handleCropComplete = async (croppedBlob: Blob) => {
     if (!currentFormInstance) return;
 
-    const file = new File([croppedBlob], "profile.jpg", { type: "image/jpeg" });
-    
-    try {
-      // Step 1: Request presigned URL
-      const reqRes = await fetch("/api/uploads/request-url", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: file.name,
-          size: file.size,
-          contentType: file.type,
-        }),
-      });
-      
-      if (!reqRes.ok) throw new Error("Failed to get upload URL");
-      const { uploadURL, objectPath } = await reqRes.json();
-
-      // Step 2: Upload directly to cloud storage
-      const uploadRes = await fetch(uploadURL, {
-        method: "PUT",
-        body: file,
-        headers: { "Content-Type": file.type },
-      });
-
-      if (!uploadRes.ok) throw new Error("Cloud upload failed");
-
-      currentFormInstance.setValue("photoUrl", objectPath);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64data = reader.result as string;
+      currentFormInstance.setValue("photoUrl", base64data);
       setCropImage(null);
-      toast({ title: t("common.success"), description: "Photo updated" });
-    } catch (error) {
-      console.error("Upload error:", error);
-      toast({ title: t("common.error"), description: "Failed to upload cropped image", variant: "destructive" });
-    }
+      toast({ title: t("common.success"), description: "Photo updated locally" });
+    };
+    reader.readAsDataURL(croppedBlob);
   };
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const formData = new FormData();
-    formData.append("file", file);
-
-    try {
-      const res = await apiRequest("POST", "/api/upload", formData);
-      const data = await res.json();
-      form.setValue("photoUrl", data.url);
-      editForm.setValue("photoUrl", data.url);
-    } catch (error) {
-      console.error("Upload failed:", error);
-    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64data = reader.result as string;
+      form.setValue("photoUrl", base64data);
+      editForm.setValue("photoUrl", base64data);
+      toast({ title: t("common.success"), description: "Photo uploaded locally" });
+    };
+    reader.readAsDataURL(file);
   };
 
   const StaffForm = ({ formInstance, onSubmitFn, buttonText }: { 
@@ -194,38 +166,17 @@ export default function Staff() {
       formInstance.setValue("categories", JSON.stringify(updated));
     };
 
-    const { uploadFile, getUploadParameters } = useUpload();
-
-    const handleUploadComplete = (result: any) => {
-      if (result.successful && result.successful.length > 0) {
-        const file = result.successful[0];
-        // Use the object path served by our proxy route
-        const objectPath = file.response.body.objectPath;
-        formInstance.setValue("photoUrl", objectPath);
-        toast({ title: t("common.success"), description: "Photo uploaded successfully" });
-      }
-    };
-
-    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileUploadLocal = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
 
-      const formData = new FormData();
-      formData.append("file", file);
-
-      try {
-        const res = await apiRequest("POST", "/api/upload", formData);
-        const data = await res.json();
-        formInstance.setValue("photoUrl", data.url);
-        toast({ title: t("common.success"), description: "Photo uploaded successfully" });
-      } catch (error) {
-        console.error("Upload failed:", error);
-        toast({ title: t("common.error"), description: "Photo upload failed", variant: "destructive" });
-      }
-    };
-
-    const handlePhotoClick = () => {
-      // Handled inline in the button now
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64data = reader.result as string;
+        formInstance.setValue("photoUrl", base64data);
+        toast({ title: t("common.success"), description: "Photo updated" });
+      };
+      reader.readAsDataURL(file);
     };
 
     return (
@@ -259,7 +210,7 @@ export default function Staff() {
                           const input = document.createElement("input");
                           input.type = "file";
                           input.accept = "image/*";
-                          input.onchange = (e) => handleFileUpload(e as any);
+                          input.onchange = (e) => handleFileUploadLocal(e as any);
                           input.click();
                         }}
                       >
