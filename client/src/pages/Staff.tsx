@@ -418,25 +418,25 @@ export default function Staff() {
           return (
             <Card key={staff.id} className="glass-card overflow-hidden">
               <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
+                <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+                  <div className="flex items-center gap-3 w-full min-w-0">
                     {staff.photoUrl ? (
                       <img 
                         src={staff.photoUrl} 
                         alt={staff.name}
-                        className="w-12 h-12 rounded-full object-cover border-2"
+                        className="w-12 h-12 rounded-full object-cover border-2 shrink-0"
                         style={{ borderColor: staff.color }}
                       />
                     ) : (
                       <div 
-                        className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg"
+                        className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg shrink-0"
                         style={{ backgroundColor: staff.color }}
                       >
                         {getInitial(staff.name)}
                       </div>
                     )}
-                    <div>
-                      <CardTitle className="text-lg">{staff.name}</CardTitle>
+                    <div className="min-w-0 flex-1">
+                      <CardTitle className="text-lg truncate">{staff.name}</CardTitle>
                       {staff.baseSalary ? (
                         <CardDescription className="flex items-center gap-1">
                           <DollarSign className="h-3 w-3" />
@@ -445,7 +445,7 @@ export default function Staff() {
                       ) : null}
                     </div>
                   </div>
-                  <div className="flex gap-1 shrink-0">
+                  <div className="flex gap-1 flex-wrap justify-center sm:justify-end shrink-0 w-full sm:w-auto border-t sm:border-0 pt-2 sm:pt-0">
                     <Button 
                       variant="ghost" 
                       size="icon"
