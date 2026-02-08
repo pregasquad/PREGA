@@ -10,6 +10,12 @@ export function serveStatic(app: Express) {
     );
   }
 
+  // Serve static files from uploads directory first
+  const uploadPath = path.resolve(process.cwd(), "uploads");
+  if (fs.existsSync(uploadPath)) {
+    app.use("/uploads", express.static(uploadPath));
+  }
+
   app.use(express.static(distPath));
 
   // fall through to index.html if the file doesn't exist

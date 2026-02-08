@@ -125,6 +125,9 @@ export async function registerRoutes(
     if (!req.file) {
       return res.status(400).json({ message: "No file uploaded" });
     }
+    
+    // In production (Koyeb), we use disk storage. 
+    // The relative URL works because we serve /uploads as static.
     const url = `/uploads/${req.file.filename}`;
     res.json({ url });
   });

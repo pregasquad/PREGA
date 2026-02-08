@@ -1668,6 +1668,7 @@ export default function Planning() {
                       className="w-12 h-12 rounded-full object-cover border-2 shadow-sm"
                       style={{ borderColor: s.color }}
                       onError={(e) => {
+                        // Fallback to avatar if local image fails to load
                         (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=${s.color.replace('#', '')}&color=fff`;
                       }}
                     />
