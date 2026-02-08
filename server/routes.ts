@@ -19,9 +19,15 @@ import fs from "fs";
 
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL || "";
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || "";
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || "";
 const supabaseBucket = process.env.SUPABASE_STORAGE_BUCKET || "avatars";
-const supabase = (supabaseUrl && supabaseAnonKey) ? createClient(supabaseUrl, supabaseAnonKey) : null;
+const supabase = (supabaseUrl && supabaseServiceKey) ? createClient(supabaseUrl, supabaseServiceKey, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+    detectSessionInUrl: false
+  }
+}) : null;
 
 const storage_disk = multer.diskStorage({
   destination: (_req, _file, cb) => {
