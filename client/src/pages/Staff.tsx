@@ -162,6 +162,23 @@ export default function Staff() {
     }
   };
 
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await apiRequest("POST", "/api/upload", formData);
+      const data = await res.json();
+      form.setValue("photoUrl", data.url);
+      editForm.setValue("photoUrl", data.url);
+    } catch (error) {
+      console.error("Upload failed:", error);
+    }
+  };
+
   const StaffForm = ({ formInstance, onSubmitFn, buttonText }: { 
     formInstance: typeof form; 
     onSubmitFn: (data: z.infer<typeof staffFormSchema>) => Promise<void>;

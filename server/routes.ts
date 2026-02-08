@@ -12,9 +12,16 @@ import { insertAdminRoleSchema, ROLE_PERMISSIONS } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import multer from "multer";
 import { offlineStorage } from "./offline-storage";
+import { createClient } from "@supabase/supabase-js";
 
 import path from "path";
 import fs from "fs";
+
+// Initialize Supabase client
+const supabaseUrl = process.env.SUPABASE_URL || "";
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || "";
+const supabaseBucket = process.env.SUPABASE_STORAGE_BUCKET || "avatars";
+const supabase = (supabaseUrl && supabaseAnonKey) ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
 const storage_disk = multer.diskStorage({
   destination: (_req, _file, cb) => {
@@ -126,15 +133,41 @@ export async function registerRoutes(
   registerObjectStorageRoutes(app);
 
   // === UPLOAD ROUTE ===
-  app.post("/api/upload", requirePermission("manage_staff"), photoUpload.single("file"), (req, res) => {
+  app.post("/api/upload", requirePermission("manage_staff"), multer({ storage: multer.memoryStorage() }).single("file"), async (req, res) => {
     if (!req.file) {
       return res.status(400).json({ message: "No file uploaded" });
     }
-    
-    // In production (Koyeb), we use disk storage. 
-    // The relative URL works because we serve /uploads as static.
-    const url = `/uploads/${req.file.filename}`;
-    res.json({ url });
+
+    if (!supabase) {
+      console.log("Supabase not configured, falling back to local storage");
+      // Fallback logic could be added here if needed, but for now we expect Supabase
+      return res.status(500).json({ message: "Supabase storage not configured" });
+    }
+
+    try {
+      const file = req.file;
+      const fileExt = path.extname(file.originalname);
+      const fileName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${fileExt}`;
+      const filePath = `staff/${fileName}`;
+
+      const { data, error } = await supabase.storage
+        .from(supabaseBucket)
+        .upload(filePath, file.buffer, {
+          contentType: file.mimetype,
+          upsert: false
+        });
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from(supabaseBucket)
+        .getPublicUrl(filePath);
+
+      res.json({ url: publicUrl });
+    } catch (error: any) {
+      console.error("Supabase upload error:", error);
+      res.status(500).json({ message: error.message || "Failed to upload to Supabase" });
+    }
   });
 
   // Serve static files from uploads directory
