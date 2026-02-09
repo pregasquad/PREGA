@@ -1363,16 +1363,16 @@ export default function Planning() {
     >
       {/* Header - Single row */}
       <div className="mb-1 shrink-0">
-        <div className="flex items-center gap-1 md:gap-2 w-full">
-          <h1 className="text-base md:text-2xl font-semibold gradient-text whitespace-nowrap">{t("planning.title")}</h1>
+        <div className="flex items-center gap-1.5 md:gap-2 w-full">
+          <h1 className="text-lg md:text-2xl font-semibold gradient-text whitespace-nowrap">{t("planning.title")}</h1>
 
           {/* Staff pills */}
           {stats.perStaff.map(s => {
             const staffMember = staffList.find(st => st.id === s.id);
             return (
-              <div key={s.id} className="flex items-center gap-0.5 md:gap-1.5 glass-card px-1 md:px-2 py-0.5 md:py-1 rounded-full">
+              <div key={s.id} className="flex items-center gap-0.5 md:gap-1.5 glass-card px-1.5 md:px-2 py-0.5 md:py-1 rounded-full">
                 <div 
-                  className="w-5 h-5 md:w-8 md:h-8 rounded-full flex items-center justify-center text-white text-[8px] md:text-xs font-bold overflow-hidden"
+                  className="w-6 h-6 md:w-8 md:h-8 rounded-full flex items-center justify-center text-white text-[9px] md:text-xs font-bold overflow-hidden"
                   style={{ backgroundColor: s.color }}
                 >
                   {staffMember?.photoUrl ? (
@@ -1381,13 +1381,13 @@ export default function Planning() {
                     s.name.charAt(0).toUpperCase()
                   )}
                 </div>
-                <span className="text-[9px] md:text-sm font-bold whitespace-nowrap" style={{ color: s.color }}>{s.total}</span>
+                <span className="text-[10px] md:text-sm font-bold whitespace-nowrap" style={{ color: s.color }}>{s.total}</span>
               </div>
             );
           })}
 
           {/* Total */}
-          <div className="liquid-gradient text-white px-2 md:px-4 py-0.5 md:py-1 rounded-full text-[10px] md:text-sm font-bold shadow-md whitespace-nowrap">
+          <div className="liquid-gradient text-white px-2.5 md:px-4 py-0.5 md:py-1 rounded-full text-[11px] md:text-sm font-bold shadow-md whitespace-nowrap">
             {stats.total}
           </div>
 
@@ -1395,12 +1395,12 @@ export default function Planning() {
           <div className="flex-1" />
 
           {/* Date nav */}
-          <Button variant="ghost" size="icon" className="h-6 w-6 md:h-9 md:w-9 rounded-full p-0" onClick={() => setDate(d => addDays(d, -1))}>
-            {isRtl ? <ChevronRight className="w-3.5 h-3.5 md:w-5 md:h-5" /> : <ChevronLeft className="w-3.5 h-3.5 md:w-5 md:h-5" />}
+          <Button variant="ghost" size="icon" className="h-7 w-7 md:h-9 md:w-9 rounded-full p-0" onClick={() => setDate(d => addDays(d, -1))}>
+            {isRtl ? <ChevronRight className="w-4 h-4 md:w-5 md:h-5" /> : <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" />}
           </Button>
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="ghost" className="h-6 px-1 md:h-9 md:px-3 text-[11px] md:text-sm font-medium rounded-full">
+              <Button variant="ghost" className="h-7 px-1.5 md:h-9 md:px-3 text-xs md:text-sm font-medium rounded-full">
                 {format(date, "dd/MM")}
               </Button>
             </PopoverTrigger>
@@ -1408,15 +1408,15 @@ export default function Planning() {
               <Calendar mode="single" selected={date} onSelect={(d) => d && setDate(d)} initialFocus />
             </PopoverContent>
           </Popover>
-          <Button variant="ghost" size="icon" className="h-6 w-6 md:h-9 md:w-9 rounded-full p-0" onClick={() => setDate(d => addDays(d, 1))}>
-            {isRtl ? <ChevronLeft className="w-3.5 h-3.5 md:w-5 md:h-5" /> : <ChevronRight className="w-3.5 h-3.5 md:w-5 md:h-5" />}
+          <Button variant="ghost" size="icon" className="h-7 w-7 md:h-9 md:w-9 rounded-full p-0" onClick={() => setDate(d => addDays(d, 1))}>
+            {isRtl ? <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" /> : <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />}
           </Button>
 
           {!isToday && (
             <Button 
               variant="default"
               size="sm" 
-              className="h-5 px-1.5 md:h-8 md:px-3 text-[9px] md:text-xs font-semibold rounded-full liquid-gradient text-white shadow-sm"
+              className="h-6 px-2 md:h-8 md:px-3 text-[10px] md:text-xs font-semibold rounded-full liquid-gradient text-white shadow-sm"
               onClick={() => setDate(getWorkDayDate(businessSettings?.openingTime, businessSettings?.closingTime))}
             >
               {t("common.today")}
@@ -1424,31 +1424,31 @@ export default function Planning() {
           )}
 
           {isNonWorkingDay && (
-            <AlertCircle className="w-3.5 h-3.5 md:w-5 md:h-5 text-sky-500 shrink-0" />
+            <AlertCircle className="w-4 h-4 md:w-5 md:h-5 text-sky-500 shrink-0" />
           )}
 
           {/* Search */}
           <div className="relative">
             {showSearchInput ? (
-              <div className="flex items-center gap-0.5 md:gap-1 glass-card px-1 md:px-2 py-0.5 md:py-1 rounded-full">
+              <div className="flex items-center gap-0.5 md:gap-1 glass-card px-1.5 md:px-2 py-0.5 md:py-1 rounded-full">
                 <Input
                   type="text"
                   placeholder={t("common.search") + "..."}
                   value={appointmentSearch}
                   onChange={(e) => setAppointmentSearch(e.target.value)}
-                  className="h-5 w-20 md:h-7 md:w-44 text-[10px] md:text-sm border-0 bg-transparent focus-visible:ring-0 px-1"
+                  className="h-6 w-24 md:h-7 md:w-44 text-[11px] md:text-sm border-0 bg-transparent focus-visible:ring-0 px-1"
                   autoFocus
                 />
                 {appointmentSearch && searchResults.count > 0 && (
-                  <span className="text-[8px] md:text-xs font-bold text-emerald-500 whitespace-nowrap">{searchResults.count}={searchResults.total}</span>
+                  <span className="text-[9px] md:text-xs font-bold text-emerald-500 whitespace-nowrap">{searchResults.count}={searchResults.total}</span>
                 )}
                 <button className="p-0.5 md:p-1" onClick={() => { setShowSearchInput(false); setAppointmentSearch(""); }}>
-                  <X className="w-2.5 h-2.5 md:w-4 md:h-4 text-muted-foreground" />
+                  <X className="w-3 h-3 md:w-4 md:h-4 text-muted-foreground" />
                 </button>
               </div>
             ) : (
-              <button className="p-0.5 md:p-1" onClick={() => setShowSearchInput(true)}>
-                <Search className="w-3.5 h-3.5 md:w-5 md:h-5 text-muted-foreground" />
+              <button className="p-1 md:p-1" onClick={() => setShowSearchInput(true)}>
+                <Search className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground" />
               </button>
             )}
             {showSearchInput && appointmentSearch && searchResults.count > 0 && (
@@ -1520,7 +1520,7 @@ export default function Planning() {
               toast({ title: t("common.refreshed"), description: t("common.dataUpdated") });
             }}
           >
-            <RefreshCw className={cn("w-3 h-3 md:w-4.5 md:h-4.5 text-muted-foreground", loadingApps && "animate-spin")} />
+            <RefreshCw className={cn("w-3.5 h-3.5 md:w-4.5 md:h-4.5 text-muted-foreground", loadingApps && "animate-spin")} />
           </button>
         </div>
       </div>
