@@ -1391,9 +1391,6 @@ export default function Planning() {
             {stats.total}
           </div>
 
-          {/* Spacer to push date/actions to end */}
-          <div className="flex-1" />
-
           {/* Date nav */}
           <Button variant="ghost" size="icon" className="h-7 w-7 md:h-9 md:w-9 rounded-full p-0" onClick={() => setDate(d => addDays(d, -1))}>
             {isRtl ? <ChevronRight className="w-4 h-4 md:w-5 md:h-5" /> : <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" />}
@@ -1428,7 +1425,7 @@ export default function Planning() {
           )}
 
           {/* Search */}
-          <div className="relative">
+          <div className="relative shrink-0">
             {showSearchInput ? (
               <div className="flex items-center gap-0.5 md:gap-1 glass-card px-1.5 md:px-2 py-0.5 md:py-1 rounded-full">
                 <Input
@@ -1509,7 +1506,7 @@ export default function Planning() {
           </div>
 
           <button
-            className="p-0.5 md:p-1"
+            className="p-0.5 md:p-1 shrink-0"
             onClick={() => {
               queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
               queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
