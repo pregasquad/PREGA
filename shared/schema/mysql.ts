@@ -122,6 +122,7 @@ export const staff = mysqlTable("staff", {
   phone: text("phone"),
   email: text("email"),
   baseSalary: double("base_salary").notNull().default(0),
+  photoUrl: text("photo_url"),
   categories: text("categories"),
 });
 
@@ -211,6 +212,7 @@ export const insertStaffSchema = createInsertSchema(staff).omit({ id: true }).ex
   phone: z.string().optional(),
   email: z.string().email().optional().or(z.literal("")),
   baseSalary: z.number().min(0).optional(),
+  photoUrl: z.string().optional().or(z.literal("")).nullable(),
   categories: z.string().optional(),
 });
 

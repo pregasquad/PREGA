@@ -249,12 +249,22 @@ export async function ensureAppointmentsAuditColumns(): Promise<void> {
   }
 }
 
-// Backfill staffId for MySQL/TiDB databases
+// Backfill staffId and ensure missing columns for MySQL/TiDB databases
 export async function ensureStaffIdBackfillMySQL(): Promise<void> {
   if (dbDialect !== 'mysql') return;
   
   try {
     const connection = await pool.getConnection();
+    
+    // Ensure photo_url column exists on staff (MEDIUMTEXT for base64)
+    const [photoRows] = await connection.query(`
+      SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+      WHERE TABLE_NAME = 'staff' AND COLUMN_NAME = 'photo_url'
+    `);
+    if ((photoRows as any[]).length === 0) {
+      await connection.query(`ALTER TABLE staff ADD COLUMN photo_url MEDIUMTEXT`);
+      console.log("Added photo_url column (MEDIUMTEXT) to staff table");
+    }
     
     // Ensure staff_id column exists on appointments
     const [appStaffIdRows] = await connection.query(`
