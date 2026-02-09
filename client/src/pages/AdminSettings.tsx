@@ -201,6 +201,7 @@ export default function AdminSettings() {
     try {
       const formData = new FormData();
       formData.append("photo", file);
+      formData.append("staffId", roleId.toString());
       
       const res = await fetch(`/api/admin-roles/${roleId}/photo`, {
         method: "POST",

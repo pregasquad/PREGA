@@ -156,7 +156,8 @@ export async function registerRoutes(
       
       // Generate standard filename for both storage types
       const fileExt = path.extname(file.originalname);
-      const fileName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${fileExt}`;
+      const staffId = req.body.staffId || 'unknown';
+      const fileName = `staff-${staffId}${fileExt}`;
       const filePath = `staff/${fileName}`;
 
       // Always save locally first as a backup and for local serving

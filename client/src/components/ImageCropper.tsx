@@ -60,7 +60,21 @@ export function ImageCropper({ imageSrc, onCropComplete, onCancel, aspect = 1 }:
 
     canvas.toBlob((blob) => {
       if (blob) {
-        onCropComplete(blob);
+        const file = new File([blob], 'photo.jpg', { type: 'image/jpeg' });
+        const formData = new FormData();
+        formData.append('file', file);
+        if (window.currentStaffIdForUpload) {
+          formData.append('staffId', window.currentStaffIdForUpload);
+        }
+        
+        fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        })
+        .then(res => res.json())
+        .then(data => {
+          onCropComplete(data.url);
+        });
       }
     }, 'image/jpeg', 0.9);
   }
