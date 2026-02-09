@@ -1365,25 +1365,28 @@ export default function Planning() {
       <div className="mb-2 flex flex-col md:flex-row justify-between items-start md:items-center gap-2 shrink-0">
         <h1 className="text-xl md:text-2xl font-semibold gradient-text">{t("planning.title")}</h1>
         
-        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2 w-full md:w-auto">
           {/* Staff Revenue - Glass Pills */}
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="grid grid-cols-2 md:flex md:flex-wrap items-stretch md:items-center gap-1.5 w-full md:w-auto">
             {stats.perStaff.map(s => (
-              <div key={s.id} className="glass-card px-3 py-1.5 text-xs flex items-center gap-1.5 hover:scale-105 transition-transform">
-                <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: s.color }} />
-                <span className="font-medium text-foreground/80">{s.name}</span>
-                <span className="font-bold text-foreground">{s.total} DH</span>
+              <div key={s.id} className="glass-card px-3 py-2 text-xs flex items-center justify-between gap-1.5 hover:scale-[1.02] transition-transform min-w-0">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <div className="w-2.5 h-2.5 rounded-full shadow-sm shrink-0" style={{ backgroundColor: s.color }} />
+                  <span className="font-medium text-foreground/80 truncate">{s.name}</span>
+                </div>
+                <span className="font-bold text-foreground whitespace-nowrap">{s.total} DH</span>
               </div>
             ))}
           </div>
 
+          <div className="flex items-center gap-2 w-full md:w-auto">
           {/* Total - Liquid Gradient */}
-          <div className="liquid-gradient text-white px-4 py-1.5 rounded-2xl text-sm font-bold shadow-lg hover:shadow-xl transition-shadow">
+          <div className="liquid-gradient text-white px-4 py-2 rounded-2xl text-sm font-bold shadow-lg hover:shadow-xl transition-shadow whitespace-nowrap">
             {stats.total} DH
           </div>
 
           {/* Search with Price - Glass Style */}
-          <div className="relative">
+          <div className="relative shrink-0">
             <div className="flex items-center gap-1 glass-card px-2 py-1">
               {showSearchInput ? (
                 <>
@@ -1479,6 +1482,7 @@ export default function Planning() {
                 </div>
               </div>
             )}
+          </div>
           </div>
 
           {/* Date Navigation - Glass Pills */}
