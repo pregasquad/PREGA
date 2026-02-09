@@ -212,7 +212,8 @@ export default function Salaries() {
     const rangeEnd = endOfDay(end);
     const inRange = (isAfter(aptDate, rangeStart) || isEqual(aptDate, rangeStart)) && 
                     (isBefore(aptDate, rangeEnd) || isEqual(aptDate, rangeEnd));
-    const staffMatch = selectedStaff === "all" || apt.staff === selectedStaff;
+    const selectedStaffId = selectedStaff !== "all" ? parseInt(selectedStaff) : null;
+    const staffMatch = selectedStaff === "all" || (selectedStaffId && (apt.staffId === selectedStaffId || (!apt.staffId && apt.staff === staff.find(s => s.id === selectedStaffId)?.name)));
     return inRange && staffMatch && apt.paid === true;
   });
 
@@ -244,9 +245,10 @@ export default function Salaries() {
       services: Record<string, { count: number; revenue: number; commission: number }>;
     }> = {};
 
+    const selectedStaffId = selectedStaff !== "all" ? parseInt(selectedStaff) : null;
     const staffToShow = selectedStaff === "all" 
       ? staff 
-      : staff.filter(s => s.name === selectedStaff);
+      : staff.filter(s => s.id === selectedStaffId);
 
     staffToShow.forEach((s) => {
       earnings[s.name] = { 
@@ -290,7 +292,8 @@ export default function Salaries() {
     if (selectedStaff === "all") {
       return Object.values(earnings).filter(e => e.appointmentsCount > 0 || staff.some(s => s.name === e.name));
     } else {
-      return Object.values(earnings).filter(e => e.name === selectedStaff);
+      const selStaff = staff.find(s => s.id === parseInt(selectedStaff));
+      return Object.values(earnings).filter(e => e.name === selStaff?.name);
     }
   };
 
@@ -309,7 +312,8 @@ export default function Salaries() {
   const filteredDeductions = deductions.filter(d => {
     if (d.cleared) return false;
     const deductionDate = startOfDay(parseISO(d.date));
-    const staffMatch = selectedStaff === "all" || d.staffName === selectedStaff;
+    const deductionStaffId = selectedStaff !== "all" ? parseInt(selectedStaff) : null;
+    const staffMatch = selectedStaff === "all" || (deductionStaffId && (d.staffId === deductionStaffId || (!d.staffId && d.staffName === staff.find(s => s.id === deductionStaffId)?.name)));
     return staffMatch &&
            (isAfter(deductionDate, startOfDay(start)) || isEqual(deductionDate, startOfDay(start))) &&
            (isBefore(deductionDate, endOfDay(end)) || isEqual(deductionDate, endOfDay(end)));
@@ -495,7 +499,7 @@ export default function Salaries() {
           <SelectContent>
             <SelectItem value="all">{t("salaries.allStaff")}</SelectItem>
             {staff.map((s) => (
-              <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+              <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -605,14 +609,14 @@ export default function Salaries() {
       {selectedStaff !== "all" && (
         <Card>
           <CardHeader className="p-3 pb-2">
-            <CardTitle className="text-base">{t("salaries.serviceDetails")} - {selectedStaff}</CardTitle>
+            <CardTitle className="text-base">{t("salaries.serviceDetails")} - {staff.find(s => s.id === parseInt(selectedStaff))?.name}</CardTitle>
           </CardHeader>
           <CardContent className="p-3 pt-0 space-y-2">
             {staffEarnings
-              .find((e) => e.name === selectedStaff)
+              .find((e) => e.name === staff.find(s => s.id === parseInt(selectedStaff))?.name)
               ?.services &&
               Object.entries(
-                staffEarnings.find((e) => e.name === selectedStaff)!.services
+                staffEarnings.find((e) => e.name === staff.find(s => s.id === parseInt(selectedStaff))?.name)!.services
               ).map(([serviceName, data]) => (
                 <div key={serviceName} className="p-3 bg-muted/50 rounded-lg">
                   <div className="flex justify-between items-center">

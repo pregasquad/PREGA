@@ -338,6 +338,23 @@ export async function ensureForeignKeyConstraints(): Promise<void> {
       END $$;
     `);
     
+    // Backfill staffId for appointments and staff_deductions from staff name
+    await pool.query(`
+      UPDATE appointments a
+      SET staff_id = s.id
+      FROM staff s
+      WHERE a.staff = s.name
+      AND a.staff_id IS NULL;
+    `);
+    await pool.query(`
+      UPDATE staff_deductions d
+      SET staff_id = s.id
+      FROM staff s
+      WHERE d.staff_name = s.name
+      AND d.staff_id IS NULL;
+    `);
+    console.log("Staff ID backfill ready");
+
     // Add indexes for better query performance
     await pool.query(`
       DO $$ 
@@ -348,6 +365,9 @@ export async function ensureForeignKeyConstraints(): Promise<void> {
         IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_appointments_staff') THEN
           CREATE INDEX idx_appointments_staff ON appointments(staff);
         END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_appointments_staff_id') THEN
+          CREATE INDEX idx_appointments_staff_id ON appointments(staff_id);
+        END IF;
         IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_appointments_client_id') THEN
           CREATE INDEX idx_appointments_client_id ON appointments(client_id);
         END IF;
@@ -356,6 +376,9 @@ export async function ensureForeignKeyConstraints(): Promise<void> {
         END IF;
         IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_staff_deductions_date') THEN
           CREATE INDEX idx_staff_deductions_date ON staff_deductions(date);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_staff_deductions_staff_id') THEN
+          CREATE INDEX idx_staff_deductions_staff_id ON staff_deductions(staff_id);
         END IF;
       EXCEPTION WHEN OTHERS THEN
         NULL;

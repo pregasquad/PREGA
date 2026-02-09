@@ -717,7 +717,7 @@ export default function Planning() {
     const total = paidAppointments.reduce((sum, app) => sum + (app.total || 0), 0);
     const perStaff = staffList.map(s => {
       const staffTotal = paidAppointments
-        .filter(app => app.staff === s.name)
+        .filter(app => app.staffId === s.id || (!app.staffId && app.staff === s.name))
         .reduce((sum, app) => sum + (app.total || 0), 0);
       return { ...s, total: staffTotal };
     });
@@ -1248,6 +1248,7 @@ export default function Planning() {
         ...draggedAppointment,
         servicesJson: parsedServicesJson,
         staff: staffName,
+        staffId: staffMember.id,
         startTime: newTime,
         updatedAt: new Date().toISOString(),
         _store: 'appointments',
@@ -1301,18 +1302,18 @@ export default function Planning() {
     });
   };
 
-  const getBooking = (staffName: string, hour: string) => {
-    return appointments.find(a => a.staff === staffName && a.startTime === hour);
+  const getBooking = (staffId: number, staffName: string, hour: string) => {
+    return appointments.find(a => (a.staffId === staffId || (!a.staffId && a.staff === staffName)) && a.startTime === hour);
   };
 
   const getBookingSpan = (app: any) => {
     return Math.ceil(app.duration / 30);
   };
 
-  const isSlotCovered = (staffName: string, hour: string) => {
+  const isSlotCovered = (staffId: number, staffName: string, hour: string) => {
     const hourIndex = hours.indexOf(hour);
     for (let i = 0; i < hourIndex; i++) {
-      const prevBooking = appointments.find(a => a.staff === staffName && a.startTime === hours[i]);
+      const prevBooking = appointments.find(a => (a.staffId === staffId || (!a.staffId && a.staff === staffName)) && a.startTime === hours[i]);
       if (prevBooking) {
         const span = getBookingSpan(prevBooking);
         if (i + span > hourIndex) {
@@ -1762,8 +1763,8 @@ export default function Planning() {
 
               {staffList.map((s, staffIndex) => {
                 const colNum = staffIndex + 2; // +2 because column 1 is time labels
-                const booking = getBooking(s.name, hour);
-                const isCovered = isSlotCovered(s.name, hour);
+                const booking = getBooking(s.id, s.name, hour);
+                const isCovered = isSlotCovered(s.id, s.name, hour);
 
                 // For covered slots, render empty cell with just borders
                 if (isCovered) {

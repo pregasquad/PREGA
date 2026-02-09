@@ -88,6 +88,7 @@ export const appointments = mysqlTable("appointments", {
   service: text("service"),
   servicesJson: text("services_json"),
   staff: text("staff").notNull(),
+  staffId: int("staff_id"),
   price: double("price").notNull(),
   total: double("total").notNull(),
   paid: boolean("paid").default(false).notNull(),
@@ -153,6 +154,7 @@ export type InsertCharge = z.infer<typeof insertChargeSchema>;
 export const staffDeductions = mysqlTable("staff_deductions", {
   id: serial("id").primaryKey(),
   staffName: text("staff_name").notNull(),
+  staffId: int("staff_id"),
   type: text("type").notNull(),
   description: text("description").notNull(),
   amount: double("amount").notNull(),

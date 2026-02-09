@@ -101,8 +101,8 @@ export default function StaffPerformance() {
     [appointments, startDate, endDate]
   );
 
-  const calculateStaffStats = useCallback((staffName: string) => {
-    const staffAppts = monthAppointments.filter((a) => a.staff === staffName);
+  const calculateStaffStats = useCallback((staffId: number, staffName: string) => {
+    const staffAppts = monthAppointments.filter((a) => a.staffId === staffId || (!a.staffId && a.staff === staffName));
     let totalRevenue = 0;
     let totalCommission = 0;
     const serviceBreakdown: Record<string, { count: number; revenue: number }> = {};
@@ -131,7 +131,7 @@ export default function StaffPerformance() {
   }, [monthAppointments, serviceMap]);
 
   const allStaffStats = useMemo(() => 
-    staffList.map((s) => calculateStaffStats(s.name)),
+    staffList.map((s) => calculateStaffStats(s.id, s.name)),
     [staffList, calculateStaffStats]
   );
 

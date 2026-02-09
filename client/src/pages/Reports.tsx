@@ -88,7 +88,7 @@ export default function Reports() {
     
     const staffRevenue = staffList.map(s => {
       const revenue = filteredAppointments
-        .filter(app => app.staff === s.name)
+        .filter(app => app.staffId === s.id || (!app.staffId && app.staff === s.name))
         .reduce((sum, app) => sum + Number(app.total || 0), 0);
       return { name: s.name, value: revenue, color: s.color };
     }).filter(item => item.value > 0);
@@ -109,7 +109,7 @@ export default function Reports() {
 
   const staffPerformance = useMemo(() => {
     return staffList.map(staff => {
-      const staffApps = filteredAppointments.filter(app => app.staff === staff.name);
+      const staffApps = filteredAppointments.filter(app => app.staffId === staff.id || (!app.staffId && app.staff === staff.name));
       const totalEarnings = staffApps.reduce((sum, app) => sum + Number(app.total || 0), 0);
       const paidEarnings = staffApps.filter(app => app.paid).reduce((sum, app) => sum + Number(app.total || 0), 0);
       

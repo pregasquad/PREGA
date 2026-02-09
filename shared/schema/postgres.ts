@@ -89,6 +89,7 @@ export const appointments = pgTable("appointments", {
   service: text("service"),
   servicesJson: text("services_json"),
   staff: text("staff").notNull(),
+  staffId: integer("staff_id"),
   price: doublePrecision("price").notNull(),
   total: doublePrecision("total").notNull(),
   paid: boolean("paid").default(false).notNull(),
@@ -156,6 +157,7 @@ export type InsertCharge = z.infer<typeof insertChargeSchema>;
 export const staffDeductions = pgTable("staff_deductions", {
   id: serial("id").primaryKey(),
   staffName: text("staff_name").notNull(),
+  staffId: integer("staff_id"),
   type: text("type").notNull(),
   description: text("description").notNull(),
   amount: doublePrecision("amount").notNull(),

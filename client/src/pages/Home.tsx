@@ -345,7 +345,7 @@ export default function Home() {
             <CardContent className="p-3 md:p-6 pt-0">
               <div className="space-y-2 md:space-y-4">
                 {staff.map((s: any) => {
-                  const staffApps = appointments.filter((a: any) => a.staff === s.name).length;
+                  const staffApps = appointments.filter((a: any) => a.staffId === s.id || (!a.staffId && a.staff === s.name)).length;
                   return (
                     <div key={s.id} className="flex items-center justify-between p-2 md:p-3 rounded-lg bg-muted/50 gap-2">
                       <div className="flex items-center gap-2 min-w-0 flex-1">

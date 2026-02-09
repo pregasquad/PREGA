@@ -20,6 +20,7 @@ interface Appointment {
   client: string;
   service: string;
   staff: string;
+  staffId?: number | null;
   date: string;
   startTime: string;
   duration: number;
@@ -101,7 +102,8 @@ export default function BookingHistory() {
         appt.client?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         appt.service?.toLowerCase().includes(searchTerm.toLowerCase());
       
-      const matchesStaff = filterStaff === "all" || appt.staff === filterStaff;
+      const filterStaffId = filterStaff !== "all" && filterStaff !== "À assigner" ? parseInt(filterStaff) : null;
+      const matchesStaff = filterStaff === "all" || filterStaff === "À assigner" ? (filterStaff === "all" || appt.staff === "À assigner" || !appt.staff) : (filterStaffId && (appt.staffId === filterStaffId || (!appt.staffId && appt.staff === staffList.find(s => s.id === filterStaffId)?.name)));
       
       const isUnassigned = appt.staff === "À assigner" || !appt.staff;
       const matchesStatus = 
@@ -198,7 +200,7 @@ export default function BookingHistory() {
                     <span className="text-sky-600">{t("bookingHistory.toAssignOption")}</span>
                   </SelectItem>
                   {staffList.map((staff) => (
-                    <SelectItem key={staff.id} value={staff.name}>
+                    <SelectItem key={staff.id} value={String(staff.id)}>
                       <div className="flex items-center gap-2">
                         <div 
                           className="w-3 h-3 rounded-full" 

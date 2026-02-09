@@ -24,7 +24,7 @@ import {
   type StaffGoal, type InsertStaffGoal,
   type MessageTemplate, type InsertMessageTemplate
 } from "@shared/schema";
-import { eq, desc, and, gte, lte, sql } from "drizzle-orm";
+import { eq, desc, and, gte, lte, sql, isNull } from "drizzle-orm";
 import { authStorage, type IAuthStorage } from "./replit_integrations/auth/storage";
 
 // Helper to check if we're using MySQL (no .returning() support)
@@ -216,6 +216,15 @@ export class DatabaseStorage implements IStorage {
     const s = schema();
     
     const processedAppointment = this.processAppointmentServices(appointment);
+
+    if (!processedAppointment.staffId && processedAppointment.staff) {
+      const [staffMember] = await db().select().from(s.staff)
+        .where(eq(s.staff.name, processedAppointment.staff));
+      if (staffMember) {
+        processedAppointment.staffId = staffMember.id;
+      }
+    }
+    
     console.log("[STORAGE] createAppointment - processed data:", JSON.stringify(processedAppointment));
     
     if (isMySQL()) {
@@ -417,6 +426,31 @@ export class DatabaseStorage implements IStorage {
       if (!current) throw new Error("Staff not found");
       return current;
     }
+
+    if (st.name) {
+      const [oldStaff] = await db().select().from(s.staff).where(eq(s.staff.id, id));
+      if (oldStaff && oldStaff.name !== st.name) {
+        await db().update(s.appointments)
+          .set({ staff: st.name, staffId: id })
+          .where(eq(s.appointments.staffId, id));
+        await db().update(s.appointments)
+          .set({ staff: st.name, staffId: id })
+          .where(and(
+            isNull(s.appointments.staffId),
+            eq(s.appointments.staff, oldStaff.name)
+          ));
+        await db().update(s.staffDeductions)
+          .set({ staffName: st.name, staffId: id })
+          .where(eq(s.staffDeductions.staffId, id));
+        await db().update(s.staffDeductions)
+          .set({ staffName: st.name, staffId: id })
+          .where(and(
+            isNull(s.staffDeductions.staffId),
+            eq(s.staffDeductions.staffName, oldStaff.name)
+          ));
+      }
+    }
+
     if (isMySQL()) {
       await db().update(s.staff).set(st).where(eq(s.staff.id, id));
       const [updated] = await db().select().from(s.staff).where(eq(s.staff.id, id));
@@ -685,6 +719,15 @@ export class DatabaseStorage implements IStorage {
 
   async createStaffDeduction(deduction: InsertStaffDeduction): Promise<StaffDeduction> {
     const s = schema();
+
+    if (!(deduction as any).staffId && deduction.staffName) {
+      const [staffMember] = await db().select().from(s.staff)
+        .where(eq(s.staff.name, deduction.staffName));
+      if (staffMember) {
+        (deduction as any).staffId = staffMember.id;
+      }
+    }
+
     if (isMySQL()) {
       const result = await db().insert(s.staffDeductions).values(deduction);
       const insertId = (result as any).insertId ?? (result as any)[0]?.insertId;
