@@ -2238,22 +2238,18 @@ export async function registerRoutes(
   app.post("/api/admin-roles/:id/photo", isPinAuthenticated, requirePermission("admin_settings"), photoUpload.single("photo"), async (req, res) => {
     try {
       const id = Number(req.params.id);
+      const isStaff = req.query.type === 'staff';
       
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
       
-      const role = await storage.getAdminRole(id);
-      if (!role) {
-        return res.status(404).json({ message: "Admin role not found" });
-      }
-
       let photoUrl = "";
 
       if (supabase) {
         try {
           const fileExt = path.extname(req.file.originalname);
-          const fileName = `admin-role-${id}${fileExt}`;
+          const fileName = isStaff ? `staff-${id}${fileExt}` : `admin-role-${id}${fileExt}`;
           const filePath = `avatars/${fileName}`;
           
           const fileBuffer = fs.readFileSync(req.file.path);
@@ -2293,13 +2289,21 @@ export async function registerRoutes(
         });
       }
       
-      const updatedRole = await storage.updateAdminRole(id, { photoUrl });
-      
-      res.json({ 
-        success: true, 
-        photoUrl,
-        role: { ...updatedRole, pin: updatedRole.pin ? "****" : null }
-      });
+      if (isStaff) {
+        const updatedStaff = await storage.updateStaff(id, { photoUrl });
+        res.json({ 
+          success: true, 
+          photoUrl,
+          staff: updatedStaff
+        });
+      } else {
+        const updatedRole = await storage.updateAdminRole(id, { photoUrl });
+        res.json({ 
+          success: true, 
+          photoUrl,
+          role: { ...updatedRole, pin: updatedRole.pin ? "****" : null }
+        });
+      }
     } catch (err: any) {
       res.status(500).json({ message: err.message || "Upload failed" });
     }

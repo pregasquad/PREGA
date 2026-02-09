@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, Edit2, User, Phone, Mail, DollarSign, Palette, Tag, Calendar, Coffee, CalendarOff, Upload } from "lucide-react";
+import { Plus, Trash2, Edit2, User, Phone, Mail, DollarSign, Palette, Tag, Calendar, Coffee, CalendarOff, Upload, Camera } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormMessage, FormLabel } from "@/components/ui/form";
@@ -206,16 +206,48 @@ export default function Staff() {
       const file = e.target.files?.[0];
       if (!file) return;
 
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const src = event.target?.result as string;
-        setCropImage(src);
-        setCurrentFormInstance(formInstance);
-        if (typeof window !== 'undefined' && staffId) {
-          window.currentStaffIdForUpload = staffId.toString();
+      if (typeof window !== 'undefined' && staffId) {
+        window.currentStaffIdForUpload = staffId.toString();
+      }
+
+      // If there's an existing ID, we use the specific staff photo endpoint like User Management
+      if (staffId) {
+        try {
+          const formData = new FormData();
+          formData.append("photo", file);
+          formData.append("staffId", staffId.toString());
+          
+          const res = await fetch(`/api/admin-roles/${staffId}/photo?type=staff`, {
+            method: "POST",
+            body: formData,
+            credentials: "include"
+          });
+          
+          if (!res.ok) {
+            const error = await res.json();
+            throw new Error(error.message || "Upload failed");
+          }
+          
+          queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
+          toast({ title: t("admin.photoUploaded") });
+          
+          const result = await res.json();
+          if (result.photoUrl) {
+            formInstance.setValue("photoUrl", result.photoUrl);
+          }
+        } catch (err: any) {
+          toast({ title: t("common.error"), description: err.message, variant: "destructive" });
         }
-      };
-      reader.readAsDataURL(file);
+      } else {
+        // For new staff, use the generic upload with cropper
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const src = event.target?.result as string;
+          setCropImage(src);
+          setCurrentFormInstance(formInstance);
+        };
+        reader.readAsDataURL(file);
+      }
     };
 
     return (
@@ -249,12 +281,15 @@ export default function Staff() {
                           const input = document.createElement("input");
                           input.type = "file";
                           input.accept = "image/*";
-                          input.onchange = (e) => handleFileUploadLocal(e as any);
+                          input.onchange = (e) => {
+                            const file = (e.target as HTMLInputElement).files?.[0];
+                            if (file) handleFileUploadLocal(e as any);
+                          };
                           input.click();
                         }}
                       >
-                        <Upload className="h-4 w-4" />
-                        {t("staff.uploadPhoto", { defaultValue: "Upload Photo" })}
+                        <Camera className="h-4 w-4" />
+                        {t("admin.uploadPhoto") || "Upload Photo"}
                       </Button>
                     </div>
                     <Input {...field} type="hidden" />
