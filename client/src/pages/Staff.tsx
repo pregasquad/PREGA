@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, Edit2, User, Phone, Mail, DollarSign, Palette, Tag, Calendar, Coffee, CalendarOff, Upload, Camera } from "lucide-react";
+import { Plus, Trash2, Edit2, User, Phone, Mail, DollarSign, Palette, Tag, Calendar, Coffee, CalendarOff, Upload, Camera, Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormMessage, FormLabel } from "@/components/ui/form";
@@ -38,7 +38,38 @@ export default function Staff() {
   const { data: staffList = [] } = useStaff();
   const { data: categories = [] } = useCategories();
   
-  const [editingStaff, setEditingStaff] = useState<StaffType | null>(null);
+  const [uploadingPhotoId, setUploadingPhotoId] = useState<number | null>(null);
+
+  const handlePhotoUpload = async (staffId: number, file: File) => {
+    // Store staff ID globally for the ImageCropper to use during upload
+    if (typeof window !== 'undefined') {
+      window.currentStaffIdForUpload = staffId.toString();
+    }
+    setUploadingPhotoId(staffId);
+    try {
+      const formData = new FormData();
+      formData.append("photo", file);
+      formData.append("staffId", staffId.toString());
+      
+      const res = await fetch(`/api/admin-roles/${staffId}/photo?type=staff`, {
+        method: "POST",
+        body: formData,
+        credentials: "include"
+      });
+      
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Upload failed");
+      }
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
+      toast({ title: t("admin.photoUploaded") });
+    } catch (err: any) {
+      toast({ title: t("common.error"), description: err.message, variant: "destructive" });
+    } finally {
+      setUploadingPhotoId(null);
+    }
+  };
   const [scheduleStaff, setScheduleStaff] = useState<StaffType | null>(null);
   const [scheduleTab, setScheduleTab] = useState<"schedule" | "breaks" | "timeoff">("schedule");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -268,7 +299,7 @@ export default function Staff() {
                       <div className="relative group w-20 h-20">
                         <img src={field.value} alt="Preview" className="w-20 h-20 rounded-full object-cover border group-hover:opacity-50 transition-opacity" />
                         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                          <Edit2 className="h-5 w-5 text-white drop-shadow" />
+                          <Camera className="h-5 w-5 text-white drop-shadow" />
                         </div>
                       </div>
                     )}
@@ -277,18 +308,32 @@ export default function Staff() {
                         type="button" 
                         variant="outline" 
                         className="w-full gap-2"
+                        disabled={staffId ? uploadingPhotoId === staffId : false}
                         onClick={() => {
                           const input = document.createElement("input");
                           input.type = "file";
                           input.accept = "image/*";
                           input.onchange = (e) => {
                             const file = (e.target as HTMLInputElement).files?.[0];
-                            if (file) handleFileUploadLocal(e as any);
+                            if (file) {
+                              if (staffId) {
+                                handlePhotoUpload(staffId, file).then(() => {
+                                  // Refresh the form if it's the current one
+                                  // This is a bit tricky with react-hook-form, but usually invalidateQueries handles the card
+                                });
+                              } else {
+                                handleFileUploadLocal(e as any);
+                              }
+                            }
                           };
                           input.click();
                         }}
                       >
-                        <Camera className="h-4 w-4" />
+                        {staffId && uploadingPhotoId === staffId ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Camera className="h-4 w-4" />
+                        )}
                         {t("admin.uploadPhoto") || "Upload Photo"}
                       </Button>
                     </div>
@@ -472,25 +517,67 @@ export default function Staff() {
                 <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
                   <div className="flex items-center gap-3 w-full min-w-0">
                     {staff.photoUrl ? (
-                      <img 
-                        src={staff.photoUrl} 
-                        alt={staff.name}
-                        className="w-12 h-12 rounded-full object-cover border-2 shrink-0"
-                        style={{ borderColor: staff.color }}
-                        onError={(e) => {
-                          // Fallback to UI Avatars if Supabase/Local URL fails
-                          const target = e.target as HTMLImageElement;
-                          if (!target.src.includes('ui-avatars.com')) {
-                            target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(staff.name)}&background=${staff.color.replace('#', '')}&color=fff`;
-                          }
-                        }}
-                      />
+                      <div className="relative group shrink-0">
+                        <img 
+                          src={staff.photoUrl} 
+                          alt={staff.name}
+                          className="w-12 h-12 rounded-full object-cover border-2 group-hover:opacity-50 transition-opacity"
+                          style={{ borderColor: staff.color }}
+                          onError={(e) => {
+                            // Fallback to UI Avatars if Supabase/Local URL fails
+                            const target = e.target as HTMLImageElement;
+                            if (!target.src.includes('ui-avatars.com')) {
+                              target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(staff.name)}&background=${staff.color.replace('#', '')}&color=fff`;
+                            }
+                          }}
+                        />
+                        <button
+                          className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => {
+                            const input = document.createElement("input");
+                            input.type = "file";
+                            input.accept = "image/*";
+                            input.onchange = (e) => {
+                              const file = (e.target as HTMLInputElement).files?.[0];
+                              if (file) handlePhotoUpload(staff.id, file);
+                            };
+                            input.click();
+                          }}
+                        >
+                          {uploadingPhotoId === staff.id ? (
+                            <Loader2 className="h-5 w-5 animate-spin text-white" />
+                          ) : (
+                            <Camera className="h-5 w-5 text-white drop-shadow" />
+                          )}
+                        </button>
+                      </div>
                     ) : (
-                      <div 
-                        className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg shrink-0"
-                        style={{ backgroundColor: staff.color }}
-                      >
-                        {getInitial(staff.name)}
+                      <div className="relative group shrink-0">
+                        <div 
+                          className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg group-hover:opacity-50 transition-opacity"
+                          style={{ backgroundColor: staff.color }}
+                        >
+                          {getInitial(staff.name)}
+                        </div>
+                        <button
+                          className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => {
+                            const input = document.createElement("input");
+                            input.type = "file";
+                            input.accept = "image/*";
+                            input.onchange = (e) => {
+                              const file = (e.target as HTMLInputElement).files?.[0];
+                              if (file) handlePhotoUpload(staff.id, file);
+                            };
+                            input.click();
+                          }}
+                        >
+                          {uploadingPhotoId === staff.id ? (
+                            <Loader2 className="h-5 w-5 animate-spin text-white" />
+                          ) : (
+                            <Camera className="h-5 w-5 text-white drop-shadow" />
+                          )}
+                        </button>
                       </div>
                     )}
                     <div className="min-w-0 flex-1">
