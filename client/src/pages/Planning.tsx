@@ -1494,12 +1494,12 @@ export default function Planning() {
           {/* Date Navigation - Glass Pills */}
           <div className="flex items-center gap-1 glass-card px-2 py-1">
             <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-muted/50" onClick={() => setDate(d => addDays(d, -1))}>
-              <ChevronRight className="w-4 h-4" />
+              {isRtl ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
             </Button>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="ghost" className="h-7 px-3 text-xs rounded-full hover:bg-muted/50">
-                  <CalendarIcon className="w-3 h-3 ml-1" />
+                  <CalendarIcon className="w-3 h-3 ltr:ml-1 rtl:mr-1" />
                   {format(date, "dd/MM")}
                 </Button>
               </PopoverTrigger>
@@ -1508,7 +1508,7 @@ export default function Planning() {
               </PopoverContent>
             </Popover>
             <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-muted/50" onClick={() => setDate(d => addDays(d, 1))}>
-              <ChevronLeft className="w-4 h-4" />
+              {isRtl ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
             </Button>
             <Button 
               variant={isToday ? "ghost" : "default"}
