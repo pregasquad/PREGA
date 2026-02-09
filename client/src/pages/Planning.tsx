@@ -1470,13 +1470,13 @@ export default function Planning() {
         </div>
 
         {/* Staff Revenue - Horizontal scroll with avatars */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide w-full">
+        <div className="flex items-center gap-3 overflow-x-auto pt-1 pb-1 px-1 scrollbar-hide w-full">
           {stats.perStaff.map(s => {
             const staffMember = staffList.find(st => st.id === s.id);
             return (
-              <div key={s.id} className="flex flex-col items-center gap-1 shrink-0 min-w-[4.5rem]">
+              <div key={s.id} className="flex flex-col items-center gap-0.5 shrink-0 min-w-[4rem]">
                 <div 
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-md ring-2 ring-offset-1 ring-offset-background overflow-hidden"
+                  className="w-11 h-11 rounded-full flex items-center justify-center text-white text-sm font-bold ring-2 ring-offset-2 ring-offset-background overflow-hidden"
                   style={{ backgroundColor: s.color, ['--tw-ring-color' as string]: s.color }}
                 >
                   {staffMember?.photoUrl ? (
@@ -1485,8 +1485,8 @@ export default function Planning() {
                     s.name.charAt(0).toUpperCase()
                   )}
                 </div>
-                <span className="text-[10px] font-medium text-foreground/70 truncate max-w-[4.5rem] text-center">{s.name}</span>
-                <span className="text-xs font-bold text-foreground" style={{ color: s.color }}>{s.total}</span>
+                <span className="text-[10px] font-medium text-foreground/70 truncate max-w-[4.5rem] text-center mt-1">{s.name}</span>
+                <span className="text-xs font-bold" style={{ color: s.color }}>{s.total}</span>
               </div>
             );
           })}
