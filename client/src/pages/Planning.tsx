@@ -1670,7 +1670,10 @@ export default function Planning() {
                       style={{ borderColor: s.color }}
                       onError={(e) => {
                         // Fallback to avatar if local image fails to load
-                        (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=${s.color.replace('#', '')}&color=fff`;
+                        const target = e.target as HTMLImageElement;
+                        if (!target.src.includes('ui-avatars.com')) {
+                          target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=${s.color.replace('#', '')}&color=fff`;
+                        }
                       }}
                     />
                   </div>

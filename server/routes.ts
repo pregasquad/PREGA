@@ -154,26 +154,27 @@ export async function registerRoutes(
       const file = req.file;
       console.log(`Uploading file: ${file.originalname} (${file.size} bytes)`);
       
+      // Generate standard filename for both storage types
+      const fileExt = path.extname(file.originalname);
+      const fileName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${fileExt}`;
+      const filePath = `staff/${fileName}`;
+
       // Always save locally first as a backup and for local serving
       const uploadPath = path.resolve(process.cwd(), "uploads");
       if (!fs.existsSync(uploadPath)) {
         fs.mkdirSync(uploadPath, { recursive: true });
       }
       
-      const fileExt = path.extname(file.originalname);
-      const fileName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${fileExt}`;
       const localFilePath = path.join(uploadPath, fileName);
       fs.writeFileSync(localFilePath, file.buffer);
       const localUrl = `/uploads/${fileName}`;
 
       if (supabase) {
-        const filePath = `staff/${fileName}`;
-
         const { data, error } = await supabase.storage
           .from(supabaseBucket)
           .upload(filePath, file.buffer, {
             contentType: file.mimetype,
-            upsert: false,
+            upsert: true,
             cacheControl: '3600'
           });
 
@@ -182,7 +183,11 @@ export async function registerRoutes(
           return res.json({ url: localUrl });
         }
 
-        const publicUrl = `${supabaseUrl}/storage/v1/object/public/${supabaseBucket}/${filePath}`;
+        const { data: publicUrlData } = supabase.storage
+          .from(supabaseBucket)
+          .getPublicUrl(filePath);
+
+        const publicUrl = publicUrlData.publicUrl;
         console.log(`Saved file to Supabase: ${publicUrl}`);
         return res.json({ url: publicUrl });
       } else {
