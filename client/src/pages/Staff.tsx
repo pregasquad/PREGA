@@ -127,14 +127,28 @@ export default function Staff() {
   const handleCropComplete = async (croppedBlob: Blob) => {
     if (!currentFormInstance) return;
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64data = reader.result as string;
-      currentFormInstance.setValue("photoUrl", base64data);
+    const formData = new FormData();
+    formData.append("file", croppedBlob, "staff-photo.jpg");
+
+    try {
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+        credentials: "include"
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Upload failed");
+      }
+
+      const { url } = await res.json();
+      currentFormInstance.setValue("photoUrl", url);
       setCropImage(null);
-      toast({ title: t("common.success"), description: "Photo updated locally" });
-    };
-    reader.readAsDataURL(croppedBlob);
+      toast({ title: t("common.success"), description: "Photo updated" });
+    } catch (err: any) {
+      toast({ title: t("common.error"), description: err.message, variant: "destructive" });
+    }
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -184,27 +198,13 @@ export default function Staff() {
       const file = e.target.files?.[0];
       if (!file) return;
 
-      const formData = new FormData();
-      formData.append("file", file);
-      
-      try {
-        const res = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-          credentials: "include"
-        });
-        
-        if (!res.ok) {
-          const error = await res.json();
-          throw new Error(error.message || "Upload failed");
-        }
-        
-        const { url } = await res.json();
-        formInstance.setValue("photoUrl", url);
-        toast({ title: t("common.success"), description: "Photo updated" });
-      } catch (err: any) {
-        toast({ title: t("common.error"), description: err.message, variant: "destructive" });
-      }
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const src = event.target?.result as string;
+        setCropImage(src);
+        setCurrentFormInstance(formInstance);
+      };
+      reader.readAsDataURL(file);
     };
 
     return (
