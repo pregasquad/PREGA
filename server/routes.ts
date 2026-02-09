@@ -154,9 +154,19 @@ export async function registerRoutes(
       const file = req.file;
       console.log(`Uploading file: ${file.originalname} (${file.size} bytes)`);
       
+      // Always save locally first as a backup and for local serving
+      const uploadPath = path.resolve(process.cwd(), "uploads");
+      if (!fs.existsSync(uploadPath)) {
+        fs.mkdirSync(uploadPath, { recursive: true });
+      }
+      
+      const fileExt = path.extname(file.originalname);
+      const fileName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${fileExt}`;
+      const localFilePath = path.join(uploadPath, fileName);
+      fs.writeFileSync(localFilePath, file.buffer);
+      const localUrl = `/uploads/${fileName}`;
+
       if (supabase) {
-        const fileExt = path.extname(file.originalname);
-        const fileName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${fileExt}`;
         const filePath = `staff/${fileName}`;
 
         const { data, error } = await supabase.storage
@@ -167,29 +177,17 @@ export async function registerRoutes(
             cacheControl: '3600'
           });
 
-        if (error) throw error;
+        if (error) {
+          console.error("Supabase upload error, falling back to local:", error);
+          return res.json({ url: localUrl });
+        }
 
-        // Use standard Supabase URL format for better stability
-        // publicUrl format: https://[project-id].supabase.co/storage/v1/object/public/[bucket]/[path]
         const publicUrl = `${supabaseUrl}/storage/v1/object/public/${supabaseBucket}/${filePath}`;
-
+        console.log(`Saved file to Supabase: ${publicUrl}`);
         return res.json({ url: publicUrl });
       } else {
-        // Fallback to local storage if Supabase is not configured
-        const uploadPath = path.resolve(process.cwd(), "uploads");
-        if (!fs.existsSync(uploadPath)) {
-          fs.mkdirSync(uploadPath, { recursive: true });
-        }
-        
-        const fileExt = path.extname(file.originalname);
-        const fileName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${fileExt}`;
-        const filePath = path.join(uploadPath, fileName);
-        
-        fs.writeFileSync(filePath, file.buffer);
-        const publicUrl = `/uploads/${fileName}`;
-        
-        console.log(`Saved file locally: ${publicUrl}`);
-        return res.json({ url: publicUrl });
+        console.log(`Saved file locally: ${localUrl}`);
+        return res.json({ url: localUrl });
       }
     } catch (error: any) {
       console.error("Upload error:", error);
