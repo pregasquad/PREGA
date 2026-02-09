@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import ReactCrop, { centerCrop, makeAspectCrop, Crop, PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { Button } from '@/components/ui/button';
@@ -9,12 +9,6 @@ interface ImageCropperProps {
   onCropComplete: (croppedImage: Blob) => void;
   onCancel: () => void;
   aspect?: number;
-}
-
-declare global {
-  interface Window {
-    currentStaffIdForUpload?: string;
-  }
 }
 
 export function ImageCropper({ imageSrc, onCropComplete, onCancel, aspect = 1 }: ImageCropperProps) {
@@ -66,21 +60,7 @@ export function ImageCropper({ imageSrc, onCropComplete, onCancel, aspect = 1 }:
 
     canvas.toBlob((blob) => {
       if (blob) {
-        const file = new File([blob], 'photo.jpg', { type: 'image/jpeg' });
-        const formData = new FormData();
-        formData.append('file', file);
-        if (window.currentStaffIdForUpload) {
-          formData.append('staffId', window.currentStaffIdForUpload);
-        }
-        
-        fetch('/api/upload', {
-          method: 'POST',
-          body: formData,
-        })
-        .then(res => res.json())
-        .then(data => {
-          onCropComplete(data.url);
-        });
+        onCropComplete(blob);
       }
     }, 'image/jpeg', 0.9);
   }
@@ -91,7 +71,7 @@ export function ImageCropper({ imageSrc, onCropComplete, onCancel, aspect = 1 }:
         <DialogHeader>
           <DialogTitle>Crop Profile Picture</DialogTitle>
         </DialogHeader>
-        <div className="flex justify-center bg-muted/30 rounded-lg p-4 overflow-hidden max-h-[60vh]">
+        <div className="flex justify-center bg-muted/30 rounded-md p-4 overflow-hidden max-h-[60vh]">
           <ReactCrop
             crop={crop}
             onChange={(c) => setCrop(c)}
@@ -109,10 +89,10 @@ export function ImageCropper({ imageSrc, onCropComplete, onCancel, aspect = 1 }:
           </ReactCrop>
         </div>
         <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={onCancel}>
+          <Button variant="outline" onClick={onCancel} data-testid="button-crop-cancel">
             Cancel
           </Button>
-          <Button onClick={getCroppedImg}>
+          <Button onClick={getCroppedImg} data-testid="button-crop-save">
             Save Crop
           </Button>
         </DialogFooter>

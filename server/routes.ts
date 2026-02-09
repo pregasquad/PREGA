@@ -142,7 +142,7 @@ export async function registerRoutes(
   app.post("/api/upload", multer({ 
     storage: multer.memoryStorage(),
     limits: {
-      fileSize: 10 * 1024 * 1024, // 10MB limit
+      fileSize: 10 * 1024 * 1024,
     }
   }).single("file"), async (req, res) => {
     if (!req.file) {
@@ -152,59 +152,54 @@ export async function registerRoutes(
 
     try {
       const file = req.file;
-      console.log(`Uploading file: ${file.originalname} (${file.size} bytes)`);
-      
-      // Generate standard filename for both storage types
-      const fileExt = path.extname(file.originalname);
       const staffId = req.body.staffId || 'unknown';
-      const fileName = `staff-${staffId}${fileExt}`;
-      const filePath = `staff/${fileName}`;
+      console.log(`Uploading file: ${file.originalname} (${file.size} bytes) for staff ${staffId}`);
 
-      // Always save locally first as a backup and for local serving
-      const uploadPath = path.resolve(process.cwd(), "uploads");
-      if (!fs.existsSync(uploadPath)) {
-        fs.mkdirSync(uploadPath, { recursive: true });
-      }
-      
-      const localFilePath = path.join(uploadPath, fileName);
-      fs.writeFileSync(localFilePath, file.buffer);
-      const localUrl = `/uploads/${fileName}`;
+      let photoUrl = "";
 
       if (supabase) {
-        const { error } = await supabase.storage
-          .from(supabaseBucket)
-          .upload(filePath, file.buffer, {
-            contentType: file.mimetype,
-            upsert: true,
-            cacheControl: '0'
-          });
+        try {
+          const fileExt = path.extname(file.originalname) || '.jpg';
+          const fileName = `staff-${staffId}${fileExt}`;
+          const filePath = `staff/${fileName}`;
 
-        if (error) {
-          console.error("Supabase upload error, falling back to local:", error);
-          return res.json({ url: localUrl });
+          const { error } = await supabase.storage
+            .from(supabaseBucket)
+            .upload(filePath, file.buffer, {
+              contentType: file.mimetype,
+              upsert: true,
+              cacheControl: '0'
+            });
+
+          if (error) throw error;
+
+          const { data: publicUrlData } = supabase.storage
+            .from(supabaseBucket)
+            .getPublicUrl(filePath);
+          photoUrl = `${publicUrlData.publicUrl}?v=${Date.now()}`;
+        } catch (supabaseError: any) {
+          console.error("Supabase upload error, falling back to base64:", supabaseError);
+          photoUrl = `data:${file.mimetype};base64,${file.buffer.toString("base64")}`;
         }
-
-        const { data: publicUrlData } = supabase.storage
-          .from(supabaseBucket)
-          .getPublicUrl(filePath);
-
-        const publicUrl = `${publicUrlData.publicUrl}?v=${Date.now()}`;
-        console.log(`Saved file to Supabase: ${publicUrl}`);
-        return res.json({ url: publicUrl });
       } else {
-        console.log(`Saved file locally: ${localUrl}`);
-        return res.json({ url: localUrl });
+        photoUrl = `data:${file.mimetype};base64,${file.buffer.toString("base64")}`;
       }
+
+      if (staffId !== 'unknown') {
+        await storage.updateStaff(Number(staffId), { photoUrl });
+      }
+
+      return res.json({ url: photoUrl, photoUrl });
     } catch (error: any) {
       console.error("Upload error:", error);
       res.status(500).json({ message: error.message || "Failed to upload file" });
     }
   });
 
-  // Serve static files from uploads directory
+  // Serve static files from uploads directory (legacy support)
   app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
 
-  // Admin photo upload (different from generic staff upload, matches legacy structure)
+  // Staff/Admin photo upload - stores as base64 in DB (works on any hosting)
   app.post("/api/admin-roles/:id/photo", multer({ 
     storage: multer.memoryStorage(),
     limits: {
@@ -219,47 +214,46 @@ export async function registerRoutes(
       const file = req.file;
       const roleId = req.params.id;
       const type = req.query.type || 'admin';
-      const fileExt = path.extname(file.originalname);
-      const fileName = `${type}-${roleId}${fileExt}`;
-      const filePath = `photos/${fileName}`;
 
-      const uploadPath = path.resolve(process.cwd(), "uploads");
-      if (!fs.existsSync(uploadPath)) {
-        fs.mkdirSync(uploadPath, { recursive: true });
-      }
-      
-      const localFilePath = path.join(uploadPath, fileName);
-      fs.writeFileSync(localFilePath, file.buffer);
-      const localUrl = `/uploads/${fileName}`;
+      let photoUrl = "";
 
-      let finalUrl = localUrl;
       if (supabase) {
-        const { error } = await supabase.storage
-          .from(supabaseBucket)
-          .upload(filePath, file.buffer, {
-            contentType: file.mimetype,
-            upsert: true,
-            cacheControl: '0'
-          });
+        try {
+          const fileExt = path.extname(file.originalname) || '.jpg';
+          const fileName = `${type}-${roleId}${fileExt}`;
+          const filePath = `photos/${fileName}`;
 
-        if (!error) {
+          const { error } = await supabase.storage
+            .from(supabaseBucket)
+            .upload(filePath, file.buffer, {
+              contentType: file.mimetype,
+              upsert: true,
+              cacheControl: '0'
+            });
+
+          if (error) throw error;
+
           const { data: publicUrlData } = supabase.storage
             .from(supabaseBucket)
             .getPublicUrl(filePath);
-          finalUrl = `${publicUrlData.publicUrl}?v=${Date.now()}`;
+          photoUrl = `${publicUrlData.publicUrl}?v=${Date.now()}`;
+        } catch (supabaseError: any) {
+          console.error("Supabase upload error, falling back to base64:", supabaseError);
+          photoUrl = `data:${file.mimetype};base64,${file.buffer.toString("base64")}`;
         }
-      }
-
-      // Update the correct table based on type
-      if (type === 'staff') {
-        await storage.updateStaff(Number(roleId), { photoUrl: finalUrl });
       } else {
-        await storage.updateAdminRole(Number(roleId), { photoUrl: finalUrl });
+        photoUrl = `data:${file.mimetype};base64,${file.buffer.toString("base64")}`;
       }
 
-      res.json({ photoUrl: finalUrl });
+      if (type === 'staff') {
+        const updatedStaff = await storage.updateStaff(Number(roleId), { photoUrl });
+        res.json({ success: true, photoUrl, staff: updatedStaff });
+      } else {
+        const updatedRole = await storage.updateAdminRole(Number(roleId), { photoUrl });
+        res.json({ success: true, photoUrl, role: updatedRole });
+      }
     } catch (error: any) {
-      console.error("Admin photo upload error:", error);
+      console.error("Photo upload error:", error);
       res.status(500).json({ message: error.message || "Failed to upload photo" });
     }
   });
@@ -2293,81 +2287,6 @@ export async function registerRoutes(
     res.status(204).send();
   });
 
-  // Upload admin role photo - protected (stores in Supabase if available, otherwise local base64)
-  // Admin role photo upload
-  app.post("/api/admin-roles/:id/photo", isPinAuthenticated, requirePermission("admin_settings"), photoUpload.single("photo"), async (req, res) => {
-    try {
-      const id = Number(req.params.id);
-      const isStaff = req.query.type === 'staff';
-      
-      if (!req.file) {
-        return res.status(400).json({ message: "No file uploaded" });
-      }
-      
-      let photoUrl = "";
-
-      if (supabase) {
-        try {
-          const fileExt = path.extname(req.file.originalname);
-          const fileName = isStaff ? `staff-${id}${fileExt}` : `admin-role-${id}${fileExt}`;
-          const filePath = `avatars/${fileName}`;
-          
-          const fileBuffer = fs.readFileSync(req.file.path);
-          const { error } = await supabase.storage
-            .from(supabaseBucket)
-            .upload(filePath, fileBuffer, {
-              contentType: req.file.mimetype,
-              upsert: true,
-              cacheControl: '0'
-            });
-
-          if (error) throw error;
-
-          const { data: { publicUrl } } = supabase.storage
-            .from(supabaseBucket)
-            .getPublicUrl(filePath);
-          
-          photoUrl = `${publicUrl}?v=${Date.now()}`;
-          
-          // Clean up local file after successful upload
-          fs.unlink(req.file.path, (err) => {
-            if (err) console.error("Error deleting local file:", err);
-          });
-        } catch (supabaseError: any) {
-          console.error("Supabase upload error, falling back to local base64:", supabaseError);
-          const base64 = fs.readFileSync(req.file.path).toString("base64");
-          photoUrl = `data:${req.file.mimetype};base64,${base64}`;
-          fs.unlink(req.file.path, (err) => {
-            if (err) console.error("Error deleting local file:", err);
-          });
-        }
-      } else {
-        const base64 = fs.readFileSync(req.file.path).toString("base64");
-        photoUrl = `data:${req.file.mimetype};base64,${base64}`;
-        fs.unlink(req.file.path, (err) => {
-          if (err) console.error("Error deleting local file:", err);
-        });
-      }
-      
-      if (isStaff) {
-        const updatedStaff = await storage.updateStaff(id, { photoUrl });
-        res.json({ 
-          success: true, 
-          photoUrl,
-          staff: updatedStaff
-        });
-      } else {
-        const updatedRole = await storage.updateAdminRole(id, { photoUrl });
-        res.json({ 
-          success: true, 
-          photoUrl,
-          role: { ...updatedRole, pin: updatedRole.pin ? "****" : null }
-        });
-      }
-    } catch (err: any) {
-      res.status(500).json({ message: err.message || "Upload failed" });
-    }
-  });
 
   app.post("/api/admin-roles/verify-pin", async (req, res) => {
     try {

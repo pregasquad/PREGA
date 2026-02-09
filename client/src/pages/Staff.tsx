@@ -42,10 +42,6 @@ export default function Staff() {
   const [uploadingPhotoId, setUploadingPhotoId] = useState<number | null>(null);
 
   const handlePhotoUpload = async (staffId: number, file: File) => {
-    // Store staff ID globally for the ImageCropper to use during upload
-    if (typeof window !== 'undefined') {
-      window.currentStaffIdForUpload = staffId.toString();
-    }
     setUploadingPhotoId(staffId);
     try {
       const formData = new FormData();
@@ -178,9 +174,11 @@ export default function Staff() {
         throw new Error(error.message || "Upload failed");
       }
 
-      const { url } = await res.json();
-      currentFormInstance.setValue("photoUrl", url);
+      const data = await res.json();
+      const photoUrl = data.url || data.photoUrl;
+      currentFormInstance.setValue("photoUrl", photoUrl);
       setCropImage(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
       toast({ title: t("common.success"), description: "Photo updated" });
     } catch (err: any) {
       toast({ title: t("common.error"), description: err.message, variant: "destructive" });
@@ -209,9 +207,11 @@ export default function Staff() {
         throw new Error(error.message || "Upload failed");
       }
       
-      const { url } = await res.json();
-      form.setValue("photoUrl", url);
-      editForm.setValue("photoUrl", url);
+      const uploadData = await res.json();
+      const uploadUrl = uploadData.url || uploadData.photoUrl;
+      form.setValue("photoUrl", uploadUrl);
+      editForm.setValue("photoUrl", uploadUrl);
+      queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
       toast({ title: t("common.success"), description: "Photo uploaded" });
     } catch (err: any) {
       toast({ title: t("common.error"), description: err.message, variant: "destructive" });
@@ -238,11 +238,6 @@ export default function Staff() {
       const file = e.target.files?.[0];
       if (!file) return;
 
-      if (typeof window !== 'undefined' && staffId) {
-        window.currentStaffIdForUpload = staffId.toString();
-      }
-
-      // If there's an existing ID, we use the specific staff photo endpoint like User Management
       if (staffId) {
         try {
           const formData = new FormData();
@@ -256,22 +251,20 @@ export default function Staff() {
           });
           
           if (!res.ok) {
-            const error = await res.json();
-            throw new Error(error.message || "Upload failed");
+            const errData = await res.json();
+            throw new Error(errData.message || "Upload failed");
           }
-          
-          queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
-          toast({ title: t("admin.photoUploaded") });
           
           const result = await res.json();
           if (result.photoUrl) {
             formInstance.setValue("photoUrl", result.photoUrl);
           }
+          queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
+          toast({ title: t("admin.photoUploaded") });
         } catch (err: any) {
           toast({ title: t("common.error"), description: err.message, variant: "destructive" });
         }
       } else {
-        // For new staff, use the generic upload with cropper
         const reader = new FileReader();
         reader.onload = (event) => {
           const src = event.target?.result as string;
