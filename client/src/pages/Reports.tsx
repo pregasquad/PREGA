@@ -191,7 +191,7 @@ export default function Reports() {
       <div className="flex items-center justify-center gap-2 bg-muted rounded-xl p-3">
         {viewMode !== "custom" && (
           <Button variant="ghost" size="icon" onClick={() => navigatePeriod("next")}>
-            <ChevronRight className="h-5 w-5" />
+            {i18n.language === "ar" ? <ChevronLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
           </Button>
         )}
         
@@ -234,7 +234,7 @@ export default function Reports() {
 
         {viewMode !== "custom" && (
           <Button variant="ghost" size="icon" onClick={() => navigatePeriod("prev")}>
-            <ChevronLeft className="h-5 w-5" />
+            {i18n.language === "ar" ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
           </Button>
         )}
       </div>

@@ -142,14 +142,14 @@ export default function Charges() {
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goToPreviousMonth}>
-              <ChevronLeft className="h-4 w-4" />
+              {i18n.language === "ar" ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
             </Button>
             <Button variant="ghost" size="sm" className="h-8 px-3 min-w-[140px]" onClick={goToCurrentMonth}>
-              <Calendar className="h-4 w-4 mr-2" />
+              <Calendar className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
               <span className="capitalize">{format(selectedMonth, "MMMM yyyy", { locale: getLocale() })}</span>
             </Button>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goToNextMonth}>
-              <ChevronRight className="h-4 w-4" />
+              {i18n.language === "ar" ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
             </Button>
           </div>
           <Button
