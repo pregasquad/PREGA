@@ -1490,24 +1490,26 @@ export default function Planning() {
               </div>
             );
           })}
+        </div>
 
-          {/* Date Navigation - Glass Pills */}
+        {/* Date Navigation - Glass Pills */}
+        <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1 glass-card px-2 py-1">
-            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-muted/50" onClick={() => setDate(d => addDays(d, -1))}>
+            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={() => setDate(d => addDays(d, -1))}>
               {isRtl ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
             </Button>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="ghost" className="h-7 px-3 text-xs rounded-full hover:bg-muted/50">
+                <Button variant="ghost" className="h-7 px-3 text-xs rounded-full">
                   <CalendarIcon className="w-3 h-3 ltr:ml-1 rtl:mr-1" />
                   {format(date, "dd/MM")}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 rounded-2xl glass-card shadow-xl" align="end">
+              <PopoverContent className="w-auto p-0 rounded-2xl glass-card shadow-xl" align="start">
                 <Calendar mode="single" selected={date} onSelect={(d) => d && setDate(d)} initialFocus />
               </PopoverContent>
             </Popover>
-            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-muted/50" onClick={() => setDate(d => addDays(d, 1))}>
+            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={() => setDate(d => addDays(d, 1))}>
               {isRtl ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
             </Button>
             <Button 
@@ -1515,17 +1517,24 @@ export default function Planning() {
               size="sm" 
               className={cn(
                 "h-7 px-3 text-xs font-semibold rounded-full transition-all",
-                !isToday && "liquid-gradient text-white shadow-md hover:shadow-lg",
-                isToday && "hover:bg-muted/50"
+                !isToday && "liquid-gradient text-white shadow-md hover:shadow-lg"
               )}
               onClick={() => setDate(getWorkDayDate(businessSettings?.openingTime, businessSettings?.closingTime))}
             >
               {t("common.today")}
             </Button>
+          </div>
+          <div className="flex items-center gap-1">
+            {isNonWorkingDay && (
+              <div className="glass-card px-2 py-1.5 flex items-center gap-1 text-sky-600 dark:text-sky-400">
+                <AlertCircle className="w-3.5 h-3.5" />
+                <span className="text-[10px] font-medium">{t("planning.nonWorkingDay", "Off Day")}</span>
+              </div>
+            )}
             <Button 
               variant="ghost" 
               size="icon" 
-              className="h-7 w-7 rounded-full hover:bg-muted/50"
+              className="h-7 w-7 rounded-full"
               onClick={() => {
                 queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
                 queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
@@ -1536,17 +1545,9 @@ export default function Planning() {
                 toast({ title: t("common.refreshed"), description: t("common.dataUpdated") });
               }}
             >
-              <RefreshCw className={cn("w-3 h-3", loadingApps && "animate-spin")} />
+              <RefreshCw className={cn("w-3.5 h-3.5", loadingApps && "animate-spin")} />
             </Button>
           </div>
-
-          {isNonWorkingDay && (
-            <div className="glass-card px-3 py-1.5 flex items-center gap-2 text-sky-600 dark:text-sky-400">
-              <AlertCircle className="w-4 h-4" />
-              <span className="text-xs font-medium">{t("planning.nonWorkingDay", "Off Day")}</span>
-            </div>
-          )}
-
         </div>
       </div>
 
