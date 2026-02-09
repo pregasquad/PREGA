@@ -197,6 +197,10 @@ export default function AdminSettings() {
   const [uploadingPhotoId, setUploadingPhotoId] = useState<number | null>(null);
 
   const handlePhotoUpload = async (roleId: number, file: File) => {
+    // Store staff ID globally for the ImageCropper to use during upload
+    if (typeof window !== 'undefined') {
+      window.currentStaffIdForUpload = roleId.toString();
+    }
     setUploadingPhotoId(roleId);
     try {
       const formData = new FormData();

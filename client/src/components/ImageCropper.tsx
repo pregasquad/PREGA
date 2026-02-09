@@ -11,6 +11,12 @@ interface ImageCropperProps {
   aspect?: number;
 }
 
+declare global {
+  interface Window {
+    currentStaffIdForUpload?: string;
+  }
+}
+
 export function ImageCropper({ imageSrc, onCropComplete, onCancel, aspect = 1 }: ImageCropperProps) {
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();

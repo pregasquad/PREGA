@@ -2234,6 +2234,7 @@ export async function registerRoutes(
   });
 
   // Upload admin role photo - protected (stores in Supabase if available, otherwise local base64)
+  // Admin role photo upload
   app.post("/api/admin-roles/:id/photo", isPinAuthenticated, requirePermission("admin_settings"), photoUpload.single("photo"), async (req, res) => {
     try {
       const id = Number(req.params.id);
@@ -2251,23 +2252,26 @@ export async function registerRoutes(
 
       if (supabase) {
         try {
-          const fileName = `admin-roles/${id}-${Date.now()}${path.extname(req.file.originalname)}`;
+          const fileExt = path.extname(req.file.originalname);
+          const fileName = `admin-role-${id}${fileExt}`;
+          const filePath = `avatars/${fileName}`;
           
-          const { data, error } = await supabase.storage
+          const fileBuffer = fs.readFileSync(req.file.path);
+          const { error } = await supabase.storage
             .from(supabaseBucket)
-            .upload(fileName, fs.createReadStream(req.file.path), {
+            .upload(filePath, fileBuffer, {
               contentType: req.file.mimetype,
               upsert: true,
-              duplex: 'half'
+              cacheControl: '0'
             });
 
           if (error) throw error;
 
           const { data: { publicUrl } } = supabase.storage
             .from(supabaseBucket)
-            .getPublicUrl(fileName);
+            .getPublicUrl(filePath);
           
-          photoUrl = publicUrl;
+          photoUrl = `${publicUrl}?v=${Date.now()}`;
           
           // Clean up local file after successful upload
           fs.unlink(req.file.path, (err) => {
