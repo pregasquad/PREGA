@@ -1362,128 +1362,134 @@ export default function Planning() {
       onTouchEnd={isMobile ? handleTouchEnd : undefined}
     >
       {/* Header - iOS Liquid Glass Style */}
-      <div className="mb-2 flex flex-col md:flex-row justify-between items-start md:items-center gap-2 shrink-0">
-        <h1 className="text-xl md:text-2xl font-semibold gradient-text">{t("planning.title")}</h1>
-        
-        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2 w-full md:w-auto">
-          {/* Staff Revenue - Glass Pills */}
-          <div className="grid grid-cols-2 md:flex md:flex-wrap items-stretch md:items-center gap-1.5 w-full md:w-auto">
-            {stats.perStaff.map(s => (
-              <div key={s.id} className="glass-card px-3 py-2 text-xs flex items-center justify-between gap-1.5 hover:scale-[1.02] transition-transform min-w-0">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <div className="w-2.5 h-2.5 rounded-full shadow-sm shrink-0" style={{ backgroundColor: s.color }} />
-                  <span className="font-medium text-foreground/80 truncate">{s.name}</span>
-                </div>
-                <span className="font-bold text-foreground whitespace-nowrap">{s.total} DH</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-2 w-full md:w-auto">
-          {/* Total - Liquid Gradient */}
-          <div className="liquid-gradient text-white px-4 py-2 rounded-2xl text-sm font-bold shadow-lg hover:shadow-xl transition-shadow whitespace-nowrap">
-            {stats.total} DH
-          </div>
-
-          {/* Search with Price - Glass Style */}
-          <div className="relative shrink-0">
-            <div className="flex items-center gap-1 glass-card px-2 py-1">
-              {showSearchInput ? (
-                <>
-                  <Input
-                    type="text"
-                    placeholder={t("common.search") + "..."}
-                    value={appointmentSearch}
-                    onChange={(e) => setAppointmentSearch(e.target.value)}
-                    className="h-7 w-32 md:w-40 text-xs border-0 bg-transparent focus-visible:ring-0"
-                    autoFocus
-                  />
-                  {appointmentSearch && searchResults.count > 0 && (
-                    <div className="bg-emerald-500/90 text-white px-2 py-0.5 rounded-full text-xs font-bold whitespace-nowrap">
-                      {searchResults.count} = {searchResults.total} DH
-                    </div>
-                  )}
+      <div className="mb-2 flex flex-col gap-2 shrink-0">
+        {/* Top bar: Title + Total + Search */}
+        <div className="flex items-center justify-between gap-2">
+          <h1 className="text-xl md:text-2xl font-semibold gradient-text">{t("planning.title")}</h1>
+          <div className="flex items-center gap-2">
+            <div className="liquid-gradient text-white px-4 py-1.5 rounded-2xl text-sm font-bold shadow-lg whitespace-nowrap">
+              {stats.total} DH
+            </div>
+            <div className="relative shrink-0">
+              <div className="flex items-center gap-1 glass-card px-2 py-1">
+                {showSearchInput ? (
+                  <>
+                    <Input
+                      type="text"
+                      placeholder={t("common.search") + "..."}
+                      value={appointmentSearch}
+                      onChange={(e) => setAppointmentSearch(e.target.value)}
+                      className="h-7 w-32 md:w-40 text-xs border-0 bg-transparent focus-visible:ring-0"
+                      autoFocus
+                    />
+                    {appointmentSearch && searchResults.count > 0 && (
+                      <div className="bg-emerald-500/90 text-white px-2 py-0.5 rounded-full text-xs font-bold whitespace-nowrap">
+                        {searchResults.count} = {searchResults.total} DH
+                      </div>
+                    )}
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-7 w-7 rounded-full"
+                      onClick={() => {
+                        setShowSearchInput(false);
+                        setAppointmentSearch("");
+                      }}
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </>
+                ) : (
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="h-7 w-7 rounded-full hover:bg-muted/50"
-                    onClick={() => {
-                      setShowSearchInput(false);
-                      setAppointmentSearch("");
-                    }}
+                    className="h-7 w-7 rounded-full"
+                    onClick={() => setShowSearchInput(true)}
                   >
-                    <X className="w-3 h-3" />
+                    <Search className="w-4 h-4" />
                   </Button>
-                </>
-              ) : (
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-7 w-7 rounded-full hover:bg-muted/50"
-                  onClick={() => setShowSearchInput(true)}
-                >
-                  <Search className="w-4 h-4" />
-                </Button>
-              )}
-            </div>
-            {/* Search Results Dropdown - Glass Panel */}
-            {showSearchInput && appointmentSearch && searchResults.count > 0 && (
-              <div className="absolute top-full mt-2 ltr:right-0 rtl:left-0 z-50 w-72 md:w-80 glass-card rounded-2xl max-h-64 overflow-auto shadow-xl">
-                <div className="p-2 border-b bg-muted/50 sticky top-0">
-                  <span className="text-xs font-medium text-muted-foreground">
-                    {searchResults.count} {t("common.results")}
-                  </span>
-                </div>
-                {searchResults.matches.map((app) => {
-                  const staffMember = staffList.find(s => s.name === app.staff);
-                  return (
-                    <div 
-                      key={app.id} 
-                      className="p-2 border-b last:border-b-0 hover:bg-muted/50 cursor-pointer"
-                      onClick={() => {
-                        setDate(parseISO(app.date));
-                        openAppointmentForEdit(app);
-                      }}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div 
-                            className="w-2 h-2 rounded-full shrink-0" 
-                            style={{ backgroundColor: staffMember?.color || '#666' }} 
-                          />
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium truncate">{app.client || "-"}</p>
-                            <div className="text-xs text-muted-foreground">
-                              {app.service?.includes(',') ? (
-                                app.service.split(',').map((svc: string, idx: number) => (
-                                  <div key={idx} className="truncate">- {svc.trim()}</div>
-                                ))
-                              ) : (
-                                <div className="truncate">{app.service}</div>
-                              )}
+                )}
+              </div>
+              {showSearchInput && appointmentSearch && searchResults.count > 0 && (
+                <div className="absolute top-full mt-2 ltr:right-0 rtl:left-0 z-50 w-72 md:w-80 glass-card rounded-2xl max-h-64 overflow-auto shadow-xl">
+                  <div className="p-2 border-b bg-muted/50 sticky top-0">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      {searchResults.count} {t("common.results")}
+                    </span>
+                  </div>
+                  {searchResults.matches.map((app) => {
+                    const staffMember = staffList.find(s => s.name === app.staff);
+                    return (
+                      <div 
+                        key={app.id} 
+                        className="p-2 border-b last:border-b-0 hover:bg-muted/50 cursor-pointer"
+                        onClick={() => {
+                          setDate(parseISO(app.date));
+                          openAppointmentForEdit(app);
+                        }}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div 
+                              className="w-2 h-2 rounded-full shrink-0" 
+                              style={{ backgroundColor: staffMember?.color || '#666' }} 
+                            />
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium truncate">{app.client || "-"}</p>
+                              <div className="text-xs text-muted-foreground">
+                                {app.service?.includes(',') ? (
+                                  app.service.split(',').map((svc: string, idx: number) => (
+                                    <div key={idx} className="truncate">- {svc.trim()}</div>
+                                  ))
+                                ) : (
+                                  <div className="truncate">{app.service}</div>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <p className="text-sm font-bold">{app.total} DH</p>
-                          <p className="text-xs text-muted-foreground">
-                            {format(parseISO(app.date), "dd/MM")} • {app.startTime} • {app.staff}
-                          </p>
+                          <div className="text-right shrink-0">
+                            <p className="text-sm font-bold">{app.total} DH</p>
+                            <p className="text-xs text-muted-foreground">
+                              {format(parseISO(app.date), "dd/MM")} {app.startTime} {app.staff}
+                            </p>
+                          </div>
                         </div>
                       </div>
+                    );
+                  })}
+                  <div className="p-2.5 bg-emerald-500/90 text-white sticky bottom-0 rounded-b-2xl">
+                    <div className="flex justify-between items-center text-sm font-bold">
+                      <span>Total</span>
+                      <span>{searchResults.total} DH</span>
                     </div>
-                  );
-                })}
-                <div className="p-2.5 bg-emerald-500/90 text-white sticky bottom-0 rounded-b-2xl">
-                  <div className="flex justify-between items-center text-sm font-bold">
-                    <span>Total</span>
-                    <span>{searchResults.total} DH</span>
                   </div>
                 </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Staff Revenue - Horizontal scroll with avatars */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide w-full">
+          {stats.perStaff.map(s => {
+            const staffMember = staffList.find(st => st.id === s.id);
+            return (
+              <div key={s.id} className="flex flex-col items-center gap-1 shrink-0 min-w-[4.5rem]">
+                <div 
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-md ring-2 ring-offset-1 ring-offset-background overflow-hidden"
+                  style={{ backgroundColor: s.color, ['--tw-ring-color' as string]: s.color }}
+                >
+                  {staffMember?.photoUrl ? (
+                    <img src={staffMember.photoUrl} alt={s.name} className="w-full h-full object-cover" />
+                  ) : (
+                    s.name.charAt(0).toUpperCase()
+                  )}
+                </div>
+                <span className="text-[10px] font-medium text-foreground/70 truncate max-w-[4.5rem] text-center">{s.name}</span>
+                <span className="text-xs font-bold text-foreground" style={{ color: s.color }}>{s.total}</span>
               </div>
-            )}
-          </div>
-          </div>
+            );
+          })}
 
           {/* Date Navigation - Glass Pills */}
           <div className="flex items-center gap-1 glass-card px-2 py-1">

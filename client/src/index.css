@@ -569,6 +569,15 @@
   transform: scale(0.98);
 }
 
+/* Hide scrollbar utility */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 /* Custom Scrollbar for Calendar - iOS style */
 .calendar-scroll::-webkit-scrollbar {
   width: 6px;
