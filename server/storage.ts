@@ -307,6 +307,14 @@ export class DatabaseStorage implements IStorage {
     
     const processedAppointment = this.processAppointmentServices(appointment as InsertAppointment);
     
+    if (!processedAppointment.staffId && processedAppointment.staff) {
+      const [staffMember] = await db().select().from(s.staff)
+        .where(eq(s.staff.name, processedAppointment.staff));
+      if (staffMember) {
+        processedAppointment.staffId = staffMember.id;
+      }
+    }
+    
     if (isMySQL()) {
       await db().update(s.appointments).set(processedAppointment).where(eq(s.appointments.id, id));
       const [updated] = await db().select().from(s.appointments).where(eq(s.appointments.id, id));
@@ -742,6 +750,13 @@ export class DatabaseStorage implements IStorage {
 
   async updateStaffDeduction(id: number, data: Partial<InsertStaffDeduction>): Promise<void> {
     const s = schema();
+    if (!(data as any).staffId && data.staffName) {
+      const [staffMember] = await db().select().from(s.staff)
+        .where(eq(s.staff.name, data.staffName));
+      if (staffMember) {
+        (data as any).staffId = staffMember.id;
+      }
+    }
     await db().update(s.staffDeductions).set(data).where(eq(s.staffDeductions.id, id));
   }
 

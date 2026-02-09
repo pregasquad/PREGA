@@ -15,7 +15,6 @@ import { offlineStorage } from "./offline-storage";
 import { createClient } from "@supabase/supabase-js";
 
 import path from "path";
-import fs from "fs";
 
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL || "";
@@ -28,33 +27,6 @@ const supabase = (supabaseUrl && supabaseServiceKey) ? createClient(supabaseUrl,
     detectSessionInUrl: false
   }
 }) : null;
-
-const storage_disk = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    const uploadPath = path.resolve(process.cwd(), "uploads");
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-    cb(null, uploadPath);
-  },
-  filename: (_req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  },
-});
-
-const photoUpload = multer({
-  storage: storage_disk,
-  limits: { fileSize: 10 * 1024 * 1024 },
-  fileFilter: (_req, file, cb) => {
-    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
-    if (allowedTypes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error("Only JPEG, PNG, and WebP images are allowed"));
-    }
-  }
-});
 
 let io: SocketIOServer;
 
@@ -195,9 +167,6 @@ export async function registerRoutes(
       res.status(500).json({ message: error.message || "Failed to upload file" });
     }
   });
-
-  // Serve static files from uploads directory (legacy support)
-  app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
 
   // Staff/Admin photo upload - stores as base64 in DB (works on any hosting)
   app.post("/api/admin-roles/:id/photo", multer({ 
