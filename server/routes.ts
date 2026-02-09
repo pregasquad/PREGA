@@ -204,6 +204,66 @@ export async function registerRoutes(
   // Serve static files from uploads directory
   app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
 
+  // Admin photo upload (different from generic staff upload, matches legacy structure)
+  app.post("/api/admin-roles/:id/photo", multer({ 
+    storage: multer.memoryStorage(),
+    limits: {
+      fileSize: 10 * 1024 * 1024,
+    }
+  }).single("photo"), async (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ message: "No photo uploaded" });
+    }
+
+    try {
+      const file = req.file;
+      const roleId = req.params.id;
+      const type = req.query.type || 'admin';
+      const fileExt = path.extname(file.originalname);
+      const fileName = `${type}-${roleId}${fileExt}`;
+      const filePath = `photos/${fileName}`;
+
+      const uploadPath = path.resolve(process.cwd(), "uploads");
+      if (!fs.existsSync(uploadPath)) {
+        fs.mkdirSync(uploadPath, { recursive: true });
+      }
+      
+      const localFilePath = path.join(uploadPath, fileName);
+      fs.writeFileSync(localFilePath, file.buffer);
+      const localUrl = `/uploads/${fileName}`;
+
+      let finalUrl = localUrl;
+      if (supabase) {
+        const { error } = await supabase.storage
+          .from(supabaseBucket)
+          .upload(filePath, file.buffer, {
+            contentType: file.mimetype,
+            upsert: true,
+            cacheControl: '0'
+          });
+
+        if (!error) {
+          const { data: publicUrlData } = supabase.storage
+            .from(supabaseBucket)
+            .getPublicUrl(filePath);
+          finalUrl = `${publicUrlData.publicUrl}?v=${Date.now()}`;
+        }
+      }
+
+      // Update the correct table based on type
+      if (type === 'staff') {
+        await storage.updateStaff(Number(roleId), { photoUrl: finalUrl });
+      } else {
+        await storage.updateAdminRole(Number(roleId), { photoUrl: finalUrl });
+      }
+
+      res.json({ photoUrl: finalUrl });
+    } catch (error: any) {
+      console.error("Admin photo upload error:", error);
+      res.status(500).json({ message: error.message || "Failed to upload photo" });
+    }
+  });
+
   // === API ROUTES ===
 
   // Health check for Koyeb and UptimeRobot (public)
