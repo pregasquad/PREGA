@@ -37,3 +37,9 @@ externalPort = 80
 deploymentTarget = "autoscale"
 run = ["node", "./dist/index.cjs"]
 build = ["npm", "run", "build"]
+
+[userenv]
+
+[userenv.shared]
+MYSQL_URL = "mysql://Y2ErVcqWMZncviT.root:QWyUFLIGJ9iYqfuS@gateway01.eu-central-1.prod.aws.tidbcloud.com:4000/test?ssl={\"rejectUnauthorized\":true}"
+DB_DIALECT = "mysql"

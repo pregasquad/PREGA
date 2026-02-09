@@ -163,14 +163,15 @@ export async function registerRoutes(
           .from(supabaseBucket)
           .upload(filePath, file.buffer, {
             contentType: file.mimetype,
-            upsert: false
+            upsert: false,
+            cacheControl: '3600'
           });
 
         if (error) throw error;
 
-        const { data: { publicUrl } } = supabase.storage
-          .from(supabaseBucket)
-          .getPublicUrl(filePath);
+        // Use standard Supabase URL format for better stability
+        // publicUrl format: https://[project-id].supabase.co/storage/v1/object/public/[bucket]/[path]
+        const publicUrl = `${supabaseUrl}/storage/v1/object/public/${supabaseBucket}/${filePath}`;
 
         return res.json({ url: publicUrl });
       } else {
