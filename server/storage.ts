@@ -412,6 +412,11 @@ export class DatabaseStorage implements IStorage {
 
   async updateStaff(id: number, st: Partial<InsertStaff>): Promise<Staff> {
     const s = schema();
+    if (Object.keys(st).length === 0) {
+      const [current] = await db().select().from(s.staff).where(eq(s.staff.id, id));
+      if (!current) throw new Error("Staff not found");
+      return current;
+    }
     if (isMySQL()) {
       await db().update(s.staff).set(st).where(eq(s.staff.id, id));
       const [updated] = await db().select().from(s.staff).where(eq(s.staff.id, id));
@@ -831,6 +836,11 @@ export class DatabaseStorage implements IStorage {
 
   async updateAdminRole(id: number, role: Partial<InsertAdminRole>): Promise<AdminRole> {
     const s = schema();
+    if (Object.keys(role).length === 0) {
+      const [current] = await db().select().from(s.adminRoles).where(eq(s.adminRoles.id, id));
+      if (!current) throw new Error("Admin role not found");
+      return current;
+    }
     if (isMySQL()) {
       await db().update(s.adminRoles).set(role).where(eq(s.adminRoles.id, id));
       const [updated] = await db().select().from(s.adminRoles).where(eq(s.adminRoles.id, id));
