@@ -141,14 +141,28 @@ export default function Staff() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64data = reader.result as string;
-      form.setValue("photoUrl", base64data);
-      editForm.setValue("photoUrl", base64data);
-      toast({ title: t("common.success"), description: "Photo uploaded locally" });
-    };
-    reader.readAsDataURL(file);
+    const formData = new FormData();
+    formData.append("file", file);
+    
+    try {
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+        credentials: "include"
+      });
+      
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Upload failed");
+      }
+      
+      const { url } = await res.json();
+      form.setValue("photoUrl", url);
+      editForm.setValue("photoUrl", url);
+      toast({ title: t("common.success"), description: "Photo uploaded" });
+    } catch (err: any) {
+      toast({ title: t("common.error"), description: err.message, variant: "destructive" });
+    }
   };
 
   const StaffForm = ({ formInstance, onSubmitFn, buttonText }: { 
@@ -166,17 +180,31 @@ export default function Staff() {
       formInstance.setValue("categories", JSON.stringify(updated));
     };
 
-    const handleFileUploadLocal = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileUploadLocal = async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
 
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64data = reader.result as string;
-        formInstance.setValue("photoUrl", base64data);
+      const formData = new FormData();
+      formData.append("file", file);
+      
+      try {
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+          credentials: "include"
+        });
+        
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.message || "Upload failed");
+        }
+        
+        const { url } = await res.json();
+        formInstance.setValue("photoUrl", url);
         toast({ title: t("common.success"), description: "Photo updated" });
-      };
-      reader.readAsDataURL(file);
+      } catch (err: any) {
+        toast({ title: t("common.error"), description: err.message, variant: "destructive" });
+      }
     };
 
     return (

@@ -355,6 +355,30 @@ export default function AdminSettings() {
     setSelectedClientIds(new Set());
   };
 
+  const handleBusinessPhotoUpload = async (file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+        credentials: "include"
+      });
+      
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Upload failed");
+      }
+      
+      const { url } = await res.json();
+      setBusinessForm(prev => ({ ...prev, logo: url }));
+      toast({ title: t("admin.photoUploaded") });
+    } catch (err: any) {
+      toast({ title: t("common.error"), description: err.message, variant: "destructive" });
+    }
+  };
+
   const handleBusinessSave = (e: React.FormEvent) => {
     e.preventDefault();
     businessMutation.mutate(businessForm);
@@ -504,6 +528,31 @@ export default function AdminSettings() {
               ) : (
                 <form onSubmit={handleBusinessSave} className="space-y-6">
                   <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>{t("admin.logo") || "Logo"}</Label>
+                      <div className="flex items-center gap-4">
+                        {businessForm.logo && (
+                          <img src={businessForm.logo} alt="Logo" className="h-12 w-12 object-contain border rounded" />
+                        )}
+                        <Button 
+                          type="button" 
+                          variant="outline"
+                          onClick={() => {
+                            const input = document.createElement("input");
+                            input.type = "file";
+                            input.accept = "image/*";
+                            input.onchange = (e) => {
+                              const file = (e.target as HTMLInputElement).files?.[0];
+                              if (file) handleBusinessPhotoUpload(file);
+                            };
+                            input.click();
+                          }}
+                        >
+                          <Camera className="mr-2 h-4 w-4" />
+                          {t("admin.uploadLogo") || "Upload Logo"}
+                        </Button>
+                      </div>
+                    </div>
                     <div className="space-y-2">
                       <Label>{t("admin.businessName")}</Label>
                       <Input
