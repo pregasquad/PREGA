@@ -268,6 +268,7 @@ export async function registerRoutes(
       id: s.id,
       name: s.name,
       color: s.color,
+      photoUrl: s.photoUrl,
       categories: s.categories || null
     }));
     res.json(sanitizedItems);
