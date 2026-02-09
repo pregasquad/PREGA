@@ -249,6 +249,72 @@ export async function ensureAppointmentsAuditColumns(): Promise<void> {
   }
 }
 
+// Backfill staffId for MySQL/TiDB databases
+export async function ensureStaffIdBackfillMySQL(): Promise<void> {
+  if (dbDialect !== 'mysql') return;
+  
+  try {
+    const connection = await pool.getConnection();
+    
+    // Ensure staff_id column exists on appointments
+    const [appStaffIdRows] = await connection.query(`
+      SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+      WHERE TABLE_NAME = 'appointments' AND COLUMN_NAME = 'staff_id'
+    `);
+    if ((appStaffIdRows as any[]).length === 0) {
+      await connection.query(`ALTER TABLE appointments ADD COLUMN staff_id INT`);
+      console.log("Added staff_id column to appointments table");
+    }
+    
+    // Ensure staff_id column exists on staff_deductions
+    const [dedStaffIdRows] = await connection.query(`
+      SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+      WHERE TABLE_NAME = 'staff_deductions' AND COLUMN_NAME = 'staff_id'
+    `);
+    if ((dedStaffIdRows as any[]).length === 0) {
+      await connection.query(`ALTER TABLE staff_deductions ADD COLUMN staff_id INT`);
+      console.log("Added staff_id column to staff_deductions table");
+    }
+    
+    // Backfill staff_id from staff name matching
+    await connection.query(`
+      UPDATE appointments a
+      JOIN staff s ON a.staff = s.name
+      SET a.staff_id = s.id
+      WHERE a.staff_id IS NULL
+    `);
+    
+    await connection.query(`
+      UPDATE staff_deductions d
+      JOIN staff s ON d.staff_name = s.name
+      SET d.staff_id = s.id
+      WHERE d.staff_id IS NULL
+    `);
+    
+    // Add indexes for staff_id columns
+    const [appIdxRows] = await connection.query(`
+      SELECT INDEX_NAME FROM INFORMATION_SCHEMA.STATISTICS 
+      WHERE TABLE_NAME = 'appointments' AND INDEX_NAME = 'idx_appointments_staff_id'
+    `);
+    if ((appIdxRows as any[]).length === 0) {
+      await connection.query(`CREATE INDEX idx_appointments_staff_id ON appointments(staff_id)`);
+    }
+    
+    const [dedIdxRows] = await connection.query(`
+      SELECT INDEX_NAME FROM INFORMATION_SCHEMA.STATISTICS 
+      WHERE TABLE_NAME = 'staff_deductions' AND INDEX_NAME = 'idx_staff_deductions_staff_id'
+    `);
+    if ((dedIdxRows as any[]).length === 0) {
+      await connection.query(`CREATE INDEX idx_staff_deductions_staff_id ON staff_deductions(staff_id)`);
+    }
+    
+    connection.release();
+    console.log("Staff ID backfill ready (MySQL/TiDB)");
+  } catch (error) {
+    console.error("Failed to backfill staff IDs for MySQL/TiDB:", error);
+  }
+}
+
 // Add foreign key constraints for data integrity (PostgreSQL only)
 export async function ensureForeignKeyConstraints(): Promise<void> {
   if (dbDialect !== 'postgres') {
