@@ -73,10 +73,12 @@ export function registerObjectStorageRoutes(app: Express): void {
   app.get("/objects/:objectPath(*)", async (req, res) => {
     try {
       const fullPath = req.path;
+      // If it's a request for an object, try to serve it from storage
       const objectFile = await objectStorageService.getObjectEntityFile(fullPath);
       await objectStorageService.downloadObject(objectFile, res);
     } catch (error) {
-      console.error("Error serving object:", error);
+      // If object storage fails, or file not found, we don't want to break the UI
+      // We could redirect to a fallback avatar here if we wanted to be aggressive
       if (error instanceof ObjectNotFoundError) {
         return res.status(404).json({ error: "Object not found" });
       }

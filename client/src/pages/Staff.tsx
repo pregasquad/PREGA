@@ -431,6 +431,9 @@ export default function Staff() {
                         alt={staff.name}
                         className="w-12 h-12 rounded-full object-cover border-2 shrink-0"
                         style={{ borderColor: staff.color }}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(staff.name)}&background=${staff.color.replace('#', '')}&color=fff`;
+                        }}
                       />
                     ) : (
                       <div 
