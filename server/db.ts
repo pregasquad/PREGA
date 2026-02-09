@@ -70,12 +70,10 @@ export async function initializeDatabase(): Promise<boolean> {
       db = drizzle(pool, { schema, mode: "default" });
       console.log("Using MySQL/TiDB database");
     } else {
-      const { drizzle } = await import("drizzle-orm/neon-serverless");
-      const { Pool, neonConfig } = await import("@neondatabase/serverless");
-      const ws = (await import("ws")).default;
+      const { drizzle } = await import("drizzle-orm/node-postgres");
+      const pg = await import("pg");
       
-      neonConfig.webSocketConstructor = ws;
-      pool = new Pool({ connectionString: databaseUrl });
+      pool = new pg.default.Pool({ connectionString: databaseUrl });
       db = drizzle(pool, { schema });
       console.log("Using PostgreSQL database");
     }
