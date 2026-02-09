@@ -1361,178 +1361,19 @@ export default function Planning() {
       onTouchStart={isMobile ? handleTouchStart : undefined}
       onTouchEnd={isMobile ? handleTouchEnd : undefined}
     >
-      {/* Header */}
-      <div className="mb-1.5 shrink-0 flex flex-col gap-1.5">
-        {/* Row 1: Title + Date + Total + Actions */}
-        <div className="flex items-center justify-between gap-2">
-          <h1 className="text-lg md:text-2xl font-semibold gradient-text whitespace-nowrap shrink-0">{t("planning.title")}</h1>
+      {/* Header - Single row */}
+      <div className="mb-1 shrink-0">
+        <div className="flex items-center gap-1 w-full">
+          <h1 className="text-base md:text-2xl font-semibold gradient-text whitespace-nowrap">{t("planning.title")}</h1>
 
-          <div className="flex items-center gap-1.5 flex-wrap justify-end">
-            {/* Date nav */}
-            <div className="flex items-center gap-0.5 glass-card px-1 py-0.5 shrink-0">
-              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={() => setDate(d => addDays(d, -1))}>
-                {isRtl ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-              </Button>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="ghost" className="h-7 px-2 text-xs font-medium rounded-full">
-                    <CalendarIcon className="w-3.5 h-3.5 ltr:mr-1 rtl:ml-1" />
-                    {format(date, "dd/MM/yyyy")}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 rounded-2xl glass-card shadow-xl" align="end">
-                  <Calendar mode="single" selected={date} onSelect={(d) => d && setDate(d)} initialFocus />
-                </PopoverContent>
-              </Popover>
-              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={() => setDate(d => addDays(d, 1))}>
-                {isRtl ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-              </Button>
-            </div>
-
-            <Button 
-              variant={isToday ? "ghost" : "default"}
-              size="sm" 
-              className={cn(
-                "h-7 px-2.5 text-xs font-semibold rounded-full transition-all",
-                !isToday && "liquid-gradient text-white shadow-md"
-              )}
-              onClick={() => setDate(getWorkDayDate(businessSettings?.openingTime, businessSettings?.closingTime))}
-            >
-              {t("common.today")}
-            </Button>
-
-            {/* Total */}
-            <div className="liquid-gradient text-white px-3 py-1 rounded-2xl text-xs font-bold shadow-lg whitespace-nowrap shrink-0">
-              {stats.total} DH
-            </div>
-
-            {/* Search */}
-            <div className="relative shrink-0">
-              <div className="flex items-center gap-1 glass-card px-1.5 py-0.5">
-                {showSearchInput ? (
-                  <>
-                    <Input
-                      type="text"
-                      placeholder={t("common.search") + "..."}
-                      value={appointmentSearch}
-                      onChange={(e) => setAppointmentSearch(e.target.value)}
-                      className="h-7 w-28 md:w-40 text-xs border-0 bg-transparent focus-visible:ring-0"
-                      autoFocus
-                    />
-                    {appointmentSearch && searchResults.count > 0 && (
-                      <div className="bg-emerald-500/90 text-white px-1.5 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap">
-                        {searchResults.count} = {searchResults.total} DH
-                      </div>
-                    )}
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-7 w-7 rounded-full"
-                      onClick={() => {
-                        setShowSearchInput(false);
-                        setAppointmentSearch("");
-                      }}
-                    >
-                      <X className="w-3 h-3" />
-                    </Button>
-                  </>
-                ) : (
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-7 w-7 rounded-full"
-                    onClick={() => setShowSearchInput(true)}
-                  >
-                    <Search className="w-4 h-4" />
-                  </Button>
-                )}
-              </div>
-              {showSearchInput && appointmentSearch && searchResults.count > 0 && (
-                <div className="absolute top-full mt-2 ltr:right-0 rtl:left-0 z-50 w-72 md:w-80 glass-card rounded-2xl max-h-64 overflow-auto shadow-xl">
-                  <div className="p-2 border-b bg-muted/50 sticky top-0">
-                    <span className="text-xs font-medium text-muted-foreground">
-                      {searchResults.count} {t("common.results")}
-                    </span>
-                  </div>
-                  {searchResults.matches.map((app) => {
-                    const staffMember = staffList.find(s => s.name === app.staff);
-                    return (
-                      <div 
-                        key={app.id} 
-                        className="p-2 border-b last:border-b-0 hover:bg-muted/50 cursor-pointer"
-                        onClick={() => {
-                          setDate(parseISO(app.date));
-                          openAppointmentForEdit(app);
-                        }}
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div 
-                              className="w-2 h-2 rounded-full shrink-0" 
-                              style={{ backgroundColor: staffMember?.color || '#666' }} 
-                            />
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium truncate">{app.client || "-"}</p>
-                              <div className="text-xs text-muted-foreground">
-                                {app.service?.includes(',') ? (
-                                  app.service.split(',').map((svc: string, idx: number) => (
-                                    <div key={idx} className="truncate">- {svc.trim()}</div>
-                                  ))
-                                ) : (
-                                  <div className="truncate">{app.service}</div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="text-right shrink-0">
-                            <p className="text-sm font-bold">{app.total} DH</p>
-                            <p className="text-xs text-muted-foreground">
-                              {format(parseISO(app.date), "dd/MM")} {app.startTime} {app.staff}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  <div className="p-2.5 bg-emerald-500/90 text-white sticky bottom-0 rounded-b-2xl">
-                    <div className="flex justify-between items-center text-sm font-bold">
-                      <span>Total</span>
-                      <span>{searchResults.total} DH</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Refresh */}
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-7 w-7 rounded-full shrink-0"
-              onClick={() => {
-                queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
-                queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
-                queryClient.invalidateQueries({ queryKey: ["/api/services"] });
-                if (boardRef.current) {
-                  boardRef.current.scrollTop = 0;
-                }
-                toast({ title: t("common.refreshed"), description: t("common.dataUpdated") });
-              }}
-            >
-              <RefreshCw className={cn("w-3.5 h-3.5", loadingApps && "animate-spin")} />
-            </Button>
-          </div>
-        </div>
-
-        {/* Row 2: Staff circles + off day indicator */}
-        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-0.5 px-0.5">
+          {/* Staff pills */}
           {stats.perStaff.map(s => {
             const staffMember = staffList.find(st => st.id === s.id);
             return (
-              <div key={s.id} className="flex flex-col items-center shrink-0" style={{ minWidth: '3.5rem' }}>
+              <div key={s.id} className="flex items-center gap-0.5 glass-card px-1 py-0.5 rounded-full">
                 <div 
-                  className="w-9 h-9 rounded-full flex items-center justify-center text-white text-[11px] font-bold ring-2 ring-offset-1 ring-offset-background overflow-hidden"
-                  style={{ backgroundColor: s.color, ['--tw-ring-color' as string]: s.color }}
+                  className="w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center text-white text-[8px] md:text-[9px] font-bold overflow-hidden"
+                  style={{ backgroundColor: s.color }}
                 >
                   {staffMember?.photoUrl ? (
                     <img src={staffMember.photoUrl} alt={s.name} className="w-full h-full object-cover" />
@@ -1540,17 +1381,147 @@ export default function Planning() {
                     s.name.charAt(0).toUpperCase()
                   )}
                 </div>
-                <span className="text-[9px] text-foreground/60 truncate max-w-[3.5rem] text-center leading-tight mt-0.5">{s.name}</span>
-                <span className="text-[10px] font-bold leading-tight" style={{ color: s.color }}>{s.total}</span>
+                <span className="text-[9px] md:text-[10px] font-bold whitespace-nowrap" style={{ color: s.color }}>{s.total}</span>
               </div>
             );
           })}
-          {isNonWorkingDay && (
-            <div className="glass-card px-2 py-1 flex items-center gap-1 text-sky-600 dark:text-sky-400 shrink-0">
-              <AlertCircle className="w-3.5 h-3.5" />
-              <span className="text-[10px] font-medium whitespace-nowrap">{t("planning.nonWorkingDay", "Off Day")}</span>
-            </div>
+
+          {/* Total */}
+          <div className="liquid-gradient text-white px-2 py-0.5 rounded-full text-[10px] md:text-xs font-bold shadow-md whitespace-nowrap">
+            {stats.total}
+          </div>
+
+          {/* Spacer to push date/actions to end */}
+          <div className="flex-1" />
+
+          {/* Date nav */}
+          <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full p-0" onClick={() => setDate(d => addDays(d, -1))}>
+            {isRtl ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
+          </Button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" className="h-6 px-1 text-[11px] md:text-xs font-medium rounded-full">
+                {format(date, "dd/MM")}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 rounded-2xl glass-card shadow-xl" align="end">
+              <Calendar mode="single" selected={date} onSelect={(d) => d && setDate(d)} initialFocus />
+            </PopoverContent>
+          </Popover>
+          <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full p-0" onClick={() => setDate(d => addDays(d, 1))}>
+            {isRtl ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+          </Button>
+
+          {!isToday && (
+            <Button 
+              variant="default"
+              size="sm" 
+              className="h-5 px-1.5 text-[9px] font-semibold rounded-full liquid-gradient text-white shadow-sm"
+              onClick={() => setDate(getWorkDayDate(businessSettings?.openingTime, businessSettings?.closingTime))}
+            >
+              {t("common.today")}
+            </Button>
           )}
+
+          {isNonWorkingDay && (
+            <AlertCircle className="w-3.5 h-3.5 text-sky-500 shrink-0" />
+          )}
+
+          {/* Search */}
+          <div className="relative">
+            {showSearchInput ? (
+              <div className="flex items-center gap-0.5 glass-card px-1 py-0.5 rounded-full">
+                <Input
+                  type="text"
+                  placeholder={t("common.search") + "..."}
+                  value={appointmentSearch}
+                  onChange={(e) => setAppointmentSearch(e.target.value)}
+                  className="h-5 w-20 md:w-32 text-[10px] border-0 bg-transparent focus-visible:ring-0 px-1"
+                  autoFocus
+                />
+                {appointmentSearch && searchResults.count > 0 && (
+                  <span className="text-[8px] font-bold text-emerald-500 whitespace-nowrap">{searchResults.count}={searchResults.total}</span>
+                )}
+                <button className="p-0.5" onClick={() => { setShowSearchInput(false); setAppointmentSearch(""); }}>
+                  <X className="w-2.5 h-2.5 text-muted-foreground" />
+                </button>
+              </div>
+            ) : (
+              <button className="p-0.5" onClick={() => setShowSearchInput(true)}>
+                <Search className="w-3.5 h-3.5 text-muted-foreground" />
+              </button>
+            )}
+            {showSearchInput && appointmentSearch && searchResults.count > 0 && (
+              <div className="absolute top-full mt-2 ltr:right-0 rtl:left-0 z-50 w-72 md:w-80 glass-card rounded-2xl max-h-64 overflow-auto shadow-xl">
+                <div className="p-2 border-b bg-muted/50 sticky top-0">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {searchResults.count} {t("common.results")}
+                  </span>
+                </div>
+                {searchResults.matches.map((app) => {
+                  const staffMember = staffList.find(s => s.name === app.staff);
+                  return (
+                    <div 
+                      key={app.id} 
+                      className="p-2 border-b last:border-b-0 hover:bg-muted/50 cursor-pointer"
+                      onClick={() => {
+                        setDate(parseISO(app.date));
+                        openAppointmentForEdit(app);
+                      }}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div 
+                            className="w-2 h-2 rounded-full shrink-0" 
+                            style={{ backgroundColor: staffMember?.color || '#666' }} 
+                          />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">{app.client || "-"}</p>
+                            <div className="text-xs text-muted-foreground">
+                              {app.service?.includes(',') ? (
+                                app.service.split(',').map((svc: string, idx: number) => (
+                                  <div key={idx} className="truncate">- {svc.trim()}</div>
+                                ))
+                              ) : (
+                                <div className="truncate">{app.service}</div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-sm font-bold">{app.total} DH</p>
+                          <p className="text-xs text-muted-foreground">
+                            {format(parseISO(app.date), "dd/MM")} {app.startTime} {app.staff}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                <div className="p-2.5 bg-emerald-500/90 text-white sticky bottom-0 rounded-b-2xl">
+                  <div className="flex justify-between items-center text-sm font-bold">
+                    <span>Total</span>
+                    <span>{searchResults.total} DH</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <button
+            className="p-0.5"
+            onClick={() => {
+              queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/services"] });
+              if (boardRef.current) {
+                boardRef.current.scrollTop = 0;
+              }
+              toast({ title: t("common.refreshed"), description: t("common.dataUpdated") });
+            }}
+          >
+            <RefreshCw className={cn("w-3 h-3 text-muted-foreground", loadingApps && "animate-spin")} />
+          </button>
         </div>
       </div>
 
