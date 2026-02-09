@@ -326,8 +326,12 @@ export default function AdminSettings() {
   const handleBroadcast = (e: React.FormEvent) => {
     e.preventDefault();
     if (!broadcastMessage.trim()) return;
+    if (selectedClientIds.size === 0) {
+      toast({ title: t("common.error"), description: t("admin.selectClientsFirst", "Please select at least one client"), variant: "destructive" });
+      return;
+    }
     setBroadcastResult(null);
-    const clientIds = selectedClientIds.size > 0 ? Array.from(selectedClientIds) : undefined;
+    const clientIds = Array.from(selectedClientIds);
     broadcastMutation.mutate({ message: broadcastMessage, clientIds });
   };
 
@@ -1091,7 +1095,7 @@ export default function AdminSettings() {
 
                 <Button 
                   type="submit" 
-                  disabled={!broadcastMessage.trim() || broadcastMutation.isPending || clientsWithPhone.length === 0}
+                  disabled={!broadcastMessage.trim() || broadcastMutation.isPending || selectedClientIds.size === 0}
                   className="w-full sm:w-auto"
                 >
                   {broadcastMutation.isPending ? (
@@ -1104,7 +1108,7 @@ export default function AdminSettings() {
                       <Send className="w-4 h-4 mr-2" />
                       {selectedClientIds.size > 0 
                         ? `${t("admin.sendTo", { defaultValue: "Envoyer à" })} ${selectedClientIds.size} ${t("admin.clients", { defaultValue: "client(s)" })}`
-                        : `${t("admin.sendToAll")} (${clientsWithPhone.length})`}
+                        : t("admin.selectClientsFirst", "Select clients first")}
                     </>
                   )}
                 </Button>
