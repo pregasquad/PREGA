@@ -139,7 +139,7 @@ export async function registerRoutes(
   registerObjectStorageRoutes(app);
 
   // === UPLOAD ROUTE ===
-  app.post("/api/upload", isPinAuthenticated, multer({ 
+  app.post("/api/upload", multer({ 
     storage: multer.memoryStorage(),
     limits: {
       fileSize: 10 * 1024 * 1024, // 10MB limit

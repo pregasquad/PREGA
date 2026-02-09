@@ -38,6 +38,7 @@ export default function Staff() {
   const { data: staffList = [] } = useStaff();
   const { data: categories = [] } = useCategories();
   
+  const [editingStaff, setEditingStaff] = useState<StaffType | null>(null);
   const [uploadingPhotoId, setUploadingPhotoId] = useState<number | null>(null);
 
   const handlePhotoUpload = async (staffId: number, file: File) => {
