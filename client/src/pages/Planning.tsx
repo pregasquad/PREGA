@@ -1667,10 +1667,9 @@ export default function Planning() {
                     <img 
                       src={s.photoUrl} 
                       alt={s.name}
-                      className="w-12 h-12 rounded-full object-cover border-2 shadow-sm"
+                      className="w-16 h-16 rounded-full object-cover border-2 shadow-sm"
                       style={{ borderColor: s.color }}
                       onError={(e) => {
-                        // Fallback to avatar if local image fails to load
                         const target = e.target as HTMLImageElement;
                         if (!target.src.includes('ui-avatars.com')) {
                           target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=${s.color.replace('#', '')}&color=fff`;
@@ -1680,7 +1679,7 @@ export default function Planning() {
                   </div>
                 ) : (
                   <div 
-                    className="w-12 h-12 rounded-full shadow-sm flex items-center justify-center text-white font-bold text-base border-2" 
+                    className="w-16 h-16 rounded-full shadow-sm flex items-center justify-center text-white font-bold text-lg border-2" 
                     style={{ backgroundColor: s.color, borderColor: s.color }}
                   >
                     {s.name.charAt(0).toUpperCase()}

@@ -40,32 +40,17 @@ export default function Staff() {
   
   const [editingStaff, setEditingStaff] = useState<StaffType | null>(null);
   const [uploadingPhotoId, setUploadingPhotoId] = useState<number | null>(null);
+  const [cropStaffId, setCropStaffId] = useState<number | null>(null);
 
-  const handlePhotoUpload = async (staffId: number, file: File) => {
-    setUploadingPhotoId(staffId);
-    try {
-      const formData = new FormData();
-      formData.append("photo", file);
-      formData.append("staffId", staffId.toString());
-      
-      const res = await fetch(`/api/admin-roles/${staffId}/photo?type=staff`, {
-        method: "POST",
-        body: formData,
-        credentials: "include"
-      });
-      
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Upload failed");
-      }
-      
-      queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
-      toast({ title: t("admin.photoUploaded") });
-    } catch (err: any) {
-      toast({ title: t("common.error"), description: err.message, variant: "destructive" });
-    } finally {
-      setUploadingPhotoId(null);
-    }
+  const handlePhotoUpload = (staffId: number, file: File) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const src = event.target?.result as string;
+      setCropImage(src);
+      setCropStaffId(staffId);
+      setCurrentFormInstance(null);
+    };
+    reader.readAsDataURL(file);
   };
   const [scheduleStaff, setScheduleStaff] = useState<StaffType | null>(null);
   const [scheduleTab, setScheduleTab] = useState<"schedule" | "breaks" | "timeoff">("schedule");
@@ -153,14 +138,48 @@ export default function Staff() {
   };
 
   const handleCropComplete = async (croppedBlob: Blob) => {
+    if (cropStaffId) {
+      const file = new File([croppedBlob], 'staff-photo.jpg', { type: 'image/jpeg' });
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("staffId", cropStaffId.toString());
+
+      setUploadingPhotoId(cropStaffId);
+      try {
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+          credentials: "include"
+        });
+
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.message || "Upload failed");
+        }
+
+        const data = await res.json();
+        const photoUrl = data.url || data.photoUrl;
+        if (currentFormInstance) {
+          currentFormInstance.setValue("photoUrl", photoUrl);
+        }
+        queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
+        toast({ title: t("admin.photoUploaded") });
+      } catch (err: any) {
+        toast({ title: t("common.error"), description: err.message, variant: "destructive" });
+      } finally {
+        setUploadingPhotoId(null);
+      }
+      setCropImage(null);
+      setCropStaffId(null);
+      setCurrentFormInstance(null);
+      return;
+    }
+
     if (!currentFormInstance) return;
 
     const file = new File([croppedBlob], 'staff-photo.jpg', { type: 'image/jpeg' });
     const formData = new FormData();
     formData.append('file', file);
-    if (editingStaff) {
-      formData.append('staffId', editingStaff.id.toString());
-    }
 
     try {
       const res = await fetch("/api/upload", {
@@ -178,6 +197,7 @@ export default function Staff() {
       const photoUrl = data.url || data.photoUrl;
       currentFormInstance.setValue("photoUrl", photoUrl);
       setCropImage(null);
+      setCropStaffId(null);
       queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
       toast({ title: t("common.success"), description: "Photo updated" });
     } catch (err: any) {
@@ -239,31 +259,14 @@ export default function Staff() {
       if (!file) return;
 
       if (staffId) {
-        try {
-          const formData = new FormData();
-          formData.append("photo", file);
-          formData.append("staffId", staffId.toString());
-          
-          const res = await fetch(`/api/admin-roles/${staffId}/photo?type=staff`, {
-            method: "POST",
-            body: formData,
-            credentials: "include"
-          });
-          
-          if (!res.ok) {
-            const errData = await res.json();
-            throw new Error(errData.message || "Upload failed");
-          }
-          
-          const result = await res.json();
-          if (result.photoUrl) {
-            formInstance.setValue("photoUrl", result.photoUrl);
-          }
-          queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
-          toast({ title: t("admin.photoUploaded") });
-        } catch (err: any) {
-          toast({ title: t("common.error"), description: err.message, variant: "destructive" });
-        }
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const src = event.target?.result as string;
+          setCropImage(src);
+          setCropStaffId(staffId);
+          setCurrentFormInstance(formInstance);
+        };
+        reader.readAsDataURL(file);
       } else {
         const reader = new FileReader();
         reader.onload = (event) => {
@@ -709,7 +712,7 @@ export default function Staff() {
         <ImageCropper 
           imageSrc={cropImage} 
           onCropComplete={handleCropComplete} 
-          onCancel={() => setCropImage(null)} 
+          onCancel={() => { setCropImage(null); setCropStaffId(null); }} 
         />
       )}
     </div>
