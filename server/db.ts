@@ -63,7 +63,7 @@ export async function initializeDatabase(): Promise<boolean> {
         enableKeepAlive: true,
         keepAliveInitialDelay: 0,
         ssl: {
-          rejectUnauthorized: true,
+          rejectUnauthorized: false,
         },
       });
       
