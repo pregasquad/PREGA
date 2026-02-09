@@ -171,12 +171,12 @@ export async function registerRoutes(
       const localUrl = `/uploads/${fileName}`;
 
       if (supabase) {
-        const { data, error } = await supabase.storage
+        const { error } = await supabase.storage
           .from(supabaseBucket)
           .upload(filePath, file.buffer, {
             contentType: file.mimetype,
             upsert: true,
-            cacheControl: '3600'
+            cacheControl: '0'
           });
 
         if (error) {
@@ -188,7 +188,7 @@ export async function registerRoutes(
           .from(supabaseBucket)
           .getPublicUrl(filePath);
 
-        const publicUrl = publicUrlData.publicUrl;
+        const publicUrl = `${publicUrlData.publicUrl}?v=${Date.now()}`;
         console.log(`Saved file to Supabase: ${publicUrl}`);
         return res.json({ url: publicUrl });
       } else {

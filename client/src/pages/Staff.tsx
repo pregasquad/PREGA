@@ -127,8 +127,12 @@ export default function Staff() {
   const handleCropComplete = async (croppedBlob: Blob) => {
     if (!currentFormInstance) return;
 
+    const file = new File([croppedBlob], 'staff-photo.jpg', { type: 'image/jpeg' });
     const formData = new FormData();
-    formData.append("file", croppedBlob, "staff-photo.jpg");
+    formData.append('file', file);
+    if (editingStaff) {
+      formData.append('staffId', editingStaff.id.toString());
+    }
 
     try {
       const res = await fetch("/api/upload", {
@@ -151,12 +155,15 @@ export default function Staff() {
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, staffId?: number) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const formData = new FormData();
     formData.append("file", file);
+    if (staffId) {
+      formData.append("staffId", staffId.toString());
+    }
     
     try {
       const res = await fetch("/api/upload", {
@@ -179,10 +186,11 @@ export default function Staff() {
     }
   };
 
-  const StaffForm = ({ formInstance, onSubmitFn, buttonText }: { 
+  const StaffForm = ({ formInstance, onSubmitFn, buttonText, staffId }: { 
     formInstance: typeof form; 
     onSubmitFn: (data: z.infer<typeof staffFormSchema>) => Promise<void>;
     buttonText: string;
+    staffId?: number;
   }) => {
     const selectedCategories = parseCategories(formInstance.watch("categories"));
     
@@ -203,6 +211,9 @@ export default function Staff() {
         const src = event.target?.result as string;
         setCropImage(src);
         setCurrentFormInstance(formInstance);
+        if (typeof window !== 'undefined' && staffId) {
+          window.currentStaffIdForUpload = staffId.toString();
+        }
       };
       reader.readAsDataURL(file);
     };
@@ -556,6 +567,7 @@ export default function Staff() {
             formInstance={editForm} 
             onSubmitFn={onEditSubmit} 
             buttonText={t("staff.save", { defaultValue: "Save Changes" })} 
+            staffId={editingStaff?.id}
           />
         </DialogContent>
       </Dialog>
