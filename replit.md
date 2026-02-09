@@ -27,4 +27,5 @@ Beauty Salon Appointment Management System built with React + Express + PostgreS
 - Port 5000 for the application
 
 ## Recent Changes
+- 2026-02-09: Import migration completed - database provisioned, schema pushed, workflow configured
 - 2026-02-08: Initial Replit setup, database created, schema pushed
