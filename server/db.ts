@@ -325,6 +325,39 @@ export async function ensureStaffIdBackfillMySQL(): Promise<void> {
   }
 }
 
+export async function ensureStaffPaymentsTable(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS staff_payments (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          staff_id INT NOT NULL,
+          staff_name TEXT NOT NULL,
+          amount DOUBLE NOT NULL,
+          paid_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+        )
+      `);
+      connection.release();
+    } else {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS staff_payments (
+          id SERIAL PRIMARY KEY,
+          staff_id INT NOT NULL,
+          staff_name TEXT NOT NULL,
+          amount DOUBLE PRECISION NOT NULL,
+          paid_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+        )
+      `);
+    }
+    console.log("Staff payments table ready");
+  } catch (error) {
+    console.error("Failed to create staff_payments table:", error);
+  }
+}
+
 // Add foreign key constraints for data integrity (PostgreSQL only)
 export async function ensureForeignKeyConstraints(): Promise<void> {
   if (dbDialect !== 'postgres') {

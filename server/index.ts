@@ -3,7 +3,7 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
-import { initializeDatabase, warmupDatabase, ensurePushSubscriptionsTable, ensureAppointmentsAuditColumns, ensureForeignKeyConstraints, ensureAdminRolesPhotoColumn, ensureProductExpiryColumns, ensureServiceStartingPriceColumn, ensureDeductionClearedColumns, ensureStaffIdBackfillMySQL } from "./db";
+import { initializeDatabase, warmupDatabase, ensurePushSubscriptionsTable, ensureAppointmentsAuditColumns, ensureForeignKeyConstraints, ensureAdminRolesPhotoColumn, ensureProductExpiryColumns, ensureServiceStartingPriceColumn, ensureDeductionClearedColumns, ensureStaffIdBackfillMySQL, ensureStaffPaymentsTable } from "./db";
 
 const app = express();
 const httpServer = createServer(app);
@@ -85,6 +85,7 @@ const startServer = async () => {
       await ensureServiceStartingPriceColumn();
       await ensureDeductionClearedColumns();
       await ensureStaffIdBackfillMySQL();
+      await ensureStaffPaymentsTable();
       await ensureForeignKeyConstraints();
     }
   } else {
