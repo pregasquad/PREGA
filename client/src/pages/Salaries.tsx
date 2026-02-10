@@ -669,21 +669,23 @@ export default function Salaries() {
                       </span>
                     </div>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="shrink-0 border-green-300 text-green-700 dark:border-green-700 dark:text-green-400"
-                    disabled={walletBalance <= 0 || createPaymentMutation.isPending}
-                    onClick={() => createPaymentMutation.mutate({
-                      staffId: s.id,
-                      staffName: s.name,
-                      amount: walletBalance,
-                    })}
-                    data-testid={`button-pay-staff-${s.id}`}
-                  >
-                    <CheckCircle className="h-3 w-3 me-1" />
-                    {t("salaries.markAsPaid")}
-                  </Button>
+                  {walletBalance > 0 && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="shrink-0 border-green-300 text-green-700 dark:border-green-700 dark:text-green-400"
+                      disabled={createPaymentMutation.isPending}
+                      onClick={() => createPaymentMutation.mutate({
+                        staffId: s.id,
+                        staffName: s.name,
+                        amount: walletBalance,
+                      })}
+                      data-testid={`button-pay-staff-${s.id}`}
+                    >
+                      <CheckCircle className="h-3 w-3 me-1" />
+                      {t("salaries.markAsPaid")}
+                    </Button>
+                  )}
                 </div>
               </div>
             );
