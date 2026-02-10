@@ -37,7 +37,7 @@ interface EarningsData {
   pendingDeductions: number;
   walletBalance: number;
   lastPaidAt: string | null;
-  deductionsList: { type: string; description: string; amount: number; date: string }[];
+  deductionsList: { type: string; description: string; amount: number; date: string; cleared?: boolean }[];
   services: { name: string; count: number; revenue: number; commission: number }[];
 }
 
@@ -396,7 +396,7 @@ export default function StaffPortal() {
 
                   {earnings.deductionsList.length > 0 && (
                     <div className="border-t pt-2 space-y-1.5">
-                      <p className="text-xs font-medium text-muted-foreground">{t("staffPortal.pendingDeductions")}</p>
+                      <p className="text-xs font-medium text-muted-foreground">{t("staffPortal.allDeductions")}</p>
                       {earnings.deductionsList.map((ded, idx) => (
                         <div key={idx} className="flex items-center justify-between gap-2 py-1 text-sm" data-testid={`deduction-item-${idx}`}>
                           <div className="min-w-0 flex-1">
@@ -404,8 +404,15 @@ export default function StaffPortal() {
                             {ded.description && (
                               <span className="text-xs text-muted-foreground"> - {ded.description}</span>
                             )}
+                            {ded.cleared && (
+                              <span className="text-[10px] ms-1.5 px-1.5 py-0.5 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400">
+                                {t("salaries.paidBack")}
+                              </span>
+                            )}
                           </div>
-                          <span className="text-red-600 font-medium shrink-0">-{formatCurrency(ded.amount)} DH</span>
+                          <span className={`font-medium shrink-0 ${ded.cleared ? 'text-muted-foreground line-through' : 'text-red-600'}`}>
+                            -{formatCurrency(ded.amount)} DH
+                          </span>
                         </div>
                       ))}
                     </div>

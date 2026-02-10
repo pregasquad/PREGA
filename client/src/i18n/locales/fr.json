@@ -927,6 +927,7 @@
     "total": "Total",
     "paid": "Payé",
     "unpaid": "Non payé",
-    "day": "Jour"
+    "day": "Jour",
+    "allDeductions": "Déductions"
   }
 }

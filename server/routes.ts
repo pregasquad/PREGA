@@ -1704,9 +1704,10 @@ export async function registerRoutes(
       }
 
       const deductions = await storage.getStaffDeductions();
-      const pendingDeductions = deductions.filter(
-        d => !d.cleared && (d.staffId === staffMember.id || (!d.staffId && d.staffName === staffMember.name))
+      const staffDeductions = deductions.filter(
+        d => d.staffId === staffMember.id || (!d.staffId && d.staffName === staffMember.name)
       );
+      const pendingDeductions = staffDeductions.filter(d => !d.cleared);
       const totalPendingDeductions = pendingDeductions.reduce((sum, d) => sum + d.amount, 0);
 
       const lastPayment = await storage.getLastStaffPayment(staffMember.id);
@@ -1740,11 +1741,12 @@ export async function registerRoutes(
         pendingDeductions: totalPendingDeductions,
         walletBalance,
         lastPaidAt: lastPayment?.paidAt || null,
-        deductionsList: pendingDeductions.map(d => ({
+        deductionsList: staffDeductions.map(d => ({
           type: d.type,
           description: d.description,
           amount: d.amount,
           date: d.date,
+          cleared: d.cleared || false,
         })),
         services: Object.values(serviceBreakdown),
       });

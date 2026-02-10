@@ -932,6 +932,7 @@
     "total": "Total",
     "paid": "Paid",
     "unpaid": "Unpaid",
-    "day": "Day"
+    "day": "Day",
+    "allDeductions": "Deductions"
   }
 }
