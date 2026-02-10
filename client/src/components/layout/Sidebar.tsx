@@ -246,8 +246,9 @@ export function Sidebar() {
 
   function SidebarBusinessName() {
     const businessName = useBusinessName();
+    const [, setLoc] = useLocation();
     return (
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 cursor-pointer" onClick={() => setLoc("/planning")} data-testid="sidebar-link-home-logo">
         <img src="/logo.png" alt={businessName} className="w-12 h-12 rounded-full object-cover" />
         <div>
           <h1 className="text-lg font-display font-bold text-cyan-500">{businessName}</h1>

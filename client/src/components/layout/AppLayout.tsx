@@ -12,8 +12,13 @@ import { useBusinessName } from "@/hooks/use-salon-data";
 
 function MobileBusinessName() {
   const businessName = useBusinessName();
+  const [, setLocation] = useLocation();
   return (
-    <div className="flex items-center gap-2 md:hidden">
+    <div
+      className="flex items-center gap-2 md:hidden cursor-pointer"
+      onClick={() => setLocation("/planning")}
+      data-testid="link-home-logo"
+    >
       <img src="/logo.png" alt={businessName} className="w-8 h-8 rounded-full object-cover" />
       <span className="text-sm font-bold text-cyan-500">{businessName}</span>
     </div>
