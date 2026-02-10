@@ -349,7 +349,7 @@ export default function Salaries() {
     const staffDeductionAmount = pendingDeductions
       .filter(d => d.staffId === s.id || (!d.staffId && d.staffName === s.name))
       .reduce((sum, d) => sum + d.amount, 0);
-    return total + Math.max(0, staffCommission - staffDeductionAmount);
+    return total + (staffCommission - staffDeductionAmount);
   }, 0);
 
   const getChargeTypeLabel = (type: string) => {
@@ -604,7 +604,7 @@ export default function Salaries() {
               const staffDeductionAmount = pendingDeductions
                 .filter(d => d.staffId === s.id || (!d.staffId && d.staffName === s.name))
                 .reduce((sum, d) => sum + d.amount, 0);
-              const staffNet = Math.max(0, staffCommission - staffDeductionAmount);
+              const staffNet = staffCommission - staffDeductionAmount;
               if (staffCommission === 0 && staffDeductionAmount === 0) return null;
               return (
                 <div key={s.id} className="flex justify-between items-center text-sm py-0.5">
@@ -614,7 +614,7 @@ export default function Salaries() {
                     {staffDeductionAmount > 0 && (
                       <span className="text-red-600">-{formatCurrency(staffDeductionAmount)}</span>
                     )}
-                    <span className="font-semibold min-w-[60px] text-end">{formatCurrency(staffNet)}</span>
+                    <span className={`font-semibold min-w-[60px] text-end ${staffNet < 0 ? 'text-red-600' : ''}`}>{formatCurrency(staffNet)}</span>
                   </div>
                 </div>
               );
