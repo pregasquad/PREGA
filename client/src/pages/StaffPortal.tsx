@@ -71,6 +71,24 @@ export default function StaffPortal() {
     }
   }, []);
 
+  useEffect(() => {
+    if (!token) return;
+    const existingManifest = document.querySelector('link[rel="manifest"]');
+    if (existingManifest) {
+      existingManifest.setAttribute("href", `/api/public/staff-portal/${token}/manifest.json`);
+    } else {
+      const link = document.createElement("link");
+      link.rel = "manifest";
+      link.href = `/api/public/staff-portal/${token}/manifest.json`;
+      document.head.appendChild(link);
+    }
+    return () => {
+      if (existingManifest) {
+        existingManifest.setAttribute("href", "/manifest.json");
+      }
+    };
+  }, [token]);
+
   const getDateLocale = () => {
     switch (i18n.language) {
       case "ar": return ar;

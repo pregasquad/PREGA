@@ -1607,6 +1607,31 @@ export async function registerRoutes(
     }
   });
 
+  // Staff Portal - dynamic manifest for PWA install
+  app.get("/api/public/staff-portal/:token/manifest.json", async (req, res) => {
+    try {
+      const staffMember = await storage.getStaffByToken(req.params.token);
+      const name = staffMember ? `${staffMember.name} - PREGA SQUAD` : "PREGA SQUAD Portal";
+      res.json({
+        name,
+        short_name: staffMember?.name || "Portal",
+        description: "Staff Portal - PREGA SQUAD",
+        start_url: `/staff-portal/${req.params.token}`,
+        scope: `/staff-portal/${req.params.token}`,
+        display: "standalone",
+        background_color: "#ffffff",
+        theme_color: "#06b6d4",
+        orientation: "portrait-primary",
+        icons: [
+          { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any maskable" },
+          { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" }
+        ]
+      });
+    } catch (err) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
   // Staff Portal - public routes (token-based)
   app.get("/api/public/staff-portal/:token", publicRateLimitMiddleware, async (req, res) => {
     try {
