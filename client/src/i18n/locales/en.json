@@ -936,6 +936,11 @@
     "paid": "Paid",
     "unpaid": "Unpaid",
     "day": "Day",
-    "allDeductions": "Deductions"
+    "allDeductions": "Deductions",
+    "installApp": "Install as App",
+    "installIOS": "Tap the Share button, then \"Add to Home Screen\"",
+    "installAndroid": "Tap the menu, then \"Add to Home Screen\"",
+    "tapShare": "Tap Share",
+    "addToHomeScreen": "Add to Home Screen"
   }
 }

@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
-import { DollarSign, Calendar, TrendingUp, Wallet, AlertTriangle, ChevronDown, ChevronUp, Clock, Globe } from "lucide-react";
+import { DollarSign, Calendar, TrendingUp, Wallet, AlertTriangle, ChevronDown, ChevronUp, Clock, Globe, Download, Share, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format, startOfMonth, endOfMonth, subMonths, getDaysInMonth, getDay, parseISO } from "date-fns";
@@ -51,10 +51,25 @@ export default function StaffPortal() {
   const [selectedMonth, setSelectedMonth] = useState(() => format(new Date(), "yyyy-MM"));
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
 
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
+
   useEffect(() => {
     document.documentElement.dir = isRTL ? "rtl" : "ltr";
     document.documentElement.lang = i18n.language;
   }, [i18n.language, isRTL]);
+
+  useEffect(() => {
+    const standalone = window.matchMedia("(display-mode: standalone)").matches
+      || (navigator as any).standalone === true;
+    setIsStandalone(standalone);
+    if (!standalone) {
+      const dismissed = localStorage.getItem("portal-install-dismissed");
+      if (!dismissed) {
+        setShowInstallBanner(true);
+      }
+    }
+  }, []);
 
   const getDateLocale = () => {
     switch (i18n.language) {
@@ -208,6 +223,49 @@ export default function StaffPortal() {
           </DropdownMenu>
         </div>
       </div>
+
+      {showInstallBanner && !isStandalone && (
+        <div className="max-w-2xl mx-auto px-4 pt-3">
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="p-3">
+              <div className="flex items-start gap-3">
+                <div className="shrink-0 p-2 rounded-md bg-primary/10">
+                  <Download className="w-5 h-5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold">{t("staffPortal.installApp", "Install as App")}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {/iPhone|iPad|iPod/.test(navigator.userAgent)
+                      ? t("staffPortal.installIOS", "Tap the Share button, then \"Add to Home Screen\"")
+                      : t("staffPortal.installAndroid", "Tap the menu, then \"Add to Home Screen\"")}
+                  </p>
+                  {/iPhone|iPad|iPod/.test(navigator.userAgent) && (
+                    <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
+                      <span>1.</span>
+                      <Share className="w-3.5 h-3.5" />
+                      <span>{t("staffPortal.tapShare", "Tap Share")}</span>
+                      <span className="mx-1">→</span>
+                      <span>2. "{t("staffPortal.addToHomeScreen", "Add to Home Screen")}"</span>
+                    </div>
+                  )}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="shrink-0"
+                  onClick={() => {
+                    setShowInstallBanner(false);
+                    localStorage.setItem("portal-install-dismissed", "1");
+                  }}
+                  data-testid="button-dismiss-install"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <div className="max-w-2xl mx-auto px-4 py-4 space-y-4">
         <div className="flex items-center justify-between gap-2">

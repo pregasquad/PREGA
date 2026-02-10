@@ -931,6 +931,11 @@
     "paid": "Payé",
     "unpaid": "Non payé",
     "day": "Jour",
-    "allDeductions": "Déductions"
+    "allDeductions": "Déductions",
+    "installApp": "Installer comme App",
+    "installIOS": "Appuyez sur le bouton Partager, puis \"Sur l'écran d'accueil\"",
+    "installAndroid": "Appuyez sur le menu, puis \"Ajouter à l'écran d'accueil\"",
+    "tapShare": "Appuyez Partager",
+    "addToHomeScreen": "Sur l'écran d'accueil"
   }
 }
