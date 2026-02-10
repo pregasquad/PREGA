@@ -237,59 +237,61 @@ export default function Reports() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-6">
         <Card className="bg-gradient-to-br from-cyan-500 to-teal-600 text-white border-0 shadow-lg shadow-cyan-500/20">
-          <CardContent className="p-6">
+          <CardContent className="p-3 md:p-6">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-cyan-100 font-medium text-sm">{t("reports.totalRevenue")}</p>
-                <h3 className="text-4xl font-bold mt-2">{formatCurrency(stats.totalRevenue)} DH</h3>
-                <div className="mt-4 flex items-center text-cyan-100 text-sm">
+                <p className="text-cyan-100 font-medium text-xs md:text-sm">{t("reports.totalRevenue")}</p>
+                <h3 className="text-2xl md:text-4xl font-bold mt-1 md:mt-2">{formatCurrency(stats.totalRevenue)} DH</h3>
+                <div className="mt-2 md:mt-4 flex items-center text-cyan-100 text-xs md:text-sm">
                   <span>{t("reports.collected")} {formatCurrency(stats.paidRevenue)} DH</span>
                 </div>
               </div>
-              <div className="p-3 bg-white/20 rounded-xl">
-                <TrendingUp className="w-6 h-6 text-white" />
+              <div className="p-2 md:p-3 bg-white/20 rounded-xl">
+                <TrendingUp className="w-5 h-5 md:w-6 md:h-6 text-white" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="shadow-lg border">
-          <CardContent className="p-6">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-muted-foreground font-medium text-sm">{t("reports.appointments")}</p>
-                <h3 className="text-4xl font-bold mt-2 text-foreground">{stats.totalAppointments}</h3>
-                <div className="mt-4 flex items-center text-emerald-600 text-sm font-medium">
-                  <CalendarCheck className="w-4 h-4 ml-1" />
-                  <span>{periodSubLabel}</span>
+        <div className="grid grid-cols-2 sm:grid-cols-1 gap-3">
+          <Card className="shadow-lg border">
+            <CardContent className="p-3 md:p-6">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-muted-foreground font-medium text-xs md:text-sm">{t("reports.appointments")}</p>
+                  <h3 className="text-xl md:text-4xl font-bold mt-1 md:mt-2 text-foreground">{stats.totalAppointments}</h3>
+                  <div className="mt-1 md:mt-4 flex items-center text-emerald-600 text-xs md:text-sm font-medium">
+                    <CalendarCheck className="w-3 h-3 md:w-4 md:h-4 ml-1" />
+                    <span>{periodSubLabel}</span>
+                  </div>
+                </div>
+                <div className="p-2 md:p-3 bg-primary/20 rounded-xl">
+                  <CalendarCheck className="w-4 h-4 md:w-6 md:h-6 text-primary" />
                 </div>
               </div>
-              <div className="p-3 bg-primary/20 rounded-xl">
-                <CalendarCheck className="w-6 h-6 text-primary" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card className="shadow-lg border">
-          <CardContent className="p-6">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-muted-foreground font-medium text-sm">{t("reports.activeStaff")}</p>
-                <h3 className="text-4xl font-bold mt-2 text-foreground">{staffList.length}</h3>
-                <div className="mt-4 flex items-center text-cyan-600 text-sm font-medium">
-                  <Users className="w-4 h-4 ml-1" />
-                  <span>{t("reports.members")}</span>
+          <Card className="shadow-lg border">
+            <CardContent className="p-3 md:p-6">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-muted-foreground font-medium text-xs md:text-sm">{t("reports.activeStaff")}</p>
+                  <h3 className="text-xl md:text-4xl font-bold mt-1 md:mt-2 text-foreground">{staffList.length}</h3>
+                  <div className="mt-1 md:mt-4 flex items-center text-cyan-600 text-xs md:text-sm font-medium">
+                    <Users className="w-3 h-3 md:w-4 md:h-4 ml-1" />
+                    <span>{t("reports.members")}</span>
+                  </div>
+                </div>
+                <div className="p-2 md:p-3 bg-cyan-100 dark:bg-cyan-900/30 rounded-xl">
+                  <Users className="w-4 h-4 md:w-6 md:h-6 text-cyan-600" />
                 </div>
               </div>
-              <div className="p-3 bg-cyan-100 rounded-xl">
-                <Users className="w-6 h-6 text-cyan-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <Card className="shadow-lg border">
@@ -303,20 +305,20 @@ export default function Reports() {
           ) : (
             <div className="space-y-6">
               {staffPerformance.map((staff) => (
-                <div key={staff.name} className="border rounded-xl p-4 bg-muted">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
+                <div key={staff.name} className="border rounded-xl p-3 md:p-4 bg-muted">
+                  <div className="flex items-center justify-between mb-3 md:mb-4 flex-wrap gap-2">
+                    <div className="flex items-center gap-2 md:gap-3">
                       <div 
-                        className="w-4 h-4 rounded-full" 
+                        className="w-3 h-3 md:w-4 md:h-4 rounded-full" 
                         style={{ backgroundColor: staff.color }}
                       />
-                      <h3 className="font-bold text-lg">{staff.name}</h3>
+                      <h3 className="font-bold text-sm md:text-lg">{staff.name}</h3>
                     </div>
-                    <div className="flex items-center gap-4 text-sm">
-                      <span className="bg-primary/20 text-primary px-3 py-1 rounded-full font-medium">
+                    <div className="flex items-center gap-2 md:gap-4 text-xs md:text-sm">
+                      <span className="bg-primary/20 text-primary px-2 md:px-3 py-0.5 md:py-1 rounded-full font-medium">
                         {staff.appointmentCount} {t("reports.appointment")}
                       </span>
-                      <span className="bg-emerald-100 text-emerald-600 px-3 py-1 rounded-full font-bold">
+                      <span className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 px-2 md:px-3 py-0.5 md:py-1 rounded-full font-bold">
                         {formatCurrency(staff.totalEarnings)} DH
                       </span>
                     </div>

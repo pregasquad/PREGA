@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface AdminRole {
   id: number;
@@ -108,6 +109,7 @@ const DAYS_OF_WEEK = [
 export default function AdminSettings() {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<AdminRole | null>(null);
   const [formData, setFormData] = useState({
@@ -786,31 +788,20 @@ export default function AdminSettings() {
                 <div className="loading-container py-8 min-h-[400px]"><SpinningLogo size="lg" /></div>
               ) : adminRoles.length === 0 ? (
                 <p className="text-center py-4 text-muted-foreground">{t("admin.noUsers")}</p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t("admin.photo")}</TableHead>
-                      <TableHead>{t("common.name")}</TableHead>
-                      <TableHead>{t("admin.role")}</TableHead>
-                      <TableHead>{t("admin.permissions")}</TableHead>
-                      <TableHead>{t("admin.pin")}</TableHead>
-                      <TableHead className="text-right">{t("common.actions")}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+              ) : isMobile ? (
+                  <div className="space-y-3">
                     {adminRoles.map((role) => (
-                      <TableRow key={role.id}>
-                        <TableCell>
-                          <div className="relative inline-block">
+                      <div key={role.id} className="p-3 rounded-lg border">
+                        <div className="flex items-center gap-3">
+                          <div className="relative shrink-0">
                             {role.photoUrl ? (
                               <img 
                                 src={role.photoUrl} 
                                 alt={role.name}
-                                className="w-12 h-12 rounded-full object-cover border-2 border-primary/20"
+                                className="w-10 h-10 rounded-full object-cover border-2 border-primary/20"
                               />
                             ) : (
-                              <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white text-lg font-bold bg-gradient-to-br ${
+                              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold bg-gradient-to-br ${
                                 role.role === "owner" ? "from-red-400 to-red-600" :
                                 role.role === "manager" ? "from-cyan-400 to-cyan-600" :
                                 "from-green-400 to-green-600"
@@ -832,39 +823,36 @@ export default function AdminSettings() {
                                 }}
                                 disabled={uploadingPhotoId === role.id}
                               />
-                              <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/80 transition-colors">
+                              <div className="w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
                                 {uploadingPhotoId === role.id ? (
-                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                  <Loader2 className="w-2.5 h-2.5 animate-spin" />
                                 ) : (
-                                  <Camera className="w-3 h-3" />
+                                  <Camera className="w-2.5 h-2.5" />
                                 )}
                               </div>
                             </label>
                           </div>
-                        </TableCell>
-                        <TableCell className="font-medium">{role.name}</TableCell>
-                        <TableCell>
-                          <Badge className={`${ROLE_LABELS[role.role]?.color || "bg-gray-500"} text-white`}>
-                            {t(`admin.${role.role}`)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="font-normal">
-                            {role.permissions?.length || 0} / {ALL_PERMISSIONS.length}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {role.pin ? "••••" : <span className="text-muted-foreground">-</span>}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-medium text-sm">{role.name}</span>
+                              <Badge className={`${ROLE_LABELS[role.role]?.color || "bg-gray-500"} text-white text-[10px]`}>
+                                {t(`admin.${role.role}`)}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                              <span>{role.permissions?.length || 0}/{ALL_PERMISSIONS.length} {t("admin.permissions")}</span>
+                              <span>·</span>
+                              <span>PIN: {role.pin ? "••••" : "-"}</span>
+                            </div>
+                          </div>
+                          <div className="flex gap-1 shrink-0">
                             <Button size="icon" variant="ghost" onClick={() => handleEdit(role)}>
                               <Edit className="w-4 h-4" />
                             </Button>
                             <Button 
                               size="icon" 
                               variant="ghost" 
-                              className="text-destructive hover:text-destructive"
+                              className="text-destructive"
                               onClick={() => {
                                 if (confirm(t("admin.deleteConfirm"))) {
                                   deleteMutation.mutate(role.id);
@@ -874,12 +862,105 @@ export default function AdminSettings() {
                               <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
-                        </TableCell>
-                      </TableRow>
+                        </div>
+                      </div>
                     ))}
-                  </TableBody>
-                </Table>
-              )}
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t("admin.photo")}</TableHead>
+                        <TableHead>{t("common.name")}</TableHead>
+                        <TableHead>{t("admin.role")}</TableHead>
+                        <TableHead>{t("admin.permissions")}</TableHead>
+                        <TableHead>{t("admin.pin")}</TableHead>
+                        <TableHead className="text-right">{t("common.actions")}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {adminRoles.map((role) => (
+                        <TableRow key={role.id}>
+                          <TableCell>
+                            <div className="relative inline-block">
+                              {role.photoUrl ? (
+                                <img 
+                                  src={role.photoUrl} 
+                                  alt={role.name}
+                                  className="w-12 h-12 rounded-full object-cover border-2 border-primary/20"
+                                />
+                              ) : (
+                                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white text-lg font-bold bg-gradient-to-br ${
+                                  role.role === "owner" ? "from-red-400 to-red-600" :
+                                  role.role === "manager" ? "from-cyan-400 to-cyan-600" :
+                                  "from-green-400 to-green-600"
+                                }`}>
+                                  {role.name.charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                              <label className="absolute -bottom-1 -right-1 cursor-pointer">
+                                <input 
+                                  type="file"
+                                  className="hidden"
+                                  accept="image/jpeg,image/png,image/webp"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                      handlePhotoUpload(role.id, file);
+                                      e.target.value = "";
+                                    }
+                                  }}
+                                  disabled={uploadingPhotoId === role.id}
+                                />
+                                <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/80 transition-colors">
+                                  {uploadingPhotoId === role.id ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    <Camera className="w-3 h-3" />
+                                  )}
+                                </div>
+                              </label>
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-medium">{role.name}</TableCell>
+                          <TableCell>
+                            <Badge className={`${ROLE_LABELS[role.role]?.color || "bg-gray-500"} text-white`}>
+                              {t(`admin.${role.role}`)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="font-normal">
+                              {role.permissions?.length || 0} / {ALL_PERMISSIONS.length}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {role.pin ? "••••" : <span className="text-muted-foreground">-</span>}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button size="icon" variant="ghost" onClick={() => handleEdit(role)}>
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button 
+                                size="icon" 
+                                variant="ghost" 
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => {
+                                  if (confirm(t("admin.deleteConfirm"))) {
+                                    deleteMutation.mutate(role.id);
+                                  }
+                                }}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )
+              }
             </CardContent>
           </Card>
 

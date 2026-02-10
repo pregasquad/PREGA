@@ -13,6 +13,7 @@ import { SpinningLogo } from "@/components/ui/spinning-logo";
 import { format, parseISO, isToday, isYesterday, startOfToday, subDays } from "date-fns";
 import { ar, enUS, fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useLocation } from "wouter";
 
 interface Appointment {
@@ -39,6 +40,7 @@ export default function BookingHistory() {
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
   const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStaff, setFilterStaff] = useState<string>("all");
@@ -215,29 +217,102 @@ export default function BookingHistory() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="rounded-lg border overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead className="w-[180px]">{t("bookingHistory.client")}</TableHead>
-                  <TableHead>{t("bookingHistory.service")}</TableHead>
-                  <TableHead className="w-[140px]">{t("common.date")}</TableHead>
-                  <TableHead className="w-[80px]">{t("planning.time")}</TableHead>
-                  <TableHead className="w-[100px]">{t("common.price")}</TableHead>
-                  <TableHead className="w-[80px]">{t("bookingHistory.status")}</TableHead>
-                  <TableHead className="w-[180px]">{t("bookingHistory.staff")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredAppointments.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                      {t("bookingHistory.noResults")}
-                    </TableCell>
+        <CardContent className={isMobile ? "px-2" : undefined}>
+          {filteredAppointments.length === 0 ? (
+            <p className="text-center py-8 text-muted-foreground">{t("bookingHistory.noResults")}</p>
+          ) : isMobile ? (
+            <div className="space-y-2">
+              {filteredAppointments.map((appt) => {
+                const isUnassigned = appt.staff === "À assigner" || !appt.staff;
+                return (
+                  <div
+                    key={appt.id}
+                    className={cn(
+                      "p-3 rounded-lg border",
+                      isUnassigned && "bg-sky-500/5 border-sky-200 dark:border-sky-800"
+                    )}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <User className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                        <span className="font-medium text-sm truncate">{appt.client}</span>
+                      </div>
+                      <Badge variant={appt.paid ? "default" : "secondary"} className="text-[10px] shrink-0">
+                        {appt.paid ? t("common.paid") : t("common.unpaid")}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1 truncate">{appt.service} · {appt.duration} min</p>
+                    <div className="flex items-center justify-between mt-2 pt-2 border-t">
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          {formatDateLabel(appt.date)}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {appt.startTime}
+                        </span>
+                      </div>
+                      <span className="font-semibold text-sm text-primary">{appt.total} DH</span>
+                    </div>
+                    <div className="mt-2">
+                      <Select
+                        value={appt.staff || "À assigner"}
+                        onValueChange={(value) => {
+                          updateAppointmentMutation.mutate({ id: appt.id, staff: value });
+                        }}
+                      >
+                        <SelectTrigger className={cn(
+                          "h-8 text-xs",
+                          isUnassigned && "border-sky-500/50 text-sky-600"
+                        )}>
+                          <div className="flex items-center gap-2">
+                            {isUnassigned ? (
+                              <UserPlus className="w-3 h-3" />
+                            ) : (
+                              <Check className="w-3 h-3 text-green-500" />
+                            )}
+                            <SelectValue />
+                          </div>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="À assigner">
+                            <span className="text-sky-600">{t("bookingHistory.toAssignOption")}</span>
+                          </SelectItem>
+                          {staffList.map((staff) => (
+                            <SelectItem key={staff.id} value={staff.name}>
+                              <div className="flex items-center gap-2">
+                                <div 
+                                  className="w-3 h-3 rounded-full" 
+                                  style={{ backgroundColor: staff.color || "#888" }}
+                                />
+                                {staff.name}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rounded-lg border overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead className="w-[180px]">{t("bookingHistory.client")}</TableHead>
+                    <TableHead>{t("bookingHistory.service")}</TableHead>
+                    <TableHead className="w-[140px]">{t("common.date")}</TableHead>
+                    <TableHead className="w-[80px]">{t("planning.time")}</TableHead>
+                    <TableHead className="w-[100px]">{t("common.price")}</TableHead>
+                    <TableHead className="w-[80px]">{t("bookingHistory.status")}</TableHead>
+                    <TableHead className="w-[180px]">{t("bookingHistory.staff")}</TableHead>
                   </TableRow>
-                ) : (
-                  filteredAppointments.map((appt) => {
+                </TableHeader>
+                <TableBody>
+                  {filteredAppointments.map((appt) => {
                     const isUnassigned = appt.staff === "À assigner" || !appt.staff;
                     return (
                       <TableRow 
@@ -316,11 +391,11 @@ export default function BookingHistory() {
                         </TableCell>
                       </TableRow>
                     );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
           
           <div className="mt-4 text-sm text-muted-foreground text-center">
             {t("bookingHistory.showingCount", { count: filteredAppointments.length })}
