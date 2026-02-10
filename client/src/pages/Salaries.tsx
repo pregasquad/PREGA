@@ -647,7 +647,7 @@ export default function Salaries() {
               .filter(d => !d.cleared && (d.staffId === s.id || (!d.staffId && d.staffName === s.name)))
               .reduce((sum, d) => sum + d.amount, 0);
 
-            const walletBalance = earningsSincePayment - pendingStaffDeductions;
+            const walletBalance = Math.max(0, earningsSincePayment - pendingStaffDeductions);
 
             return (
               <div key={s.id} className="p-3 bg-muted/50 rounded-lg" data-testid={`wallet-staff-${s.id}`}>
