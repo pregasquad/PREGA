@@ -48,6 +48,20 @@ export async function setupVite(server: Server, app: Express) {
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`,
       );
+
+      const portalMatch = url.match(/^\/staff-portal\/([^/?]+)/);
+      if (portalMatch) {
+        const token = portalMatch[1];
+        template = template.replace(
+          'href="/manifest.json"',
+          `href="/api/public/staff-portal/${token}/manifest.json"`,
+        );
+        template = template.replace(
+          '<meta name="apple-mobile-web-app-title" content="PregaSquad" />',
+          `<meta name="apple-mobile-web-app-title" content="PregaSquad Portal" />`,
+        );
+      }
+
       const page = await vite.transformIndexHtml(url, template);
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
     } catch (e) {
