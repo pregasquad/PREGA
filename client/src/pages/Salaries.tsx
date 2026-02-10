@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { formatCurrency } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -21,9 +22,6 @@ import type { Staff, Service, Appointment, Charge, StaffDeduction } from "@share
 
 type PeriodType = "day" | "week" | "month" | "custom";
 
-const formatCurrency = (value: number): string => {
-  return value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-};
 
 export default function Salaries() {
   const { t, i18n } = useTranslation();

@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { formatCurrency } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -18,9 +19,6 @@ import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import type { Staff, Appointment, Service, StaffGoal } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 
-const formatCurrency = (value: number): string => {
-  return value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-};
 
 export default function StaffPerformance() {
   const { t, i18n } = useTranslation();

@@ -13,12 +13,12 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, TrendingDown, FolderPlus, RefreshCw, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 
 const DEFAULT_CHARGE_TYPES_KEYS = [
-  { id: 0, key: "expenses.product", value: "Produit" },
-  { id: 0, key: "expenses.rent", value: "Loyer" },
-  { id: 0, key: "expenses.water", value: "Eau" },
-  { id: 0, key: "expenses.electricity", value: "Electricité" },
-  { id: 0, key: "expenses.salary", value: "Salaire" },
-  { id: 0, key: "expenses.other", value: "Autre" },
+  { id: 1, key: "expenses.product", value: "Produit" },
+  { id: 2, key: "expenses.rent", value: "Loyer" },
+  { id: 3, key: "expenses.water", value: "Eau" },
+  { id: 4, key: "expenses.electricity", value: "Electricité" },
+  { id: 5, key: "expenses.salary", value: "Salaire" },
+  { id: 6, key: "expenses.other", value: "Autre" },
 ];
 
 export default function Charges() {
@@ -45,20 +45,12 @@ export default function Charges() {
   const goToNextMonth = () => setSelectedMonth(addMonths(selectedMonth, 1));
   const goToCurrentMonth = () => setSelectedMonth(new Date());
 
-  const { data: charges = [] } = useQuery({
+  const { data: charges = [] } = useQuery<any[]>({
     queryKey: ["/api/charges"],
-    queryFn: async () => {
-      const res = await fetch("/api/charges");
-      return res.json();
-    },
   });
 
-  const { data: categories = [] } = useQuery({
+  const { data: categories = [] } = useQuery<any[]>({
     queryKey: ["/api/expense-categories"],
-    queryFn: async () => {
-      const res = await fetch("/api/expense-categories");
-      return res.json();
-    },
   });
 
   const defaultChargeTypes = DEFAULT_CHARGE_TYPES_KEYS.map(item => ({

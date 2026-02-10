@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAppointments, useStaff } from "@/hooks/use-salon-data";
+import { formatCurrency } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from "recharts";
 import { TrendingUp, Users, CalendarCheck, Calendar as CalendarIcon, ChevronRight, ChevronLeft, RefreshCw } from "lucide-react";
@@ -16,9 +17,6 @@ import type { DateRange } from "react-day-picker";
 
 const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#a4de6c', '#d0ed57'];
 
-const formatCurrency = (value: number): string => {
-  return value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-};
 
 type ViewMode = "weekly" | "monthly" | "custom";
 
