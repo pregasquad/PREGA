@@ -344,7 +344,7 @@ export default function Salaries() {
   const totalExpenses = filteredCharges.reduce((sum, c) => sum + c.amount, 0);
   const totalDeductions = filteredDeductions.reduce((sum, d) => sum + d.amount, 0);
   const netProfit = salonPortion + totalPaidBack - totalExpenses;
-  const netStaffPayable = totalCommissions - totalPending;
+  const netStaffPayable = Math.max(0, totalCommissions - totalPending);
 
   const getChargeTypeLabel = (type: string) => {
     switch (type) {
