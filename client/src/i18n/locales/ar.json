@@ -273,6 +273,8 @@
     "staffAccount": "حساب الموظفين",
     "totalCommissionsDue": "إجمالي العمولات المستحقة",
     "totalDeductions": "إجمالي الخصومات",
+    "paidBackDeductions": "خصومات مستردة",
+    "pendingDeductions": "في الانتظار (لم تسترد بعد)",
     "netDueToStaff": "صافي المستحق للموظفين",
     "staffEarningsDetails": "تفاصيل أرباح الموظفين",
     "staff": "الموظف",

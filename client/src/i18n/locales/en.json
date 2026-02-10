@@ -273,6 +273,8 @@
     "staffAccount": "Staff Account",
     "totalCommissionsDue": "Total Commissions Due",
     "totalDeductions": "Total Deductions",
+    "paidBackDeductions": "Paid Back Deductions",
+    "pendingDeductions": "Pending (not yet paid back)",
     "netDueToStaff": "Net Due to Staff",
     "staffEarningsDetails": "Staff Earnings Details",
     "staff": "Staff",

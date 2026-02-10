@@ -273,6 +273,8 @@
     "staffAccount": "Compte du Personnel",
     "totalCommissionsDue": "Total des Commissions Dues",
     "totalDeductions": "Total des Déductions",
+    "paidBackDeductions": "Déductions Récupérées",
+    "pendingDeductions": "En attente (non récupérées)",
     "netDueToStaff": "Net Dû au Personnel",
     "staffEarningsDetails": "Détails des Gains du Personnel",
     "staff": "Personnel",

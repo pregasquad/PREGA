@@ -308,7 +308,6 @@ export default function Salaries() {
   });
 
   const filteredDeductions = deductions.filter(d => {
-    if (d.cleared) return false;
     const deductionDate = startOfDay(parseISO(d.date));
     const deductionStaffId = selectedStaff !== "all" ? parseInt(selectedStaff) : null;
     const staffMatch = selectedStaff === "all" || (deductionStaffId && (d.staffId === deductionStaffId || (!d.staffId && d.staffName === staff.find(s => s.id === deductionStaffId)?.name)));
@@ -317,9 +316,13 @@ export default function Salaries() {
            (isBefore(deductionDate, endOfDay(end)) || isEqual(deductionDate, endOfDay(end)));
   });
 
+  const paidBackDeductions = filteredDeductions.filter(d => d.cleared);
+  const pendingDeductions = filteredDeductions.filter(d => !d.cleared);
+  const totalPaidBack = paidBackDeductions.reduce((sum, d) => sum + d.amount, 0);
+  const totalPending = pendingDeductions.reduce((sum, d) => sum + d.amount, 0);
   const totalExpenses = filteredCharges.reduce((sum, c) => sum + c.amount, 0);
   const totalDeductions = filteredDeductions.reduce((sum, d) => sum + d.amount, 0);
-  const netProfit = salonPortion + totalDeductions - totalExpenses;
+  const netProfit = salonPortion + totalPaidBack - totalExpenses;
   const netStaffPayable = totalCommissions - totalDeductions;
 
   const getChargeTypeLabel = (type: string) => {
@@ -541,10 +544,10 @@ export default function Salaries() {
               <span>{t("salaries.salonRevenueShare")}</span>
               <span className="text-primary">{formatCurrency(salonPortion)}</span>
             </div>
-            {totalDeductions > 0 && (
+            {totalPaidBack > 0 && (
               <div className="flex justify-between text-sm text-green-600">
-                <span>{t("salaries.totalDeductions")}</span>
-                <span>+{formatCurrency(totalDeductions)}</span>
+                <span>{t("salaries.paidBackDeductions")}</span>
+                <span>+{formatCurrency(totalPaidBack)}</span>
               </div>
             )}
             <div className="flex justify-between text-sm text-red-600">
@@ -557,6 +560,12 @@ export default function Salaries() {
                 {formatCurrency(netProfit)}
               </span>
             </div>
+            {totalPending > 0 && (
+              <div className="flex justify-between text-sm text-orange-600 dark:text-orange-400 border-t pt-1">
+                <span>{t("salaries.pendingDeductions")}</span>
+                <span>{formatCurrency(totalPending)}</span>
+              </div>
+            )}
           </div>
 
           <div className="p-3 bg-green-50 rounded-lg space-y-1.5">
