@@ -454,38 +454,34 @@ export default function Planning() {
   // Check if business settings are loaded (opening/closing times are set)
   const hoursReady = Boolean(businessSettings?.openingTime) || Boolean(businessSettings?.closingTime);
   
+  const dataReady = staffList.length > 0 && (!loadingServices || services.length > 0);
+  
   useEffect(() => {
-    // Only scroll when: viewing today, data loaded, and haven't scrolled yet
-    // Business settings may not be needed if default hours are used
-    if (!isToday || initialScrollDoneRef.current || staffList.length === 0) return;
+    if (!isToday || initialScrollDoneRef.current || !dataReady) return;
     
-    // Track all timers for cleanup
     const timers: NodeJS.Timeout[] = [];
     let cancelled = false;
     
     const tryScroll = (attempt: number) => {
       if (cancelled || initialScrollDoneRef.current) return;
       
-      // Check if live line element exists
       if (liveLineRef.current && boardRef.current) {
         initialScrollDoneRef.current = true;
-        scrollToLiveLine(true, true); // smooth = true, force = true
-      } else if (attempt < 5) {
-        // Retry after a short delay if elements not ready
+        scrollToLiveLine(true, true);
+      } else if (attempt < 8) {
         const retryTimer = setTimeout(() => tryScroll(attempt + 1), 200);
         timers.push(retryTimer);
       }
     };
     
-    // Start first attempt after initial delay
-    const initialTimer = setTimeout(() => tryScroll(0), 300);
+    const initialTimer = setTimeout(() => tryScroll(0), 150);
     timers.push(initialTimer);
     
     return () => {
       cancelled = true;
       timers.forEach(t => clearTimeout(t));
     };
-  }, [isToday, staffList.length, scrollToLiveLine]);
+  }, [isToday, dataReady, scrollToLiveLine]);
 
   // FOLLOW LIVE LINE every 30 seconds when currentTime updates
   // This respects user interaction pause - won't scroll if user interacted in last 30s
