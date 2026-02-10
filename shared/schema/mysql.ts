@@ -124,6 +124,7 @@ export const staff = mysqlTable("staff", {
   baseSalary: double("base_salary").notNull().default(0),
   photoUrl: text("photo_url"),
   categories: text("categories"),
+  publicToken: text("public_token"),
 });
 
 export const expenseCategories = mysqlTable("expense_categories", {

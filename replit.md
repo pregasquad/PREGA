@@ -34,6 +34,8 @@ Beauty Salon Appointment Management System built with React + Express + PostgreS
 - **Database migrations**: Startup migrations in `server/db.ts` handle backfilling staffId and creating indexes
 
 ## Recent Changes
+- 2026-02-10: Fixed MySQL/TiDB schema - added missing `publicToken` column to staff table in `shared/schema/mysql.ts`, which was causing SQL parse errors on production (Koyeb/TiDB) when accessing staff portal routes
+- 2026-02-10: Redesigned Salaries page with iOS liquid glass cards - individual staff cards with profile photos, earnings breakdown, wallet balance, service details; uses Shadcn Card components with glass-card styling
 - 2026-02-10: Default language changed to Arabic; language switcher added to Staff Portal page; Share Portal Link button added to Staff cards
 - 2026-02-10: Math audit - fixed netStaffPayable to sum per-staff Math.max(0, commission-deductions) instead of global Math.max; fixed backend getStaffPerformance and StaffPerformance page to use custom per-staff commissions (staffCommissions table) for consistent calculations across all pages
 - 2026-02-10: Added Employee Wallet feature to Salaries page - tracks accumulated staff earnings since last payment, with "Paid" button to reset wallet; uses staff_payments table
