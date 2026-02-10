@@ -1531,7 +1531,7 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Staff not found" });
       }
 
-      const performance = await storage.getStaffPerformance(staff.name, startDate, endDate);
+      const performance = await storage.getStaffPerformance(staff.name, startDate, endDate, staffId);
       
       const existingGoal = await storage.getStaffGoal(staffId, period);
       if (!existingGoal) {
@@ -1927,10 +1927,13 @@ export async function registerRoutes(
         endDate: z.string(),
       }).parse(req.query);
       
+      const allStaff = await storage.getStaff();
+      const staffMember = allStaff.find(s => s.name === req.params.staffName);
       const performance = await storage.getStaffPerformance(
         req.params.staffName,
         startDate,
-        endDate
+        endDate,
+        staffMember?.id
       );
       res.json(performance);
     } catch (err) {

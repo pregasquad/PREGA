@@ -342,9 +342,15 @@ export default function Salaries() {
   const totalPaidBack = paidBackDeductions.reduce((sum, d) => sum + d.amount, 0);
   const totalPending = pendingDeductions.reduce((sum, d) => sum + d.amount, 0);
   const totalExpenses = filteredCharges.reduce((sum, c) => sum + c.amount, 0);
-  const totalDeductions = filteredDeductions.reduce((sum, d) => sum + d.amount, 0);
   const netProfit = salonPortion + totalPaidBack - totalExpenses;
-  const netStaffPayable = Math.max(0, totalCommissions - totalPending);
+  const netStaffPayable = staff.reduce((total, s) => {
+    const earning = staffEarnings.find(e => e.name === s.name);
+    const staffCommission = earning ? earning.totalCommission : 0;
+    const staffDeductionAmount = pendingDeductions
+      .filter(d => d.staffId === s.id || (!d.staffId && d.staffName === s.name))
+      .reduce((sum, d) => sum + d.amount, 0);
+    return total + Math.max(0, staffCommission - staffDeductionAmount);
+  }, 0);
 
   const getChargeTypeLabel = (type: string) => {
     switch (type) {

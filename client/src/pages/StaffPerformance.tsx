@@ -47,6 +47,10 @@ export default function StaffPerformance() {
     queryKey: ["/api/appointments/all"],
   });
 
+  const { data: staffCommissions = [] } = useQuery<{ id: number; staffId: number; serviceId: number; percentage: number }[]>({
+    queryKey: ["/api/staff-commissions"],
+  });
+
   const { data: staffGoals = [], isLoading: loadingGoals } = useQuery<StaffGoal[]>({
     queryKey: ["/api/staff/goals/summary", selectedMonth],
     queryFn: async () => {
@@ -109,7 +113,13 @@ export default function StaffPerformance() {
       totalRevenue += appt.total;
       const serviceName = appt.service || "Unknown";
       const service = serviceMap.get(serviceName);
-      const commissionRate = service?.commissionPercent || 50;
+      let commissionRate = service?.commissionPercent || 50;
+      if (service) {
+        const customComm = staffCommissions.find(c => c.staffId === staffId && c.serviceId === service.id);
+        if (customComm) {
+          commissionRate = customComm.percentage;
+        }
+      }
       totalCommission += (appt.total * commissionRate) / 100;
 
       if (!serviceBreakdown[serviceName]) {
@@ -126,7 +136,7 @@ export default function StaffPerformance() {
       totalCommission,
       serviceBreakdown,
     };
-  }, [monthAppointments, serviceMap]);
+  }, [monthAppointments, serviceMap, staffCommissions]);
 
   const allStaffStats = useMemo(() => 
     staffList.map((s) => calculateStaffStats(s.id, s.name)),

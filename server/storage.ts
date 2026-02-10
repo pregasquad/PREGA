@@ -96,7 +96,7 @@ export interface IStorage extends IAuthStorage {
   getLoyaltyRedemptions(clientId?: number): Promise<LoyaltyRedemption[]>;
   createLoyaltyRedemption(redemption: InsertLoyaltyRedemption): Promise<LoyaltyRedemption>;
 
-  getStaffPerformance(staffName: string, startDate: string, endDate: string): Promise<{
+  getStaffPerformance(staffName: string, startDate: string, endDate: string, staffId?: number): Promise<{
     totalAppointments: number;
     totalRevenue: number;
     totalCommission: number;
@@ -833,7 +833,7 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async getStaffPerformance(staffName: string, startDate: string, endDate: string): Promise<{
+  async getStaffPerformance(staffName: string, startDate: string, endDate: string, staffId?: number): Promise<{
     totalAppointments: number;
     totalRevenue: number;
     totalCommission: number;
@@ -849,6 +849,15 @@ export class DatabaseStorage implements IStorage {
     const allServices = await db().select().from(s.services);
     const serviceMap: Map<string, any> = new Map(allServices.map((svc: any) => [svc.name, svc]));
     
+    let customCommissions: Map<number, number> = new Map();
+    if (staffId) {
+      const staffComms = await db().select().from(s.staffCommissions)
+        .where(eq(s.staffCommissions.staffId, staffId));
+      for (const sc of staffComms) {
+        customCommissions.set(sc.serviceId, Number(sc.percentage));
+      }
+    }
+    
     let totalRevenue = 0;
     let totalCommission = 0;
     
@@ -856,7 +865,10 @@ export class DatabaseStorage implements IStorage {
       const amount = Number(appt.total || 0);
       totalRevenue += amount;
       const service = serviceMap.get(appt.service);
-      const commissionRate = Number(service?.commissionPercent || 50);
+      let commissionRate = Number(service?.commissionPercent || 50);
+      if (service && customCommissions.has(service.id)) {
+        commissionRate = customCommissions.get(service.id)!;
+      }
       totalCommission += (amount * commissionRate) / 100;
     }
     
