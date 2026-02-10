@@ -18,6 +18,7 @@ import { SpinningLogo } from "@/components/ui/spinning-logo";
 import { format, startOfToday } from "date-fns";
 import { ar, enUS, fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 import type { Client, Appointment, Service, Staff } from "@shared/schema";
 
 const TIME_SLOTS = [
@@ -32,6 +33,7 @@ export default function Clients() {
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -468,29 +470,29 @@ export default function Clients() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-cyan-100 rounded-lg">
-                <User className="w-5 h-5 text-cyan-600" />
+          <CardContent className="p-3 md:pt-6 md:px-6">
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="p-1.5 md:p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
+                <User className="w-4 h-4 md:w-5 md:h-5 text-cyan-600" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">{t("clients.totalAppointments")}</p>
-                <p className="text-2xl font-bold">{clients.length}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">{t("clients.title")}</p>
+                <p className="text-lg md:text-2xl font-bold">{clients.length}</p>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <Crown className="w-5 h-5 text-yellow-600" />
+          <CardContent className="p-3 md:pt-6 md:px-6">
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="p-1.5 md:p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
+                <Crown className="w-4 h-4 md:w-5 md:h-5 text-yellow-600" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">{t("clients.vip")} {t("clients.title")}</p>
-                <p className="text-2xl font-bold">
+                <p className="text-xs md:text-sm text-muted-foreground">{t("clients.vip")}</p>
+                <p className="text-lg md:text-2xl font-bold">
                   {clients.filter((c) => c.loyaltyPoints >= 1000).length}
                 </p>
               </div>
@@ -498,14 +500,14 @@ export default function Clients() {
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Gift className="w-5 h-5 text-green-600" />
+          <CardContent className="p-3 md:pt-6 md:px-6">
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="p-1.5 md:p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                <Gift className="w-4 h-4 md:w-5 md:h-5 text-green-600" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">{t("clients.loyaltyPoints")}</p>
-                <p className="text-2xl font-bold">
+                <p className="text-xs md:text-sm text-muted-foreground">{t("clients.loyaltyPoints")}</p>
+                <p className="text-lg md:text-2xl font-bold">
                   {clients.reduce((sum, c) => sum + c.loyaltyPoints, 0)}
                 </p>
               </div>
@@ -513,14 +515,14 @@ export default function Clients() {
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-cyan-100 rounded-lg">
-                <CalendarIcon className="w-5 h-5 text-cyan-600" />
+          <CardContent className="p-3 md:pt-6 md:px-6">
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="p-1.5 md:p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
+                <CalendarIcon className="w-4 h-4 md:w-5 md:h-5 text-cyan-600" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">{t("clients.totalAppointments")}</p>
-                <p className="text-2xl font-bold">
+                <p className="text-xs md:text-sm text-muted-foreground">{t("clients.totalAppointments")}</p>
+                <p className="text-lg md:text-2xl font-bold">
                   {clients.reduce((sum, c) => sum + c.totalVisits, 0)}
                 </p>
               </div>
@@ -529,94 +531,187 @@ export default function Clients() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle>{t("clients.title")}</CardTitle>
-            <Input
-              placeholder={t("common.search") + "..."}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-64"
-            />
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t("clients.name")}</TableHead>
-                <TableHead>{t("clients.phone")}</TableHead>
-                <TableHead>{t("clients.email")}</TableHead>
-                <TableHead>{t("clients.totalAppointments")}</TableHead>
-                <TableHead>{t("clients.loyaltyPoints")}</TableHead>
-                <TableHead>{t("giftCard.balance", "Gift Card")}</TableHead>
-                <TableHead>{t("common.status")}</TableHead>
-                <TableHead>{t("common.actions")}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredClients.map((client) => {
-                const tier = getLoyaltyTier(client.loyaltyPoints);
-                const TierIcon = tier.icon;
-                return (
-                  <TableRow
-                    key={client.id}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => handleViewDetails(client)}
-                  >
-                    <TableCell className="font-medium">{client.name}</TableCell>
-                    <TableCell dir="ltr">{client.phone || "-"}</TableCell>
-                    <TableCell dir="ltr">{client.email || "-"}</TableCell>
-                    <TableCell>{client.totalVisits}</TableCell>
-                    <TableCell>{client.loyaltyPoints}</TableCell>
-                    <TableCell>
-                      {Number(client.giftCardBalance ?? 0) > 0 ? (
-                        <span className="text-green-600 font-medium">{Number(client.giftCardBalance ?? 0).toFixed(2)}</span>
-                      ) : (
-                        <span className="text-muted-foreground">0</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={`${tier.color} text-white`}>
-                        <TierIcon className="w-3 h-3 ml-1" />
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder={t("common.search") + "..."}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9"
+            data-testid="input-search-clients"
+          />
+        </div>
+      </div>
+
+      {isMobile ? (
+        <div className="space-y-2">
+          {filteredClients.map((client) => {
+            const tier = getLoyaltyTier(client.loyaltyPoints);
+            const TierIcon = tier.icon;
+            return (
+              <Card
+                key={client.id}
+                className="cursor-pointer"
+                onClick={() => handleViewDetails(client)}
+                data-testid={`card-client-${client.id}`}
+              >
+                <CardContent className="p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <div className="p-1.5 bg-muted rounded-full shrink-0">
+                        <User className="w-4 h-4 text-muted-foreground" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm truncate">{client.name}</p>
+                        {client.phone && (
+                          <p className="text-xs text-muted-foreground" dir="ltr">{client.phone}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <Badge className={`${tier.color} text-white text-[10px] px-1.5 py-0.5`}>
+                        <TierIcon className="w-2.5 h-2.5" />
                         {tier.name}
                       </Badge>
-                    </TableCell>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="default"
-                          size="sm"
-                          className="gap-1"
-                          onClick={(e) => handleQuickBook(client, e)}
-                        >
-                          <Zap className="w-3 h-3" />
-                          {t("clients.quickBook")}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEdit(client)}
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => deleteMutation.mutate(client.id)}
-                        >
-                          <Trash2 className="w-4 h-4 text-red-500" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between mt-2 pt-2 border-t">
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <CalendarIcon className="w-3 h-3" />
+                        {client.totalVisits}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Star className="w-3 h-3" />
+                        {client.loyaltyPoints}
+                      </span>
+                      {Number(client.giftCardBalance ?? 0) > 0 && (
+                        <span className="flex items-center gap-1 text-green-600">
+                          <CreditCard className="w-3 h-3" />
+                          {Number(client.giftCardBalance).toFixed(0)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        className="gap-1 h-7 text-xs px-2"
+                        onClick={(e) => handleQuickBook(client, e)}
+                        data-testid={`button-quickbook-${client.id}`}
+                      >
+                        <Zap className="w-3 h-3" />
+                        {t("clients.quickBook")}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => handleEdit(client)}
+                        data-testid={`button-edit-client-${client.id}`}
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => deleteMutation.mutate(client.id)}
+                        data-testid={`button-delete-client-${client.id}`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t("clients.name")}</TableHead>
+                  <TableHead>{t("clients.phone")}</TableHead>
+                  <TableHead>{t("clients.email")}</TableHead>
+                  <TableHead>{t("clients.totalAppointments")}</TableHead>
+                  <TableHead>{t("clients.loyaltyPoints")}</TableHead>
+                  <TableHead>{t("giftCard.balance", "Gift Card")}</TableHead>
+                  <TableHead>{t("common.status")}</TableHead>
+                  <TableHead>{t("common.actions")}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredClients.map((client) => {
+                  const tier = getLoyaltyTier(client.loyaltyPoints);
+                  const TierIcon = tier.icon;
+                  return (
+                    <TableRow
+                      key={client.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => handleViewDetails(client)}
+                      data-testid={`row-client-${client.id}`}
+                    >
+                      <TableCell className="font-medium">{client.name}</TableCell>
+                      <TableCell dir="ltr">{client.phone || "-"}</TableCell>
+                      <TableCell dir="ltr">{client.email || "-"}</TableCell>
+                      <TableCell>{client.totalVisits}</TableCell>
+                      <TableCell>{client.loyaltyPoints}</TableCell>
+                      <TableCell>
+                        {Number(client.giftCardBalance ?? 0) > 0 ? (
+                          <span className="text-green-600 font-medium">{Number(client.giftCardBalance ?? 0).toFixed(2)}</span>
+                        ) : (
+                          <span className="text-muted-foreground">0</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={`${tier.color} text-white`}>
+                          <TierIcon className="w-3 h-3 ml-1" />
+                          {tier.name}
+                        </Badge>
+                      </TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="default"
+                            size="sm"
+                            className="gap-1"
+                            onClick={(e) => handleQuickBook(client, e)}
+                            data-testid={`button-quickbook-${client.id}`}
+                          >
+                            <Zap className="w-3 h-3" />
+                            {t("clients.quickBook")}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(client)}
+                            data-testid={`button-edit-client-${client.id}`}
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => deleteMutation.mutate(client.id)}
+                            data-testid={`button-delete-client-${client.id}`}
+                          >
+                            <Trash2 className="w-4 h-4 text-red-500" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
