@@ -314,6 +314,8 @@
     "unclearedDeductions": "خصومات غير مستردة",
     "unclearedDeductionsDesc": "تبقى هذه الخصومات ظاهرة حتى تأكيد استرداد المبلغ",
     "markAsCleared": "تم الاسترداد",
+    "paidBack": "مدفوع",
+    "pending": "في الانتظار",
     "cleared": "تم الاسترداد",
     "noUnclearedDeductions": "تم استرداد جميع الخصومات"
   },

@@ -314,6 +314,8 @@
     "unclearedDeductions": "Uncleared Deductions",
     "unclearedDeductionsDesc": "These deductions stay visible until you confirm the money is paid back",
     "markAsCleared": "Paid Back",
+    "paidBack": "Paid",
+    "pending": "Pending",
     "cleared": "Cleared",
     "noUnclearedDeductions": "All deductions have been cleared"
   },

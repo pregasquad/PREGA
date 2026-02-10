@@ -314,6 +314,8 @@
     "unclearedDeductions": "Déductions Non Récupérées",
     "unclearedDeductionsDesc": "Ces déductions restent affichées jusqu'à confirmation du remboursement",
     "markAsCleared": "Récupéré",
+    "paidBack": "Payé",
+    "pending": "En attente",
     "cleared": "Récupéré",
     "noUnclearedDeductions": "Toutes les déductions ont été récupérées"
   },

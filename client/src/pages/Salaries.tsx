@@ -866,23 +866,38 @@ export default function Salaries() {
           <CollapsibleContent>
             <CardContent className="p-3 pt-0 space-y-2">
               {filteredDeductions.map((deduction) => (
-                <div key={deduction.id} className="p-3 bg-sky-50 rounded-lg flex justify-between items-center">
+                <div key={deduction.id} className={`p-3 rounded-lg flex justify-between items-center ${deduction.cleared ? 'bg-green-50 dark:bg-green-950/20' : 'bg-sky-50 dark:bg-sky-950/20'}`}>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm font-medium">{deduction.staffName}</span>
-                      <span className="text-xs px-1.5 py-0.5 bg-sky-100 rounded text-sky-700">{getDeductionTypeLabel(deduction.type)}</span>
+                      <span className="text-xs px-1.5 py-0.5 bg-sky-100 dark:bg-sky-900/40 rounded text-sky-700 dark:text-sky-400">{getDeductionTypeLabel(deduction.type)}</span>
+                      {deduction.cleared ? (
+                        <span className="text-xs px-1.5 py-0.5 bg-green-100 dark:bg-green-900/40 rounded text-green-700 dark:text-green-400">{t("salaries.paidBack")}</span>
+                      ) : (
+                        <span className="text-xs px-1.5 py-0.5 bg-orange-100 dark:bg-orange-900/40 rounded text-orange-700 dark:text-orange-400">{t("salaries.pending")}</span>
+                      )}
                     </div>
                     <div className="text-sm text-muted-foreground truncate">{deduction.description}</div>
                     <div className="flex gap-2 text-sm mt-0.5">
-                      <span className="text-sky-600 font-semibold">{formatCurrency(deduction.amount)}</span>
+                      <span className={`font-semibold ${deduction.cleared ? 'text-green-600' : 'text-sky-600'}`}>{formatCurrency(deduction.amount)}</span>
                       <span className="text-muted-foreground">{format(parseISO(deduction.date), "d/M/yy")}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
+                    {!deduction.cleared && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        disabled={clearDeductionMutation.isPending}
+                        onClick={() => clearDeductionMutation.mutate(deduction.id)}
+                        data-testid={`button-paidback-${deduction.id}`}
+                      >
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8"
                       onClick={() => setEditingDeduction(deduction)}
                     >
                       <Pencil className="h-4 w-4 text-blue-600" />
@@ -890,7 +905,6 @@ export default function Salaries() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8"
                       onClick={() => deleteDeductionMutation.mutate(deduction.id)}
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
