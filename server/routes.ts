@@ -1707,6 +1707,16 @@ export async function registerRoutes(
       const staffDeductions = deductions.filter(
         d => d.staffId === staffMember.id || (!d.staffId && d.staffName === staffMember.name)
       );
+
+      const periodDeductions = staffDeductions.filter(d => {
+        if (d.cleared && d.clearedAt) {
+          const clearedDate = new Date(d.clearedAt).toISOString().split("T")[0];
+          return clearedDate >= startDate && clearedDate <= endDate;
+        }
+        return d.date >= startDate && d.date <= endDate;
+      });
+      const totalPeriodDeductions = periodDeductions.reduce((sum, d) => sum + d.amount, 0);
+
       const pendingDeductions = staffDeductions.filter(d => !d.cleared);
       const totalPendingDeductions = pendingDeductions.reduce((sum, d) => sum + d.amount, 0);
 
@@ -1734,17 +1744,18 @@ export async function registerRoutes(
         walletBalance = totalCommission - totalPendingDeductions;
       }
 
-      const netPayable = totalCommission - totalPendingDeductions;
+      const netCommission = totalCommission - totalPeriodDeductions;
+      const periodPendingDeductions = periodDeductions.filter(d => !d.cleared).reduce((sum, d) => sum + d.amount, 0);
 
       res.json({
         totalRevenue,
-        totalCommission,
+        totalCommission: netCommission,
         totalAppointments: paidAppointments.length,
-        pendingDeductions: totalPendingDeductions,
-        netPayable,
+        pendingDeductions: periodPendingDeductions,
+        netPayable: netCommission,
         walletBalance,
         lastPaidAt: lastPayment?.paidAt || null,
-        deductionsList: staffDeductions.map(d => ({
+        deductionsList: periodDeductions.map(d => ({
           type: d.type,
           description: d.description,
           amount: d.amount,
