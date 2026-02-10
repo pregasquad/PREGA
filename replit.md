@@ -34,6 +34,7 @@ Beauty Salon Appointment Management System built with React + Express + PostgreS
 - **Database migrations**: Startup migrations in `server/db.ts` handle backfilling staffId and creating indexes
 
 ## Recent Changes
+- 2026-02-10: Default language changed to Arabic; language switcher added to Staff Portal page; Share Portal Link button added to Staff cards
 - 2026-02-10: Math audit - fixed netStaffPayable to sum per-staff Math.max(0, commission-deductions) instead of global Math.max; fixed backend getStaffPerformance and StaffPerformance page to use custom per-staff commissions (staffCommissions table) for consistent calculations across all pages
 - 2026-02-10: Added Employee Wallet feature to Salaries page - tracks accumulated staff earnings since last payment, with "Paid" button to reset wallet; uses staff_payments table
 - 2026-02-10: Deduction display logic updated - pending deductions carry over monthly until paid, paid-back deductions only show in the month they were cleared

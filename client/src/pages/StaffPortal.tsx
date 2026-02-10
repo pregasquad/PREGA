@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useParams } from "wouter";
@@ -7,7 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
-import { DollarSign, Calendar, TrendingUp, Wallet, AlertTriangle, ChevronDown, ChevronUp, Clock } from "lucide-react";
+import { DollarSign, Calendar, TrendingUp, Wallet, AlertTriangle, ChevronDown, ChevronUp, Clock, Globe } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format, startOfMonth, endOfMonth, subMonths, getDaysInMonth, getDay, parseISO } from "date-fns";
 import { ar, enUS, fr } from "date-fns/locale";
 
@@ -47,6 +49,11 @@ export default function StaffPortal() {
 
   const [selectedMonth, setSelectedMonth] = useState(() => format(new Date(), "yyyy-MM"));
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
+
+  useEffect(() => {
+    document.documentElement.dir = isRTL ? "rtl" : "ltr";
+    document.documentElement.lang = i18n.language;
+  }, [i18n.language, isRTL]);
 
   const getDateLocale = () => {
     switch (i18n.language) {
@@ -173,8 +180,31 @@ export default function StaffPortal() {
             style={{ backgroundColor: staffInfo.color }}
             data-testid="indicator-staff-color"
           />
-          <h1 className="text-lg font-bold truncate" data-testid="text-staff-name">{staffInfo.name}</h1>
+          <h1 className="text-lg font-bold truncate flex-1" data-testid="text-staff-name">{staffInfo.name}</h1>
           <Badge variant="secondary" className="shrink-0">{t("staffPortal.title")}</Badge>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" data-testid="button-portal-language">
+                <Globe className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+              {[
+                { code: "ar", name: "العربية" },
+                { code: "fr", name: "Français" },
+                { code: "en", name: "English" },
+              ].map((lang) => (
+                <DropdownMenuItem
+                  key={lang.code}
+                  onClick={() => i18n.changeLanguage(lang.code)}
+                  className={`cursor-pointer ${i18n.language === lang.code ? "bg-primary/10 text-primary font-medium" : ""}`}
+                  data-testid={`menu-lang-${lang.code}`}
+                >
+                  {lang.name}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
