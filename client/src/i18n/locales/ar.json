@@ -317,7 +317,15 @@
     "paidBack": "مدفوع",
     "pending": "في الانتظار",
     "cleared": "تم الاسترداد",
-    "noUnclearedDeductions": "تم استرداد جميع الخصومات"
+    "noUnclearedDeductions": "تم استرداد جميع الخصومات",
+    "employeeWallet": "محفظة الموظف",
+    "walletBalance": "الرصيد",
+    "sinceLastPayment": "منذ آخر دفعة",
+    "markAsPaid": "تم الدفع",
+    "paymentRecorded": "تم تسجيل الدفعة",
+    "noEarnings": "لا توجد أرباح متراكمة",
+    "lastPaid": "آخر دفعة",
+    "never": "أبداً"
   },
   "staffPerformance": {
     "title": "أداء الموظفين",

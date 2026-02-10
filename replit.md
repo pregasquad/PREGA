@@ -34,6 +34,8 @@ Beauty Salon Appointment Management System built with React + Express + PostgreS
 - **Database migrations**: Startup migrations in `server/db.ts` handle backfilling staffId and creating indexes
 
 ## Recent Changes
+- 2026-02-10: Added Employee Wallet feature to Salaries page - tracks accumulated staff earnings since last payment, with "Paid" button to reset wallet; uses staff_payments table
+- 2026-02-10: Deduction display logic updated - pending deductions carry over monthly until paid, paid-back deductions only show in the month they were cleared
 - 2026-02-09: Added MySQL/TiDB staff_id backfill migration (ensureStaffIdBackfillMySQL) - adds staff_id columns if missing, backfills from staff name matching, creates indexes
 - 2026-02-09: Migrated appointments/staff_deductions to use staffId (ID-based relationships) instead of name-only matching; cascade rename logic covers both linked and legacy records
 - 2026-02-09: Import migration completed - database provisioned, schema pushed, workflow configured

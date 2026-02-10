@@ -22,7 +22,8 @@ import {
   type StaffBreak, type InsertStaffBreak,
   type StaffTimeOff, type InsertStaffTimeOff,
   type StaffGoal, type InsertStaffGoal,
-  type MessageTemplate, type InsertMessageTemplate
+  type MessageTemplate, type InsertMessageTemplate,
+  type StaffPayment, type InsertStaffPayment
 } from "@shared/schema";
 import { eq, desc, and, gte, lte, sql, isNull } from "drizzle-orm";
 import { authStorage, type IAuthStorage } from "./replit_integrations/auth/storage";
@@ -183,6 +184,11 @@ export interface IStorage extends IAuthStorage {
   createMessageTemplate(template: InsertMessageTemplate): Promise<MessageTemplate>;
   updateMessageTemplate(id: number, template: Partial<InsertMessageTemplate>): Promise<MessageTemplate>;
   deleteMessageTemplate(id: number): Promise<void>;
+
+  getStaffPayments(): Promise<StaffPayment[]>;
+  getStaffPaymentsByStaff(staffId: number): Promise<StaffPayment[]>;
+  getLastStaffPayment(staffId: number): Promise<StaffPayment | undefined>;
+  createStaffPayment(payment: InsertStaffPayment): Promise<StaffPayment>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1495,6 +1501,34 @@ export class DatabaseStorage implements IStorage {
   async deleteMessageTemplate(id: number): Promise<void> {
     const s = schema();
     await db().delete(s.messageTemplates).where(eq(s.messageTemplates.id, id));
+  }
+
+  async getStaffPayments(): Promise<StaffPayment[]> {
+    const s = schema();
+    return await db().select().from(s.staffPayments).orderBy(desc(s.staffPayments.paidAt));
+  }
+
+  async getStaffPaymentsByStaff(staffId: number): Promise<StaffPayment[]> {
+    const s = schema();
+    return await db().select().from(s.staffPayments).where(eq(s.staffPayments.staffId, staffId)).orderBy(desc(s.staffPayments.paidAt));
+  }
+
+  async getLastStaffPayment(staffId: number): Promise<StaffPayment | undefined> {
+    const s = schema();
+    const [payment] = await db().select().from(s.staffPayments).where(eq(s.staffPayments.staffId, staffId)).orderBy(desc(s.staffPayments.paidAt)).limit(1);
+    return payment;
+  }
+
+  async createStaffPayment(payment: InsertStaffPayment): Promise<StaffPayment> {
+    const s = schema();
+    if (isMySQL()) {
+      const result = await db().insert(s.staffPayments).values(payment);
+      const insertId = (result as any)[0]?.insertId;
+      const [created] = await db().select().from(s.staffPayments).where(eq(s.staffPayments.id, insertId));
+      return created;
+    }
+    const [created] = await db().insert(s.staffPayments).values(payment).returning();
+    return created;
   }
 }
 

@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { DollarSign, Users, CalendarIcon, TrendingUp, Building2, RefreshCw, Plus, Trash2, Receipt, UserMinus, ChevronDown, CheckCircle, Pencil } from "lucide-react";
+import { DollarSign, Users, CalendarIcon, TrendingUp, Building2, RefreshCw, Plus, Trash2, Receipt, UserMinus, ChevronDown, CheckCircle, Pencil, Wallet } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
@@ -18,7 +18,7 @@ import { io, Socket } from "socket.io-client";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay, parseISO, isAfter, isBefore, isEqual } from "date-fns";
 import { ar, enUS, fr } from "date-fns/locale";
 import { apiRequest } from "@/lib/queryClient";
-import type { Staff, Service, Appointment, Charge, StaffDeduction } from "@shared/schema";
+import type { Staff, Service, Appointment, Charge, StaffDeduction, StaffPayment } from "@shared/schema";
 
 type PeriodType = "day" | "week" | "month" | "custom";
 
@@ -106,6 +106,10 @@ export default function Salaries() {
     queryKey: ["/api/staff-commissions"],
   });
 
+  const { data: staffPayments = [] } = useQuery<StaffPayment[]>({
+    queryKey: ["/api/staff-payments"],
+  });
+
   const createChargeMutation = useMutation({
     mutationFn: async (charge: typeof newCharge) => {
       const res = await apiRequest("POST", "/api/charges", charge);
@@ -177,6 +181,17 @@ export default function Salaries() {
       queryClient.invalidateQueries({ queryKey: ["/api/staff-deductions"] });
       setEditingDeduction(null);
       toast({ title: t("common.save") });
+    },
+  });
+
+  const createPaymentMutation = useMutation({
+    mutationFn: async (payment: { staffId: number; staffName: string; amount: number }) => {
+      const res = await apiRequest("POST", "/api/staff-payments", payment);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff-payments"] });
+      toast({ title: t("salaries.paymentRecorded") });
     },
   });
 
@@ -371,6 +386,7 @@ export default function Salaries() {
               queryClient.invalidateQueries({ queryKey: ["/api/charges"] }),
               queryClient.invalidateQueries({ queryKey: ["/api/staff-deductions"] }),
               queryClient.invalidateQueries({ queryKey: ["/api/staff-commissions"] }),
+              queryClient.invalidateQueries({ queryKey: ["/api/staff-payments"] }),
             ]);
             setLastUpdate(new Date());
             setIsRefreshing(false);
@@ -593,6 +609,90 @@ export default function Salaries() {
               </span>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="p-3 pb-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Wallet className="h-4 w-4" />
+            {t("salaries.employeeWallet")}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-3 pt-0 space-y-2">
+          {staff.map((s) => {
+            const lastPayment = staffPayments
+              .filter(p => p.staffId === s.id)
+              .sort((a, b) => new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime())[0];
+            const lastPaymentDate = lastPayment ? new Date(lastPayment.paidAt) : null;
+
+            const earningsSincePayment = appointments
+              .filter(apt => {
+                if (!apt.paid) return false;
+                const matchesStaff = apt.staffId === s.id || (!apt.staffId && apt.staff === s.name);
+                if (!matchesStaff) return false;
+                if (lastPaymentDate) {
+                  const aptDate = parseISO(apt.date);
+                  return isAfter(aptDate, lastPaymentDate);
+                }
+                return true;
+              })
+              .reduce((sum, apt) => {
+                const serviceName = apt.service || "Unknown";
+                const commissionPercent = getServiceCommission(serviceName, s.name);
+                return sum + (apt.total * commissionPercent) / 100;
+              }, 0);
+
+            const pendingStaffDeductions = deductions
+              .filter(d => !d.cleared && (d.staffId === s.id || (!d.staffId && d.staffName === s.name)))
+              .reduce((sum, d) => sum + d.amount, 0);
+
+            const walletBalance = earningsSincePayment - pendingStaffDeductions;
+
+            return (
+              <div key={s.id} className="p-3 bg-muted/50 rounded-lg" data-testid={`wallet-staff-${s.id}`}>
+                <div className="flex justify-between items-center">
+                  <div className="flex-1 min-w-0">
+                    <span className="font-medium text-base">{s.name}</span>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {t("salaries.lastPaid")}: {lastPaymentDate ? format(lastPaymentDate, "d/M/yy") : t("salaries.never")}
+                    </div>
+                    <div className="flex gap-3 mt-1 text-sm">
+                      <span className="text-green-600">{formatCurrency(earningsSincePayment)}</span>
+                      {pendingStaffDeductions > 0 && (
+                        <span className="text-red-600">-{formatCurrency(pendingStaffDeductions)}</span>
+                      )}
+                    </div>
+                    <div className="text-base font-bold mt-0.5">
+                      <span className={walletBalance >= 0 ? 'text-green-600' : 'text-red-600'}>
+                        {t("salaries.walletBalance")}: {formatCurrency(walletBalance)}
+                      </span>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="shrink-0 border-green-300 text-green-700 dark:border-green-700 dark:text-green-400"
+                    disabled={walletBalance <= 0 || createPaymentMutation.isPending}
+                    onClick={() => createPaymentMutation.mutate({
+                      staffId: s.id,
+                      staffName: s.name,
+                      amount: walletBalance,
+                    })}
+                    data-testid={`button-pay-staff-${s.id}`}
+                  >
+                    <CheckCircle className="h-3 w-3 me-1" />
+                    {t("salaries.markAsPaid")}
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+          {staff.length === 0 && (
+            <p className="text-center text-muted-foreground py-4 text-sm">
+              {t("salaries.noEarnings")}
+            </p>
+          )}
         </CardContent>
       </Card>
 

@@ -1746,6 +1746,48 @@ export async function registerRoutes(
     }
   });
 
+  // Staff Payments (Employee Wallet)
+  app.get("/api/staff-payments", isPinAuthenticated, async (_req, res) => {
+    try {
+      const items = await storage.getStaffPayments();
+      res.json(items);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch staff payments" });
+    }
+  });
+
+  app.get("/api/staff-payments/staff/:staffId", isPinAuthenticated, async (req, res) => {
+    try {
+      const items = await storage.getStaffPaymentsByStaff(Number(req.params.staffId));
+      res.json(items);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch staff payments" });
+    }
+  });
+
+  app.get("/api/staff-payments/staff/:staffId/last", isPinAuthenticated, async (req, res) => {
+    try {
+      const payment = await storage.getLastStaffPayment(Number(req.params.staffId));
+      res.json(payment || null);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch last payment" });
+    }
+  });
+
+  app.post("/api/staff-payments", isPinAuthenticated, requirePermission("manage_salaries"), async (req, res) => {
+    try {
+      const { insertStaffPaymentSchema } = await import("@shared/schema");
+      const validated = insertStaffPaymentSchema.parse(req.body);
+      const payment = await storage.createStaffPayment(validated);
+      res.json(payment);
+    } catch (err: any) {
+      if (err?.name === "ZodError") {
+        return res.status(400).json({ message: "Invalid payment data", errors: err.errors });
+      }
+      res.status(500).json({ message: "Failed to create staff payment" });
+    }
+  });
+
   // Clients - protected routes
   app.get("/api/clients", isPinAuthenticated, async (_req, res) => {
     const items = await storage.getClients();

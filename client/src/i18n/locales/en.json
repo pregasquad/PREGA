@@ -317,7 +317,15 @@
     "paidBack": "Paid",
     "pending": "Pending",
     "cleared": "Cleared",
-    "noUnclearedDeductions": "All deductions have been cleared"
+    "noUnclearedDeductions": "All deductions have been cleared",
+    "employeeWallet": "Employee Wallet",
+    "walletBalance": "Balance",
+    "sinceLastPayment": "Since last payment",
+    "markAsPaid": "Paid",
+    "paymentRecorded": "Payment recorded",
+    "noEarnings": "No earnings accumulated",
+    "lastPaid": "Last paid",
+    "never": "Never"
   },
   "staffPerformance": {
     "title": "Staff Performance",

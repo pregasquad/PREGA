@@ -591,3 +591,20 @@ export const insertMessageTemplateSchema = createInsertSchema(messageTemplates).
 });
 export type MessageTemplate = typeof messageTemplates.$inferSelect;
 export type InsertMessageTemplate = z.infer<typeof insertMessageTemplateSchema>;
+
+export const staffPayments = pgTable("staff_payments", {
+  id: serial("id").primaryKey(),
+  staffId: integer("staff_id").notNull(),
+  staffName: text("staff_name").notNull(),
+  amount: doublePrecision("amount").notNull(),
+  paidAt: timestamp("paid_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertStaffPaymentSchema = createInsertSchema(staffPayments).omit({ id: true, createdAt: true }).extend({
+  staffId: z.number().int(),
+  staffName: z.string().min(1),
+  amount: z.number().min(0),
+});
+export type StaffPayment = typeof staffPayments.$inferSelect;
+export type InsertStaffPayment = z.infer<typeof insertStaffPaymentSchema>;

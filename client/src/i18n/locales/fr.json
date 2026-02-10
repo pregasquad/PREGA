@@ -317,7 +317,15 @@
     "paidBack": "Payé",
     "pending": "En attente",
     "cleared": "Récupéré",
-    "noUnclearedDeductions": "Toutes les déductions ont été récupérées"
+    "noUnclearedDeductions": "Toutes les déductions ont été récupérées",
+    "employeeWallet": "Portefeuille Employé",
+    "walletBalance": "Solde",
+    "sinceLastPayment": "Depuis le dernier paiement",
+    "markAsPaid": "Payé",
+    "paymentRecorded": "Paiement enregistré",
+    "noEarnings": "Aucun gain accumulé",
+    "lastPaid": "Dernier paiement",
+    "never": "Jamais"
   },
   "staffPerformance": {
     "title": "Performance Staff",
