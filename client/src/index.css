@@ -464,7 +464,7 @@
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
   border-top: 0.5px solid rgba(255, 255, 255, 0.45);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 2px);
 }
 
 .dark .liquid-glass-tab-bar {

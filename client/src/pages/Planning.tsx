@@ -2505,7 +2505,7 @@ export default function Planning() {
 
       {isMobile && (
         <div className="fixed bottom-0 left-0 right-0 z-40 liquid-glass-tab-bar" data-testid="mobile-shortcuts-bar">
-          <div className="flex items-center justify-around py-1 px-6">
+          <div className="flex items-center justify-around py-0.5 px-6">
             {hasPermission("view_salaries") && (
               <button
                 onClick={() => setLocation("/salaries")}
