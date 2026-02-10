@@ -321,7 +321,7 @@ export default function Salaries() {
 
   const totalExpenses = filteredCharges.reduce((sum, c) => sum + c.amount, 0);
   const totalDeductions = filteredDeductions.reduce((sum, d) => sum + d.amount, 0);
-  const netProfit = salonPortion - totalExpenses;
+  const netProfit = salonPortion + totalDeductions - totalExpenses;
   const netStaffPayable = totalCommissions - totalDeductions;
 
   const getChargeTypeLabel = (type: string) => {
@@ -543,6 +543,12 @@ export default function Salaries() {
               <span>{t("salaries.salonRevenueShare")}</span>
               <span className="text-primary">{formatCurrency(salonPortion)}</span>
             </div>
+            {totalDeductions > 0 && (
+              <div className="flex justify-between text-sm text-green-600">
+                <span>{t("salaries.totalDeductions")}</span>
+                <span>+{formatCurrency(totalDeductions)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-sm text-red-600">
               <span>{t("salaries.totalExpenses")}</span>
               <span>-{formatCurrency(totalExpenses)}</span>
