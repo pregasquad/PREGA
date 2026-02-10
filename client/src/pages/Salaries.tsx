@@ -346,7 +346,7 @@ export default function Salaries() {
   const netStaffPayable = staff.reduce((total, s) => {
     const earning = staffEarnings.find(e => e.name === s.name);
     const staffCommission = earning ? earning.totalCommission : 0;
-    const staffDeductionAmount = pendingDeductions
+    const staffDeductionAmount = filteredDeductions
       .filter(d => d.staffId === s.id || (!d.staffId && d.staffName === s.name))
       .reduce((sum, d) => sum + d.amount, 0);
     return total + (staffCommission - staffDeductionAmount);
@@ -397,13 +397,13 @@ export default function Salaries() {
         return sum + (apt.total * commissionPercent) / 100;
       }, 0);
 
-    const pendingStaffDeductions = deductions
-      .filter(d => !d.cleared && (d.staffId === s.id || (!d.staffId && d.staffName === s.name)))
+    const allStaffDeductions = deductions
+      .filter(d => d.staffId === s.id || (!d.staffId && d.staffName === s.name))
       .reduce((sum, d) => sum + d.amount, 0);
 
-    const walletBalance = earningsSincePayment - pendingStaffDeductions;
+    const walletBalance = earningsSincePayment - allStaffDeductions;
 
-    return { lastPaymentDate, earningsSincePayment, pendingStaffDeductions, walletBalance };
+    return { lastPaymentDate, earningsSincePayment, pendingStaffDeductions: allStaffDeductions, walletBalance };
   };
 
   return (
@@ -667,7 +667,7 @@ export default function Salaries() {
             {staff.map((s) => {
               const earning = staffEarnings.find(e => e.name === s.name);
               const staffCommission = earning ? earning.totalCommission : 0;
-              const staffDeductionAmount = pendingDeductions
+              const staffDeductionAmount = filteredDeductions
                 .filter(d => d.staffId === s.id || (!d.staffId && d.staffName === s.name))
                 .reduce((sum, d) => sum + d.amount, 0);
               const staffNet = staffCommission - staffDeductionAmount;
