@@ -323,7 +323,7 @@ export default function Salaries() {
   const totalExpenses = filteredCharges.reduce((sum, c) => sum + c.amount, 0);
   const totalDeductions = filteredDeductions.reduce((sum, d) => sum + d.amount, 0);
   const netProfit = salonPortion + totalPaidBack - totalExpenses;
-  const netStaffPayable = totalCommissions - totalDeductions;
+  const netStaffPayable = totalCommissions - totalPending;
 
   const getChargeTypeLabel = (type: string) => {
     switch (type) {
@@ -574,10 +574,12 @@ export default function Salaries() {
               <span>{t("salaries.totalCommissionsDue")}</span>
               <span className="text-green-600">{formatCurrency(totalCommissions)}</span>
             </div>
-            <div className="flex justify-between text-sm text-red-600">
-              <span>{t("salaries.totalDeductions")}</span>
-              <span>-{formatCurrency(totalDeductions)}</span>
-            </div>
+            {totalPending > 0 && (
+              <div className="flex justify-between text-sm text-red-600">
+                <span>{t("salaries.totalDeductions")}</span>
+                <span>-{formatCurrency(totalPending)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-base font-bold border-t pt-1">
               <span>{t("salaries.netDueToStaff")}</span>
               <span className={netStaffPayable >= 0 ? 'text-green-600' : 'text-red-600'}>
