@@ -589,7 +589,7 @@ export default function Salaries() {
               </div>
               <p className="text-xs text-muted-foreground">{t("salaries.staffCommissions")}</p>
             </div>
-            <p className="text-xl font-bold text-green-600" data-testid="text-total-commissions">{formatCurrency(totalCommissions - totalPending)}</p>
+            <p className="text-xl font-bold text-green-600" data-testid="text-total-commissions">{formatCurrency(totalCommissions - totalPending - totalPaidBack)}</p>
           </CardContent>
         </Card>
         <Card className="glass-card" data-testid="stat-salon-share">
@@ -708,8 +708,7 @@ export default function Salaries() {
           const wallet = getStaffWalletData(s);
           const staffAllDeductions = filteredDeductions
             .filter(d => d.staffId === s.id || (!d.staffId && d.staffName === s.name));
-          const staffPendingDeductions = staffAllDeductions.filter(d => !d.cleared);
-          const staffDeductionAmount = staffPendingDeductions.reduce((sum, d) => sum + d.amount, 0);
+          const staffDeductionAmount = staffAllDeductions.reduce((sum, d) => sum + d.amount, 0);
 
           return (
             <Card key={s.id} className="glass-card" data-testid={`staff-card-${s.id}`}>
