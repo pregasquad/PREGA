@@ -352,6 +352,31 @@ export async function ensureStaffPaymentsTable(): Promise<void> {
         )
       `);
     }
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      const [staffRows] = await connection.query(`
+        SELECT s.id, s.name FROM staff s
+        WHERE s.id NOT IN (SELECT DISTINCT staff_id FROM staff_payments)
+      `);
+      for (const staff of staffRows as any[]) {
+        await connection.query(
+          `INSERT INTO staff_payments (staff_id, staff_name, amount, paid_at, created_at) VALUES (?, ?, 0, NOW(), NOW())`,
+          [staff.id, staff.name]
+        );
+      }
+      connection.release();
+    } else {
+      const { rows: staffRows } = await pool.query(`
+        SELECT s.id, s.name FROM staff s
+        WHERE s.id NOT IN (SELECT DISTINCT staff_id FROM staff_payments)
+      `);
+      for (const staff of staffRows) {
+        await pool.query(
+          `INSERT INTO staff_payments (staff_id, staff_name, amount, paid_at, created_at) VALUES ($1, $2, 0, NOW(), NOW())`,
+          [staff.id, staff.name]
+        );
+      }
+    }
     console.log("Staff payments table ready");
   } catch (error) {
     console.error("Failed to create staff_payments table:", error);
