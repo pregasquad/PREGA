@@ -401,7 +401,7 @@ export default function Salaries() {
       .filter(d => !d.cleared && (d.staffId === s.id || (!d.staffId && d.staffName === s.name)))
       .reduce((sum, d) => sum + d.amount, 0);
 
-    const walletBalance = Math.max(0, earningsSincePayment - pendingStaffDeductions);
+    const walletBalance = earningsSincePayment - pendingStaffDeductions;
 
     return { lastPaymentDate, earningsSincePayment, pendingStaffDeductions, walletBalance };
   };
@@ -733,7 +733,7 @@ export default function Salaries() {
                         )}
                       </div>
                     </div>
-                    {wallet.walletBalance > 0 && (
+                    {wallet.earningsSincePayment > 0 && (
                       <Button
                         size="sm"
                         variant="outline"
@@ -742,7 +742,7 @@ export default function Salaries() {
                         onClick={() => createPaymentMutation.mutate({
                           staffId: s.id,
                           staffName: s.name,
-                          amount: wallet.walletBalance,
+                          amount: Math.max(0, wallet.walletBalance),
                         })}
                         data-testid={`button-pay-staff-${s.id}`}
                       >
@@ -766,8 +766,8 @@ export default function Salaries() {
                     </div>
                     <div className="p-2 rounded-lg bg-primary/5 dark:bg-primary/10 text-center" data-testid={`text-staff-wallet-${s.id}`}>
                       <p className="text-[10px] text-primary uppercase tracking-wider">{t("salaries.walletBalance").split(':')[0] || "Wallet"}</p>
-                      <p className={`text-sm font-bold mt-0.5 ${wallet.walletBalance > 0 ? 'text-primary' : 'text-muted-foreground'}`}>
-                        {formatCurrency(wallet.walletBalance)}
+                      <p className={`text-sm font-bold mt-0.5 ${wallet.walletBalance < 0 ? 'text-red-600' : wallet.walletBalance > 0 ? 'text-primary' : 'text-muted-foreground'}`}>
+                        {wallet.walletBalance < 0 ? `-${formatCurrency(Math.abs(wallet.walletBalance))}` : formatCurrency(wallet.walletBalance)}
                       </p>
                     </div>
                   </div>

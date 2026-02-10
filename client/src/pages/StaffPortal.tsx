@@ -372,8 +372,8 @@ export default function StaffPortal() {
                 <CardContent className="px-3 pb-3 space-y-3">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">{t("staffPortal.earningsSincePayment")}</span>
-                    <span className="font-bold text-green-600" data-testid="text-wallet-balance">
-                      {formatCurrency(earnings.walletBalance)} DH
+                    <span className={`font-bold ${earnings.walletBalance < 0 ? 'text-red-600' : 'text-green-600'}`} data-testid="text-wallet-balance">
+                      {earnings.walletBalance < 0 ? `-${formatCurrency(Math.abs(earnings.walletBalance))}` : formatCurrency(earnings.walletBalance)} DH
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
