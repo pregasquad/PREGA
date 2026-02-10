@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, Edit2, User, Phone, Mail, DollarSign, Palette, Tag, Calendar, Coffee, CalendarOff, Upload, Camera, Loader2 } from "lucide-react";
+import { Plus, Trash2, Edit2, User, Phone, Mail, DollarSign, Palette, Tag, Calendar, Coffee, CalendarOff, Upload, Camera, Loader2, Share2, Check } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormMessage, FormLabel } from "@/components/ui/form";
@@ -22,6 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ImageCropper } from "@/components/ImageCropper";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { useUpload } from "@/hooks/use-upload";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const staffFormSchema = insertStaffSchema.extend({
   baseSalary: z.coerce.number().min(0).optional(),
@@ -41,6 +42,7 @@ export default function Staff() {
   const [editingStaff, setEditingStaff] = useState<StaffType | null>(null);
   const [uploadingPhotoId, setUploadingPhotoId] = useState<number | null>(null);
   const [cropStaffId, setCropStaffId] = useState<number | null>(null);
+  const [copiedStaffId, setCopiedStaffId] = useState<number | null>(null);
 
   const handlePhotoUpload = (staffId: number, file: File) => {
     const reader = new FileReader();
@@ -62,6 +64,23 @@ export default function Staff() {
   const createStaff = useCreateStaff();
   const updateStaff = useUpdateStaff();
   const deleteStaff = useDeleteStaff();
+
+  const handleSharePortalLink = (staffMember: StaffType) => {
+    const token = staffMember.publicToken;
+    if (!token) {
+      toast({ title: t("staff.noPortalToken", "No portal link available"), variant: "destructive" });
+      return;
+    }
+    const baseUrl = window.location.origin;
+    const portalUrl = `${baseUrl}/staff-portal/${token}`;
+    navigator.clipboard.writeText(portalUrl).then(() => {
+      setCopiedStaffId(staffMember.id);
+      toast({ title: t("staff.portalLinkCopied", "Portal link copied!"), description: staffMember.name });
+      setTimeout(() => setCopiedStaffId(null), 2000);
+    }).catch(() => {
+      window.prompt(t("staff.copyPortalLink", "Copy this link:"), portalUrl);
+    });
+  };
 
   const form = useForm({
     resolver: zodResolver(staffFormSchema),
@@ -585,6 +604,24 @@ export default function Staff() {
                     </div>
                   </div>
                   <div className="flex gap-1 flex-wrap justify-center sm:justify-end shrink-0 w-full sm:w-auto border-t sm:border-0 pt-2 sm:pt-0">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => handleSharePortalLink(staff)}
+                          data-testid={`button-share-portal-${staff.id}`}
+                          className="h-8 w-8"
+                        >
+                          {copiedStaffId === staff.id ? (
+                            <Check className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <Share2 className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>{t("staff.sharePortal", "Share Portal Link")}</TooltipContent>
+                    </Tooltip>
                     <Button 
                       variant="ghost" 
                       size="icon"
