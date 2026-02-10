@@ -11,6 +11,7 @@ import { insertStaffSchema } from "@shared/schema";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { api } from "@shared/routes";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import type { Staff as StaffType } from "@shared/schema";
@@ -65,11 +66,18 @@ export default function Staff() {
   const updateStaff = useUpdateStaff();
   const deleteStaff = useDeleteStaff();
 
-  const handleSharePortalLink = (staffMember: StaffType) => {
-    const token = staffMember.publicToken;
+  const handleSharePortalLink = async (staffMember: StaffType) => {
+    let token = staffMember.publicToken;
     if (!token) {
-      toast({ title: t("staff.noPortalToken", "No portal link available"), variant: "destructive" });
-      return;
+      try {
+        const res = await apiRequest("POST", `/api/staff/${staffMember.id}/regenerate-token`);
+        const data = await res.json();
+        token = data.token;
+        queryClient.invalidateQueries({ queryKey: [api.staff.list.path] });
+      } catch {
+        toast({ title: t("staff.noPortalToken", "No portal link available"), variant: "destructive" });
+        return;
+      }
     }
     const baseUrl = window.location.origin;
     const portalUrl = `${baseUrl}/staff-portal/${token}`;

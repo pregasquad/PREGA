@@ -1304,7 +1304,9 @@ export async function registerRoutes(
   });
 
   app.post("/api/staff", isPinAuthenticated, requirePermission("manage_staff"), async (req, res) => {
-    const item = await storage.createStaff(req.body);
+    const { randomUUID } = await import("crypto");
+    const staffData = { ...req.body, publicToken: req.body.publicToken || randomUUID() };
+    const item = await storage.createStaff(staffData);
     res.status(201).json(item);
   });
 
