@@ -590,18 +590,29 @@ export default function Salaries() {
             )}
           </div>
 
-          <div className="p-3 bg-green-50 rounded-lg space-y-1.5">
+          <div className="p-3 bg-green-50 dark:bg-green-950/30 rounded-lg space-y-1.5">
             <p className="text-sm font-medium">{t("salaries.staffAccount")}</p>
-            <div className="flex justify-between text-sm">
-              <span>{t("salaries.totalCommissionsDue")}</span>
-              <span className="text-green-600">{formatCurrency(totalCommissions)}</span>
-            </div>
-            {totalPending > 0 && (
-              <div className="flex justify-between text-sm text-red-600">
-                <span>{t("salaries.totalDeductions")}</span>
-                <span>-{formatCurrency(totalPending)}</span>
-              </div>
-            )}
+            {staff.map((s) => {
+              const earning = staffEarnings.find(e => e.name === s.name);
+              const staffCommission = earning ? earning.totalCommission : 0;
+              const staffDeductionAmount = pendingDeductions
+                .filter(d => d.staffId === s.id || (!d.staffId && d.staffName === s.name))
+                .reduce((sum, d) => sum + d.amount, 0);
+              const staffNet = Math.max(0, staffCommission - staffDeductionAmount);
+              if (staffCommission === 0 && staffDeductionAmount === 0) return null;
+              return (
+                <div key={s.id} className="flex justify-between items-center text-sm py-0.5">
+                  <span>{s.name}</span>
+                  <div className="flex gap-2 items-center">
+                    <span className="text-green-600">{formatCurrency(staffCommission)}</span>
+                    {staffDeductionAmount > 0 && (
+                      <span className="text-red-600">-{formatCurrency(staffDeductionAmount)}</span>
+                    )}
+                    <span className="font-semibold min-w-[60px] text-end">{formatCurrency(staffNet)}</span>
+                  </div>
+                </div>
+              );
+            })}
             <div className="flex justify-between text-base font-bold border-t pt-1">
               <span>{t("salaries.netDueToStaff")}</span>
               <span className={netStaffPayable >= 0 ? 'text-green-600' : 'text-red-600'}>
