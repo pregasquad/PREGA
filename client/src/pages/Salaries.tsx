@@ -343,7 +343,7 @@ export default function Salaries() {
   const totalPaidBack = paidBackDeductions.reduce((sum, d) => sum + d.amount, 0);
   const totalPending = pendingDeductions.reduce((sum, d) => sum + d.amount, 0);
   const totalExpenses = filteredCharges.reduce((sum, c) => sum + c.amount, 0);
-  const netProfit = salonPortion + totalPaidBack - totalExpenses;
+  const netProfit = salonPortion - totalExpenses;
   const netStaffPayable = staff.reduce((total, s) => {
     const earning = staffEarnings.find(e => e.name === s.name);
     const staffCommission = earning ? earning.totalCommission : 0;
@@ -589,7 +589,7 @@ export default function Salaries() {
               </div>
               <p className="text-xs text-muted-foreground">{t("salaries.staffCommissions")}</p>
             </div>
-            <p className="text-xl font-bold text-green-600" data-testid="text-total-commissions">{formatCurrency(totalCommissions - totalPending - totalPaidBack)}</p>
+            <p className="text-xl font-bold text-green-600" data-testid="text-total-commissions">{formatCurrency(totalCommissions - totalPending)}</p>
           </CardContent>
         </Card>
         <Card className="glass-card" data-testid="stat-salon-share">
@@ -636,12 +636,6 @@ export default function Salaries() {
               <span>{t("salaries.salonRevenueShare")}</span>
               <span className="text-primary font-medium" data-testid="text-salon-revenue-share">{formatCurrency(salonPortion)}</span>
             </div>
-            {totalPaidBack > 0 && (
-              <div className="flex justify-between text-sm text-green-600">
-                <span>{t("salaries.paidBackDeductions")}</span>
-                <span>+{formatCurrency(totalPaidBack)}</span>
-              </div>
-            )}
             <div className="flex justify-between text-sm text-red-500">
               <span>{t("salaries.totalExpenses")}</span>
               <span>-{formatCurrency(totalExpenses)}</span>

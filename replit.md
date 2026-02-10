@@ -34,6 +34,7 @@ Beauty Salon Appointment Management System built with React + Express + PostgreS
 - **Database migrations**: Startup migrations in `server/db.ts` handle backfilling staffId and creating indexes
 
 ## Recent Changes
+- 2026-02-10: Payback deductions no longer affect salon account - netProfit is now salonPortion - expenses only; paid-back amounts removed from salon summary and staff commissions summary stat
 - 2026-02-10: Deductions now subtract from commissions, not wallet; wallet = earnings since last payment minus pending deductions; "Paid" button uses wallet balance; netPayable (commission - deductions) shown on Staff Portal; per-staff Math.max(0) applied to netStaffPayable
 - 2026-02-10: Fixed MySQL/TiDB schema - added missing `publicToken` column to staff table in `shared/schema/mysql.ts`, which was causing SQL parse errors on production (Koyeb/TiDB) when accessing staff portal routes
 - 2026-02-10: Redesigned Salaries page with iOS liquid glass cards - individual staff cards with profile photos, earnings breakdown, wallet balance, service details; uses Shadcn Card components with glass-card styling
