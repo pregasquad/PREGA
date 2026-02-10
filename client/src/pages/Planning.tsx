@@ -2493,54 +2493,48 @@ export default function Planning() {
         <button
           onClick={() => scrollToLiveLine(true, true)}
           className={cn(
-            "fixed z-50 w-14 h-14 rounded-full liquid-gradient shadow-xl flex items-center justify-center text-white transition-all active:scale-95 live-indicator",
-            isMobile ? "bottom-[5.5rem]" : "bottom-20",
+            "fixed z-50 rounded-full liquid-gradient shadow-xl flex items-center justify-center text-white transition-all active:scale-95 live-indicator",
+            isMobile ? "w-11 h-11 bottom-14" : "w-14 h-14 bottom-20",
             isRtl ? "left-4" : "right-4"
           )}
           aria-label="Go to current time"
         >
-          <Clock className="w-6 h-6" />
+          <Clock className={cn(isMobile ? "w-5 h-5" : "w-6 h-6")} />
         </button>
       )}
 
       {isMobile && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-t safe-area-pb" data-testid="mobile-shortcuts-bar">
-          <div className="flex items-center justify-around py-1.5 px-4 gap-2">
+        <div className="fixed bottom-0 left-0 right-0 z-40 liquid-glass-tab-bar" data-testid="mobile-shortcuts-bar">
+          <div className="flex items-center justify-around py-1 px-6">
             {hasPermission("view_salaries") && (
-              <Button
-                variant="ghost"
-                size="sm"
+              <button
                 onClick={() => setLocation("/salaries")}
-                className="flex flex-col items-center gap-0.5 h-auto py-1.5"
+                className="flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition-all active:scale-95"
                 data-testid="shortcut-salaries"
               >
-                <Wallet className="w-5 h-5" />
-                <span className="text-[10px] font-normal">{t("nav.salaries")}</span>
-              </Button>
+                <Wallet className="w-[18px] h-[18px] text-foreground/70" />
+                <span className="text-[9px] font-medium text-foreground/60">{t("nav.salaries")}</span>
+              </button>
             )}
             {hasPermission("view_clients") && (
-              <Button
-                variant="ghost"
-                size="sm"
+              <button
                 onClick={() => setLocation("/clients")}
-                className="flex flex-col items-center gap-0.5 h-auto py-1.5"
+                className="flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition-all active:scale-95"
                 data-testid="shortcut-clients"
               >
-                <Users className="w-5 h-5" />
-                <span className="text-[10px] font-normal">{t("nav.clients")}</span>
-              </Button>
+                <Users className="w-[18px] h-[18px] text-foreground/70" />
+                <span className="text-[9px] font-medium text-foreground/60">{t("nav.clients")}</span>
+              </button>
             )}
             {hasPermission("view_inventory") && (
-              <Button
-                variant="ghost"
-                size="sm"
+              <button
                 onClick={() => setLocation("/inventory")}
-                className="flex flex-col items-center gap-0.5 h-auto py-1.5"
+                className="flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition-all active:scale-95"
                 data-testid="shortcut-inventory"
               >
-                <Package className="w-5 h-5" />
-                <span className="text-[10px] font-normal">{t("nav.inventory")}</span>
-              </Button>
+                <Package className="w-[18px] h-[18px] text-foreground/70" />
+                <span className="text-[9px] font-medium text-foreground/60">{t("nav.inventory")}</span>
+              </button>
             )}
           </div>
         </div>
