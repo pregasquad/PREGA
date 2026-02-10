@@ -311,9 +311,15 @@ export default function Salaries() {
     const deductionDate = startOfDay(parseISO(d.date));
     const deductionStaffId = selectedStaff !== "all" ? parseInt(selectedStaff) : null;
     const staffMatch = selectedStaff === "all" || (deductionStaffId && (d.staffId === deductionStaffId || (!d.staffId && d.staffName === staff.find(s => s.id === deductionStaffId)?.name)));
-    return staffMatch &&
-           (isAfter(deductionDate, startOfDay(start)) || isEqual(deductionDate, startOfDay(start))) &&
-           (isBefore(deductionDate, endOfDay(end)) || isEqual(deductionDate, endOfDay(end)));
+    if (!staffMatch) return false;
+
+    if (d.cleared && d.clearedAt) {
+      const clearedDate = startOfDay(new Date(d.clearedAt));
+      return (isAfter(clearedDate, startOfDay(start)) || isEqual(clearedDate, startOfDay(start))) &&
+             (isBefore(clearedDate, endOfDay(end)) || isEqual(clearedDate, endOfDay(end)));
+    }
+
+    return isBefore(deductionDate, endOfDay(end)) || isEqual(deductionDate, endOfDay(end));
   });
 
   const paidBackDeductions = filteredDeductions.filter(d => d.cleared);
