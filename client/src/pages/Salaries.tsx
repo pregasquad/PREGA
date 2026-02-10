@@ -334,7 +334,8 @@ export default function Salaries() {
              (isBefore(clearedDate, endOfDay(end)) || isEqual(clearedDate, endOfDay(end)));
     }
 
-    return isBefore(deductionDate, endOfDay(end)) || isEqual(deductionDate, endOfDay(end));
+    return (isAfter(deductionDate, startOfDay(start)) || isEqual(deductionDate, startOfDay(start))) &&
+           (isBefore(deductionDate, endOfDay(end)) || isEqual(deductionDate, endOfDay(end)));
   });
 
   const paidBackDeductions = filteredDeductions.filter(d => d.cleared);
@@ -588,7 +589,7 @@ export default function Salaries() {
               </div>
               <p className="text-xs text-muted-foreground">{t("salaries.staffCommissions")}</p>
             </div>
-            <p className="text-xl font-bold text-green-600" data-testid="text-total-commissions">{formatCurrency(totalCommissions)}</p>
+            <p className="text-xl font-bold text-green-600" data-testid="text-total-commissions">{formatCurrency(totalCommissions - totalPending)}</p>
           </CardContent>
         </Card>
         <Card className="glass-card" data-testid="stat-salon-share">
@@ -763,7 +764,7 @@ export default function Salaries() {
                     </div>
                     <div className="p-2 rounded-lg bg-green-50/80 dark:bg-green-950/20 text-center" data-testid={`text-staff-commission-${s.id}`}>
                       <p className="text-[10px] text-green-600 uppercase tracking-wider">Commission</p>
-                      <p className="text-sm font-bold text-green-600 mt-0.5">{formatCurrency(earning?.totalCommission || 0)}</p>
+                      <p className="text-sm font-bold text-green-600 mt-0.5">{formatCurrency((earning?.totalCommission || 0) - staffDeductionAmount)}</p>
                     </div>
                     <div className="p-2 rounded-lg bg-primary/5 dark:bg-primary/10 text-center" data-testid={`text-staff-wallet-${s.id}`}>
                       <p className="text-[10px] text-primary uppercase tracking-wider">{t("salaries.walletBalance").split(':')[0] || "Wallet"}</p>
