@@ -1734,11 +1734,14 @@ export async function registerRoutes(
         walletBalance = totalCommission - totalPendingDeductions;
       }
 
+      const netPayable = totalCommission - totalPendingDeductions;
+
       res.json({
         totalRevenue,
         totalCommission,
         totalAppointments: paidAppointments.length,
         pendingDeductions: totalPendingDeductions,
+        netPayable,
         walletBalance,
         lastPaidAt: lastPayment?.paidAt || null,
         deductionsList: staffDeductions.map(d => ({

@@ -403,7 +403,7 @@ export default function Salaries() {
 
     const walletBalance = earningsSincePayment - pendingStaffDeductions;
 
-    return { lastPaymentDate, earningsSincePayment, pendingStaffDeductions, walletBalance };
+    return { lastPaymentDate, earningsSincePayment, walletBalance };
   };
 
   return (
@@ -734,7 +734,7 @@ export default function Salaries() {
                         )}
                       </div>
                     </div>
-                    {wallet.earningsSincePayment > 0 && (
+                    {wallet.walletBalance > 0 && (
                       <Button
                         size="sm"
                         variant="outline"

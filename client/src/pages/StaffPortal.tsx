@@ -35,6 +35,7 @@ interface EarningsData {
   totalCommission: number;
   totalAppointments: number;
   pendingDeductions: number;
+  netPayable: number;
   walletBalance: number;
   lastPaidAt: string | null;
   deductionsList: { type: string; description: string; amount: number; date: string; cleared?: boolean }[];
@@ -366,20 +367,28 @@ export default function StaffPortal() {
                 <CardHeader className="pb-2 px-3 pt-3">
                   <CardTitle className="text-sm flex items-center gap-2">
                     <Wallet className="w-4 h-4" />
-                    {t("staffPortal.walletBalance")}
+                    {t("staffPortal.earningsAndDeductions")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="px-3 pb-3 space-y-3">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">{t("staffPortal.earningsSincePayment")}</span>
-                    <span className={`font-bold ${earnings.walletBalance < 0 ? 'text-red-600' : 'text-green-600'}`} data-testid="text-wallet-balance">
-                      {earnings.walletBalance < 0 ? `-${formatCurrency(Math.abs(earnings.walletBalance))}` : formatCurrency(earnings.walletBalance)} DH
+                    <span className="text-sm text-muted-foreground">{t("staffPortal.commission")}</span>
+                    <span className="font-bold text-green-600" data-testid="text-commission-total">
+                      {formatCurrency(earnings.totalCommission)} DH
                     </span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">{t("staffPortal.pendingDeductions")}</span>
-                    <span className="font-bold text-red-600" data-testid="text-pending-deductions">
-                      -{formatCurrency(earnings.pendingDeductions)} DH
+                  {earnings.pendingDeductions > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">{t("staffPortal.pendingDeductions")}</span>
+                      <span className="font-bold text-red-600" data-testid="text-pending-deductions">
+                        -{formatCurrency(earnings.pendingDeductions)} DH
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center border-t pt-2">
+                    <span className="text-sm font-medium">{t("staffPortal.walletBalance")}</span>
+                    <span className={`font-bold ${earnings.walletBalance < 0 ? 'text-red-600' : 'text-green-600'}`} data-testid="text-wallet-balance">
+                      {earnings.walletBalance < 0 ? `-${formatCurrency(Math.abs(earnings.walletBalance))}` : formatCurrency(earnings.walletBalance)} DH
                     </span>
                   </div>
                   <div className="flex justify-between items-center text-xs text-muted-foreground">
