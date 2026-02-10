@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Tag, Scissors, Edit2, Package, RefreshCw, X } from "lucide-react";
+import { Plus, Trash2, Tag, Scissors, Edit2, Package, RefreshCw, X, ChevronDown, ChevronRight } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -39,6 +39,22 @@ export default function Services() {
   
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [expandedCategories, setExpandedCategories] = useState<Set<number>>(new Set());
+
+  const toggleCategory = (categoryId: number) => {
+    setExpandedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(categoryId)) {
+        next.delete(categoryId);
+      } else {
+        next.add(categoryId);
+      }
+      return next;
+    });
+  };
+
+  const expandAll = () => setExpandedCategories(new Set(categories.map(c => c.id)));
+  const collapseAll = () => setExpandedCategories(new Set());
 
   const createService = useCreateService();
   const updateServiceMutation = useMutation({
@@ -281,62 +297,99 @@ export default function Services() {
           </Card>
         </div>
 
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4">
           <Card className="shadow-lg shadow-black/5 border-border/50">
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
               <CardTitle>{t("services.currentServices")}</CardTitle>
+              <div className="flex gap-1">
+                <Button
+                  data-testid="button-expand-all"
+                  variant="ghost"
+                  size="sm"
+                  onClick={expandAll}
+                  className="text-xs text-muted-foreground"
+                >
+                  {t("common.expandAll", { defaultValue: "Expand All" })}
+                </Button>
+                <Button
+                  data-testid="button-collapse-all"
+                  variant="ghost"
+                  size="sm"
+                  onClick={collapseAll}
+                  className="text-xs text-muted-foreground"
+                >
+                  {t("common.collapseAll", { defaultValue: "Collapse All" })}
+                </Button>
+              </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-2">
               {categories.map(category => {
                 const categoryServices = services.filter(s => s.category === category.name);
+                const isExpanded = expandedCategories.has(category.id);
                 return (
-                  <div key={category.id} className="mb-6">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-sm font-bold text-muted-foreground uppercase flex items-center gap-2">
-                        {category.name}
-                      </h3>
-                      <div className="flex gap-2">
-                        <Button variant="ghost" size="icon" onClick={() => {
+                  <div key={category.id} className="border rounded-lg overflow-hidden">
+                    <button
+                      data-testid={`button-toggle-category-${category.id}`}
+                      className="w-full flex items-center justify-between p-3 hover-elevate transition-colors"
+                      onClick={() => toggleCategory(category.id)}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        {isExpanded ? (
+                          <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+                        ) : (
+                          <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                        )}
+                        <span className="text-sm font-bold uppercase truncate">{category.name}</span>
+                        <span className="text-xs text-muted-foreground shrink-0">({categoryServices.length})</span>
+                      </div>
+                      <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" data-testid={`button-edit-category-${category.id}`} onClick={() => {
                           setEditingCategory(category);
                           editCForm.reset(category);
                         }}>
                           <Edit2 className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => deleteCategoryMutation.mutate(category.id)}>
+                        <Button variant="ghost" size="icon" data-testid={`button-delete-category-${category.id}`} onClick={() => deleteCategoryMutation.mutate(category.id)}>
                           <Trash2 className="w-4 h-4 text-destructive" />
                         </Button>
                       </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {categoryServices.map(service => (
-                        <div key={service.id} className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border border-border group">
-                          <div>
-                            <h4 className="font-semibold">{service.name}</h4>
-                            <p className="text-sm text-muted-foreground">{service.duration} {t("common.minutes")} • {service.isStartingPrice ? `${t("services.startingFrom")} ` : ''}{service.price} DH • {t("services.commission")} {service.commissionPercent ?? 50}%</p>
-                            {(((service.linkedProductIds as number[] | null | undefined) || []).length > 0 || service.linkedProductId) && (
-                              <div className="text-xs text-primary flex items-center gap-1 mt-1 flex-wrap">
-                                <Package className="w-3 h-3" />
-                                {((service.linkedProductIds as number[] | null | undefined) || []).length > 0 
-                                  ? ((service.linkedProductIds as number[]) || []).map(id => products?.find(p => p.id === id)?.name).filter(Boolean).join(", ")
-                                  : products?.find(p => p.id === service.linkedProductId)?.name || t("services.linkedProduct")
-                                }
+                    </button>
+                    {isExpanded && (
+                      <div className="border-t px-3 pb-3 pt-2 space-y-2">
+                        {categoryServices.length === 0 ? (
+                          <p className="text-sm text-muted-foreground py-2 text-center">{t("services.noServicesInCategory", { defaultValue: "No services in this category" })}</p>
+                        ) : (
+                          categoryServices.map(service => (
+                            <div key={service.id} data-testid={`card-service-${service.id}`} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/50 group">
+                              <div className="min-w-0">
+                                <h4 className="font-semibold text-sm truncate">{service.name}</h4>
+                                <p className="text-xs text-muted-foreground">{service.duration} {t("common.minutes")} • {service.isStartingPrice ? `${t("services.startingFrom")} ` : ''}{service.price} DH • {t("services.commission")} {service.commissionPercent ?? 50}%</p>
+                                {(((service.linkedProductIds as number[] | null | undefined) || []).length > 0 || service.linkedProductId) && (
+                                  <div className="text-xs text-primary flex items-center gap-1 mt-1 flex-wrap">
+                                    <Package className="w-3 h-3" />
+                                    {((service.linkedProductIds as number[] | null | undefined) || []).length > 0 
+                                      ? ((service.linkedProductIds as number[]) || []).map(id => products?.find(p => p.id === id)?.name).filter(Boolean).join(", ")
+                                      : products?.find(p => p.id === service.linkedProductId)?.name || t("services.linkedProduct")
+                                    }
+                                  </div>
+                                )}
                               </div>
-                            )}
-                          </div>
-                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button variant="ghost" size="icon" onClick={() => {
-                              setEditingService(service);
-                              editSForm.reset(service);
-                            }}>
-                              <Edit2 className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => deleteService.mutate(service.id)}>
-                              <Trash2 className="w-4 h-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                              <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Button variant="ghost" size="icon" data-testid={`button-edit-service-${service.id}`} onClick={() => {
+                                  setEditingService(service);
+                                  editSForm.reset(service);
+                                }}>
+                                  <Edit2 className="w-4 h-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" data-testid={`button-delete-service-${service.id}`} onClick={() => deleteService.mutate(service.id)}>
+                                  <Trash2 className="w-4 h-4 text-destructive" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
