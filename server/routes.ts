@@ -1707,7 +1707,8 @@ export async function registerRoutes(
       const staffDeductions = deductions.filter(
         d => d.staffId === staffMember.id || (!d.staffId && d.staffName === staffMember.name)
       );
-      const totalAllDeductions = staffDeductions.reduce((sum, d) => sum + d.amount, 0);
+      const pendingDeductions = staffDeductions.filter(d => !d.cleared);
+      const totalPendingDeductions = pendingDeductions.reduce((sum, d) => sum + d.amount, 0);
 
       const lastPayment = await storage.getLastStaffPayment(staffMember.id);
 
@@ -1728,16 +1729,16 @@ export async function registerRoutes(
           if (cc) cr = cc.percentage;
           walletBalance += (appt.total * cr) / 100;
         }
-        walletBalance -= totalAllDeductions;
+        walletBalance -= totalPendingDeductions;
       } else {
-        walletBalance = totalCommission - totalAllDeductions;
+        walletBalance = totalCommission - totalPendingDeductions;
       }
 
       res.json({
         totalRevenue,
         totalCommission,
         totalAppointments: paidAppointments.length,
-        pendingDeductions: totalAllDeductions,
+        pendingDeductions: totalPendingDeductions,
         walletBalance,
         lastPaidAt: lastPayment?.paidAt || null,
         deductionsList: staffDeductions.map(d => ({

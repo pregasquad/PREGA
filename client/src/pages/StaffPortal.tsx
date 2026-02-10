@@ -377,7 +377,7 @@ export default function StaffPortal() {
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">{t("staffPortal.allDeductions")}</span>
+                    <span className="text-sm text-muted-foreground">{t("staffPortal.pendingDeductions")}</span>
                     <span className="font-bold text-red-600" data-testid="text-pending-deductions">
                       -{formatCurrency(earnings.pendingDeductions)} DH
                     </span>
