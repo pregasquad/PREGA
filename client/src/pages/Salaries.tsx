@@ -633,7 +633,8 @@ export default function Salaries() {
                 if (!matchesStaff) return false;
                 if (lastPaymentDate) {
                   const aptDate = parseISO(apt.date);
-                  return isAfter(aptDate, lastPaymentDate);
+                  const paymentDay = startOfDay(lastPaymentDate);
+                  return isAfter(aptDate, paymentDay) || isEqual(aptDate, paymentDay);
                 }
                 return true;
               })
