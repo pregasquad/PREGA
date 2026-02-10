@@ -305,56 +305,6 @@ export default function Planning() {
     };
   }, []);
 
-  // Sync horizontal scroll between header and board
-  useEffect(() => {
-    const board = boardRef.current;
-    if (!board) return;
-
-    const handleScroll = () => {
-      if (headerRef.current) {
-        headerRef.current.scrollLeft = board.scrollLeft;
-      }
-    };
-
-    board.addEventListener('scroll', handleScroll, { passive: true });
-    return () => board.removeEventListener('scroll', handleScroll);
-  }, []);
-  
-  // Detect user interaction (wheel/touch/pointer/keyboard) to pause auto-scroll
-  useEffect(() => {
-    const board = boardRef.current;
-    if (!board) return;
-    
-    const markUserInteraction = () => {
-      userScrollPauseRef.current = Date.now();
-    };
-    
-    // Handle keyboard scroll (arrow keys, page up/down, home/end)
-    const handleKeydown = (e: KeyboardEvent) => {
-      const scrollKeys = ['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '];
-      if (scrollKeys.includes(e.key)) {
-        markUserInteraction();
-      }
-    };
-    
-    // Listen for actual user input events on board AND window (for parent scrolls)
-    board.addEventListener('wheel', markUserInteraction, { passive: true });
-    board.addEventListener('touchstart', markUserInteraction, { passive: true });
-    board.addEventListener('pointerdown', markUserInteraction, { passive: true });
-    window.addEventListener('wheel', markUserInteraction, { passive: true });
-    
-    // Keyboard events on document for scroll keys
-    document.addEventListener('keydown', handleKeydown);
-    
-    return () => {
-      board.removeEventListener('wheel', markUserInteraction);
-      board.removeEventListener('touchstart', markUserInteraction);
-      board.removeEventListener('pointerdown', markUserInteraction);
-      window.removeEventListener('wheel', markUserInteraction);
-      document.removeEventListener('keydown', handleKeydown);
-    };
-  }, []);
-
   // Track data loaded state
   const dataLoadedRef = useRef(false);
   const [isEditFavoritesOpen, setIsEditFavoritesOpen] = useState(false);
@@ -643,6 +593,55 @@ export default function Planning() {
   const isDataLoading = (loadingStaff && staffList.length === 0) || (loadingServices && services.length === 0);
   const hasAuthError = (staffError || servicesError) && staffList.length === 0;
   const isAdmin = sessionStorage.getItem("admin_authenticated") === "true";
+
+  // Sync horizontal scroll between header and board
+  // Re-attaches when loading finishes so refs are connected to actual DOM
+  useEffect(() => {
+    if (isDataLoading) return;
+    const board = boardRef.current;
+    if (!board) return;
+
+    const handleScroll = () => {
+      if (headerRef.current) {
+        headerRef.current.scrollLeft = board.scrollLeft;
+      }
+    };
+
+    board.addEventListener('scroll', handleScroll, { passive: true });
+    return () => board.removeEventListener('scroll', handleScroll);
+  }, [isDataLoading]);
+
+  // Detect user interaction (wheel/touch/pointer/keyboard) to pause auto-scroll
+  useEffect(() => {
+    if (isDataLoading) return;
+    const board = boardRef.current;
+    if (!board) return;
+    
+    const markUserInteraction = () => {
+      userScrollPauseRef.current = Date.now();
+    };
+    
+    const handleKeydown = (e: KeyboardEvent) => {
+      const scrollKeys = ['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '];
+      if (scrollKeys.includes(e.key)) {
+        markUserInteraction();
+      }
+    };
+    
+    board.addEventListener('wheel', markUserInteraction, { passive: true });
+    board.addEventListener('touchstart', markUserInteraction, { passive: true });
+    board.addEventListener('pointerdown', markUserInteraction, { passive: true });
+    window.addEventListener('wheel', markUserInteraction, { passive: true });
+    document.addEventListener('keydown', handleKeydown);
+    
+    return () => {
+      board.removeEventListener('wheel', markUserInteraction);
+      board.removeEventListener('touchstart', markUserInteraction);
+      board.removeEventListener('pointerdown', markUserInteraction);
+      window.removeEventListener('wheel', markUserInteraction);
+      document.removeEventListener('keydown', handleKeydown);
+    };
+  }, [isDataLoading]);
 
   // Auto-redirect to login if session expired
   useEffect(() => {
