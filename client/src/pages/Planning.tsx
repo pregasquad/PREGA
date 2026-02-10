@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { CalendarIcon, ChevronLeft, ChevronRight, Plus, Trash2, Check, X, Search, Star, RefreshCw, Sparkles, CreditCard, Settings2, Scissors, Clock, User, ChevronsUpDown, ListTodo, Bell, UserCheck, Gift, AlertCircle } from "lucide-react";
+import { CalendarIcon, ChevronLeft, ChevronRight, Plus, Trash2, Check, X, Search, Star, RefreshCw, Sparkles, CreditCard, Settings2, Scissors, Clock, User, ChevronsUpDown, ListTodo, Bell, UserCheck, Gift, AlertCircle, Wallet, Users, Package } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
 import { cn } from "@/lib/utils";
@@ -444,6 +444,19 @@ export default function Planning() {
   }>({
     queryKey: ["/api/business-settings"],
   });
+
+  const { data: adminRoles = [] } = useQuery<Array<{id: number; name: string; role: string; permissions: string[]}>>({
+    queryKey: ["/api/admin-roles"],
+  });
+  const currentUserName = typeof window !== 'undefined' ? sessionStorage.getItem("current_user") : null;
+  const currentUser = adminRoles.find(role => role.name === currentUserName);
+  const hasPermission = (permission: string) => {
+    if (!currentUserName || currentUserName === "Setup") return true;
+    if (!currentUser) return true;
+    if (currentUser.role === "owner") return true;
+    if (currentUser.permissions.length === 0) return true;
+    return (currentUser.permissions || []).includes(permission);
+  };
   
   // Re-adjust date once business settings are loaded (in case initial load used wrong cutoff)
   const settingsLoadedRef = useRef(false);
@@ -2480,13 +2493,57 @@ export default function Planning() {
         <button
           onClick={() => scrollToLiveLine(true, true)}
           className={cn(
-            "fixed bottom-20 z-50 w-14 h-14 rounded-full liquid-gradient shadow-xl flex items-center justify-center text-white transition-all active:scale-95 live-indicator",
+            "fixed z-50 w-14 h-14 rounded-full liquid-gradient shadow-xl flex items-center justify-center text-white transition-all active:scale-95 live-indicator",
+            isMobile ? "bottom-[5.5rem]" : "bottom-20",
             isRtl ? "left-4" : "right-4"
           )}
           aria-label="Go to current time"
         >
           <Clock className="w-6 h-6" />
         </button>
+      )}
+
+      {isMobile && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-t safe-area-pb" data-testid="mobile-shortcuts-bar">
+          <div className="flex items-center justify-around py-1.5 px-4 gap-2">
+            {hasPermission("view_salaries") && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setLocation("/salaries")}
+                className="flex flex-col items-center gap-0.5 h-auto py-1.5"
+                data-testid="shortcut-salaries"
+              >
+                <Wallet className="w-5 h-5" />
+                <span className="text-[10px] font-normal">{t("nav.salaries")}</span>
+              </Button>
+            )}
+            {hasPermission("view_clients") && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setLocation("/clients")}
+                className="flex flex-col items-center gap-0.5 h-auto py-1.5"
+                data-testid="shortcut-clients"
+              >
+                <Users className="w-5 h-5" />
+                <span className="text-[10px] font-normal">{t("nav.clients")}</span>
+              </Button>
+            )}
+            {hasPermission("view_inventory") && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setLocation("/inventory")}
+                className="flex flex-col items-center gap-0.5 h-auto py-1.5"
+                data-testid="shortcut-inventory"
+              >
+                <Package className="w-5 h-5" />
+                <span className="text-[10px] font-normal">{t("nav.inventory")}</span>
+              </Button>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
