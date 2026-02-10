@@ -705,8 +705,9 @@ export default function Salaries() {
         {(selectedStaff === "all" ? staff : staff.filter(s => s.id === parseInt(selectedStaff))).map((s) => {
           const earning = staffEarnings.find(e => e.name === s.name);
           const wallet = getStaffWalletData(s);
-          const staffPendingDeductions = pendingDeductions
+          const staffAllDeductions = filteredDeductions
             .filter(d => d.staffId === s.id || (!d.staffId && d.staffName === s.name));
+          const staffPendingDeductions = staffAllDeductions.filter(d => !d.cleared);
           const staffDeductionAmount = staffPendingDeductions.reduce((sum, d) => sum + d.amount, 0);
 
           return (
@@ -773,12 +774,36 @@ export default function Salaries() {
                   </div>
                 </div>
 
-                {/* Deductions if any */}
-                {staffDeductionAmount > 0 && (
+                {/* Deductions */}
+                {staffAllDeductions.length > 0 && (
                   <div className="px-4 pb-3">
-                    <div className="p-2 rounded-lg bg-orange-50/80 dark:bg-orange-950/20 flex items-center justify-between" data-testid={`text-staff-deductions-${s.id}`}>
-                      <span className="text-xs text-orange-600 dark:text-orange-400">{t("salaries.pendingDeductions")}</span>
-                      <span className="text-sm font-semibold text-orange-600 dark:text-orange-400">-{formatCurrency(staffDeductionAmount)}</span>
+                    <div className="p-2 rounded-lg bg-orange-50/80 dark:bg-orange-950/20" data-testid={`text-staff-deductions-${s.id}`}>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs font-medium text-orange-600 dark:text-orange-400">{t("staffPortal.allDeductions")}</span>
+                        {staffDeductionAmount > 0 && (
+                          <span className="text-xs font-semibold text-orange-600 dark:text-orange-400">-{formatCurrency(staffDeductionAmount)}</span>
+                        )}
+                      </div>
+                      <div className="space-y-1">
+                        {staffAllDeductions.map((d) => (
+                          <div key={d.id} className="flex items-center justify-between gap-2 py-0.5" data-testid={`text-staff-deduction-item-${d.id}`}>
+                            <div className="min-w-0 flex-1 flex items-center gap-1.5 flex-wrap">
+                              <span className="text-xs">{getDeductionTypeLabel(d.type)}</span>
+                              {d.description && (
+                                <span className="text-[10px] text-muted-foreground">- {d.description}</span>
+                              )}
+                              {d.cleared && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400">
+                                  {t("salaries.paidBack")}
+                                </span>
+                              )}
+                            </div>
+                            <span className={`text-xs font-medium shrink-0 ${d.cleared ? 'text-muted-foreground line-through' : 'text-red-600'}`}>
+                              -{formatCurrency(d.amount)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 )}
