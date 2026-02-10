@@ -189,6 +189,8 @@ export interface IStorage extends IAuthStorage {
   getStaffPaymentsByStaff(staffId: number): Promise<StaffPayment[]>;
   getLastStaffPayment(staffId: number): Promise<StaffPayment | undefined>;
   createStaffPayment(payment: InsertStaffPayment): Promise<StaffPayment>;
+
+  getStaffByToken(token: string): Promise<Staff | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1541,6 +1543,11 @@ export class DatabaseStorage implements IStorage {
     }
     const [created] = await db().insert(s.staffPayments).values(payment).returning();
     return created;
+  }
+  async getStaffByToken(token: string): Promise<Staff | undefined> {
+    const s = schema();
+    const [staffMember] = await db().select().from(s.staff).where(eq(s.staff.publicToken, token));
+    return staffMember;
   }
 }
 

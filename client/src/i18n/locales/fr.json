@@ -905,5 +905,28 @@
     "noDiscount": "Pas de réduction à appliquer - vérifiez le total",
     "applied": "Carte cadeau appliquée!",
     "error": "Échec de l'application de la carte cadeau"
+  },
+  "staffPortal": {
+    "title": "Portail Employé",
+    "myPerformance": "Ma Performance",
+    "monthlyEarnings": "Revenus Mensuels",
+    "serviceBreakdown": "Détail des Services",
+    "appointments": "Rendez-vous",
+    "earnings": "Revenus",
+    "commission": "Commission",
+    "revenue": "Chiffre d'Affaires",
+    "noAppointments": "Aucun rendez-vous ce mois",
+    "invalidLink": "Ce lien portail est invalide ou a expiré",
+    "walletBalance": "Solde du Portefeuille",
+    "pendingDeductions": "Déductions en Attente",
+    "lastPaid": "Dernier Paiement",
+    "never": "Jamais",
+    "earningsSincePayment": "Revenus Depuis le Dernier Paiement",
+    "service": "Service",
+    "count": "Nombre",
+    "total": "Total",
+    "paid": "Payé",
+    "unpaid": "Non payé",
+    "day": "Jour"
   }
 }

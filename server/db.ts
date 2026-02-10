@@ -383,6 +383,46 @@ export async function ensureStaffPaymentsTable(): Promise<void> {
   }
 }
 
+export async function ensureStaffPublicTokens(): Promise<void> {
+  try {
+    const { randomUUID } = await import("crypto");
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      await connection.query(`
+        ALTER TABLE staff ADD COLUMN IF NOT EXISTS public_token TEXT
+      `).catch(() => {});
+      const [staffRows] = await connection.query(`
+        SELECT id FROM staff WHERE public_token IS NULL
+      `);
+      for (const staff of staffRows as any[]) {
+        const token = randomUUID();
+        await connection.query(
+          `UPDATE staff SET public_token = ? WHERE id = ?`,
+          [token, staff.id]
+        );
+      }
+      connection.release();
+    } else {
+      await pool.query(`
+        ALTER TABLE staff ADD COLUMN IF NOT EXISTS public_token TEXT
+      `);
+      const { rows: staffRows } = await pool.query(`
+        SELECT id FROM staff WHERE public_token IS NULL
+      `);
+      for (const staff of staffRows) {
+        const token = randomUUID();
+        await pool.query(
+          `UPDATE staff SET public_token = $1 WHERE id = $2`,
+          [token, staff.id]
+        );
+      }
+    }
+    console.log("Staff public tokens ready");
+  } catch (error) {
+    console.error("Failed to ensure staff public tokens:", error);
+  }
+}
+
 // Add foreign key constraints for data integrity (PostgreSQL only)
 export async function ensureForeignKeyConstraints(): Promise<void> {
   if (dbDialect !== 'postgres') {

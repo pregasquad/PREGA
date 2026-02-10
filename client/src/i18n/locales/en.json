@@ -910,5 +910,28 @@
     "noDiscount": "No discount to apply - check appointment total",
     "applied": "Gift card applied!",
     "error": "Failed to apply gift card"
+  },
+  "staffPortal": {
+    "title": "Staff Portal",
+    "myPerformance": "My Performance",
+    "monthlyEarnings": "Monthly Earnings",
+    "serviceBreakdown": "Service Breakdown",
+    "appointments": "Appointments",
+    "earnings": "Earnings",
+    "commission": "Commission",
+    "revenue": "Revenue",
+    "noAppointments": "No appointments this month",
+    "invalidLink": "This portal link is invalid or has expired",
+    "walletBalance": "Wallet Balance",
+    "pendingDeductions": "Pending Deductions",
+    "lastPaid": "Last Paid",
+    "never": "Never",
+    "earningsSincePayment": "Earnings Since Last Payment",
+    "service": "Service",
+    "count": "Count",
+    "total": "Total",
+    "paid": "Paid",
+    "unpaid": "Unpaid",
+    "day": "Day"
   }
 }

@@ -1605,6 +1605,165 @@ export async function registerRoutes(
     }
   });
 
+  // Staff Portal - public routes (token-based)
+  app.get("/api/public/staff-portal/:token", publicRateLimitMiddleware, async (req, res) => {
+    try {
+      const staffMember = await storage.getStaffByToken(req.params.token);
+      if (!staffMember) {
+        return res.status(404).json({ message: "Invalid portal link" });
+      }
+      res.json({
+        id: staffMember.id,
+        name: staffMember.name,
+        color: staffMember.color,
+      });
+    } catch (err) {
+      console.error("Error fetching staff portal:", err);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/public/staff-portal/:token/appointments", publicRateLimitMiddleware, async (req, res) => {
+    try {
+      const staffMember = await storage.getStaffByToken(req.params.token);
+      if (!staffMember) {
+        return res.status(404).json({ message: "Invalid portal link" });
+      }
+      const { startDate, endDate } = req.query as { startDate?: string; endDate?: string };
+      if (!startDate || !endDate) {
+        return res.status(400).json({ message: "startDate and endDate are required" });
+      }
+      const appointments = await storage.getAppointmentsByDateRange(startDate, endDate);
+      const staffAppointments = appointments
+        .filter(a => a.staffId === staffMember.id || (!a.staffId && a.staff === staffMember.name))
+        .map(a => ({
+          id: a.id,
+          date: a.date,
+          time: a.startTime,
+          service: a.service,
+          duration: a.duration,
+          total: a.total,
+          paid: a.paid,
+          client: a.client ? a.client.split(" ")[0] : "",
+        }));
+      res.json(staffAppointments);
+    } catch (err) {
+      console.error("Error fetching staff portal appointments:", err);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/public/staff-portal/:token/earnings", publicRateLimitMiddleware, async (req, res) => {
+    try {
+      const staffMember = await storage.getStaffByToken(req.params.token);
+      if (!staffMember) {
+        return res.status(404).json({ message: "Invalid portal link" });
+      }
+      const { startDate, endDate } = req.query as { startDate?: string; endDate?: string };
+      if (!startDate || !endDate) {
+        return res.status(400).json({ message: "startDate and endDate are required" });
+      }
+
+      const appointments = await storage.getAppointmentsByDateRange(startDate, endDate);
+      const paidAppointments = appointments.filter(
+        a => (a.staffId === staffMember.id || (!a.staffId && a.staff === staffMember.name)) && a.paid === true
+      );
+
+      const allServices = await storage.getServices();
+      const serviceMap = new Map(allServices.map(s => [s.name, s]));
+      const staffCommissions = await storage.getStaffCommissionsByStaff(staffMember.id);
+
+      let totalRevenue = 0;
+      let totalCommission = 0;
+      const serviceBreakdown: Record<string, { name: string; count: number; revenue: number; commission: number }> = {};
+
+      for (const appt of paidAppointments) {
+        const serviceName = appt.service || "Unknown";
+        const service = serviceMap.get(serviceName);
+        let commissionRate = service?.commissionPercent ?? 50;
+
+        if (service) {
+          const customComm = staffCommissions.find(c => c.serviceId === service.id);
+          if (customComm) {
+            commissionRate = customComm.percentage;
+          }
+        }
+
+        const commission = (appt.total * commissionRate) / 100;
+        totalRevenue += appt.total;
+        totalCommission += commission;
+
+        if (!serviceBreakdown[serviceName]) {
+          serviceBreakdown[serviceName] = { name: serviceName, count: 0, revenue: 0, commission: 0 };
+        }
+        serviceBreakdown[serviceName].count++;
+        serviceBreakdown[serviceName].revenue += appt.total;
+        serviceBreakdown[serviceName].commission += commission;
+      }
+
+      const deductions = await storage.getStaffDeductions();
+      const pendingDeductions = deductions.filter(
+        d => !d.cleared && (d.staffId === staffMember.id || (!d.staffId && d.staffName === staffMember.name))
+      );
+      const totalPendingDeductions = pendingDeductions.reduce((sum, d) => sum + d.amount, 0);
+
+      const lastPayment = await storage.getLastStaffPayment(staffMember.id);
+
+      let walletBalance = 0;
+      if (lastPayment) {
+        const allAppointments = await storage.getAppointmentsByDateRange(
+          lastPayment.paidAt ? new Date(lastPayment.paidAt).toISOString().split("T")[0] : "2000-01-01",
+          new Date().toISOString().split("T")[0]
+        );
+        const sincePayment = allAppointments.filter(
+          a => (a.staffId === staffMember.id || (!a.staffId && a.staff === staffMember.name)) && a.paid === true
+        );
+        for (const appt of sincePayment) {
+          const serviceName = appt.service || "Unknown";
+          const service = serviceMap.get(serviceName);
+          let cr = service?.commissionPercent ?? 50;
+          const cc = staffCommissions.find(c => service && c.serviceId === service.id);
+          if (cc) cr = cc.percentage;
+          walletBalance += (appt.total * cr) / 100;
+        }
+        walletBalance -= totalPendingDeductions;
+      } else {
+        walletBalance = totalCommission - totalPendingDeductions;
+      }
+
+      res.json({
+        totalRevenue,
+        totalCommission,
+        totalAppointments: paidAppointments.length,
+        pendingDeductions: totalPendingDeductions,
+        walletBalance,
+        lastPaidAt: lastPayment?.paidAt || null,
+        deductionsList: pendingDeductions.map(d => ({
+          type: d.type,
+          description: d.description,
+          amount: d.amount,
+          date: d.date,
+        })),
+        services: Object.values(serviceBreakdown),
+      });
+    } catch (err) {
+      console.error("Error fetching staff portal earnings:", err);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.post("/api/staff/:id/regenerate-token", isPinAuthenticated, requirePermission("manage_staff"), async (req, res) => {
+    try {
+      const { randomUUID } = await import("crypto");
+      const newToken = randomUUID();
+      await storage.updateStaff(Number(req.params.id), { publicToken: newToken } as any);
+      res.json({ token: newToken });
+    } catch (err) {
+      console.error("Error regenerating staff token:", err);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
   // Products/Inventory - protected routes
   app.get("/api/products", isPinAuthenticated, async (_req, res) => {
     const products = await storage.getProducts();

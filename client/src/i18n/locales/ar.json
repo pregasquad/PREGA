@@ -841,5 +841,28 @@
     "noDiscount": "لا يوجد خصم للتطبيق - تحقق من الإجمالي",
     "applied": "تم تطبيق بطاقة الهدية!",
     "error": "فشل تطبيق بطاقة الهدية"
+  },
+  "staffPortal": {
+    "title": "بوابة الموظف",
+    "myPerformance": "أدائي",
+    "monthlyEarnings": "الأرباح الشهرية",
+    "serviceBreakdown": "تفصيل الخدمات",
+    "appointments": "المواعيد",
+    "earnings": "الأرباح",
+    "commission": "العمولة",
+    "revenue": "الإيرادات",
+    "noAppointments": "لا توجد مواعيد هذا الشهر",
+    "invalidLink": "رابط البوابة غير صالح أو منتهي الصلاحية",
+    "walletBalance": "رصيد المحفظة",
+    "pendingDeductions": "الخصومات المعلقة",
+    "lastPaid": "آخر دفعة",
+    "never": "أبداً",
+    "earningsSincePayment": "الأرباح منذ آخر دفعة",
+    "service": "الخدمة",
+    "count": "العدد",
+    "total": "المجموع",
+    "paid": "مدفوع",
+    "unpaid": "غير مدفوع",
+    "day": "يوم"
   }
 }

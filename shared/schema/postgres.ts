@@ -126,6 +126,7 @@ export const staff = pgTable("staff", {
   baseSalary: doublePrecision("base_salary").notNull().default(0),
   photoUrl: text("photo_url"),
   categories: text("categories"),
+  publicToken: text("public_token"),
 });
 
 export const expenseCategories = pgTable("expense_categories", {

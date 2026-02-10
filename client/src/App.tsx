@@ -32,6 +32,7 @@ const LoyaltyRewards = lazy(() => import("@/pages/LoyaltyRewards"));
 const Packages = lazy(() => import("@/pages/Packages"));
 const BookingHistory = lazy(() => import("@/pages/BookingHistory"));
 const NotFound = lazy(() => import("@/pages/not-found"));
+const StaffPortal = lazy(() => import("@/pages/StaffPortal"));
 
 // Loading fallback component with smooth fade - prevents flash
 function PageLoader() {
@@ -185,6 +186,12 @@ function Router() {
 
       <Route path="/booking" component={Booking} />
       <Route path="/my-bookings" component={MyBookings} />
+
+      <Route path="/staff-portal/:token">
+        <Suspense fallback={<PageLoader />}>
+          <StaffPortal />
+        </Suspense>
+      </Route>
 
       <Route>
         <Suspense fallback={<PageLoader />}>
