@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatCurrency } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +9,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { DollarSign, Users, CalendarIcon, TrendingUp, Building2, RefreshCw, Plus, Trash2, Receipt, UserMinus, ChevronDown, CheckCircle, Pencil, Wallet } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { DollarSign, Users, CalendarIcon, TrendingUp, Building2, RefreshCw, Plus, Trash2, Receipt, UserMinus, ChevronDown, CheckCircle, Pencil, Wallet, Briefcase, BarChart3 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
@@ -374,14 +374,45 @@ export default function Salaries() {
     }
   };
 
+  const getStaffWalletData = (s: Staff) => {
+    const lastPayment = staffPayments
+      .filter(p => p.staffId === s.id)
+      .sort((a, b) => new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime())[0];
+    const lastPaymentDate = lastPayment ? new Date(lastPayment.paidAt) : null;
+
+    const earningsSincePayment = appointments
+      .filter(apt => {
+        if (!apt.paid) return false;
+        const matchesStaff = apt.staffId === s.id || (!apt.staffId && apt.staff === s.name);
+        if (!matchesStaff) return false;
+        if (lastPaymentDate) {
+          const aptCreated = apt.createdAt ? new Date(apt.createdAt) : parseISO(apt.date);
+          return isAfter(aptCreated, lastPaymentDate);
+        }
+        return true;
+      })
+      .reduce((sum, apt) => {
+        const serviceName = apt.service || "Unknown";
+        const commissionPercent = getServiceCommission(serviceName, s.name);
+        return sum + (apt.total * commissionPercent) / 100;
+      }, 0);
+
+    const pendingStaffDeductions = deductions
+      .filter(d => !d.cleared && (d.staffId === s.id || (!d.staffId && d.staffName === s.name)))
+      .reduce((sum, d) => sum + d.amount, 0);
+
+    const walletBalance = Math.max(0, earningsSincePayment - pendingStaffDeductions);
+
+    return { lastPaymentDate, earningsSincePayment, pendingStaffDeductions, walletBalance };
+  };
+
   return (
     <div className="h-full flex flex-col gap-3 p-2 animate-fade-in" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
       <div className="flex justify-between items-center">
-        <h1 className="text-lg font-bold">{t("salaries.pageTitle")}</h1>
+        <h1 className="text-lg font-bold" data-testid="text-page-title">{t("salaries.pageTitle")}</h1>
         <Button
           variant="outline"
-          size="sm"
-          className="h-8"
+          size="icon"
           disabled={isRefreshing}
           onClick={async () => {
             setIsRefreshing(true);
@@ -398,6 +429,7 @@ export default function Salaries() {
             setIsRefreshing(false);
             toast({ title: t("common.refreshed"), description: t("common.dataUpdated") });
           }}
+          data-testid="button-refresh-salaries"
         >
           <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
         </Button>
@@ -405,29 +437,29 @@ export default function Salaries() {
 
       {unclearedDeductions.length > 0 && (
         <Collapsible open={unclearedOpen} onOpenChange={setUnclearedOpen}>
-          <Card className="border-orange-300 bg-orange-50 dark:bg-orange-950/30 dark:border-orange-800">
+          <Card className="glass-card border-orange-300/50 dark:border-orange-700/50">
             <CollapsibleTrigger asChild>
-              <CardHeader className="flex flex-row items-center justify-between p-3 pb-2 cursor-pointer hover:bg-orange-100/50 dark:hover:bg-orange-900/20 transition-colors">
+              <CardHeader className="flex flex-row items-center justify-between gap-2 p-3 pb-2 cursor-pointer" data-testid="button-toggle-uncleared">
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <Receipt className="h-4 w-4 text-orange-600" />
+                  <Receipt className="h-4 w-4 text-orange-500" />
                   <span className="text-orange-700 dark:text-orange-400">{t("salaries.unclearedDeductions")}</span>
                   <span className="text-sm font-normal text-orange-600/70">({unclearedDeductions.length})</span>
                 </CardTitle>
                 <div className="flex items-center gap-2">
-                  <span className="text-orange-600 font-bold text-sm">{formatCurrency(totalUncleared)} DH</span>
-                  <ChevronDown className={`h-4 w-4 text-orange-600 transition-transform ${unclearedOpen ? "rotate-180" : ""}`} />
+                  <span className="text-orange-600 font-bold text-sm" data-testid="text-uncleared-total">{formatCurrency(totalUncleared)} DH</span>
+                  <ChevronDown className={`h-4 w-4 text-orange-500 transition-transform ${unclearedOpen ? "rotate-180" : ""}`} />
                 </div>
               </CardHeader>
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <CardContent className="p-3 pt-0 space-y-2">
+              <CardContent className="px-3 pb-3 pt-0 space-y-2">
                 <p className="text-xs text-orange-600/70 dark:text-orange-400/70 mb-2">{t("salaries.unclearedDeductionsDesc")}</p>
                 {unclearedDeductions.map((d) => (
-                  <div key={d.id} className="p-3 bg-white/60 dark:bg-white/5 rounded-lg flex items-center justify-between gap-2">
+                  <div key={d.id} className="p-3 rounded-lg glass-subtle flex items-center justify-between gap-2" data-testid={`uncleared-item-${d.id}`}>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-medium">{d.staffName}</span>
-                        <span className="text-xs px-1.5 py-0.5 bg-orange-100 dark:bg-orange-900/40 rounded text-orange-700 dark:text-orange-400">{getDeductionTypeLabel(d.type)}</span>
+                        <span className="liquid-glass-chip text-xs">{getDeductionTypeLabel(d.type)}</span>
                       </div>
                       <div className="text-xs text-muted-foreground truncate">{d.description}</div>
                       <div className="flex gap-2 text-sm mt-0.5">
@@ -438,9 +470,10 @@ export default function Salaries() {
                     <Button
                       size="sm"
                       variant="outline"
-                      className="h-8 text-xs border-green-300 text-green-700 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-950/30 shrink-0"
+                      className="shrink-0"
                       disabled={clearDeductionMutation.isPending}
                       onClick={() => clearDeductionMutation.mutate(d.id)}
+                      data-testid={`button-clear-uncleared-${d.id}`}
                     >
                       <CheckCircle className="h-3 w-3 me-1" />
                       {t("salaries.markAsCleared")}
@@ -455,7 +488,7 @@ export default function Salaries() {
 
       <div className="flex gap-2 flex-wrap">
         <Select value={period} onValueChange={(v) => setPeriod(v as PeriodType)}>
-          <SelectTrigger className="w-28 h-9 text-sm">
+          <SelectTrigger className="w-28 text-sm" data-testid="select-period">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -469,7 +502,7 @@ export default function Salaries() {
         {period !== "custom" ? (
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="h-9 text-sm px-3">
+              <Button variant="outline" size="sm" data-testid="button-select-date">
                 <CalendarIcon className="h-4 w-4 mr-2" />
                 {format(selectedDate, "d/M/yy")}
               </Button>
@@ -487,7 +520,7 @@ export default function Salaries() {
           <>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9 text-sm px-3">
+                <Button variant="outline" size="sm" data-testid="button-start-date">
                   <CalendarIcon className="h-4 w-4 mr-1" />
                   {format(customStartDate, "d/M/yy")}
                 </Button>
@@ -501,10 +534,10 @@ export default function Salaries() {
                 />
               </PopoverContent>
             </Popover>
-            <span className="text-muted-foreground self-center">→</span>
+            <span className="text-muted-foreground self-center">&rarr;</span>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9 text-sm px-3">
+                <Button variant="outline" size="sm" data-testid="button-end-date">
                   <CalendarIcon className="h-4 w-4 mr-1" />
                   {format(customEndDate, "d/M/yy")}
                 </Button>
@@ -522,7 +555,7 @@ export default function Salaries() {
         )}
 
         <Select value={selectedStaff} onValueChange={setSelectedStaff}>
-          <SelectTrigger className="w-28 h-9 text-sm">
+          <SelectTrigger className="w-28 text-sm" data-testid="select-staff-filter">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -534,43 +567,73 @@ export default function Salaries() {
         </Select>
       </div>
 
+      {/* Summary Stats - Glass Cards */}
       <div className="grid grid-cols-2 gap-2">
-        <Card>
+        <Card className="glass-card" data-testid="stat-total-revenue">
           <CardContent className="p-3">
-            <p className="text-sm text-muted-foreground">{t("salaries.totalRevenue")}</p>
-            <p className="text-2xl font-bold">{formatCurrency(totalRevenue)}</p>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-7 h-7 rounded-lg bg-primary/15 flex items-center justify-center">
+                <DollarSign className="h-3.5 w-3.5 text-primary" />
+              </div>
+              <p className="text-xs text-muted-foreground">{t("salaries.totalRevenue")}</p>
+            </div>
+            <p className="text-xl font-bold" data-testid="text-total-revenue">{formatCurrency(totalRevenue)}</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="glass-card" data-testid="stat-commissions">
           <CardContent className="p-3">
-            <p className="text-sm text-muted-foreground">{t("salaries.staffCommissions")}</p>
-            <p className="text-2xl font-bold text-green-600">{formatCurrency(totalCommissions)}</p>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-7 h-7 rounded-lg bg-green-500/15 flex items-center justify-center">
+                <Users className="h-3.5 w-3.5 text-green-600" />
+              </div>
+              <p className="text-xs text-muted-foreground">{t("salaries.staffCommissions")}</p>
+            </div>
+            <p className="text-xl font-bold text-green-600" data-testid="text-total-commissions">{formatCurrency(totalCommissions)}</p>
           </CardContent>
         </Card>
-        <Card className="bg-primary/5">
+        <Card className="glass-card" data-testid="stat-salon-share">
           <CardContent className="p-3">
-            <p className="text-sm text-muted-foreground">{t("salaries.salonShare")}</p>
-            <p className="text-2xl font-bold text-primary">{formatCurrency(salonPortion)}</p>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-7 h-7 rounded-lg bg-primary/15 flex items-center justify-center">
+                <Building2 className="h-3.5 w-3.5 text-primary" />
+              </div>
+              <p className="text-xs text-muted-foreground">{t("salaries.salonShare")}</p>
+            </div>
+            <p className="text-xl font-bold text-primary" data-testid="text-salon-share">{formatCurrency(salonPortion)}</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="glass-card" data-testid="stat-appointments">
           <CardContent className="p-3">
-            <p className="text-sm text-muted-foreground">{t("salaries.appointmentsCount")}</p>
-            <p className="text-2xl font-bold">{totalAppointments}</p>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-7 h-7 rounded-lg bg-blue-500/15 flex items-center justify-center">
+                <CalendarIcon className="h-3.5 w-3.5 text-blue-600" />
+              </div>
+              <p className="text-xs text-muted-foreground">{t("salaries.appointmentsCount")}</p>
+            </div>
+            <p className="text-xl font-bold" data-testid="text-total-appointments">{totalAppointments}</p>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
-        <CardHeader className="p-3 pb-2">
-          <CardTitle className="text-base">{t("salaries.budget")}</CardTitle>
+      {/* Salon Budget - Glass Card */}
+      <Card className="glass-card" data-testid="card-salon-budget">
+        <CardHeader className="p-4 pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <div className="w-8 h-8 rounded-lg bg-primary/15 flex items-center justify-center">
+              <Briefcase className="h-4 w-4 text-primary" />
+            </div>
+            {t("salaries.budget")}
+          </CardTitle>
         </CardHeader>
-        <CardContent className="p-3 pt-0 space-y-2">
-          <div className="p-3 bg-primary/5 rounded-lg space-y-1.5">
-            <p className="text-sm font-medium">{t("salaries.salonAccount")}</p>
+        <CardContent className="px-4 pb-4 pt-0 space-y-3">
+          <div className="p-3 rounded-xl bg-primary/5 dark:bg-primary/10 space-y-1.5">
+            <p className="text-sm font-medium flex items-center gap-1.5">
+              <Building2 className="h-3.5 w-3.5 text-primary" />
+              {t("salaries.salonAccount")}
+            </p>
             <div className="flex justify-between text-sm">
               <span>{t("salaries.salonRevenueShare")}</span>
-              <span className="text-primary">{formatCurrency(salonPortion)}</span>
+              <span className="text-primary font-medium" data-testid="text-salon-revenue-share">{formatCurrency(salonPortion)}</span>
             </div>
             {totalPaidBack > 0 && (
               <div className="flex justify-between text-sm text-green-600">
@@ -578,26 +641,29 @@ export default function Salaries() {
                 <span>+{formatCurrency(totalPaidBack)}</span>
               </div>
             )}
-            <div className="flex justify-between text-sm text-red-600">
+            <div className="flex justify-between text-sm text-red-500">
               <span>{t("salaries.totalExpenses")}</span>
               <span>-{formatCurrency(totalExpenses)}</span>
             </div>
-            <div className="flex justify-between text-base font-bold border-t pt-1">
+            <div className="flex justify-between text-base font-bold border-t border-border/50 pt-1.5 mt-1">
               <span>{t("salaries.salonNetProfit")}</span>
-              <span className={netProfit >= 0 ? 'text-green-600' : 'text-red-600'}>
+              <span className={netProfit >= 0 ? 'text-green-600' : 'text-red-500'} data-testid="text-net-profit">
                 {formatCurrency(netProfit)}
               </span>
             </div>
             {totalPending > 0 && (
-              <div className="flex justify-between text-sm text-orange-600 dark:text-orange-400 border-t pt-1">
+              <div className="flex justify-between text-sm text-orange-600 dark:text-orange-400 border-t border-border/50 pt-1">
                 <span>{t("salaries.pendingDeductions")}</span>
                 <span>{formatCurrency(totalPending)}</span>
               </div>
             )}
           </div>
 
-          <div className="p-3 bg-green-50 dark:bg-green-950/30 rounded-lg space-y-1.5">
-            <p className="text-sm font-medium">{t("salaries.staffAccount")}</p>
+          <div className="p-3 rounded-xl bg-green-50/80 dark:bg-green-950/20 space-y-1.5">
+            <p className="text-sm font-medium flex items-center gap-1.5">
+              <Users className="h-3.5 w-3.5 text-green-600" />
+              {t("salaries.staffAccount")}
+            </p>
             {staff.map((s) => {
               const earning = staffEarnings.find(e => e.name === s.name);
               const staffCommission = earning ? earning.totalCommission : 0;
@@ -607,21 +673,21 @@ export default function Salaries() {
               const staffNet = staffCommission - staffDeductionAmount;
               if (staffCommission === 0 && staffDeductionAmount === 0) return null;
               return (
-                <div key={s.id} className="flex justify-between items-center text-sm py-0.5">
+                <div key={s.id} className="flex justify-between items-center text-sm py-0.5" data-testid={`text-staff-budget-${s.id}`}>
                   <span>{s.name}</span>
                   <div className="flex gap-2 items-center">
                     <span className="text-green-600">{formatCurrency(staffCommission)}</span>
                     {staffDeductionAmount > 0 && (
-                      <span className="text-red-600">-{formatCurrency(staffDeductionAmount)}</span>
+                      <span className="text-red-500">-{formatCurrency(staffDeductionAmount)}</span>
                     )}
-                    <span className={`font-semibold min-w-[60px] text-end ${staffNet < 0 ? 'text-red-600' : ''}`}>{formatCurrency(staffNet)}</span>
+                    <span className={`font-semibold min-w-[60px] text-end ${staffNet < 0 ? 'text-red-500' : ''}`}>{formatCurrency(staffNet)}</span>
                   </div>
                 </div>
               );
             })}
-            <div className="flex justify-between text-base font-bold border-t pt-1">
+            <div className="flex justify-between text-base font-bold border-t border-green-200/50 dark:border-green-800/30 pt-1.5">
               <span>{t("salaries.netDueToStaff")}</span>
-              <span className={netStaffPayable >= 0 ? 'text-green-600' : 'text-red-600'}>
+              <span className={netStaffPayable >= 0 ? 'text-green-600' : 'text-red-500'} data-testid="text-net-due-staff">
                 {formatCurrency(netStaffPayable)}
               </span>
             </div>
@@ -629,169 +695,148 @@ export default function Salaries() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="p-3 pb-2">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Wallet className="h-4 w-4" />
-            {t("salaries.employeeWallet")}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-3 pt-0 space-y-2">
-          {staff.map((s) => {
-            const lastPayment = staffPayments
-              .filter(p => p.staffId === s.id)
-              .sort((a, b) => new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime())[0];
-            const lastPaymentDate = lastPayment ? new Date(lastPayment.paidAt) : null;
+      {/* Individual Staff Cards */}
+      <div className="space-y-3">
+        <h2 className="text-base font-semibold flex items-center gap-2" data-testid="text-staff-earnings-header">
+          <BarChart3 className="h-4 w-4 text-primary" />
+          {t("salaries.staffEarningsDetails")}
+        </h2>
+        
+        {(selectedStaff === "all" ? staff : staff.filter(s => s.id === parseInt(selectedStaff))).map((s) => {
+          const earning = staffEarnings.find(e => e.name === s.name);
+          const wallet = getStaffWalletData(s);
+          const staffPendingDeductions = pendingDeductions
+            .filter(d => d.staffId === s.id || (!d.staffId && d.staffName === s.name));
+          const staffDeductionAmount = staffPendingDeductions.reduce((sum, d) => sum + d.amount, 0);
 
-            const earningsSincePayment = appointments
-              .filter(apt => {
-                if (!apt.paid) return false;
-                const matchesStaff = apt.staffId === s.id || (!apt.staffId && apt.staff === s.name);
-                if (!matchesStaff) return false;
-                if (lastPaymentDate) {
-                  const aptCreated = apt.createdAt ? new Date(apt.createdAt) : parseISO(apt.date);
-                  return isAfter(aptCreated, lastPaymentDate);
-                }
-                return true;
-              })
-              .reduce((sum, apt) => {
-                const serviceName = apt.service || "Unknown";
-                const commissionPercent = getServiceCommission(serviceName, s.name);
-                return sum + (apt.total * commissionPercent) / 100;
-              }, 0);
-
-            const pendingStaffDeductions = deductions
-              .filter(d => !d.cleared && (d.staffId === s.id || (!d.staffId && d.staffName === s.name)))
-              .reduce((sum, d) => sum + d.amount, 0);
-
-            const walletBalance = Math.max(0, earningsSincePayment - pendingStaffDeductions);
-
-            return (
-              <div key={s.id} className="p-3 bg-muted/50 rounded-lg" data-testid={`wallet-staff-${s.id}`}>
-                <div className="flex justify-between items-center">
-                  <div className="flex-1 min-w-0">
-                    <span className="font-medium text-base">{s.name}</span>
-                    <div className="text-xs text-muted-foreground mt-0.5">
-                      {t("salaries.lastPaid")}: {lastPaymentDate ? format(lastPaymentDate, "d/M/yy") : t("salaries.never")}
+          return (
+            <Card key={s.id} className="glass-card" data-testid={`staff-card-${s.id}`}>
+              <CardContent className="p-0">
+                {/* Staff Header with Photo */}
+                <div className="p-4 pb-3">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-12 w-12 border-2 border-primary/20" data-testid={`img-avatar-${s.id}`}>
+                      <AvatarImage src={s.photoUrl || undefined} alt={s.name} />
+                      <AvatarFallback className="bg-primary/10 text-primary font-semibold text-lg">
+                        {s.name.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-base" data-testid={`text-staff-name-${s.id}`}>{s.name}</h3>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                        <span data-testid={`text-staff-appointments-${s.id}`}>{earning?.appointmentsCount || 0} {t("salaries.appointmentsCount").toLowerCase()}</span>
+                        {wallet.lastPaymentDate && (
+                          <>
+                            <span>-</span>
+                            <span data-testid={`text-staff-last-paid-${s.id}`}>{t("salaries.lastPaid")}: {format(wallet.lastPaymentDate, "d/M/yy")}</span>
+                          </>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex gap-3 mt-1 text-sm">
-                      <span className="text-green-600">{formatCurrency(earningsSincePayment)}</span>
-                      {pendingStaffDeductions > 0 && (
-                        <span className="text-red-600">-{formatCurrency(pendingStaffDeductions)}</span>
-                      )}
-                    </div>
-                    <div className="text-base font-bold mt-0.5">
-                      <span className={walletBalance >= 0 ? 'text-green-600' : 'text-red-600'}>
-                        {t("salaries.walletBalance")}: {formatCurrency(walletBalance)}
-                      </span>
-                    </div>
+                    {wallet.walletBalance > 0 && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="shrink-0"
+                        disabled={createPaymentMutation.isPending}
+                        onClick={() => createPaymentMutation.mutate({
+                          staffId: s.id,
+                          staffName: s.name,
+                          amount: wallet.walletBalance,
+                        })}
+                        data-testid={`button-pay-staff-${s.id}`}
+                      >
+                        <CheckCircle className="h-3 w-3 me-1" />
+                        {t("salaries.markAsPaid")}
+                      </Button>
+                    )}
                   </div>
-                  {walletBalance > 0 && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="shrink-0 border-green-300 text-green-700 dark:border-green-700 dark:text-green-400"
-                      disabled={createPaymentMutation.isPending}
-                      onClick={() => createPaymentMutation.mutate({
-                        staffId: s.id,
-                        staffName: s.name,
-                        amount: walletBalance,
-                      })}
-                      data-testid={`button-pay-staff-${s.id}`}
-                    >
-                      <CheckCircle className="h-3 w-3 me-1" />
-                      {t("salaries.markAsPaid")}
-                    </Button>
-                  )}
                 </div>
-              </div>
-            );
-          })}
-          {staff.length === 0 && (
-            <p className="text-center text-muted-foreground py-4 text-sm">
-              {t("salaries.noEarnings")}
-            </p>
-          )}
-        </CardContent>
-      </Card>
 
-      <Card>
-        <CardHeader className="p-3 pb-2">
-          <CardTitle className="text-base">{t("salaries.staffEarningsDetails")}</CardTitle>
-        </CardHeader>
-        <CardContent className="p-3 pt-0 space-y-2">
-          {staffEarnings.map((earning) => (
-            <div key={earning.name} className="p-3 bg-muted/50 rounded-lg">
-              <div className="flex justify-between items-center">
-                <span className="font-medium text-base">{earning.name}</span>
-                <span className="text-sm text-muted-foreground">{earning.appointmentsCount} rdv</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 mt-1 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Rev:</span>
-                  <span>{formatCurrency(earning.totalRevenue)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Com:</span>
-                  <span className="text-green-600">{formatCurrency(earning.totalCommission)}</span>
-                </div>
-              </div>
-            </div>
-          ))}
-          {staffEarnings.length === 0 && (
-            <p className="text-center text-muted-foreground py-4 text-sm">
-              {t("salaries.noDataForPeriod")}
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      {selectedStaff !== "all" && (
-        <Card>
-          <CardHeader className="p-3 pb-2">
-            <CardTitle className="text-base">{t("salaries.serviceDetails")} - {staff.find(s => s.id === parseInt(selectedStaff))?.name}</CardTitle>
-          </CardHeader>
-          <CardContent className="p-3 pt-0 space-y-2">
-            {staffEarnings
-              .find((e) => e.name === staff.find(s => s.id === parseInt(selectedStaff))?.name)
-              ?.services &&
-              Object.entries(
-                staffEarnings.find((e) => e.name === staff.find(s => s.id === parseInt(selectedStaff))?.name)!.services
-              ).map(([serviceName, data]) => (
-                <div key={serviceName} className="p-3 bg-muted/50 rounded-lg">
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium text-sm">{serviceName}</span>
-                    <span className="text-sm text-muted-foreground">{getServiceCommission(serviceName)}% | x{data.count}</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 mt-1 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Rev:</span>
-                      <span>{formatCurrency(data.revenue)}</span>
+                {/* Earnings Row */}
+                <div className="px-4 pb-3">
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="p-2 rounded-lg bg-muted/40 dark:bg-muted/20 text-center" data-testid={`text-staff-revenue-${s.id}`}>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{t("salaries.totalRevenue").split(' ').pop()}</p>
+                      <p className="text-sm font-bold mt-0.5">{formatCurrency(earning?.totalRevenue || 0)}</p>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Com:</span>
-                      <span className="text-green-600">{formatCurrency(data.commission)}</span>
+                    <div className="p-2 rounded-lg bg-green-50/80 dark:bg-green-950/20 text-center" data-testid={`text-staff-commission-${s.id}`}>
+                      <p className="text-[10px] text-green-600 uppercase tracking-wider">Commission</p>
+                      <p className="text-sm font-bold text-green-600 mt-0.5">{formatCurrency(earning?.totalCommission || 0)}</p>
+                    </div>
+                    <div className="p-2 rounded-lg bg-primary/5 dark:bg-primary/10 text-center" data-testid={`text-staff-wallet-${s.id}`}>
+                      <p className="text-[10px] text-primary uppercase tracking-wider">{t("salaries.walletBalance").split(':')[0] || "Wallet"}</p>
+                      <p className={`text-sm font-bold mt-0.5 ${wallet.walletBalance > 0 ? 'text-primary' : 'text-muted-foreground'}`}>
+                        {formatCurrency(wallet.walletBalance)}
+                      </p>
                     </div>
                   </div>
                 </div>
-              ))}
-          </CardContent>
-        </Card>
-      )}
 
+                {/* Deductions if any */}
+                {staffDeductionAmount > 0 && (
+                  <div className="px-4 pb-3">
+                    <div className="p-2 rounded-lg bg-orange-50/80 dark:bg-orange-950/20 flex items-center justify-between" data-testid={`text-staff-deductions-${s.id}`}>
+                      <span className="text-xs text-orange-600 dark:text-orange-400">{t("salaries.pendingDeductions")}</span>
+                      <span className="text-sm font-semibold text-orange-600 dark:text-orange-400">-{formatCurrency(staffDeductionAmount)}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Service Breakdown */}
+                {earning && Object.keys(earning.services).length > 0 && (
+                  <div className="px-4 pb-4">
+                    <div className="space-y-1">
+                      {Object.entries(earning.services).map(([serviceName, data]) => (
+                        <div key={serviceName} className="flex items-center justify-between py-1.5 border-t border-border/30 first:border-0" data-testid={`text-service-${s.id}-${serviceName}`}>
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <span className="text-sm truncate">{serviceName}</span>
+                            <span className="liquid-glass-chip text-[10px] shrink-0">x{data.count}</span>
+                          </div>
+                          <div className="flex items-center gap-3 shrink-0">
+                            <span className="text-xs text-muted-foreground">{formatCurrency(data.revenue)}</span>
+                            <span className="text-sm font-medium text-green-600">{formatCurrency(data.commission)}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Empty state */}
+                {(!earning || earning.appointmentsCount === 0) && (
+                  <div className="px-4 pb-4">
+                    <p className="text-center text-xs text-muted-foreground py-2">{t("salaries.noDataForPeriod")}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
+
+        {staff.length === 0 && (
+          <Card className="glass-card">
+            <CardContent className="p-6">
+              <p className="text-center text-muted-foreground text-sm">{t("salaries.noEarnings")}</p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Expenses Section */}
       <Collapsible open={expensesOpen} onOpenChange={setExpensesOpen}>
-        <Card>
+        <Card className="glass-card">
           <CollapsibleTrigger asChild>
-            <CardHeader className="flex flex-row items-center justify-between p-3 pb-2 cursor-pointer hover:bg-muted/50 transition-colors">
+            <CardHeader className="flex flex-row items-center justify-between gap-2 p-3 pb-2 cursor-pointer" data-testid="button-toggle-expenses">
               <CardTitle className="flex items-center gap-2 text-base">
-                <Receipt className="h-4 w-4" />
+                <Receipt className="h-4 w-4 text-red-500" />
                 {t("salaries.expensesAndCosts")}
                 <span className="text-sm font-normal text-muted-foreground">({filteredCharges.length})</span>
               </CardTitle>
               <div className="flex items-center gap-2">
                 <Dialog open={showChargeDialog} onOpenChange={setShowChargeDialog}>
                   <DialogTrigger asChild>
-                    <Button size="sm" className="h-8 text-sm px-3" onClick={(e) => e.stopPropagation()}>
+                    <Button size="sm" onClick={(e) => e.stopPropagation()} data-testid="button-add-expense">
                       <Plus className="h-4 w-4 mr-1" />
                       +
                     </Button>
@@ -804,7 +849,7 @@ export default function Salaries() {
                       <div>
                         <Label>{t("salaries.expenseType")}</Label>
                         <Select value={newCharge.type} onValueChange={(v) => setNewCharge({ ...newCharge, type: v })}>
-                          <SelectTrigger>
+                          <SelectTrigger data-testid="select-expense-type">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -823,6 +868,7 @@ export default function Salaries() {
                           value={newCharge.name}
                           onChange={(e) => setNewCharge({ ...newCharge, name: e.target.value })}
                           placeholder={t("salaries.expenseDescription")}
+                          data-testid="input-expense-name"
                         />
                       </div>
                       <div>
@@ -832,6 +878,7 @@ export default function Salaries() {
                           value={newCharge.amount || ""}
                           onChange={(e) => setNewCharge({ ...newCharge, amount: parseFloat(e.target.value) || 0 })}
                           placeholder="0"
+                          data-testid="input-expense-amount"
                         />
                       </div>
                       <div>
@@ -840,12 +887,14 @@ export default function Salaries() {
                           type="date"
                           value={newCharge.date}
                           onChange={(e) => setNewCharge({ ...newCharge, date: e.target.value })}
+                          data-testid="input-expense-date"
                         />
                       </div>
                       <Button
                         className="w-full"
                         onClick={() => createChargeMutation.mutate(newCharge)}
                         disabled={!newCharge.name || !newCharge.amount || createChargeMutation.isPending}
+                        data-testid="button-save-expense"
                       >
                         {t("common.save")}
                       </Button>
@@ -857,34 +906,24 @@ export default function Salaries() {
             </CardHeader>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <CardContent className="p-3 pt-0 space-y-2">
+            <CardContent className="px-3 pb-3 pt-0 space-y-2">
               {filteredCharges.map((charge) => (
-                <div key={charge.id} className="p-3 bg-red-50 rounded-lg flex justify-between items-center">
+                <div key={charge.id} className="p-3 rounded-lg glass-subtle flex justify-between items-center" data-testid={`expense-item-${charge.id}`}>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm font-medium truncate">{charge.name}</span>
-                      <span className="text-xs px-1.5 py-0.5 bg-red-100 rounded text-red-700">{getChargeTypeLabel(charge.type)}</span>
+                      <span className="liquid-glass-chip text-xs">{getChargeTypeLabel(charge.type)}</span>
                     </div>
                     <div className="flex gap-2 text-sm mt-0.5">
-                      <span className="text-red-600 font-semibold">{formatCurrency(charge.amount)}</span>
+                      <span className="text-red-500 font-semibold">{formatCurrency(charge.amount)}</span>
                       <span className="text-muted-foreground">{format(parseISO(charge.date), "d/M/yy")}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => setEditingCharge(charge)}
-                    >
+                    <Button variant="ghost" size="icon" onClick={() => setEditingCharge(charge)} data-testid={`button-edit-expense-${charge.id}`}>
                       <Pencil className="h-4 w-4 text-blue-600" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => deleteChargeMutation.mutate(charge.id)}
-                    >
+                    <Button variant="ghost" size="icon" onClick={() => deleteChargeMutation.mutate(charge.id)} data-testid={`button-delete-expense-${charge.id}`}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>
@@ -900,19 +939,20 @@ export default function Salaries() {
         </Card>
       </Collapsible>
 
+      {/* Deductions Section */}
       <Collapsible open={deductionsOpen} onOpenChange={setDeductionsOpen}>
-        <Card>
+        <Card className="glass-card">
           <CollapsibleTrigger asChild>
-            <CardHeader className="flex flex-row items-center justify-between p-3 pb-2 cursor-pointer hover:bg-muted/50 transition-colors">
+            <CardHeader className="flex flex-row items-center justify-between gap-2 p-3 pb-2 cursor-pointer" data-testid="button-toggle-deductions">
               <CardTitle className="flex items-center gap-2 text-base">
-                <UserMinus className="h-4 w-4" />
+                <UserMinus className="h-4 w-4 text-sky-500" />
                 {t("salaries.staffDeductions")}
                 <span className="text-sm font-normal text-muted-foreground">({filteredDeductions.length})</span>
               </CardTitle>
               <div className="flex items-center gap-2">
                 <Dialog open={showDeductionDialog} onOpenChange={setShowDeductionDialog}>
                   <DialogTrigger asChild>
-                    <Button size="sm" className="h-8 text-sm px-3" onClick={(e) => e.stopPropagation()}>
+                    <Button size="sm" onClick={(e) => e.stopPropagation()} data-testid="button-add-deduction">
                       <Plus className="h-4 w-4 mr-1" />
                       +
                     </Button>
@@ -925,7 +965,7 @@ export default function Salaries() {
                       <div>
                         <Label>{t("salaries.staff")}</Label>
                         <Select value={newDeduction.staffName} onValueChange={(v) => setNewDeduction({ ...newDeduction, staffName: v })}>
-                          <SelectTrigger>
+                          <SelectTrigger data-testid="select-deduction-staff">
                             <SelectValue placeholder={t("salaries.selectStaff")} />
                           </SelectTrigger>
                           <SelectContent>
@@ -938,7 +978,7 @@ export default function Salaries() {
                       <div>
                         <Label>{t("salaries.deductionType")}</Label>
                         <Select value={newDeduction.type} onValueChange={(v) => setNewDeduction({ ...newDeduction, type: v as "advance" | "loan" | "penalty" | "other" })}>
-                          <SelectTrigger>
+                          <SelectTrigger data-testid="select-deduction-type">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -955,6 +995,7 @@ export default function Salaries() {
                           value={newDeduction.description}
                           onChange={(e) => setNewDeduction({ ...newDeduction, description: e.target.value })}
                           placeholder={t("salaries.deductionDescription")}
+                          data-testid="input-deduction-description"
                         />
                       </div>
                       <div>
@@ -964,6 +1005,7 @@ export default function Salaries() {
                           value={newDeduction.amount || ""}
                           onChange={(e) => setNewDeduction({ ...newDeduction, amount: parseFloat(e.target.value) || 0 })}
                           placeholder="0"
+                          data-testid="input-deduction-amount"
                         />
                       </div>
                       <div>
@@ -972,12 +1014,14 @@ export default function Salaries() {
                           type="date"
                           value={newDeduction.date}
                           onChange={(e) => setNewDeduction({ ...newDeduction, date: e.target.value })}
+                          data-testid="input-deduction-date"
                         />
                       </div>
                       <Button
                         className="w-full"
                         onClick={() => createDeductionMutation.mutate(newDeduction)}
                         disabled={!newDeduction.staffName || !newDeduction.description || !newDeduction.amount || createDeductionMutation.isPending}
+                        data-testid="button-save-deduction"
                       >
                         {t("common.save")}
                       </Button>
@@ -989,17 +1033,17 @@ export default function Salaries() {
             </CardHeader>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <CardContent className="p-3 pt-0 space-y-2">
+            <CardContent className="px-3 pb-3 pt-0 space-y-2">
               {filteredDeductions.map((deduction) => (
-                <div key={deduction.id} className={`p-3 rounded-lg flex justify-between items-center ${deduction.cleared ? 'bg-green-50 dark:bg-green-950/20' : 'bg-sky-50 dark:bg-sky-950/20'}`}>
+                <div key={deduction.id} className="p-3 rounded-lg glass-subtle flex justify-between items-center" data-testid={`deduction-item-${deduction.id}`}>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm font-medium">{deduction.staffName}</span>
-                      <span className="text-xs px-1.5 py-0.5 bg-sky-100 dark:bg-sky-900/40 rounded text-sky-700 dark:text-sky-400">{getDeductionTypeLabel(deduction.type)}</span>
+                      <span className="liquid-glass-chip text-xs">{getDeductionTypeLabel(deduction.type)}</span>
                       {deduction.cleared ? (
-                        <span className="text-xs px-1.5 py-0.5 bg-green-100 dark:bg-green-900/40 rounded text-green-700 dark:text-green-400">{t("salaries.paidBack")}</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400">{t("salaries.paidBack")}</span>
                       ) : (
-                        <span className="text-xs px-1.5 py-0.5 bg-orange-100 dark:bg-orange-900/40 rounded text-orange-700 dark:text-orange-400">{t("salaries.pending")}</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400">{t("salaries.pending")}</span>
                       )}
                     </div>
                     <div className="text-sm text-muted-foreground truncate">{deduction.description}</div>
@@ -1020,18 +1064,10 @@ export default function Salaries() {
                         <CheckCircle className="h-4 w-4 text-green-600" />
                       </Button>
                     )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setEditingDeduction(deduction)}
-                    >
+                    <Button variant="ghost" size="icon" onClick={() => setEditingDeduction(deduction)} data-testid={`button-edit-deduction-${deduction.id}`}>
                       <Pencil className="h-4 w-4 text-blue-600" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => deleteDeductionMutation.mutate(deduction.id)}
-                    >
+                    <Button variant="ghost" size="icon" onClick={() => deleteDeductionMutation.mutate(deduction.id)} data-testid={`button-delete-deduction-${deduction.id}`}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>
@@ -1047,6 +1083,7 @@ export default function Salaries() {
         </Card>
       </Collapsible>
 
+      {/* Edit Expense Dialog */}
       <Dialog open={!!editingCharge} onOpenChange={(open) => !open && setEditingCharge(null)}>
         <DialogContent>
           <DialogHeader>
@@ -1057,7 +1094,7 @@ export default function Salaries() {
               <div>
                 <Label>{t("salaries.expenseType")}</Label>
                 <Select value={editingCharge.type} onValueChange={(v) => setEditingCharge({ ...editingCharge, type: v })}>
-                  <SelectTrigger>
+                  <SelectTrigger data-testid="select-edit-expense-type">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1075,6 +1112,7 @@ export default function Salaries() {
                 <Input
                   value={editingCharge.name}
                   onChange={(e) => setEditingCharge({ ...editingCharge, name: e.target.value })}
+                  data-testid="input-edit-expense-name"
                 />
               </div>
               <div>
@@ -1083,6 +1121,7 @@ export default function Salaries() {
                   type="number"
                   value={editingCharge.amount || ""}
                   onChange={(e) => setEditingCharge({ ...editingCharge, amount: parseFloat(e.target.value) || 0 })}
+                  data-testid="input-edit-expense-amount"
                 />
               </div>
               <div>
@@ -1091,12 +1130,14 @@ export default function Salaries() {
                   type="date"
                   value={editingCharge.date}
                   onChange={(e) => setEditingCharge({ ...editingCharge, date: e.target.value })}
+                  data-testid="input-edit-expense-date"
                 />
               </div>
               <Button
                 className="w-full"
                 onClick={() => updateChargeMutation.mutate({ id: editingCharge.id, data: { type: editingCharge.type, name: editingCharge.name, amount: editingCharge.amount, date: editingCharge.date } })}
                 disabled={!editingCharge.name || !editingCharge.amount || updateChargeMutation.isPending}
+                data-testid="button-update-expense"
               >
                 {t("common.save")}
               </Button>
@@ -1105,6 +1146,7 @@ export default function Salaries() {
         </DialogContent>
       </Dialog>
 
+      {/* Edit Deduction Dialog */}
       <Dialog open={!!editingDeduction} onOpenChange={(open) => !open && setEditingDeduction(null)}>
         <DialogContent>
           <DialogHeader>
@@ -1115,7 +1157,7 @@ export default function Salaries() {
               <div>
                 <Label>{t("salaries.staff")}</Label>
                 <Select value={editingDeduction.staffName} onValueChange={(v) => setEditingDeduction({ ...editingDeduction, staffName: v })}>
-                  <SelectTrigger>
+                  <SelectTrigger data-testid="select-edit-deduction-staff">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1128,7 +1170,7 @@ export default function Salaries() {
               <div>
                 <Label>{t("salaries.deductionType")}</Label>
                 <Select value={editingDeduction.type} onValueChange={(v) => setEditingDeduction({ ...editingDeduction, type: v })}>
-                  <SelectTrigger>
+                  <SelectTrigger data-testid="select-edit-deduction-type">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1144,6 +1186,7 @@ export default function Salaries() {
                 <Input
                   value={editingDeduction.description}
                   onChange={(e) => setEditingDeduction({ ...editingDeduction, description: e.target.value })}
+                  data-testid="input-edit-deduction-description"
                 />
               </div>
               <div>
@@ -1152,6 +1195,7 @@ export default function Salaries() {
                   type="number"
                   value={editingDeduction.amount || ""}
                   onChange={(e) => setEditingDeduction({ ...editingDeduction, amount: parseFloat(e.target.value) || 0 })}
+                  data-testid="input-edit-deduction-amount"
                 />
               </div>
               <div>
@@ -1160,12 +1204,14 @@ export default function Salaries() {
                   type="date"
                   value={editingDeduction.date}
                   onChange={(e) => setEditingDeduction({ ...editingDeduction, date: e.target.value })}
+                  data-testid="input-edit-deduction-date"
                 />
               </div>
               <Button
                 className="w-full"
                 onClick={() => updateDeductionMutation.mutate({ id: editingDeduction.id, data: { staffName: editingDeduction.staffName, type: editingDeduction.type, description: editingDeduction.description, amount: editingDeduction.amount, date: editingDeduction.date } })}
                 disabled={!editingDeduction.staffName || !editingDeduction.description || !editingDeduction.amount || updateDeductionMutation.isPending}
+                data-testid="button-update-deduction"
               >
                 {t("common.save")}
               </Button>
