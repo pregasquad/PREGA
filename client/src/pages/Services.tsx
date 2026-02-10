@@ -39,6 +39,8 @@ export default function Services() {
   
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [showAddService, setShowAddService] = useState(false);
+  const [showAddCategory, setShowAddCategory] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Set<number>>(new Set());
 
   const toggleCategory = (categoryId: number) => {
@@ -137,167 +139,18 @@ export default function Services() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-        <div className="lg:col-span-1 space-y-4 md:space-y-6">
-          <Card className="shadow-lg shadow-black/5 border-border/50">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Tag className="w-5 h-5 text-primary" />
-                {t("services.newCategory")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Form {...cForm}>
-                <form onSubmit={cForm.handleSubmit(onCategorySubmit)} className="space-y-4">
-                  <FormField
-                    control={cForm.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl><Input placeholder={t("services.categoryName")} {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button type="submit" className="w-full" disabled={createCategory.isPending}>{t("common.add")}</Button>
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
+      <div className="flex flex-wrap gap-2">
+        <Button data-testid="button-add-service" onClick={() => { sForm.reset(); setShowAddService(true); }}>
+          <Plus className="w-4 h-4" />
+          {t("services.newService")}
+        </Button>
+        <Button data-testid="button-add-category" variant="outline" onClick={() => { cForm.reset(); setShowAddCategory(true); }}>
+          <Tag className="w-4 h-4" />
+          {t("services.newCategory")}
+        </Button>
+      </div>
 
-          <Card className="shadow-lg shadow-black/5 border-border/50">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Scissors className="w-5 h-5 text-primary" />
-                {t("services.newService")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Form {...sForm}>
-                <form onSubmit={sForm.handleSubmit(onServiceSubmit)} className="space-y-4">
-                  <FormField
-                    control={sForm.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t("services.serviceName")}</FormLabel>
-                        <FormControl><Input {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
-                    <FormField
-                      control={sForm.control}
-                      name="price"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("common.price")}</FormLabel>
-                          <FormControl><Input type="number" {...field} /></FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={sForm.control}
-                      name="duration"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("common.duration")}</FormLabel>
-                          <FormControl><Input type="number" {...field} /></FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={sForm.control}
-                      name="commissionPercent"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("services.commissionPercent")}</FormLabel>
-                          <FormControl><Input type="number" min={0} max={100} {...field} /></FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <FormField
-                    control={sForm.control}
-                    name="category"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t("services.category")}</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger><SelectValue placeholder={t("services.selectCategory")} /></SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {categories.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={sForm.control}
-                    name="linkedProductIds"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2">
-                          <Package className="w-4 h-4" />
-                          {t("services.linkedProducts")} ({t("services.optional")})
-                        </FormLabel>
-                        <div className="space-y-2 max-h-32 overflow-y-auto border rounded-md p-2">
-                          {products?.length === 0 ? (
-                            <p className="text-sm text-muted-foreground">{t("services.noProductsAvailable")}</p>
-                          ) : (
-                            products?.map((p) => (
-                              <div key={p.id} className="flex items-center space-x-2">
-                                <Checkbox
-                                  id={`product-${p.id}`}
-                                  checked={(field.value || []).includes(p.id)}
-                                  onCheckedChange={(checked) => {
-                                    const current = field.value || [];
-                                    if (checked) {
-                                      field.onChange([...current, p.id]);
-                                    } else {
-                                      field.onChange(current.filter((id: number) => id !== p.id));
-                                    }
-                                  }}
-                                />
-                                <label htmlFor={`product-${p.id}`} className="text-sm cursor-pointer">
-                                  {p.name} ({p.quantity} {t("services.inStock")})
-                                </label>
-                              </div>
-                            ))
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground">{t("services.autoDeductNote")}</p>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={sForm.control}
-                    name="isStartingPrice"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                        <FormLabel className="text-sm font-normal cursor-pointer">
-                          {t("services.startingPrice")}
-                        </FormLabel>
-                      </FormItem>
-                    )}
-                  />
-                  <Button type="submit" className="w-full" disabled={createService.isPending}>{t("common.add")}</Button>
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="lg:col-span-2 space-y-4">
+      <div className="max-w-4xl space-y-4">
           <Card className="shadow-lg shadow-black/5 border-border/50">
             <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
               <CardTitle>{t("services.currentServices")}</CardTitle>
@@ -395,8 +248,158 @@ export default function Services() {
               })}
             </CardContent>
           </Card>
-        </div>
       </div>
+
+      <Dialog open={showAddService} onOpenChange={setShowAddService}>
+        <DialogContent>
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><Scissors className="w-5 h-5 text-primary" />{t("services.newService")}</DialogTitle></DialogHeader>
+          <Form {...sForm}>
+            <form onSubmit={sForm.handleSubmit((data) => {
+              createService.mutate(data, { onSuccess: () => { sForm.reset(); setShowAddService(false); } });
+            })} className="space-y-4">
+              <FormField
+                control={sForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("services.serviceName")}</FormLabel>
+                    <FormControl><Input {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-3 gap-3">
+                <FormField
+                  control={sForm.control}
+                  name="price"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("common.price")}</FormLabel>
+                      <FormControl><Input type="number" {...field} /></FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={sForm.control}
+                  name="duration"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("common.duration")}</FormLabel>
+                      <FormControl><Input type="number" {...field} /></FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={sForm.control}
+                  name="commissionPercent"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("services.commissionPercent")}</FormLabel>
+                      <FormControl><Input type="number" min={0} max={100} {...field} /></FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={sForm.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("services.category")}</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger><SelectValue placeholder={t("services.selectCategory")} /></SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {categories.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={sForm.control}
+                name="linkedProductIds"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <Package className="w-4 h-4" />
+                      {t("services.linkedProducts")} ({t("services.optional")})
+                    </FormLabel>
+                    <div className="space-y-2 max-h-32 overflow-y-auto border rounded-md p-2">
+                      {products?.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">{t("services.noProductsAvailable")}</p>
+                      ) : (
+                        products?.map((p) => (
+                          <div key={p.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`product-${p.id}`}
+                              checked={(field.value || []).includes(p.id)}
+                              onCheckedChange={(checked) => {
+                                const current = field.value || [];
+                                if (checked) {
+                                  field.onChange([...current, p.id]);
+                                } else {
+                                  field.onChange(current.filter((id: number) => id !== p.id));
+                                }
+                              }}
+                            />
+                            <label htmlFor={`product-${p.id}`} className="text-sm cursor-pointer">
+                              {p.name} ({p.quantity} {t("services.inStock")})
+                            </label>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">{t("services.autoDeductNote")}</p>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={sForm.control}
+                name="isStartingPrice"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormLabel className="text-sm font-normal cursor-pointer">
+                      {t("services.startingPrice")}
+                    </FormLabel>
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" className="w-full" disabled={createService.isPending}>{t("common.add")}</Button>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showAddCategory} onOpenChange={setShowAddCategory}>
+        <DialogContent>
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><Tag className="w-5 h-5 text-primary" />{t("services.newCategory")}</DialogTitle></DialogHeader>
+          <Form {...cForm}>
+            <form onSubmit={cForm.handleSubmit((data) => {
+              createCategory.mutate(data, { onSuccess: () => { cForm.reset(); setShowAddCategory(false); } });
+            })} className="space-y-4">
+              <FormField
+                control={cForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl><Input placeholder={t("services.categoryName")} {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" className="w-full" disabled={createCategory.isPending}>{t("common.add")}</Button>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!editingService} onOpenChange={() => setEditingService(null)}>
         <DialogContent>
