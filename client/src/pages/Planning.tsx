@@ -305,8 +305,6 @@ export default function Planning() {
     };
   }, []);
 
-  // Track data loaded state
-  const dataLoadedRef = useRef(false);
   const [isEditFavoritesOpen, setIsEditFavoritesOpen] = useState(false);
   const [isWaitlistOpen, setIsWaitlistOpen] = useState(false);
   const [servicePopoverOpen, setServicePopoverOpen] = useState(false);
@@ -451,13 +449,10 @@ export default function Planning() {
   // INITIAL AUTO-SCROLL: Scroll once when all data loads (staff + business settings ready)
   const initialScrollDoneRef = useRef(false);
   
-  // Check if business settings are loaded (opening/closing times are set)
-  const hoursReady = Boolean(businessSettings?.openingTime) || Boolean(businessSettings?.closingTime);
-  
-  const dataReady = staffList.length > 0 && (!loadingServices || services.length > 0);
+  const readyForScroll = staffList.length > 0 && !loadingServices && !loadingStaff;
   
   useEffect(() => {
-    if (!isToday || initialScrollDoneRef.current || !dataReady) return;
+    if (!isToday || initialScrollDoneRef.current || !readyForScroll) return;
     
     const timers: NodeJS.Timeout[] = [];
     let cancelled = false;
@@ -468,7 +463,7 @@ export default function Planning() {
       if (liveLineRef.current && boardRef.current) {
         initialScrollDoneRef.current = true;
         scrollToLiveLine(true, true);
-      } else if (attempt < 8) {
+      } else if (attempt < 10) {
         const retryTimer = setTimeout(() => tryScroll(attempt + 1), 200);
         timers.push(retryTimer);
       }
@@ -481,43 +476,38 @@ export default function Planning() {
       cancelled = true;
       timers.forEach(t => clearTimeout(t));
     };
-  }, [isToday, dataReady, scrollToLiveLine]);
+  }, [isToday, readyForScroll, scrollToLiveLine]);
 
-  // FOLLOW LIVE LINE every 30 seconds when currentTime updates
-  // This respects user interaction pause - won't scroll if user interacted in last 30s
   const isFirstRender = useRef(true);
   
   useEffect(() => {
-    // Skip the first render (initial scroll handles that)
     if (isFirstRender.current) {
       isFirstRender.current = false;
       return;
     }
     if (!isToday || !initialScrollDoneRef.current) return;
-    scrollToLiveLine(true); // smooth animation, respects user pause
+    scrollToLiveLine(true);
   }, [isToday, currentTime, scrollToLiveLine]);
 
   // Scroll when visibility changes (returning from background in PWA)
+  // Always register listeners, but no-op inside handler if not ready
   useEffect(() => {
     let visibilityTimers: NodeJS.Timeout[] = [];
     let cancelled = false;
     
     const handleVisibility = () => {
-      // Clear any pending timers from previous visibility changes
       visibilityTimers.forEach(t => clearTimeout(t));
       visibilityTimers = [];
       
-      if (document.visibilityState === 'visible' && isToday) {
-        // Reset user pause when returning to app - they expect to see current time
+      if (document.visibilityState === 'visible' && isToday && readyForScroll) {
         userScrollPauseRef.current = 0;
         
-        // Retry a few times to ensure live line is ready
         const tryScroll = (attempt: number) => {
           if (cancelled) return;
-          if (liveLineRef.current && boardRef.current && isToday) {
-            scrollToLiveLine(true, true); // smooth, force
-          } else if (attempt < 3) {
-            const timer = setTimeout(() => tryScroll(attempt + 1), 100);
+          if (liveLineRef.current && boardRef.current) {
+            scrollToLiveLine(true, true);
+          } else if (attempt < 5) {
+            const timer = setTimeout(() => tryScroll(attempt + 1), 150);
             visibilityTimers.push(timer);
           }
         };
@@ -538,7 +528,7 @@ export default function Planning() {
       window.removeEventListener('focus', handleVisibility);
       window.removeEventListener('pageshow', handleVisibility);
     };
-  }, [isToday, scrollToLiveLine]);
+  }, [isToday, readyForScroll, scrollToLiveLine]);
   
   const hours = useMemo(() => {
     if (businessSettings?.openingTime && businessSettings?.closingTime) {
@@ -648,13 +638,6 @@ export default function Planning() {
       window.location.href = "/";
     }
   }, [hasAuthError]);
-
-  // Mark data as loaded when staff loads (used by initial scroll timing)
-  useEffect(() => {
-    if (staffList.length > 0 && !dataLoadedRef.current) {
-      dataLoadedRef.current = true;
-    }
-  }, [staffList]);
 
   const createMutation = useCreateAppointment();
   const updateMutation = useUpdateAppointment();
