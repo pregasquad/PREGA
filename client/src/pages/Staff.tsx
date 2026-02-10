@@ -314,10 +314,7 @@ export default function Staff() {
                             const file = (e.target as HTMLInputElement).files?.[0];
                             if (file) {
                               if (staffId) {
-                                handlePhotoUpload(staffId, file).then(() => {
-                                  // Refresh the form if it's the current one
-                                  // This is a bit tricky with react-hook-form, but usually invalidateQueries handles the card
-                                });
+                                handlePhotoUpload(staffId, file);
                               } else {
                                 handleFileUploadLocal(e as any);
                               }
