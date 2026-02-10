@@ -632,8 +632,9 @@ export default function Salaries() {
                 const matchesStaff = apt.staffId === s.id || (!apt.staffId && apt.staff === s.name);
                 if (!matchesStaff) return false;
                 if (lastPaymentDate) {
-                  const aptDate = parseISO(apt.date);
-                  return isAfter(aptDate, lastPaymentDate);
+                  const aptDate = startOfDay(parseISO(apt.date));
+                  const paymentDay = startOfDay(lastPaymentDate);
+                  return isAfter(aptDate, paymentDay);
                 }
                 return true;
               })
