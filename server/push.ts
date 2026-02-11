@@ -127,6 +127,13 @@ export async function checkAndNotifyLowStock(): Promise<void> {
   }
 }
 
+function getLocalDateString(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 let lastClosingReminderDate = '';
 
 export async function sendClosingReminderNow(): Promise<void> {
@@ -143,7 +150,7 @@ export async function checkAndSendClosingReminder(): Promise<void> {
     if (!settings) return;
 
     const now = new Date();
-    const todayDate = now.toISOString().split('T')[0];
+    const todayDate = getLocalDateString(now);
 
     if (lastClosingReminderDate === todayDate) return;
 
@@ -161,6 +168,73 @@ export async function checkAndSendClosingReminder(): Promise<void> {
     }
   } catch (error) {
     console.error('[Push] Error sending closing reminder:', error);
+  }
+}
+
+const sentReminderIds = new Set<number>();
+
+export async function checkAndSendAppointmentReminders(): Promise<void> {
+  try {
+    const now = new Date();
+    const todayDate = getLocalDateString(now);
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowDate = getLocalDateString(tomorrow);
+
+    const todayAppointments = await storage.getAppointments(todayDate);
+    const allAppointments = [...(todayAppointments || [])];
+
+    if (currentMinutes >= 22 * 60) {
+      const tomorrowAppointments = await storage.getAppointments(tomorrowDate);
+      if (tomorrowAppointments) {
+        allAppointments.push(...tomorrowAppointments);
+      }
+    }
+
+    if (allAppointments.length === 0) return;
+
+    const { sendAppointmentReminder } = await import('./wawp');
+
+    for (const apt of allAppointments) {
+      if (sentReminderIds.has(apt.id)) continue;
+
+      const phone = apt.phone;
+      if (!phone) continue;
+
+      const [aptHour, aptMin] = apt.startTime.split(':').map(Number);
+      let aptTotalMinutes = aptHour * 60 + aptMin;
+      if (apt.date === tomorrowDate) {
+        aptTotalMinutes += 24 * 60;
+      }
+
+      const minutesUntil = aptTotalMinutes - currentMinutes;
+
+      if (minutesUntil > 0 && minutesUntil <= 120) {
+        sentReminderIds.add(apt.id);
+        try {
+          const clientName = apt.client?.split(' (')[0] || 'Client';
+          const serviceName = apt.service || 'RDV';
+          await sendAppointmentReminder(
+            phone,
+            clientName,
+            apt.date,
+            apt.startTime,
+            serviceName
+          );
+          console.log(`[Reminder] Sent WhatsApp reminder for appointment ${apt.id} (${clientName} at ${apt.startTime})`);
+        } catch (err) {
+          console.error(`[Reminder] Failed to send for appointment ${apt.id}:`, err);
+        }
+      }
+    }
+
+    if (currentMinutes < 5) {
+      sentReminderIds.clear();
+    }
+  } catch (error) {
+    console.error('[Reminder] Error checking appointment reminders:', error);
   }
 }
 
