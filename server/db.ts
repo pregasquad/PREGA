@@ -724,7 +724,7 @@ export async function ensureChargeAttachmentColumns(): Promise<void> {
         WHERE TABLE_NAME = 'charges' AND COLUMN_NAME = 'attachment'
       `);
       if ((rows as any[]).length === 0) {
-        await connection.query(`ALTER TABLE charges ADD COLUMN attachment LONGTEXT NULL`);
+        await connection.query(`ALTER TABLE charges ADD COLUMN attachment LONGTEXT NULL DEFAULT NULL`);
         await connection.query(`ALTER TABLE charges ADD COLUMN attachment_name VARCHAR(500) NULL`);
         console.log("Added attachment columns to charges table");
       }

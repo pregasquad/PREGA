@@ -1,4 +1,4 @@
-import { mysqlTable, text, int, boolean, timestamp, varchar, serial, double, index, json } from "drizzle-orm/mysql-core";
+import { mysqlTable, text, longtext, int, boolean, timestamp, varchar, serial, double, index, json } from "drizzle-orm/mysql-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -140,8 +140,8 @@ export const charges = mysqlTable("charges", {
   amount: double("amount").notNull(),
   date: text("date").notNull(),
   categoryId: int("category_id"),
-  attachment: text("attachment"),
-  attachmentName: text("attachment_name"),
+  attachment: longtext("attachment"),
+  attachmentName: varchar("attachment_name", { length: 500 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
