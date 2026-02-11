@@ -95,111 +95,6 @@ function getWorkDayDate(openingTime?: string, closingTime?: string): Date {
   return startOfToday();
 }
 
-const ServiceSearchPopover = React.memo(function ServiceSearchPopover({
-  services,
-  selectedServices,
-  onSelectService,
-  open,
-  onOpenChange,
-}: {
-  services: Array<{ id: number; name: string; price: number; duration: number; category?: string | null; isStartingPrice?: boolean }>;
-  selectedServices: Array<{ name: string }>;
-  onSelectService: (name: string) => void;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}) {
-  const { t } = useTranslation();
-  const [search, setSearch] = useState("");
-
-  const grouped = useMemo(() => {
-    const groups: Record<string, typeof services> = {};
-    const list = search.trim()
-      ? services.filter(s => s.name.toLowerCase().includes(search.toLowerCase()))
-      : services;
-    list.forEach(s => {
-      const cat = s.category || t("common.other");
-      if (!groups[cat]) groups[cat] = [];
-      groups[cat].push(s);
-    });
-    return groups;
-  }, [services, search, t]);
-
-  return (
-    <Popover open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) setSearch(""); }}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          className="h-11 w-full justify-between rounded-xl text-xs border-0 bg-secondary/50 hover:bg-secondary/70 transition-colors"
-          data-testid="button-add-service"
-        >
-          <span className="flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            {t("planning.addService")}
-          </span>
-          <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent
-        className="w-[calc(100vw-48px)] max-w-[396px] p-0 rounded-2xl glass-card shadow-2xl"
-        align="center"
-        side="top"
-        sideOffset={4}
-        onWheel={(e) => e.stopPropagation()}
-      >
-        <div className="p-3 border-b border-white/20 liquid-gradient-subtle rounded-t-2xl">
-          <Input
-            placeholder={t("planning.searchService")}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="h-10 text-sm rounded-xl border-0 bg-white/80 dark:bg-slate-800/80"
-            data-testid="input-service-search"
-            autoFocus
-          />
-        </div>
-        <div
-          className="max-h-[200px] overflow-y-auto p-2"
-          style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
-          onWheel={(e) => {
-            e.stopPropagation();
-            e.currentTarget.scrollTop += e.deltaY;
-          }}
-          onTouchMove={(e) => e.stopPropagation()}
-        >
-          {Object.entries(grouped).map(([category, categoryServices]) => (
-            <div key={category}>
-              <div className="px-2 py-1.5 text-[10px] font-bold gradient-text uppercase glass-subtle rounded-lg mb-1 sticky top-0">
-                {category}
-              </div>
-              {categoryServices.map(s => (
-                <div
-                  key={s.id}
-                  data-testid={`service-option-${s.id}`}
-                  className={cn(
-                    "flex items-center justify-between p-3 rounded-xl cursor-pointer text-sm mb-1",
-                    "hover:bg-primary/5 dark:hover:bg-primary/10",
-                    selectedServices.some(sel => sel.name === s.name) && "bg-primary/10 dark:bg-primary/20"
-                  )}
-                  onClick={() => {
-                    onSelectService(s.name);
-                    setSearch("");
-                  }}
-                >
-                  <span className="truncate">{s.name}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold gradient-text">{s.isStartingPrice ? `${t("services.startingFrom")} ` : ''}{s.price} DH</span>
-                    <Plus className="w-4 h-4 text-primary" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
-      </PopoverContent>
-    </Popover>
-  );
-});
-
 export default function Planning() {
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === "ar";
@@ -228,7 +123,7 @@ export default function Planning() {
       return true;
     }
   }, [currentUserRole]);
-  // serviceSearch state moved into ServiceSearchPopover component to avoid full-page re-renders on each keystroke
+  const [serviceSearch, setServiceSearch] = useState("");
   const [currentTime, setCurrentTime] = useState(new Date());
   const boardRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
@@ -240,15 +135,16 @@ export default function Planning() {
   const isScrollingRef = useRef<boolean>(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Time state update: only every 5 minutes for isToday/isAutoLocked checks (reduces re-renders)
-  // Live line position is updated directly via DOM ref separately (see below)
+  // Update time using setInterval (more efficient than requestAnimationFrame)
   useEffect(() => {
     setCurrentTime(new Date());
+    const updateInterval = isMobile ? 60000 : 30000;
     
-    const stateInterval = setInterval(() => {
+    const intervalId = setInterval(() => {
       setCurrentTime(new Date());
-    }, 300000);
+    }, updateInterval);
     
+    // Handle visibility change for PWA - update immediately when app becomes visible
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         setCurrentTime(new Date());
@@ -258,10 +154,10 @@ export default function Planning() {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
     return () => {
-      clearInterval(stateInterval);
+      clearInterval(intervalId);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, []);
+  }, [isMobile]);
 
   // Refresh data - rely on socket.io for real-time updates, use long interval as fallback
   // Socket.io in Sidebar handles instant notifications, this is just a safety net
@@ -490,10 +386,7 @@ export default function Planning() {
   const formattedDate = format(date, "yyyy-MM-dd");
   
   const { data: appointments = [], isLoading: loadingApps } = useAppointments(formattedDate);
-  const { data: allAppointments = [] } = useQuery<any[]>({
-    queryKey: ["/api/appointments"],
-    enabled: showSearchInput,
-  });
+  const { data: allAppointments = [] } = useAppointments();
   const { data: staffList = [], isLoading: loadingStaff, isError: staffError } = useStaff();
   const { data: services = [], isLoading: loadingServices, isError: servicesError } = useServices();
   const { data: clients = [] } = useQuery<Array<{id: number, name: string, phone: string | null, loyaltyPoints: number, usePoints: boolean, loyaltyEnrolled: boolean, totalSpent: number, giftCardBalance: number, useGiftCardBalance: boolean}>>({
@@ -634,9 +527,14 @@ export default function Planning() {
 
   const isFirstRender = useRef(true);
   
-  // NOTE: Removed auto-scroll on every currentTime tick - this was causing the board
-  // to jump/flash every 30s. The live line position updates via CSS (top style) without
-  // needing to scroll. Initial scroll + visibility-change scroll are sufficient.
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    if (!isToday || !initialScrollDoneRef.current) return;
+    scrollToLiveLine(true);
+  }, [isToday, currentTime, scrollToLiveLine]);
 
   // Scroll when visibility changes (returning from background in PWA)
   // Always register listeners, but no-op inside handler if not ready
@@ -686,71 +584,6 @@ export default function Planning() {
     return DEFAULT_HOURS;
   }, [businessSettings?.openingTime, businessSettings?.closingTime]);
   
-  // Live line position: update directly via DOM ref every 30s (no re-render needed)
-  // Uses fresh Date() each tick instead of currentTime state to avoid stale closures
-  useEffect(() => {
-    const computePosition = () => {
-      if (hours.length === 0) return -1;
-      const now = new Date();
-      const currentHour = now.getHours();
-      const currentMinutes = now.getMinutes();
-      
-      const openTime = businessSettings?.openingTime;
-      const closeTime = businessSettings?.closingTime;
-      
-      let openingMinutes: number;
-      if (openTime) {
-        const [openH, openM] = openTime.split(":").map(Number);
-        openingMinutes = openH * 60 + openM;
-      } else {
-        const [firstH, firstM] = hours[0].split(":").map(Number);
-        openingMinutes = firstH * 60 + firstM;
-      }
-      
-      let closingMinutes: number;
-      if (closeTime) {
-        const [closeH, closeM] = closeTime.split(":").map(Number);
-        closingMinutes = closeH * 60 + closeM;
-      } else {
-        const [lastH, lastM] = hours[hours.length - 1].split(":").map(Number);
-        closingMinutes = lastH * 60 + lastM + 30;
-      }
-      
-      if (closingMinutes <= openingMinutes) closingMinutes += 24 * 60;
-      
-      let currentTotalMinutes = currentHour * 60 + currentMinutes;
-      if (currentTotalMinutes < openingMinutes && currentHour < 12) currentTotalMinutes += 24 * 60;
-      
-      if (currentTotalMinutes < openingMinutes || currentTotalMinutes > closingMinutes) return -1;
-      
-      return ((currentTotalMinutes - openingMinutes) / 30) * 52;
-    };
-    
-    const updateLiveLine = () => {
-      if (!liveLineRef.current) return;
-      const pos = computePosition();
-      if (pos >= 0) {
-        liveLineRef.current.style.top = `${pos}px`;
-        liveLineRef.current.style.display = '';
-      } else {
-        liveLineRef.current.style.display = 'none';
-      }
-    };
-    
-    updateLiveLine();
-    const lineInterval = setInterval(updateLiveLine, 30000);
-    
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') updateLiveLine();
-    };
-    document.addEventListener('visibilitychange', handleVisibility);
-    
-    return () => {
-      clearInterval(lineInterval);
-      document.removeEventListener('visibilitychange', handleVisibility);
-    };
-  }, [hours, businessSettings?.openingTime, businessSettings?.closingTime]);
-
   const isNonWorkingDay = useMemo(() => {
     if (!businessSettings?.workingDays || businessSettings.workingDays.length === 0) {
       return false;
@@ -1485,7 +1318,18 @@ export default function Planning() {
     return favoriteIds.map(id => services.find(s => s.id === id)).filter(Boolean);
   }, [services, favoriteIds]);
 
-  // groupedServices moved into ServiceSearchPopover component
+  const groupedServices = useMemo(() => {
+    const groups: Record<string, typeof services> = {};
+    const list = serviceSearch.trim() 
+      ? services.filter(s => s.name.toLowerCase().includes(serviceSearch.toLowerCase()))
+      : services;
+    list.forEach(s => {
+      const cat = s.category || t("common.other");
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(s);
+    });
+    return groups;
+  }, [services, serviceSearch, t]);
 
   const toggleFavorite = (serviceId: number) => {
     setFavoriteIds(prev => {
@@ -1503,39 +1347,26 @@ export default function Planning() {
     });
   };
 
+  const getBooking = (staffId: number, staffName: string, hour: string) => {
+    return appointments.find(a => (a.staffId === staffId || (!a.staffId && a.staff === staffName)) && a.startTime === hour);
+  };
+
   const getBookingSpan = (app: any) => {
     return Math.ceil(app.duration / 30);
   };
 
-  const bookingLookup = useMemo(() => {
-    const bySlot = new Map<string, any>();
-    const covered = new Set<string>();
-    
-    for (const a of appointments) {
-      const staffKey = a.staffId ? `id:${a.staffId}` : `name:${a.staff}`;
-      bySlot.set(`${staffKey}:${a.startTime}`, a);
-      
-      const span = Math.ceil(a.duration / 30);
-      if (span > 1) {
-        const startIdx = hours.indexOf(a.startTime);
-        if (startIdx >= 0) {
-          for (let j = 1; j < span; j++) {
-            if (startIdx + j < hours.length) {
-              covered.add(`${staffKey}:${hours[startIdx + j]}`);
-            }
-          }
+  const isSlotCovered = (staffId: number, staffName: string, hour: string) => {
+    const hourIndex = hours.indexOf(hour);
+    for (let i = 0; i < hourIndex; i++) {
+      const prevBooking = appointments.find(a => (a.staffId === staffId || (!a.staffId && a.staff === staffName)) && a.startTime === hours[i]);
+      if (prevBooking) {
+        const span = getBookingSpan(prevBooking);
+        if (i + span > hourIndex) {
+          return true;
         }
       }
     }
-    return { bySlot, covered };
-  }, [appointments, hours]);
-
-  const getBooking = (staffId: number, staffName: string, hour: string) => {
-    return bookingLookup.bySlot.get(`id:${staffId}:${hour}`) || bookingLookup.bySlot.get(`name:${staffName}:${hour}`) || null;
-  };
-
-  const isSlotCovered = (staffId: number, staffName: string, hour: string) => {
-    return bookingLookup.covered.has(`id:${staffId}:${hour}`) || bookingLookup.covered.has(`name:${staffName}:${hour}`);
+    return false;
   };
 
   // Show loading screen only while actively loading
@@ -1907,10 +1738,10 @@ export default function Planning() {
             }}
           >
             {/* Current Time Line - iOS Liquid Glass Style */}
-            {isToday && (
+            {isToday && getCurrentTimePosition(hours, businessSettings?.openingTime, businessSettings?.closingTime) >= 0 && (
               <div 
                 ref={liveLineRef}
-                className="absolute z-[35] pointer-events-none"
+                className="absolute z-[35] pointer-events-none transition-all duration-1000 ease-in-out"
                 style={{ 
                   top: `${getCurrentTimePosition(hours, businessSettings?.openingTime, businessSettings?.closingTime)}px`,
                   left: 0,
@@ -1928,7 +1759,7 @@ export default function Planning() {
                       <div className="w-10 h-10 rounded-full liquid-gradient shadow-xl flex items-center justify-center border-2 border-white/50 live-indicator">
                         <Scissors className="w-5 h-5 text-white drop-shadow-md" />
                       </div>
-                      <div className="absolute -inset-1 rounded-full liquid-gradient blur-lg opacity-40" />
+                      <div className="absolute -inset-1 rounded-full liquid-gradient blur-lg opacity-40 animate-pulse" />
                     </div>
                   </div>
                   {/* Thick glowing line - Liquid gradient */}
@@ -2012,7 +1843,7 @@ export default function Planning() {
                         onDragEnd={handleDragEnd}
                         onClick={(e) => handleAppointmentClick(e, booking)}
                       >
-                        
+                        <div className="water-shimmer absolute inset-0 opacity-30" />
                         {span === 1 ? (
                           /* Compact single-row layout for 30min appointments */
                           <div className="relative z-10 flex items-center w-full gap-1 min-w-0 pointer-events-auto">
@@ -2096,7 +1927,7 @@ export default function Planning() {
                   <div
                     key={`${s.id}-${hour}`}
                     className={cn(
-                      "border-b border-slate-100/50 dark:border-slate-800/50 min-h-[60px] bg-transparent",
+                      "border-b border-slate-100/50 dark:border-slate-800/50 min-h-[60px] transition-all duration-300 bg-transparent",
                       isRtl ? "border-l border-slate-100/50 dark:border-slate-800/50" : "border-r border-slate-100/50 dark:border-slate-800/50",
                       "hover:bg-primary/5 dark:hover:bg-primary/10 cursor-pointer",
                       isDragOver && "bg-primary/10 dark:bg-primary/20 ring-2 ring-primary/50 ring-inset"
@@ -2534,16 +2365,78 @@ export default function Planning() {
                     name="service"
                     render={({ field }) => (
                       <FormItem className="space-y-0">
-                        <ServiceSearchPopover
-                          services={services}
-                          selectedServices={selectedServices}
-                          onSelectService={(name) => {
-                            handleServiceChange(name);
-                            setServicePopoverOpen(false);
-                          }}
-                          open={servicePopoverOpen}
-                          onOpenChange={setServicePopoverOpen}
-                        />
+                        <Popover open={servicePopoverOpen} onOpenChange={setServicePopoverOpen}>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                className="h-11 w-full justify-between rounded-xl text-xs border-0 bg-secondary/50 hover:bg-secondary/70 transition-colors"
+                              >
+                                <span className="flex items-center gap-2">
+                                  <Plus className="w-4 h-4" />
+                                  {t("planning.addService")}
+                                </span>
+                                <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent 
+                            className="w-[calc(100vw-48px)] max-w-[396px] p-0 rounded-2xl glass-card shadow-2xl" 
+                            align="center" 
+                            side="top" 
+                            sideOffset={4}
+                            onWheel={(e) => e.stopPropagation()}
+                          >
+                            <div className="p-3 border-b border-white/20 liquid-gradient-subtle rounded-t-2xl">
+                              <Input
+                                placeholder={t("planning.searchService")}
+                                value={serviceSearch}
+                                onChange={(e) => setServiceSearch(e.target.value)}
+                                className="h-10 text-sm rounded-xl border-0 bg-white/80 dark:bg-slate-800/80"
+                              />
+                            </div>
+                            <div 
+                              className="max-h-[200px] overflow-y-auto p-2"
+                              style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
+                              onWheel={(e) => {
+                                e.stopPropagation();
+                                const target = e.currentTarget;
+                                target.scrollTop += e.deltaY;
+                              }}
+                              onTouchMove={(e) => e.stopPropagation()}
+                            >
+                              {Object.entries(groupedServices).map(([category, categoryServices]) => (
+                                <div key={category}>
+                                  <div className="px-2 py-1.5 text-[10px] font-bold gradient-text uppercase glass-subtle rounded-lg mb-1 sticky top-0">
+                                    {category}
+                                  </div>
+                                  {categoryServices.map(s => (
+                                    <div
+                                      key={s.id}
+                                      className={cn(
+                                        "flex items-center justify-between p-3 rounded-xl cursor-pointer text-sm mb-1 transition-all",
+                                        "hover:bg-primary/5 dark:hover:bg-primary/10",
+                                        selectedServices.some(sel => sel.name === s.name) && "bg-primary/10 dark:bg-primary/20"
+                                      )}
+                                      onClick={() => {
+                                        handleServiceChange(s.name);
+                                        setServiceSearch("");
+                                        setServicePopoverOpen(false);
+                                      }}
+                                    >
+                                      <span className="truncate">{s.name}</span>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xs font-bold gradient-text">{s.isStartingPrice ? `${t("services.startingFrom")} ` : ''}{s.price} DH</span>
+                                        <Plus className="w-4 h-4 text-primary" />
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              ))}
+                            </div>
+                          </PopoverContent>
+                        </Popover>
                       </FormItem>
                     )}
                   />
