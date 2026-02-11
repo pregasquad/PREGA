@@ -124,6 +124,8 @@ export default function Planning() {
     }
   }, [currentUserRole]);
   const [serviceSearch, setServiceSearch] = useState("");
+  const serviceSearchRef = useRef<HTMLInputElement>(null);
+  const serviceSearchTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const boardRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
@@ -1314,6 +1316,15 @@ export default function Planning() {
     setDraggedAppointment(null);
   };
 
+  const handleServiceSearchChange = useCallback((value: string) => {
+    if (serviceSearchTimerRef.current) {
+      clearTimeout(serviceSearchTimerRef.current);
+    }
+    serviceSearchTimerRef.current = setTimeout(() => {
+      setServiceSearch(value);
+    }, 150);
+  }, []);
+
   const favoriteServices = useMemo(() => {
     return favoriteIds.map(id => services.find(s => s.id === id)).filter(Boolean);
   }, [services, favoriteIds]);
@@ -2365,7 +2376,14 @@ export default function Planning() {
                     name="service"
                     render={({ field }) => (
                       <FormItem className="space-y-0">
-                        <Popover open={servicePopoverOpen} onOpenChange={setServicePopoverOpen}>
+                        <Popover open={servicePopoverOpen} onOpenChange={(open) => {
+                          setServicePopoverOpen(open);
+                          if (!open) {
+                            setServiceSearch("");
+                            if (serviceSearchRef.current) serviceSearchRef.current.value = "";
+                            if (serviceSearchTimerRef.current) clearTimeout(serviceSearchTimerRef.current);
+                          }
+                        }}>
                           <PopoverTrigger asChild>
                             <FormControl>
                               <Button
@@ -2390,10 +2408,12 @@ export default function Planning() {
                           >
                             <div className="p-3 border-b border-white/20 liquid-gradient-subtle rounded-t-2xl">
                               <Input
+                                ref={serviceSearchRef}
                                 placeholder={t("planning.searchService")}
-                                value={serviceSearch}
-                                onChange={(e) => setServiceSearch(e.target.value)}
+                                defaultValue=""
+                                onChange={(e) => handleServiceSearchChange(e.target.value)}
                                 className="h-10 text-sm rounded-xl border-0 bg-white/80 dark:bg-slate-800/80"
+                                autoFocus
                               />
                             </div>
                             <div 
@@ -2422,6 +2442,8 @@ export default function Planning() {
                                       onClick={() => {
                                         handleServiceChange(s.name);
                                         setServiceSearch("");
+                                        if (serviceSearchRef.current) serviceSearchRef.current.value = "";
+                                        if (serviceSearchTimerRef.current) clearTimeout(serviceSearchTimerRef.current);
                                         setServicePopoverOpen(false);
                                       }}
                                     >
