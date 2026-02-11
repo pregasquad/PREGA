@@ -129,11 +129,21 @@ export default function Charges() {
     });
   };
 
+  const blobToDataURL = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
+
   const compressFile = async (file: File): Promise<string> => {
-    const arrayBuffer = await file.arrayBuffer();
-    const stream = new Blob([arrayBuffer]).stream();
-    const compressedStream = stream.pipeThrough(new CompressionStream("gzip"));
-    const reader = compressedStream.getReader();
+    if (typeof CompressionStream === "undefined") {
+      return blobToDataURL(file);
+    }
+    const stream = file.stream().pipeThrough(new CompressionStream("gzip"));
+    const reader = stream.getReader();
     const chunks: Uint8Array[] = [];
     while (true) {
       const { done, value } = await reader.read();
@@ -141,9 +151,9 @@ export default function Charges() {
       chunks.push(value);
     }
     const compressedBlob = new Blob(chunks);
-    const buffer = await compressedBlob.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
-    return `data:application/gzip;base64,${base64}`;
+    const dataUrl = await blobToDataURL(compressedBlob);
+    const base64Part = dataUrl.split(",")[1];
+    return `data:application/gzip;name=${encodeURIComponent(file.type)};base64,${base64Part}`;
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -163,6 +173,13 @@ export default function Charges() {
       } else {
         result = await compressFile(file);
       }
+
+      const maxPayloadSize = 8 * 1024 * 1024;
+      if (result.length > maxPayloadSize) {
+        toast({ title: t("expenses.fileTooLarge"), variant: "destructive" });
+        return;
+      }
+
       setAttachment(result);
       setAttachmentName(file.name);
     } catch {
@@ -181,10 +198,28 @@ export default function Charges() {
 
   const downloadCompressedFile = async (data: string, fileName: string) => {
     try {
+      const header = data.split(",")[0];
       const base64 = data.split(",")[1];
+
+      let originalMime = "application/octet-stream";
+      const nameMatch = header.match(/name=([^;]+)/);
+      if (nameMatch) originalMime = decodeURIComponent(nameMatch[1]);
+
       const binaryStr = atob(base64);
       const bytes = new Uint8Array(binaryStr.length);
       for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+
+      if (typeof DecompressionStream === "undefined") {
+        const blob = new Blob([bytes], { type: originalMime });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName || "attachment";
+        a.click();
+        URL.revokeObjectURL(url);
+        return;
+      }
+
       const stream = new Blob([bytes]).stream();
       const decompressedStream = stream.pipeThrough(new DecompressionStream("gzip"));
       const reader = decompressedStream.getReader();
@@ -194,7 +229,7 @@ export default function Charges() {
         if (done) break;
         chunks.push(value);
       }
-      const blob = new Blob(chunks);
+      const blob = new Blob(chunks, { type: originalMime });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
