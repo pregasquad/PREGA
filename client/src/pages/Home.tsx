@@ -56,11 +56,11 @@ function EditStaffForm({ staff, categories, onSubmit, isPending, t }: {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
         <label className="text-sm font-medium">{t("home.name")}</label>
-        <Input value={name} onChange={(e) => setName(e.target.value)} required />
+        <Input value={name} onChange={(e) => setName(e.target.value)} required data-testid="input-edit-staff-name" />
       </div>
       <div className="space-y-2">
         <label className="text-sm font-medium">{t("home.color")}</label>
-        <Input type="color" value={color} onChange={(e) => setColor(e.target.value)} required />
+        <Input type="color" value={color} onChange={(e) => setColor(e.target.value)} required data-testid="input-edit-staff-color" />
       </div>
       <div className="space-y-2">
         <label className="text-sm font-medium">{t("home.categories")}</label>
@@ -72,6 +72,7 @@ function EditStaffForm({ staff, categories, onSubmit, isPending, t }: {
               variant={selectedCategories.includes(cat.name) ? "default" : "outline"}
               size="sm"
               onClick={() => toggleCategory(cat.name)}
+              data-testid={`button-edit-category-${cat.id}`}
             >
               {cat.name}
             </Button>
@@ -79,7 +80,7 @@ function EditStaffForm({ staff, categories, onSubmit, isPending, t }: {
         </div>
         <p className="text-xs text-muted-foreground">{t("home.selectCategoriesHint")}</p>
       </div>
-      <Button type="submit" className="w-full" disabled={isPending}>
+      <Button type="submit" className="w-full" disabled={isPending} data-testid="button-edit-staff-submit">
         {isPending ? t("home.updating") : t("home.update")}
       </Button>
     </form>
@@ -98,13 +99,8 @@ export default function Home() {
   const { data: charges = [] } = useQuery<any[]>({
     queryKey: ["/api/charges"],
   });
-  const { data: lowStockProducts = [] } = useQuery({
+  const { data: lowStockProducts = [] } = useQuery<any[]>({
     queryKey: ["/api/products/low-stock"],
-    queryFn: async () => {
-      const res = await fetch("/api/products/low-stock", { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch low stock products");
-      return res.json();
-    },
   });
   const [cashVerified, setCashVerified] = useState(() => {
     const stored = localStorage.getItem(`cash_verified_${todayDate}`);
@@ -329,10 +325,10 @@ export default function Home() {
                 <Form {...staffForm}>
                   <form onSubmit={staffForm.handleSubmit((data) => createStaffMutation.mutate(data))} className="space-y-4">
                     <FormField control={staffForm.control} name="name" render={({ field }) => (
-                      <FormItem><FormLabel>{t("home.name")}</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+                      <FormItem><FormLabel>{t("home.name")}</FormLabel><FormControl><Input {...field} data-testid="input-add-staff-name" /></FormControl></FormItem>
                     )} />
                     <FormField control={staffForm.control} name="color" render={({ field }) => (
-                      <FormItem><FormLabel>{t("home.color")}</FormLabel><FormControl><Input type="color" {...field} /></FormControl></FormItem>
+                      <FormItem><FormLabel>{t("home.color")}</FormLabel><FormControl><Input type="color" {...field} data-testid="input-add-staff-color" /></FormControl></FormItem>
                     )} />
                     <FormField control={staffForm.control} name="categories" render={({ field }) => {
                       const selectedCategories = field.value ? field.value.split(",").filter(Boolean) : [];
@@ -353,6 +349,7 @@ export default function Home() {
                                 variant={selectedCategories.includes(cat.name) ? "default" : "outline"}
                                 size="sm"
                                 onClick={() => toggleCategory(cat.name)}
+                                data-testid={`button-add-category-${cat.id}`}
                               >
                                 {cat.name}
                               </Button>
@@ -362,7 +359,7 @@ export default function Home() {
                         </FormItem>
                       );
                     }} />
-                    <Button type="submit" className="w-full" disabled={createStaffMutation.isPending}>
+                    <Button type="submit" className="w-full" disabled={createStaffMutation.isPending} data-testid="button-add-staff-submit">
                       {createStaffMutation.isPending ? t("home.adding") : t("home.add")}
                     </Button>
                   </form>
@@ -505,7 +502,7 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className={`mt-3 p-2 rounded-lg text-center text-xs font-semibold ${closingChecklist.allGood ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300' : 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'}`}>
+              <div className={`mt-3 p-2 rounded-lg text-center text-xs font-semibold ${closingChecklist.allGood ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300' : 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'}`} data-testid="text-closing-status">
                 {closingChecklist.allGood ? t("home.closingReady") : t("home.closingNotReady")}
               </div>
             </CardContent>
