@@ -135,16 +135,15 @@ export default function Planning() {
   const isScrollingRef = useRef<boolean>(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Update time using setInterval (more efficient than requestAnimationFrame)
+  // Time state update: only every 5 minutes for isToday/isAutoLocked checks (reduces re-renders)
+  // Live line position is updated directly via DOM ref separately (see below)
   useEffect(() => {
     setCurrentTime(new Date());
-    const updateInterval = isMobile ? 60000 : 30000;
     
-    const intervalId = setInterval(() => {
+    const stateInterval = setInterval(() => {
       setCurrentTime(new Date());
-    }, updateInterval);
+    }, 300000);
     
-    // Handle visibility change for PWA - update immediately when app becomes visible
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         setCurrentTime(new Date());
@@ -154,10 +153,10 @@ export default function Planning() {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
     return () => {
-      clearInterval(intervalId);
+      clearInterval(stateInterval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [isMobile]);
+  }, []);
 
   // Refresh data - rely on socket.io for real-time updates, use long interval as fallback
   // Socket.io in Sidebar handles instant notifications, this is just a safety net
@@ -386,7 +385,10 @@ export default function Planning() {
   const formattedDate = format(date, "yyyy-MM-dd");
   
   const { data: appointments = [], isLoading: loadingApps } = useAppointments(formattedDate);
-  const { data: allAppointments = [] } = useAppointments();
+  const { data: allAppointments = [] } = useQuery<any[]>({
+    queryKey: ["/api/appointments"],
+    enabled: showSearchInput,
+  });
   const { data: staffList = [], isLoading: loadingStaff, isError: staffError } = useStaff();
   const { data: services = [], isLoading: loadingServices, isError: servicesError } = useServices();
   const { data: clients = [] } = useQuery<Array<{id: number, name: string, phone: string | null, loyaltyPoints: number, usePoints: boolean, loyaltyEnrolled: boolean, totalSpent: number, giftCardBalance: number, useGiftCardBalance: boolean}>>({
@@ -527,14 +529,9 @@ export default function Planning() {
 
   const isFirstRender = useRef(true);
   
-  useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-    if (!isToday || !initialScrollDoneRef.current) return;
-    scrollToLiveLine(true);
-  }, [isToday, currentTime, scrollToLiveLine]);
+  // NOTE: Removed auto-scroll on every currentTime tick - this was causing the board
+  // to jump/flash every 30s. The live line position updates via CSS (top style) without
+  // needing to scroll. Initial scroll + visibility-change scroll are sufficient.
 
   // Scroll when visibility changes (returning from background in PWA)
   // Always register listeners, but no-op inside handler if not ready
@@ -584,6 +581,71 @@ export default function Planning() {
     return DEFAULT_HOURS;
   }, [businessSettings?.openingTime, businessSettings?.closingTime]);
   
+  // Live line position: update directly via DOM ref every 30s (no re-render needed)
+  // Uses fresh Date() each tick instead of currentTime state to avoid stale closures
+  useEffect(() => {
+    const computePosition = () => {
+      if (hours.length === 0) return -1;
+      const now = new Date();
+      const currentHour = now.getHours();
+      const currentMinutes = now.getMinutes();
+      
+      const openTime = businessSettings?.openingTime;
+      const closeTime = businessSettings?.closingTime;
+      
+      let openingMinutes: number;
+      if (openTime) {
+        const [openH, openM] = openTime.split(":").map(Number);
+        openingMinutes = openH * 60 + openM;
+      } else {
+        const [firstH, firstM] = hours[0].split(":").map(Number);
+        openingMinutes = firstH * 60 + firstM;
+      }
+      
+      let closingMinutes: number;
+      if (closeTime) {
+        const [closeH, closeM] = closeTime.split(":").map(Number);
+        closingMinutes = closeH * 60 + closeM;
+      } else {
+        const [lastH, lastM] = hours[hours.length - 1].split(":").map(Number);
+        closingMinutes = lastH * 60 + lastM + 30;
+      }
+      
+      if (closingMinutes <= openingMinutes) closingMinutes += 24 * 60;
+      
+      let currentTotalMinutes = currentHour * 60 + currentMinutes;
+      if (currentTotalMinutes < openingMinutes && currentHour < 12) currentTotalMinutes += 24 * 60;
+      
+      if (currentTotalMinutes < openingMinutes || currentTotalMinutes > closingMinutes) return -1;
+      
+      return ((currentTotalMinutes - openingMinutes) / 30) * 52;
+    };
+    
+    const updateLiveLine = () => {
+      if (!liveLineRef.current) return;
+      const pos = computePosition();
+      if (pos >= 0) {
+        liveLineRef.current.style.top = `${pos}px`;
+        liveLineRef.current.style.display = '';
+      } else {
+        liveLineRef.current.style.display = 'none';
+      }
+    };
+    
+    updateLiveLine();
+    const lineInterval = setInterval(updateLiveLine, 30000);
+    
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') updateLiveLine();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    
+    return () => {
+      clearInterval(lineInterval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [hours, businessSettings?.openingTime, businessSettings?.closingTime]);
+
   const isNonWorkingDay = useMemo(() => {
     if (!businessSettings?.workingDays || businessSettings.workingDays.length === 0) {
       return false;
@@ -1347,26 +1409,39 @@ export default function Planning() {
     });
   };
 
-  const getBooking = (staffId: number, staffName: string, hour: string) => {
-    return appointments.find(a => (a.staffId === staffId || (!a.staffId && a.staff === staffName)) && a.startTime === hour);
-  };
-
   const getBookingSpan = (app: any) => {
     return Math.ceil(app.duration / 30);
   };
 
-  const isSlotCovered = (staffId: number, staffName: string, hour: string) => {
-    const hourIndex = hours.indexOf(hour);
-    for (let i = 0; i < hourIndex; i++) {
-      const prevBooking = appointments.find(a => (a.staffId === staffId || (!a.staffId && a.staff === staffName)) && a.startTime === hours[i]);
-      if (prevBooking) {
-        const span = getBookingSpan(prevBooking);
-        if (i + span > hourIndex) {
-          return true;
+  const bookingLookup = useMemo(() => {
+    const bySlot = new Map<string, any>();
+    const covered = new Set<string>();
+    
+    for (const a of appointments) {
+      const staffKey = a.staffId ? `id:${a.staffId}` : `name:${a.staff}`;
+      bySlot.set(`${staffKey}:${a.startTime}`, a);
+      
+      const span = Math.ceil(a.duration / 30);
+      if (span > 1) {
+        const startIdx = hours.indexOf(a.startTime);
+        if (startIdx >= 0) {
+          for (let j = 1; j < span; j++) {
+            if (startIdx + j < hours.length) {
+              covered.add(`${staffKey}:${hours[startIdx + j]}`);
+            }
+          }
         }
       }
     }
-    return false;
+    return { bySlot, covered };
+  }, [appointments, hours]);
+
+  const getBooking = (staffId: number, staffName: string, hour: string) => {
+    return bookingLookup.bySlot.get(`id:${staffId}:${hour}`) || bookingLookup.bySlot.get(`name:${staffName}:${hour}`) || null;
+  };
+
+  const isSlotCovered = (staffId: number, staffName: string, hour: string) => {
+    return bookingLookup.covered.has(`id:${staffId}:${hour}`) || bookingLookup.covered.has(`name:${staffName}:${hour}`);
   };
 
   // Show loading screen only while actively loading
@@ -1738,10 +1813,10 @@ export default function Planning() {
             }}
           >
             {/* Current Time Line - iOS Liquid Glass Style */}
-            {isToday && getCurrentTimePosition(hours, businessSettings?.openingTime, businessSettings?.closingTime) >= 0 && (
+            {isToday && (
               <div 
                 ref={liveLineRef}
-                className="absolute z-[35] pointer-events-none transition-all duration-1000 ease-in-out"
+                className="absolute z-[35] pointer-events-none"
                 style={{ 
                   top: `${getCurrentTimePosition(hours, businessSettings?.openingTime, businessSettings?.closingTime)}px`,
                   left: 0,
@@ -1759,7 +1834,7 @@ export default function Planning() {
                       <div className="w-10 h-10 rounded-full liquid-gradient shadow-xl flex items-center justify-center border-2 border-white/50 live-indicator">
                         <Scissors className="w-5 h-5 text-white drop-shadow-md" />
                       </div>
-                      <div className="absolute -inset-1 rounded-full liquid-gradient blur-lg opacity-40 animate-pulse" />
+                      <div className="absolute -inset-1 rounded-full liquid-gradient blur-lg opacity-40" />
                     </div>
                   </div>
                   {/* Thick glowing line - Liquid gradient */}
@@ -1843,7 +1918,7 @@ export default function Planning() {
                         onDragEnd={handleDragEnd}
                         onClick={(e) => handleAppointmentClick(e, booking)}
                       >
-                        <div className="water-shimmer absolute inset-0 opacity-30" />
+                        
                         {span === 1 ? (
                           /* Compact single-row layout for 30min appointments */
                           <div className="relative z-10 flex items-center w-full gap-1 min-w-0 pointer-events-auto">
@@ -1927,7 +2002,7 @@ export default function Planning() {
                   <div
                     key={`${s.id}-${hour}`}
                     className={cn(
-                      "border-b border-slate-100/50 dark:border-slate-800/50 min-h-[60px] transition-all duration-300 bg-transparent",
+                      "border-b border-slate-100/50 dark:border-slate-800/50 min-h-[60px] bg-transparent",
                       isRtl ? "border-l border-slate-100/50 dark:border-slate-800/50" : "border-r border-slate-100/50 dark:border-slate-800/50",
                       "hover:bg-primary/5 dark:hover:bg-primary/10 cursor-pointer",
                       isDragOver && "bg-primary/10 dark:bg-primary/20 ring-2 ring-primary/50 ring-inset"
