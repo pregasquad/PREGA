@@ -124,8 +124,6 @@ export default function Planning() {
     }
   }, [currentUserRole]);
   const [serviceSearch, setServiceSearch] = useState("");
-  const serviceSearchRef = useRef<HTMLInputElement>(null);
-  const serviceSearchTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const boardRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
@@ -140,7 +138,7 @@ export default function Planning() {
   // Update time using setInterval (more efficient than requestAnimationFrame)
   useEffect(() => {
     setCurrentTime(new Date());
-    const updateInterval = 60000;
+    const updateInterval = isMobile ? 60000 : 30000;
     
     const intervalId = setInterval(() => {
       setCurrentTime(new Date());
@@ -1316,15 +1314,6 @@ export default function Planning() {
     setDraggedAppointment(null);
   };
 
-  const handleServiceSearchChange = useCallback((value: string) => {
-    if (serviceSearchTimerRef.current) {
-      clearTimeout(serviceSearchTimerRef.current);
-    }
-    serviceSearchTimerRef.current = setTimeout(() => {
-      setServiceSearch(value);
-    }, 150);
-  }, []);
-
   const favoriteServices = useMemo(() => {
     return favoriteIds.map(id => services.find(s => s.id === id)).filter(Boolean);
   }, [services, favoriteIds]);
@@ -1358,38 +1347,27 @@ export default function Planning() {
     });
   };
 
-  const bookingLookup = useMemo(() => {
-    const map = new Map<string, typeof appointments[number]>();
-    const coveredSet = new Set<string>();
-    for (const a of appointments) {
-      const staffKey = a.staffId ? `id:${a.staffId}` : `name:${a.staff}`;
-      map.set(`${staffKey}:${a.startTime}`, a);
-      const span = Math.ceil(a.duration / 30);
-      if (span > 1) {
-        const startIdx = hours.indexOf(a.startTime);
-        if (startIdx >= 0) {
-          for (let j = 1; j < span; j++) {
-            if (startIdx + j < hours.length) {
-              coveredSet.add(`${staffKey}:${hours[startIdx + j]}`);
-            }
-          }
+  const getBooking = (staffId: number, staffName: string, hour: string) => {
+    return appointments.find(a => (a.staffId === staffId || (!a.staffId && a.staff === staffName)) && a.startTime === hour);
+  };
+
+  const getBookingSpan = (app: any) => {
+    return Math.ceil(app.duration / 30);
+  };
+
+  const isSlotCovered = (staffId: number, staffName: string, hour: string) => {
+    const hourIndex = hours.indexOf(hour);
+    for (let i = 0; i < hourIndex; i++) {
+      const prevBooking = appointments.find(a => (a.staffId === staffId || (!a.staffId && a.staff === staffName)) && a.startTime === hours[i]);
+      if (prevBooking) {
+        const span = getBookingSpan(prevBooking);
+        if (i + span > hourIndex) {
+          return true;
         }
       }
     }
-    return { map, coveredSet };
-  }, [appointments, hours]);
-
-  const getBooking = useCallback((staffId: number, staffName: string, hour: string) => {
-    return bookingLookup.map.get(`id:${staffId}:${hour}`) || bookingLookup.map.get(`name:${staffName}:${hour}`);
-  }, [bookingLookup]);
-
-  const getBookingSpan = useCallback((app: any) => {
-    return Math.ceil(app.duration / 30);
-  }, []);
-
-  const isSlotCovered = useCallback((staffId: number, staffName: string, hour: string) => {
-    return bookingLookup.coveredSet.has(`id:${staffId}:${hour}`) || bookingLookup.coveredSet.has(`name:${staffName}:${hour}`);
-  }, [bookingLookup]);
+    return false;
+  };
 
   // Show loading screen only while actively loading
   if (isDataLoading) {
@@ -1949,7 +1927,7 @@ export default function Planning() {
                   <div
                     key={`${s.id}-${hour}`}
                     className={cn(
-                      "border-b border-slate-100/50 dark:border-slate-800/50 min-h-[60px] transition-colors duration-200 bg-transparent",
+                      "border-b border-slate-100/50 dark:border-slate-800/50 min-h-[60px] transition-all duration-300 bg-transparent",
                       isRtl ? "border-l border-slate-100/50 dark:border-slate-800/50" : "border-r border-slate-100/50 dark:border-slate-800/50",
                       "hover:bg-primary/5 dark:hover:bg-primary/10 cursor-pointer",
                       isDragOver && "bg-primary/10 dark:bg-primary/20 ring-2 ring-primary/50 ring-inset"
@@ -2387,14 +2365,7 @@ export default function Planning() {
                     name="service"
                     render={({ field }) => (
                       <FormItem className="space-y-0">
-                        <Popover open={servicePopoverOpen} onOpenChange={(open) => {
-                          setServicePopoverOpen(open);
-                          if (!open) {
-                            setServiceSearch("");
-                            if (serviceSearchRef.current) serviceSearchRef.current.value = "";
-                            if (serviceSearchTimerRef.current) clearTimeout(serviceSearchTimerRef.current);
-                          }
-                        }}>
+                        <Popover open={servicePopoverOpen} onOpenChange={setServicePopoverOpen}>
                           <PopoverTrigger asChild>
                             <FormControl>
                               <Button
@@ -2419,12 +2390,10 @@ export default function Planning() {
                           >
                             <div className="p-3 border-b border-white/20 liquid-gradient-subtle rounded-t-2xl">
                               <Input
-                                ref={serviceSearchRef}
                                 placeholder={t("planning.searchService")}
-                                defaultValue=""
-                                onChange={(e) => handleServiceSearchChange(e.target.value)}
+                                value={serviceSearch}
+                                onChange={(e) => setServiceSearch(e.target.value)}
                                 className="h-10 text-sm rounded-xl border-0 bg-white/80 dark:bg-slate-800/80"
-                                autoFocus
                               />
                             </div>
                             <div 
@@ -2453,8 +2422,6 @@ export default function Planning() {
                                       onClick={() => {
                                         handleServiceChange(s.name);
                                         setServiceSearch("");
-                                        if (serviceSearchRef.current) serviceSearchRef.current.value = "";
-                                        if (serviceSearchTimerRef.current) clearTimeout(serviceSearchTimerRef.current);
                                         setServicePopoverOpen(false);
                                       }}
                                     >

@@ -195,7 +195,7 @@
     inset 0 1px 0 var(--glass-specular),
     inset 0 -1px 0 var(--glass-refraction);
   border-radius: var(--radius);
-  transition: box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Specular highlight on top edge */
@@ -535,8 +535,6 @@
   );
   background-size: 200% 100%;
   animation: shimmer 3s ease-in-out infinite;
-  will-change: background-position;
-  contain: strict;
 }
 
 /* Liquid Flow Animation */
@@ -771,8 +769,6 @@
 
 .live-indicator {
   animation: pulse-glow 2s ease-in-out infinite;
-  will-change: box-shadow;
-  contain: layout;
 }
 
 /* Water Ripple Effect */
@@ -819,22 +815,4 @@
 
 .status-unpaid {
   @apply bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20;
-}
-
-/* Mobile GPU optimization - reduce blur on smaller/lower-powered devices */
-@media (max-width: 768px) {
-  :root {
-    --glass-blur: 12px;
-    --glass-blur-lg: 20px;
-  }
-  .glass-subtle {
-    backdrop-filter: blur(8px) saturate(130%);
-    -webkit-backdrop-filter: blur(8px) saturate(130%);
-  }
-  .glass-card {
-    transition: none;
-  }
-  .glass-card::after {
-    display: none;
-  }
 }
