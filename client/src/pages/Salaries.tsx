@@ -462,10 +462,12 @@ export default function Salaries() {
                         <span className="text-sm font-medium">{d.staffName}</span>
                         <span className="liquid-glass-chip text-xs">{getDeductionTypeLabel(d.type)}</span>
                       </div>
-                      <div className="text-xs text-muted-foreground truncate">{d.description}</div>
-                      <div className="flex gap-2 text-sm mt-0.5">
-                        <span className="text-orange-600 font-semibold">{formatCurrency(d.amount)} DH</span>
-                        <span className="text-muted-foreground">{format(parseISO(d.date), "d/M/yy")}</span>
+                      {d.description && (
+                        <div className="text-xs text-muted-foreground truncate mt-0.5">{d.description}</div>
+                      )}
+                      <div className="flex items-center gap-2 text-sm mt-1">
+                        <span className="text-orange-600 font-semibold tabular-nums">{formatCurrency(d.amount)} DH</span>
+                        <span className="text-muted-foreground text-xs">{format(parseISO(d.date), "d/M/yy")}</span>
                       </div>
                     </div>
                     <Button
@@ -572,46 +574,46 @@ export default function Salaries() {
       <div className="grid grid-cols-2 gap-2">
         <Card className="glass-card" data-testid="stat-total-revenue">
           <CardContent className="p-3">
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1.5">
               <div className="w-7 h-7 rounded-lg bg-primary/15 flex items-center justify-center">
                 <DollarSign className="h-3.5 w-3.5 text-primary" />
               </div>
               <p className="text-xs text-muted-foreground">{t("salaries.totalRevenue")}</p>
             </div>
-            <p className="text-xl font-bold" data-testid="text-total-revenue">{formatCurrency(totalRevenue)}</p>
+            <p className="text-xl font-bold tabular-nums" data-testid="text-total-revenue">{formatCurrency(totalRevenue)} <span className="text-sm font-normal text-muted-foreground">DH</span></p>
           </CardContent>
         </Card>
         <Card className="glass-card" data-testid="stat-commissions">
           <CardContent className="p-3">
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1.5">
               <div className="w-7 h-7 rounded-lg bg-green-500/15 flex items-center justify-center">
                 <Users className="h-3.5 w-3.5 text-green-600" />
               </div>
               <p className="text-xs text-muted-foreground">{t("salaries.staffCommissions")}</p>
             </div>
-            <p className="text-xl font-bold text-green-600" data-testid="text-total-commissions">{formatCurrency(totalCommissions - totalPending)}</p>
+            <p className="text-xl font-bold tabular-nums" data-testid="text-total-commissions">{formatCurrency(totalCommissions - totalPending)} <span className="text-sm font-normal text-muted-foreground">DH</span></p>
           </CardContent>
         </Card>
         <Card className="glass-card" data-testid="stat-salon-share">
           <CardContent className="p-3">
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1.5">
               <div className="w-7 h-7 rounded-lg bg-primary/15 flex items-center justify-center">
                 <Building2 className="h-3.5 w-3.5 text-primary" />
               </div>
               <p className="text-xs text-muted-foreground">{t("salaries.salonShare")}</p>
             </div>
-            <p className="text-xl font-bold text-primary" data-testid="text-salon-share">{formatCurrency(salonPortion)}</p>
+            <p className="text-xl font-bold tabular-nums" data-testid="text-salon-share">{formatCurrency(salonPortion)} <span className="text-sm font-normal text-muted-foreground">DH</span></p>
           </CardContent>
         </Card>
         <Card className="glass-card" data-testid="stat-appointments">
           <CardContent className="p-3">
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1.5">
               <div className="w-7 h-7 rounded-lg bg-blue-500/15 flex items-center justify-center">
                 <CalendarIcon className="h-3.5 w-3.5 text-blue-600" />
               </div>
               <p className="text-xs text-muted-foreground">{t("salaries.appointmentsCount")}</p>
             </div>
-            <p className="text-xl font-bold" data-testid="text-total-appointments">{totalAppointments}</p>
+            <p className="text-xl font-bold tabular-nums" data-testid="text-total-appointments">{totalAppointments}</p>
           </CardContent>
         </Card>
       </div>
@@ -626,65 +628,74 @@ export default function Salaries() {
             {t("salaries.budget")}
           </CardTitle>
         </CardHeader>
-        <CardContent className="px-4 pb-4 pt-0 space-y-3">
-          <div className="p-3 rounded-xl bg-primary/5 dark:bg-primary/10 space-y-1.5">
-            <p className="text-sm font-medium flex items-center gap-1.5">
-              <Building2 className="h-3.5 w-3.5 text-primary" />
+        <CardContent className="px-4 pb-4 pt-0 space-y-4">
+          {/* Salon Account Section */}
+          <div className="p-4 rounded-xl bg-primary/5 dark:bg-primary/10">
+            <p className="text-sm font-bold flex items-center gap-2 mb-3">
+              <Building2 className="h-4 w-4 text-primary" />
               {t("salaries.salonAccount")}
             </p>
-            <div className="flex justify-between text-sm">
-              <span>{t("salaries.salonRevenueShare")}</span>
-              <span className="text-primary font-medium" data-testid="text-salon-revenue-share">{formatCurrency(salonPortion)}</span>
-            </div>
-            <div className="flex justify-between text-sm text-red-500">
-              <span>{t("salaries.totalExpenses")}</span>
-              <span>-{formatCurrency(totalExpenses)}</span>
-            </div>
-            <div className="flex justify-between text-base font-bold border-t border-border/50 pt-1.5 mt-1">
-              <span>{t("salaries.salonNetProfit")}</span>
-              <span className={netProfit >= 0 ? 'text-green-600' : 'text-red-500'} data-testid="text-net-profit">
-                {formatCurrency(netProfit)}
-              </span>
+            <div className="space-y-2">
+              <div className="flex justify-between items-baseline text-sm">
+                <span className="text-muted-foreground">{t("salaries.salonRevenueShare")}</span>
+                <span className="font-semibold tabular-nums" data-testid="text-salon-revenue-share">{formatCurrency(salonPortion)} DH</span>
+              </div>
+              <div className="flex justify-between items-baseline text-sm">
+                <span className="text-muted-foreground">{t("salaries.totalExpenses")}</span>
+                <span className="font-semibold tabular-nums text-red-600 dark:text-red-400">- {formatCurrency(totalExpenses)} DH</span>
+              </div>
+              <div className="border-t border-border/50 my-1" />
+              <div className="flex justify-between items-baseline">
+                <span className="text-sm font-bold">{t("salaries.salonNetProfit")}</span>
+                <span className={`text-base font-bold tabular-nums ${netProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`} data-testid="text-net-profit">
+                  {netProfit >= 0 ? '' : '- '}{formatCurrency(Math.abs(netProfit))} DH
+                </span>
+              </div>
             </div>
             {totalPending > 0 && (
-              <div className="flex justify-between text-sm text-orange-600 dark:text-orange-400 border-t border-border/50 pt-1">
+              <div className="flex justify-between items-baseline text-xs text-orange-600 dark:text-orange-400 border-t border-border/30 pt-2 mt-2">
                 <span>{t("salaries.pendingDeductions")}</span>
-                <span>{formatCurrency(totalPending)}</span>
+                <span className="tabular-nums">{formatCurrency(totalPending)} DH</span>
               </div>
             )}
           </div>
 
-          <div className="p-3 rounded-xl bg-green-50/80 dark:bg-green-950/20 space-y-1.5">
-            <p className="text-sm font-medium flex items-center gap-1.5">
-              <Users className="h-3.5 w-3.5 text-green-600" />
+          {/* Staff Account Section */}
+          <div className="p-4 rounded-xl bg-green-50/80 dark:bg-green-950/20">
+            <p className="text-sm font-bold flex items-center gap-2 mb-3">
+              <Users className="h-4 w-4 text-green-600" />
               {t("salaries.staffAccount")}
             </p>
-            {staff.map((s) => {
-              const earning = staffEarnings.find(e => e.name === s.name);
-              const staffCommission = earning ? earning.totalCommission : 0;
-              const staffDeductionAmount = pendingDeductions
-                .filter(d => d.staffId === s.id || (!d.staffId && d.staffName === s.name))
-                .reduce((sum, d) => sum + d.amount, 0);
-              const staffNet = staffCommission - staffDeductionAmount;
-              if (staffCommission === 0 && staffDeductionAmount === 0) return null;
-              return (
-                <div key={s.id} className="flex justify-between items-center text-sm py-0.5" data-testid={`text-staff-budget-${s.id}`}>
-                  <span>{s.name}</span>
-                  <div className="flex gap-2 items-center">
-                    <span className="text-green-600">{formatCurrency(staffCommission)}</span>
-                    {staffDeductionAmount > 0 && (
-                      <span className="text-red-500">-{formatCurrency(staffDeductionAmount)}</span>
-                    )}
-                    <span className={`font-semibold min-w-[60px] text-end ${staffNet < 0 ? 'text-red-500' : ''}`}>{formatCurrency(staffNet)}</span>
+            <div className="space-y-1.5">
+              {staff.map((s) => {
+                const earning = staffEarnings.find(e => e.name === s.name);
+                const staffCommission = earning ? earning.totalCommission : 0;
+                const staffDeductionAmount = pendingDeductions
+                  .filter(d => d.staffId === s.id || (!d.staffId && d.staffName === s.name))
+                  .reduce((sum, d) => sum + d.amount, 0);
+                const staffNet = staffCommission - staffDeductionAmount;
+                if (staffCommission === 0 && staffDeductionAmount === 0) return null;
+                return (
+                  <div key={s.id} className="flex justify-between items-center text-sm py-1 border-b border-border/20 last:border-0" data-testid={`text-staff-budget-${s.id}`}>
+                    <span className="font-medium">{s.name}</span>
+                    <div className="flex items-center gap-3 tabular-nums">
+                      <span className="text-muted-foreground min-w-[55px] text-end">{formatCurrency(staffCommission)}</span>
+                      {staffDeductionAmount > 0 && (
+                        <span className="text-red-600 dark:text-red-400 min-w-[55px] text-end">- {formatCurrency(staffDeductionAmount)}</span>
+                      )}
+                      <span className={`font-bold min-w-[60px] text-end ${staffNet < 0 ? 'text-red-600 dark:text-red-400' : ''}`}>= {formatCurrency(Math.abs(staffNet))}</span>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-            <div className="flex justify-between text-base font-bold border-t border-green-200/50 dark:border-green-800/30 pt-1.5">
-              <span>{t("salaries.netDueToStaff")}</span>
-              <span className={netStaffPayable >= 0 ? 'text-green-600' : 'text-red-500'} data-testid="text-net-due-staff">
-                {formatCurrency(netStaffPayable)}
-              </span>
+                );
+              })}
+            </div>
+            <div className="border-t border-green-200/50 dark:border-green-800/30 mt-2 pt-2">
+              <div className="flex justify-between items-baseline">
+                <span className="text-sm font-bold">{t("salaries.netDueToStaff")}</span>
+                <span className={`text-base font-bold tabular-nums ${netStaffPayable >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`} data-testid="text-net-due-staff">
+                  {formatCurrency(netStaffPayable)} DH
+                </span>
+              </div>
             </div>
           </div>
         </CardContent>
@@ -751,18 +762,18 @@ export default function Salaries() {
                 {/* Earnings Row */}
                 <div className="px-4 pb-3">
                   <div className="grid grid-cols-3 gap-2">
-                    <div className="p-2 rounded-lg bg-muted/40 dark:bg-muted/20 text-center" data-testid={`text-staff-revenue-${s.id}`}>
-                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{t("salaries.totalRevenue").split(' ').pop()}</p>
-                      <p className="text-sm font-bold mt-0.5">{formatCurrency(earning?.totalRevenue || 0)}</p>
+                    <div className="p-2.5 rounded-lg bg-muted/40 dark:bg-muted/20" data-testid={`text-staff-revenue-${s.id}`}>
+                      <p className="text-[10px] text-muted-foreground mb-1">{t("salaries.totalRevenue")}</p>
+                      <p className="text-sm font-bold tabular-nums">{formatCurrency(earning?.totalRevenue || 0)}</p>
                     </div>
-                    <div className="p-2 rounded-lg bg-green-50/80 dark:bg-green-950/20 text-center" data-testid={`text-staff-commission-${s.id}`}>
-                      <p className="text-[10px] text-green-600 uppercase tracking-wider">Commission</p>
-                      <p className="text-sm font-bold text-green-600 mt-0.5">{formatCurrency((earning?.totalCommission || 0) - staffDeductionAmount)}</p>
+                    <div className="p-2.5 rounded-lg bg-green-50/80 dark:bg-green-950/20" data-testid={`text-staff-commission-${s.id}`}>
+                      <p className="text-[10px] text-muted-foreground mb-1">{t("salaries.staffCommissions")}</p>
+                      <p className="text-sm font-bold tabular-nums">{formatCurrency((earning?.totalCommission || 0) - staffDeductionAmount)}</p>
                     </div>
-                    <div className="p-2 rounded-lg bg-primary/5 dark:bg-primary/10 text-center" data-testid={`text-staff-wallet-${s.id}`}>
-                      <p className="text-[10px] text-primary uppercase tracking-wider">{t("salaries.walletBalance").split(':')[0] || "Wallet"}</p>
-                      <p className={`text-sm font-bold mt-0.5 ${wallet.walletBalance < 0 ? 'text-red-600' : wallet.walletBalance > 0 ? 'text-primary' : 'text-muted-foreground'}`}>
-                        {wallet.walletBalance < 0 ? `-${formatCurrency(Math.abs(wallet.walletBalance))}` : formatCurrency(wallet.walletBalance)}
+                    <div className="p-2.5 rounded-lg bg-primary/5 dark:bg-primary/10" data-testid={`text-staff-wallet-${s.id}`}>
+                      <p className="text-[10px] text-muted-foreground mb-1">{t("salaries.walletBalance").split(':')[0] || "Wallet"}</p>
+                      <p className={`text-sm font-bold tabular-nums ${wallet.walletBalance < 0 ? 'text-red-600 dark:text-red-400' : wallet.walletBalance > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}>
+                        {wallet.walletBalance < 0 ? `- ${formatCurrency(Math.abs(wallet.walletBalance))}` : formatCurrency(wallet.walletBalance)}
                       </p>
                     </div>
                   </div>
@@ -771,18 +782,18 @@ export default function Salaries() {
                 {/* Deductions */}
                 {staffAllDeductions.length > 0 && (
                   <div className="px-4 pb-3">
-                    <div className="p-2 rounded-lg bg-orange-50/80 dark:bg-orange-950/20" data-testid={`text-staff-deductions-${s.id}`}>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-xs font-medium text-orange-600 dark:text-orange-400">{t("staffPortal.allDeductions")}</span>
+                    <div className="p-3 rounded-lg bg-orange-50/80 dark:bg-orange-950/20" data-testid={`text-staff-deductions-${s.id}`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-bold text-orange-700 dark:text-orange-400">{t("staffPortal.allDeductions")}</span>
                         {staffDeductionAmount > 0 && (
-                          <span className="text-xs font-semibold text-orange-600 dark:text-orange-400">-{formatCurrency(staffDeductionAmount)}</span>
+                          <span className="text-xs font-bold tabular-nums text-red-600 dark:text-red-400">- {formatCurrency(staffDeductionAmount)} DH</span>
                         )}
                       </div>
                       <div className="space-y-1">
                         {staffAllDeductions.map((d) => (
-                          <div key={d.id} className="flex items-center justify-between gap-2 py-0.5" data-testid={`text-staff-deduction-item-${d.id}`}>
+                          <div key={d.id} className="flex items-center justify-between gap-2 py-1 border-t border-orange-200/30 dark:border-orange-800/20 first:border-0" data-testid={`text-staff-deduction-item-${d.id}`}>
                             <div className="min-w-0 flex-1 flex items-center gap-1.5 flex-wrap">
-                              <span className="text-xs">{getDeductionTypeLabel(d.type)}</span>
+                              <span className="text-xs font-medium">{getDeductionTypeLabel(d.type)}</span>
                               {d.description && (
                                 <span className="text-[10px] text-muted-foreground">- {d.description}</span>
                               )}
@@ -792,8 +803,8 @@ export default function Salaries() {
                                 </span>
                               )}
                             </div>
-                            <span className={`text-xs font-medium shrink-0 ${d.cleared ? 'text-muted-foreground line-through' : 'text-red-600'}`}>
-                              -{formatCurrency(d.amount)}
+                            <span className={`text-xs font-medium shrink-0 tabular-nums ${d.cleared ? 'text-muted-foreground line-through' : 'text-red-600 dark:text-red-400'}`}>
+                              - {formatCurrency(d.amount)}
                             </span>
                           </div>
                         ))}
@@ -805,16 +816,17 @@ export default function Salaries() {
                 {/* Service Breakdown */}
                 {earning && Object.keys(earning.services).length > 0 && (
                   <div className="px-4 pb-4">
-                    <div className="space-y-1">
+                    <p className="text-[10px] text-muted-foreground mb-1.5 font-medium uppercase tracking-wider">{t("reports.serviceDetailsLabel")}</p>
+                    <div className="space-y-0">
                       {Object.entries(earning.services).map(([serviceName, data]) => (
-                        <div key={serviceName} className="flex items-center justify-between py-1.5 border-t border-border/30 first:border-0" data-testid={`text-service-${s.id}-${serviceName}`}>
-                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <div key={serviceName} className="flex items-center justify-between py-1.5 border-t border-border/20 first:border-0" data-testid={`text-service-${s.id}-${serviceName}`}>
+                          <div className="flex items-center gap-2 flex-1 min-w-0 flex-wrap">
                             <span className="text-sm truncate">{serviceName}</span>
                             <span className="liquid-glass-chip text-[10px] shrink-0">x{data.count}</span>
                           </div>
-                          <div className="flex items-center gap-3 shrink-0">
-                            <span className="text-xs text-muted-foreground">{formatCurrency(data.revenue)}</span>
-                            <span className="text-sm font-medium text-green-600">{formatCurrency(data.commission)}</span>
+                          <div className="flex items-center gap-3 shrink-0 tabular-nums">
+                            <span className="text-xs text-muted-foreground min-w-[45px] text-end">{formatCurrency(data.revenue)}</span>
+                            <span className="text-sm font-semibold min-w-[50px] text-end">{formatCurrency(data.commission)}</span>
                           </div>
                         </div>
                       ))}
@@ -933,9 +945,9 @@ export default function Salaries() {
                       <span className="text-sm font-medium truncate">{charge.name}</span>
                       <span className="liquid-glass-chip text-xs">{getChargeTypeLabel(charge.type)}</span>
                     </div>
-                    <div className="flex gap-2 text-sm mt-0.5">
-                      <span className="text-red-500 font-semibold">{formatCurrency(charge.amount)}</span>
-                      <span className="text-muted-foreground">{format(parseISO(charge.date), "d/M/yy")}</span>
+                    <div className="flex items-center gap-2 text-sm mt-1">
+                      <span className="text-red-600 dark:text-red-400 font-semibold tabular-nums">{formatCurrency(charge.amount)} DH</span>
+                      <span className="text-muted-foreground text-xs">{format(parseISO(charge.date), "d/M/yy")}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
@@ -1065,10 +1077,12 @@ export default function Salaries() {
                         <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400">{t("salaries.pending")}</span>
                       )}
                     </div>
-                    <div className="text-sm text-muted-foreground truncate">{deduction.description}</div>
-                    <div className="flex gap-2 text-sm mt-0.5">
-                      <span className={`font-semibold ${deduction.cleared ? 'text-green-600' : 'text-sky-600'}`}>{formatCurrency(deduction.amount)}</span>
-                      <span className="text-muted-foreground">{format(parseISO(deduction.date), "d/M/yy")}</span>
+                    {deduction.description && (
+                      <div className="text-xs text-muted-foreground truncate mt-0.5">{deduction.description}</div>
+                    )}
+                    <div className="flex items-center gap-2 text-sm mt-1">
+                      <span className={`font-semibold tabular-nums ${deduction.cleared ? 'text-muted-foreground line-through' : 'text-red-600 dark:text-red-400'}`}>{formatCurrency(deduction.amount)} DH</span>
+                      <span className="text-muted-foreground text-xs">{format(parseISO(deduction.date), "d/M/yy")}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
