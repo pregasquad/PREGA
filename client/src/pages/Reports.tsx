@@ -8,7 +8,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
   PieChart, Pie, Legend, AreaChart, Area
 } from "recharts";
-import { TrendingUp, Users, CalendarCheck, Calendar as CalendarIcon, ChevronRight, ChevronLeft, RefreshCw, DollarSign } from "lucide-react";
+import { TrendingUp, CalendarCheck, Calendar as CalendarIcon, ChevronRight, ChevronLeft, RefreshCw, DollarSign, Users, Clock, BarChart3, UserCheck } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -28,6 +28,7 @@ const tooltipStyle = {
 };
 
 type ViewMode = "weekly" | "monthly" | "custom";
+type ReportCategory = "financial" | "staff" | "scheduling" | "clients";
 
 export default function Reports() {
   const { t, i18n } = useTranslation();
@@ -41,6 +42,7 @@ export default function Reports() {
     to: new Date()
   });
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [activeCategory, setActiveCategory] = useState<ReportCategory>("financial");
 
   const { data: appointments = [] } = useAppointments();
   const { data: staffList = [] } = useStaff();
@@ -286,8 +288,15 @@ export default function Reports() {
     </div>
   );
 
+  const categories: { key: ReportCategory; label: string; icon: typeof TrendingUp }[] = [
+    { key: "financial", label: t("reports.catFinancial"), icon: DollarSign },
+    { key: "staff", label: t("reports.catStaff"), icon: Users },
+    { key: "scheduling", label: t("reports.catScheduling"), icon: BarChart3 },
+    { key: "clients", label: t("reports.catClients"), icon: UserCheck },
+  ];
+
   return (
-    <div className="space-y-4 md:space-y-6 max-w-6xl mx-auto p-2 md:p-4 lg:p-6 animate-fade-in" dir={isRtl ? "rtl" : "ltr"}>
+    <div className="space-y-4 md:space-y-5 max-w-6xl mx-auto p-2 md:p-4 lg:p-6 animate-fade-in" dir={isRtl ? "rtl" : "ltr"}>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 md:gap-4">
         <div>
           <h1 className="text-xl md:text-2xl lg:text-3xl font-display font-bold" data-testid="text-reports-title">{t("reports.pageTitle")}</h1>
@@ -358,7 +367,7 @@ export default function Reports() {
         )}
       </div>
 
-      {/* Summary Cards */}
+      {/* Summary Cards - Always visible */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4">
         <Card className="border shadow-sm">
           <CardContent className="p-3 md:p-4">
@@ -402,328 +411,357 @@ export default function Reports() {
         </Card>
       </div>
 
-      {/* Revenue Trend (Area Chart) */}
-      <Card className="border shadow-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">{t("reports.dailyRevenueTrend")}</CardTitle>
-          <CardDescription className="text-xs">{t("reports.dailyRevenueTrendDesc")}</CardDescription>
-        </CardHeader>
-        <CardContent className="h-64 md:h-72" data-testid="chart-revenue-trend">
-          {noData(dailyRevenueData) ? <EmptyState /> : (
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={dailyRevenueData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                <defs>
-                  <linearGradient id="gradRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-                <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} width={50} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [`${formatCurrency(v)} DH`]} />
-                <Area type="monotone" dataKey="revenue" stroke="#6366f1" fill="url(#gradRevenue)" strokeWidth={2} name={t("reports.revenue")} />
-              </AreaChart>
-            </ResponsiveContainer>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Revenue vs Expenses (Bar Chart) */}
-      <Card className="border shadow-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">{t("reports.revenueVsExpenses")}</CardTitle>
-          <CardDescription className="text-xs">{t("reports.revenueVsExpensesDesc")}</CardDescription>
-        </CardHeader>
-        <CardContent className="h-64 md:h-72" data-testid="chart-revenue-vs-expenses">
-          {noData(dailyRevenueData) ? <EmptyState /> : (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={dailyRevenueData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-                <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} width={50} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [`${formatCurrency(v)} DH`]} />
-                <Legend wrapperStyle={{ fontSize: '12px' }} />
-                <Bar dataKey="revenue" fill="#6366f1" radius={[4, 4, 0, 0]} name={t("reports.revenue")} />
-                <Bar dataKey="expenses" fill="#ef4444" radius={[4, 4, 0, 0]} name={t("reports.expenses")} />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-        {/* Payment Status (Pie) */}
-        <Card className="border shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">{t("reports.paymentStatus")}</CardTitle>
-            <CardDescription className="text-xs">{t("reports.paymentStatusDesc")}</CardDescription>
-          </CardHeader>
-          <CardContent className="h-64" data-testid="chart-payment-status">
-            {noData(paymentStatusData) ? <EmptyState /> : (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={paymentStatusData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={5} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                    {paymentStatusData.map((entry, i) => (
-                      <Cell key={i} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={tooltipStyle} />
-                  <Legend wrapperStyle={{ fontSize: '12px' }} />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Appointments by Day of Week (Bar) */}
-        <Card className="border shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">{t("reports.appointmentsByDay")}</CardTitle>
-            <CardDescription className="text-xs">{t("reports.appointmentsByDayDesc")}</CardDescription>
-          </CardHeader>
-          <CardContent className="h-64" data-testid="chart-appointments-by-day">
-            {noData(appointmentsByDayData.filter(d => d.count > 0)) ? <EmptyState /> : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={appointmentsByDayData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                  <XAxis dataKey="day" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
-                  <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} allowDecimals={false} width={30} />
-                  <Tooltip contentStyle={tooltipStyle} />
-                  <Bar dataKey="count" fill="#06b6d4" radius={[4, 4, 0, 0]} name={t("reports.count")} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
+      {/* Category Tabs */}
+      <div className="grid grid-cols-4 gap-2 md:gap-3">
+        {categories.map((cat) => {
+          const Icon = cat.icon;
+          const isActive = activeCategory === cat.key;
+          return (
+            <button
+              key={cat.key}
+              onClick={() => setActiveCategory(cat.key)}
+              className={`flex flex-col items-center gap-1.5 p-3 md:p-4 rounded-xl border transition-colors ${
+                isActive
+                  ? 'bg-primary text-primary-foreground border-primary shadow-md'
+                  : 'bg-card border-border hover-elevate'
+              }`}
+              data-testid={`button-cat-${cat.key}`}
+            >
+              <Icon className="w-5 h-5" />
+              <span className="text-xs md:text-sm font-medium">{cat.label}</span>
+            </button>
+          );
+        })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-        {/* Revenue by Category (Pie) */}
-        <Card className="border shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">{t("reports.categoryBreakdown")}</CardTitle>
-            <CardDescription className="text-xs">{t("reports.categoryBreakdownDesc")}</CardDescription>
-          </CardHeader>
-          <CardContent className="h-72" data-testid="chart-category-revenue">
-            {noData(categoryRevenueData) ? <EmptyState /> : (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={categoryRevenueData} cx="50%" cy="45%" innerRadius={45} outerRadius={75} paddingAngle={3} dataKey="value">
-                    {categoryRevenueData.map((_, i) => (
-                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [`${formatCurrency(v)} DH`]} />
-                  <Legend wrapperStyle={{ fontSize: '11px' }} />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
+      {/* Financial Section */}
+      {activeCategory === "financial" && (
+        <div className="space-y-4 md:space-y-5 animate-fade-in">
+          <Card className="border shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">{t("reports.dailyRevenueTrend")}</CardTitle>
+              <CardDescription className="text-xs">{t("reports.dailyRevenueTrendDesc")}</CardDescription>
+            </CardHeader>
+            <CardContent className="h-64 md:h-72" data-testid="chart-revenue-trend">
+              {noData(dailyRevenueData) ? <EmptyState /> : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={dailyRevenueData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                    <defs>
+                      <linearGradient id="gradRevenue" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                    <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+                    <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} width={50} />
+                    <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [`${formatCurrency(v)} DH`]} />
+                    <Area type="monotone" dataKey="revenue" stroke="#6366f1" fill="url(#gradRevenue)" strokeWidth={2} name={t("reports.revenue")} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
 
-        {/* Expense Categories (Pie) */}
-        <Card className="border shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">{t("reports.expenseCategories")}</CardTitle>
-            <CardDescription className="text-xs">{t("reports.expenseCategoriesDesc")}</CardDescription>
-          </CardHeader>
-          <CardContent className="h-72" data-testid="chart-expense-categories">
-            {noData(expenseCategoryData) ? <EmptyState /> : (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={expenseCategoryData} cx="50%" cy="45%" innerRadius={45} outerRadius={75} paddingAngle={3} dataKey="value">
-                    {expenseCategoryData.map((_, i) => (
-                      <Cell key={i} fill={COLORS[(i + 3) % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [`${formatCurrency(v)} DH`]} />
-                  <Legend wrapperStyle={{ fontSize: '11px' }} />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+          <Card className="border shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">{t("reports.revenueVsExpenses")}</CardTitle>
+              <CardDescription className="text-xs">{t("reports.revenueVsExpensesDesc")}</CardDescription>
+            </CardHeader>
+            <CardContent className="h-64 md:h-72" data-testid="chart-revenue-vs-expenses">
+              {noData(dailyRevenueData) ? <EmptyState /> : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={dailyRevenueData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                    <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+                    <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} width={50} />
+                    <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [`${formatCurrency(v)} DH`]} />
+                    <Legend wrapperStyle={{ fontSize: '12px' }} />
+                    <Bar dataKey="revenue" fill="#6366f1" radius={[4, 4, 0, 0]} name={t("reports.revenue")} />
+                    <Bar dataKey="expenses" fill="#ef4444" radius={[4, 4, 0, 0]} name={t("reports.expenses")} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-        {/* Revenue by Staff (Bar) */}
-        <Card className="border shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">{t("reports.revenueByStaff")}</CardTitle>
-            <CardDescription className="text-xs">{t("reports.staffRevenueDesc")}</CardDescription>
-          </CardHeader>
-          <CardContent className="h-72" data-testid="chart-revenue-by-staff">
-            {noData(stats.staffRevenue) ? <EmptyState /> : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stats.staffRevenue} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} opacity={0.2} />
-                  <XAxis type="number" hide />
-                  <YAxis dataKey="name" type="category" width={70} tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
-                  <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'transparent' }} formatter={(v: number) => [`${formatCurrency(v)} DH`, t("reports.revenue")]} />
-                  <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={24}>
-                    {stats.staffRevenue.map((entry, i) => (
-                      <Cell key={i} fill={entry.color} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Appointments by Staff (Bar) */}
-        <Card className="border shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">{t("reports.staffAppointments")}</CardTitle>
-            <CardDescription className="text-xs">{t("reports.staffAppointmentsDesc")}</CardDescription>
-          </CardHeader>
-          <CardContent className="h-72" data-testid="chart-staff-appointments">
-            {noData(staffAppointmentsData) ? <EmptyState /> : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={staffAppointmentsData} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} opacity={0.2} />
-                  <XAxis type="number" allowDecimals={false} hide />
-                  <YAxis dataKey="name" type="category" width={70} tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
-                  <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'transparent' }} />
-                  <Bar dataKey="count" radius={[0, 4, 4, 0]} barSize={24} name={t("reports.count")}>
-                    {staffAppointmentsData.map((entry, i) => (
-                      <Cell key={i} fill={entry.color} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-        {/* Top Services (Pie) */}
-        <Card className="border shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">{t("reports.topServices")}</CardTitle>
-            <CardDescription className="text-xs">{t("reports.topServicesDesc")}</CardDescription>
-          </CardHeader>
-          <CardContent className="h-72" data-testid="chart-top-services">
-            {noData(stats.serviceData) ? <EmptyState /> : (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={stats.serviceData} cx="50%" cy="45%" innerRadius={45} outerRadius={75} paddingAngle={4} dataKey="value">
-                    {stats.serviceData.map((_, i) => (
-                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={tooltipStyle} />
-                  <Legend wrapperStyle={{ fontSize: '11px' }} />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Busiest Hours (Bar) */}
-        <Card className="border shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">{t("reports.hourlyDistribution")}</CardTitle>
-            <CardDescription className="text-xs">{t("reports.hourlyDistributionDesc")}</CardDescription>
-          </CardHeader>
-          <CardContent className="h-72" data-testid="chart-hourly-distribution">
-            {noData(hourlyData.filter(h => h.count > 0)) ? <EmptyState /> : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={hourlyData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                  <XAxis dataKey="hour" tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))' }} />
-                  <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} allowDecimals={false} width={25} />
-                  <Tooltip contentStyle={tooltipStyle} />
-                  <Bar dataKey="count" fill="#8b5cf6" radius={[4, 4, 0, 0]} name={t("reports.count")} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Top Clients (Bar) */}
-      <Card className="border shadow-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">{t("reports.clientFrequency")}</CardTitle>
-          <CardDescription className="text-xs">{t("reports.clientFrequencyDesc")}</CardDescription>
-        </CardHeader>
-        <CardContent className="h-64 md:h-72" data-testid="chart-client-frequency">
-          {noData(clientFrequencyData) ? <EmptyState /> : (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={clientFrequencyData} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} opacity={0.2} />
-                <XAxis type="number" allowDecimals={false} hide />
-                <YAxis dataKey="name" type="category" width={90} tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
-                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'transparent' }} formatter={(v: number) => [`${v} ${t("reports.visits")}`]} />
-                <Bar dataKey="count" fill="#f59e0b" radius={[0, 4, 4, 0]} barSize={20} name={t("reports.visits")} />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Staff Performance Detail */}
-      <Card className="border shadow-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">{t("reports.staffPerformance")}</CardTitle>
-          <CardDescription className="text-xs">{t("reports.staffPerformanceDesc")}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {staffPerformance.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8 text-sm">{t("reports.noDataForPeriod")}</p>
-          ) : (
-            <div className="space-y-4">
-              {staffPerformance.map((staff) => (
-                <div key={staff.name} className="border rounded-xl p-3 md:p-4 bg-muted" data-testid={`card-staff-perf-${staff.name}`}>
-                  <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: staff.color }} />
-                      <h3 className="font-bold text-sm md:text-base">{staff.name}</h3>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs">
-                      <span className="bg-primary/20 text-primary px-2 py-0.5 rounded-full font-medium">
-                        {staff.appointmentCount} {t("reports.appointment")}
-                      </span>
-                      <span className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 px-2 py-0.5 rounded-full font-bold">
-                        {formatCurrency(staff.totalEarnings)} DH
-                      </span>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 mb-3">
-                    <div className="bg-background rounded-lg p-2.5 border">
-                      <p className="text-[10px] text-muted-foreground">{t("reports.collectedAmount")}</p>
-                      <p className="text-sm font-bold text-emerald-600">{formatCurrency(staff.paidEarnings)} DH</p>
-                    </div>
-                    <div className="bg-background rounded-lg p-2.5 border">
-                      <p className="text-[10px] text-muted-foreground">{t("reports.uncollected")}</p>
-                      <p className="text-sm font-bold text-sky-500">{formatCurrency(staff.unpaidEarnings)} DH</p>
-                    </div>
-                  </div>
-                  {staff.serviceBreakdown.length > 0 && (
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground mb-1.5">{t("reports.serviceDetailsLabel")}</p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
-                        {staff.serviceBreakdown.map((svc) => (
-                          <div key={svc.service} className="flex items-center justify-between bg-background rounded-lg px-2.5 py-1.5 border text-xs">
-                            <span className="truncate flex-1">{svc.service}</span>
-                            <div className="flex items-center gap-1.5 ms-2">
-                              <span className="text-muted-foreground">{svc.count}x</span>
-                              <span className="font-medium text-primary">{formatCurrency(svc.revenue)} DH</span>
-                            </div>
-                          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-5">
+            <Card className="border shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">{t("reports.paymentStatus")}</CardTitle>
+                <CardDescription className="text-xs">{t("reports.paymentStatusDesc")}</CardDescription>
+              </CardHeader>
+              <CardContent className="h-64" data-testid="chart-payment-status">
+                {noData(paymentStatusData) ? <EmptyState /> : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={paymentStatusData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={5} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                        {paymentStatusData.map((entry, i) => (
+                          <Cell key={i} fill={entry.color} />
                         ))}
+                      </Pie>
+                      <Tooltip contentStyle={tooltipStyle} />
+                      <Legend wrapperStyle={{ fontSize: '12px' }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="border shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">{t("reports.categoryBreakdown")}</CardTitle>
+                <CardDescription className="text-xs">{t("reports.categoryBreakdownDesc")}</CardDescription>
+              </CardHeader>
+              <CardContent className="h-64" data-testid="chart-category-revenue">
+                {noData(categoryRevenueData) ? <EmptyState /> : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={categoryRevenueData} cx="50%" cy="45%" innerRadius={45} outerRadius={75} paddingAngle={3} dataKey="value">
+                        {categoryRevenueData.map((_, i) => (
+                          <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [`${formatCurrency(v)} DH`]} />
+                      <Legend wrapperStyle={{ fontSize: '11px' }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="border shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">{t("reports.expenseCategories")}</CardTitle>
+              <CardDescription className="text-xs">{t("reports.expenseCategoriesDesc")}</CardDescription>
+            </CardHeader>
+            <CardContent className="h-64" data-testid="chart-expense-categories">
+              {noData(expenseCategoryData) ? <EmptyState /> : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={expenseCategoryData} cx="50%" cy="45%" innerRadius={45} outerRadius={75} paddingAngle={3} dataKey="value">
+                      {expenseCategoryData.map((_, i) => (
+                        <Cell key={i} fill={COLORS[(i + 3) % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [`${formatCurrency(v)} DH`]} />
+                    <Legend wrapperStyle={{ fontSize: '11px' }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Staff Section */}
+      {activeCategory === "staff" && (
+        <div className="space-y-4 md:space-y-5 animate-fade-in">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-5">
+            <Card className="border shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">{t("reports.revenueByStaff")}</CardTitle>
+                <CardDescription className="text-xs">{t("reports.staffRevenueDesc")}</CardDescription>
+              </CardHeader>
+              <CardContent className="h-72" data-testid="chart-revenue-by-staff">
+                {noData(stats.staffRevenue) ? <EmptyState /> : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={stats.staffRevenue} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} opacity={0.2} />
+                      <XAxis type="number" hide />
+                      <YAxis dataKey="name" type="category" width={70} tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
+                      <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'transparent' }} formatter={(v: number) => [`${formatCurrency(v)} DH`, t("reports.revenue")]} />
+                      <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={24}>
+                        {stats.staffRevenue.map((entry, i) => (
+                          <Cell key={i} fill={entry.color} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="border shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">{t("reports.staffAppointments")}</CardTitle>
+                <CardDescription className="text-xs">{t("reports.staffAppointmentsDesc")}</CardDescription>
+              </CardHeader>
+              <CardContent className="h-72" data-testid="chart-staff-appointments">
+                {noData(staffAppointmentsData) ? <EmptyState /> : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={staffAppointmentsData} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} opacity={0.2} />
+                      <XAxis type="number" allowDecimals={false} hide />
+                      <YAxis dataKey="name" type="category" width={70} tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
+                      <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'transparent' }} />
+                      <Bar dataKey="count" radius={[0, 4, 4, 0]} barSize={24} name={t("reports.count")}>
+                        {staffAppointmentsData.map((entry, i) => (
+                          <Cell key={i} fill={entry.color} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="border shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">{t("reports.staffPerformance")}</CardTitle>
+              <CardDescription className="text-xs">{t("reports.staffPerformanceDesc")}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {staffPerformance.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8 text-sm">{t("reports.noDataForPeriod")}</p>
+              ) : (
+                <div className="space-y-4">
+                  {staffPerformance.map((staff) => (
+                    <div key={staff.name} className="border rounded-xl p-3 md:p-4 bg-muted" data-testid={`card-staff-perf-${staff.name}`}>
+                      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: staff.color }} />
+                          <h3 className="font-bold text-sm md:text-base">{staff.name}</h3>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="bg-primary/20 text-primary px-2 py-0.5 rounded-full font-medium">
+                            {staff.appointmentCount} {t("reports.appointment")}
+                          </span>
+                          <span className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 px-2 py-0.5 rounded-full font-bold">
+                            {formatCurrency(staff.totalEarnings)} DH
+                          </span>
+                        </div>
                       </div>
+                      <div className="grid grid-cols-2 gap-3 mb-3">
+                        <div className="bg-background rounded-lg p-2.5 border">
+                          <p className="text-[10px] text-muted-foreground">{t("reports.collectedAmount")}</p>
+                          <p className="text-sm font-bold text-emerald-600">{formatCurrency(staff.paidEarnings)} DH</p>
+                        </div>
+                        <div className="bg-background rounded-lg p-2.5 border">
+                          <p className="text-[10px] text-muted-foreground">{t("reports.uncollected")}</p>
+                          <p className="text-sm font-bold text-sky-500">{formatCurrency(staff.unpaidEarnings)} DH</p>
+                        </div>
+                      </div>
+                      {staff.serviceBreakdown.length > 0 && (
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground mb-1.5">{t("reports.serviceDetailsLabel")}</p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
+                            {staff.serviceBreakdown.map((svc) => (
+                              <div key={svc.service} className="flex items-center justify-between bg-background rounded-lg px-2.5 py-1.5 border text-xs">
+                                <span className="truncate flex-1">{svc.service}</span>
+                                <div className="flex items-center gap-1.5 ms-2">
+                                  <span className="text-muted-foreground">{svc.count}x</span>
+                                  <span className="font-medium text-primary">{formatCurrency(svc.revenue)} DH</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Scheduling Section */}
+      {activeCategory === "scheduling" && (
+        <div className="space-y-4 md:space-y-5 animate-fade-in">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-5">
+            <Card className="border shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">{t("reports.appointmentsByDay")}</CardTitle>
+                <CardDescription className="text-xs">{t("reports.appointmentsByDayDesc")}</CardDescription>
+              </CardHeader>
+              <CardContent className="h-64" data-testid="chart-appointments-by-day">
+                {noData(appointmentsByDayData.filter(d => d.count > 0)) ? <EmptyState /> : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={appointmentsByDayData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                      <XAxis dataKey="day" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
+                      <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} allowDecimals={false} width={30} />
+                      <Tooltip contentStyle={tooltipStyle} />
+                      <Bar dataKey="count" fill="#06b6d4" radius={[4, 4, 0, 0]} name={t("reports.count")} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="border shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">{t("reports.hourlyDistribution")}</CardTitle>
+                <CardDescription className="text-xs">{t("reports.hourlyDistributionDesc")}</CardDescription>
+              </CardHeader>
+              <CardContent className="h-64" data-testid="chart-hourly-distribution">
+                {noData(hourlyData.filter(h => h.count > 0)) ? <EmptyState /> : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={hourlyData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                      <XAxis dataKey="hour" tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))' }} />
+                      <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} allowDecimals={false} width={25} />
+                      <Tooltip contentStyle={tooltipStyle} />
+                      <Bar dataKey="count" fill="#8b5cf6" radius={[4, 4, 0, 0]} name={t("reports.count")} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="border shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">{t("reports.topServices")}</CardTitle>
+              <CardDescription className="text-xs">{t("reports.topServicesDesc")}</CardDescription>
+            </CardHeader>
+            <CardContent className="h-64" data-testid="chart-top-services">
+              {noData(stats.serviceData) ? <EmptyState /> : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={stats.serviceData} cx="50%" cy="45%" innerRadius={45} outerRadius={75} paddingAngle={4} dataKey="value">
+                      {stats.serviceData.map((_, i) => (
+                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={tooltipStyle} />
+                    <Legend wrapperStyle={{ fontSize: '11px' }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Clients Section */}
+      {activeCategory === "clients" && (
+        <div className="space-y-4 md:space-y-5 animate-fade-in">
+          <Card className="border shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">{t("reports.clientFrequency")}</CardTitle>
+              <CardDescription className="text-xs">{t("reports.clientFrequencyDesc")}</CardDescription>
+            </CardHeader>
+            <CardContent className="h-64 md:h-72" data-testid="chart-client-frequency">
+              {noData(clientFrequencyData) ? <EmptyState /> : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={clientFrequencyData} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} opacity={0.2} />
+                    <XAxis type="number" allowDecimals={false} hide />
+                    <YAxis dataKey="name" type="category" width={90} tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
+                    <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'transparent' }} formatter={(v: number) => [`${v} ${t("reports.visits")}`]} />
+                    <Bar dataKey="count" fill="#f59e0b" radius={[0, 4, 4, 0]} barSize={20} name={t("reports.visits")} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

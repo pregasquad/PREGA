@@ -449,7 +449,11 @@
     "thu": "Jeu",
     "fri": "Ven",
     "sat": "Sam",
-    "sun": "Dim"
+    "sun": "Dim",
+    "catFinancial": "Financier",
+    "catStaff": "Personnel",
+    "catScheduling": "Planification",
+    "catClients": "Clients"
   },
   "booking": {
     "title": "Réservez votre Rendez-vous",

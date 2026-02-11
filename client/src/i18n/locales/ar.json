@@ -449,7 +449,11 @@
     "thu": "الخميس",
     "fri": "الجمعة",
     "sat": "السبت",
-    "sun": "الأحد"
+    "sun": "الأحد",
+    "catFinancial": "المالية",
+    "catStaff": "الموظفين",
+    "catScheduling": "الجدولة",
+    "catClients": "العملاء"
   },
   "booking": {
     "title": "احجز موعدك",

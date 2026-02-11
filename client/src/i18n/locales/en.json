@@ -449,7 +449,11 @@
     "thu": "Thu",
     "fri": "Fri",
     "sat": "Sat",
-    "sun": "Sun"
+    "sun": "Sun",
+    "catFinancial": "Financial",
+    "catStaff": "Staff",
+    "catScheduling": "Scheduling",
+    "catClients": "Clients"
   },
   "booking": {
     "title": "Book Your Appointment",
