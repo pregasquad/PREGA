@@ -767,7 +767,17 @@
     "noExpensesRecorded": "Aucune dépense enregistrée",
     "closingReady": "Tout est bon, vous pouvez fermer la journée !",
     "closingNotReady": "Ne laissez pas d'erreurs - vérifiez la liste",
-    "cashTapToVerify": "Appuyez pour confirmer après vérification manuelle"
+    "cashTapToVerify": "Appuyez pour confirmer après vérification manuelle",
+    "financialOverview": "APERCU FINANCIER",
+    "salonRevenue": "Chiffre d'Affaires",
+    "expenses": "Dépenses",
+    "netProfit": "Bénéfice Net",
+    "todayFinancials": "Finances du Jour",
+    "employeesAccount": "PERFORMANCE EQUIPE",
+    "revenue": "Revenus",
+    "appointments": "RDV",
+    "noStaffData": "Aucun membre d'équipe",
+    "totalExpenses": "Total Dépenses"
   },
   "login": {
     "welcomeBack": "Bienvenue",

@@ -727,7 +727,17 @@
     "noExpensesRecorded": "لم يتم تسجيل أي مصروف",
     "closingReady": "كل شيء تمام، يمكنك إغلاق اليوم!",
     "closingNotReady": "ما يبقاش الخطأ - راجع القائمة",
-    "cashTapToVerify": "اضغط للتأكيد بعد التحقق يدوياً"
+    "cashTapToVerify": "اضغط للتأكيد بعد التحقق يدوياً",
+    "financialOverview": "النظرة المالية",
+    "salonRevenue": "إيرادات الصالون",
+    "expenses": "المصاريف",
+    "netProfit": "صافي الربح",
+    "todayFinancials": "الوضع المالي لليوم",
+    "employeesAccount": "أداء الفريق",
+    "revenue": "الإيرادات",
+    "appointments": "المواعيد",
+    "noStaffData": "لا يوجد أعضاء فريق بعد",
+    "totalExpenses": "إجمالي المصاريف"
   },
   "login": {
     "welcomeBack": "مرحباً بعودتك",

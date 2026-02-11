@@ -767,7 +767,17 @@
     "noExpensesRecorded": "No expenses recorded",
     "closingReady": "All good, you can close the day!",
     "closingNotReady": "Don't leave errors behind - review the list",
-    "cashTapToVerify": "Tap to confirm after manual verification"
+    "cashTapToVerify": "Tap to confirm after manual verification",
+    "financialOverview": "FINANCIAL OVERVIEW",
+    "salonRevenue": "Salon Revenue",
+    "expenses": "Expenses",
+    "netProfit": "Net Profit",
+    "todayFinancials": "Today's Financials",
+    "employeesAccount": "TEAM PERFORMANCE",
+    "revenue": "Revenue",
+    "appointments": "Appts",
+    "noStaffData": "No team members yet",
+    "totalExpenses": "Total Expenses"
   },
   "login": {
     "welcomeBack": "Welcome Back",

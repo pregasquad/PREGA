@@ -1,7 +1,7 @@
 import { useAppointments, useStaff, useServices, useClients, useCategories } from "@/hooks/use-salon-data";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Scissors, CalendarCheck, TrendingUp, Clock, Package, UserPlus, Pencil, Trash2, LogOut, AlertTriangle, Banknote, CreditCard, RefreshCw, ClipboardCheck, CheckCircle2, XCircle, CircleDot } from "lucide-react";
+import { Users, Scissors, CalendarCheck, TrendingUp, Clock, Package, UserPlus, Pencil, Trash2, LogOut, AlertTriangle, Banknote, CreditCard, RefreshCw, ClipboardCheck, CheckCircle2, XCircle, CircleDot, ArrowUpRight, ArrowDownRight, Minus } from "lucide-react";
 import { format, startOfToday, subDays } from "date-fns";
 import { useState, useMemo } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -174,6 +174,13 @@ export default function Home() {
     return { totalRevenue, paidRevenue, unpaidRevenue, count: appointments.length };
   }, [appointments]);
 
+  const todayExpenses = useMemo(() => {
+    const todayCharges = charges.filter((c: any) => c.date === todayDate);
+    return todayCharges.reduce((sum: number, c: any) => sum + (c.amount || 0), 0);
+  }, [charges, todayDate]);
+
+  const netProfit = todayStats.totalRevenue - todayExpenses;
+
   const closingChecklist = useMemo(() => {
     const unpaidCount = appointments.filter((app: any) => !app.paid).length;
     const hasAppointments = appointments.length > 0;
@@ -185,312 +192,361 @@ export default function Home() {
     return { unpaidCount, hasAppointments, allPaid, unpaidAmount, hasExpenses, allGood };
   }, [appointments, charges, todayDate, cashVerified]);
 
-  const stats = [
-    { label: t("home.todayRevenue"), value: `${todayStats.totalRevenue} DH`, icon: Banknote, color: "text-emerald-500", highlight: true },
-    { label: t("home.todayAppointments"), value: todayStats.count, icon: CalendarCheck, color: "text-cyan-500" },
-    { label: t("home.paidToday"), value: `${todayStats.paidRevenue} DH`, icon: CreditCard, color: "text-green-500" },
-    { label: t("home.unpaidToday"), value: `${todayStats.unpaidRevenue} DH`, icon: TrendingUp, color: todayStats.unpaidRevenue > 0 ? "text-sky-500" : "text-muted-foreground" },
-  ];
+  const staffPerformance = useMemo(() => {
+    return staff.map((s: any) => {
+      const staffApps = appointments.filter((a: any) => a.staffId === s.id || (!a.staffId && a.staff === s.name));
+      const staffRevenue = staffApps.reduce((sum: number, a: any) => sum + (a.total || 0), 0);
+      return {
+        ...s,
+        appointmentCount: staffApps.length,
+        revenue: staffRevenue,
+      };
+    });
+  }, [staff, appointments]);
 
   return (
-    <div className="space-y-4 md:space-y-8 p-3 md:p-6 animate-fade-in min-h-screen pb-20" dir={isRtl ? "rtl" : "ltr"}>
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="text-xl md:text-3xl font-display font-bold">{t("home.dashboard")}</h1>
-          <p className="text-muted-foreground text-sm md:text-base mt-1">{t("home.overview")}</p>
+    <div className="min-h-screen pb-24" dir={isRtl ? "rtl" : "ltr"}>
+      <div className="max-w-lg mx-auto px-4 py-5 space-y-6 animate-fade-in">
+
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-bold tracking-tight" data-testid="text-dashboard-title">{t("home.dashboard")}</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">{t("home.overview")}</p>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                queryClient.invalidateQueries();
+                toast({ title: t("common.refreshed"), description: t("common.dataUpdated") });
+              }}
+              title={t("common.refresh")}
+              data-testid="button-refresh"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+            <LanguageSwitcher />
+            <Button 
+              variant="ghost" 
+              size="icon"
+              className="text-destructive"
+              onClick={handleAdminLogout}
+              data-testid="button-logout"
+            >
+              <LogOut className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8 md:h-10 md:w-10"
-            onClick={() => {
-              queryClient.invalidateQueries();
-              toast({ title: t("common.refreshed"), description: t("common.dataUpdated") });
-            }}
-            title={t("common.refresh")}
-          >
-            <RefreshCw className="h-4 w-4" />
-          </Button>
-          <LanguageSwitcher />
-          
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="gap-1 md:gap-2 text-destructive hover:bg-destructive/10 hover:border-destructive/30 text-xs md:text-sm h-8 md:h-9"
-            onClick={handleAdminLogout}
-          >
-            <LogOut className="w-3 h-3 md:w-4 md:h-4" />
-            <span className="hidden sm:inline">{t("home.logout")}</span>
-          </Button>
-          
-          <Dialog open={isStaffDialogOpen} onOpenChange={setIsStaffDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="gap-1 md:gap-2 text-xs md:text-sm h-8 md:h-9">
-                <UserPlus className="w-3 h-3 md:w-4 md:h-4" />
-                <span className="hidden sm:inline">{t("home.addStaff")}</span>
-                <span className="sm:hidden">+</span>
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader><DialogTitle>{t("home.addNewStaff")}</DialogTitle></DialogHeader>
-              <Form {...staffForm}>
-                <form onSubmit={staffForm.handleSubmit((data) => createStaffMutation.mutate(data))} className="space-y-4">
-                  <FormField control={staffForm.control} name="name" render={({ field }) => (
-                    <FormItem><FormLabel>{t("home.name")}</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
-                  )} />
-                  <FormField control={staffForm.control} name="color" render={({ field }) => (
-                    <FormItem><FormLabel>{t("home.color")}</FormLabel><FormControl><Input type="color" {...field} /></FormControl></FormItem>
-                  )} />
-                  <FormField control={staffForm.control} name="categories" render={({ field }) => {
-                    const selectedCategories = field.value ? field.value.split(",").filter(Boolean) : [];
-                    const toggleCategory = (catName: string) => {
-                      const newCategories = selectedCategories.includes(catName)
-                        ? selectedCategories.filter(c => c !== catName)
-                        : [...selectedCategories, catName];
-                      field.onChange(newCategories.join(","));
-                    };
-                    return (
-                      <FormItem>
-                        <FormLabel>{t("home.categories")}</FormLabel>
-                        <div className="flex flex-wrap gap-2">
-                          {categories.map((cat: any) => (
-                            <Button
-                              key={cat.id}
-                              type="button"
-                              variant={selectedCategories.includes(cat.name) ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => toggleCategory(cat.name)}
-                            >
-                              {cat.name}
-                            </Button>
-                          ))}
-                        </div>
-                        <p className="text-xs text-muted-foreground">{t("home.selectCategoriesHint")}</p>
-                      </FormItem>
-                    );
-                  }} />
-                  <Button type="submit" className="w-full" disabled={createStaffMutation.isPending}>
-                    {createStaffMutation.isPending ? t("home.adding") : t("home.add")}
-                  </Button>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
+        <div className="grid grid-cols-2 gap-3" data-testid="section-summary-cards">
+          <div className="glass-card rounded-2xl p-4 flex flex-col justify-between min-h-[100px]" data-testid="card-revenue">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{t("home.todayRevenue")}</span>
+            <div className="mt-2">
+              <span className="text-2xl font-bold tracking-tight" data-testid="text-revenue-value">{todayStats.totalRevenue}</span>
+              <span className="text-sm font-medium text-muted-foreground ms-1">DH</span>
+            </div>
+          </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
-          {stats.map((stat, i) => (
-            <Card key={i} className={`hover-elevate ${stat.highlight ? 'bg-gradient-to-br from-emerald-50 to-green-100 dark:from-emerald-950/50 dark:to-green-900/30 border-emerald-200 dark:border-emerald-800' : ''}`}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2 gap-2 p-3 md:p-6">
-                <CardTitle className="text-xs md:text-sm font-medium">{stat.label}</CardTitle>
-                <stat.icon className={`h-4 w-4 md:h-5 md:w-5 ${stat.color}`} />
-              </CardHeader>
-              <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
-                <div className={`text-lg md:text-2xl font-bold ${stat.highlight ? 'text-emerald-700 dark:text-emerald-400' : ''}`}>{stat.value}</div>
+          <div className="glass-card rounded-2xl p-4 flex flex-col justify-between min-h-[100px]" data-testid="card-appointments">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{t("home.todayAppointments")}</span>
+            <div className="mt-2">
+              <span className="text-2xl font-bold tracking-tight" data-testid="text-appointments-value">{todayStats.count}</span>
+            </div>
+          </div>
+
+          <div className="glass-card rounded-2xl p-4 flex flex-col justify-between min-h-[100px]" data-testid="card-paid">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{t("home.paidToday")}</span>
+            <div className="mt-2">
+              <span className="text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400" data-testid="text-paid-value">{todayStats.paidRevenue}</span>
+              <span className="text-sm font-medium text-muted-foreground ms-1">DH</span>
+            </div>
+          </div>
+
+          <div className="glass-card rounded-2xl p-4 flex flex-col justify-between min-h-[100px]" data-testid="card-unpaid">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{t("home.unpaidToday")}</span>
+            <div className="mt-2">
+              <span className={`text-2xl font-bold tracking-tight ${todayStats.unpaidRevenue > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'}`} data-testid="text-unpaid-value">{todayStats.unpaidRevenue}</span>
+              <span className="text-sm font-medium text-muted-foreground ms-1">DH</span>
+            </div>
+          </div>
+        </div>
+
+        <div data-testid="section-financial">
+          <h2 className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">{t("home.financialOverview")}</h2>
+          <Card className="overflow-visible">
+            <CardContent className="p-0">
+              <div className="p-4 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
+                    <ArrowUpRight className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{t("home.salonRevenue")}</p>
+                    <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400" data-testid="text-salon-revenue">{todayStats.totalRevenue} DH</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t border-border/50" />
+
+              <div className="p-4 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-red-100 dark:bg-red-900/40 flex items-center justify-center">
+                    <ArrowDownRight className="w-4 h-4 text-red-600 dark:text-red-400" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{t("home.expenses")}</p>
+                    <p className="text-lg font-bold text-red-600 dark:text-red-400" data-testid="text-expenses">{todayExpenses} DH</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t border-border/50" />
+
+              <div className="p-5 flex flex-col items-center justify-center">
+                <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-1">{t("home.netProfit")}</p>
+                <p className={`text-3xl font-extrabold tracking-tight ${netProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`} data-testid="text-net-profit">
+                  {netProfit >= 0 ? '+' : ''}{netProfit} DH
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div data-testid="section-team-performance">
+          <div className="flex items-center justify-between mb-3 gap-2">
+            <h2 className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">{t("home.employeesAccount")}</h2>
+            <Dialog open={isStaffDialogOpen} onOpenChange={setIsStaffDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="sm" className="gap-1.5 text-xs" data-testid="button-add-staff">
+                  <UserPlus className="w-3.5 h-3.5" />
+                  {t("home.addStaff")}
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader><DialogTitle>{t("home.addNewStaff")}</DialogTitle></DialogHeader>
+                <Form {...staffForm}>
+                  <form onSubmit={staffForm.handleSubmit((data) => createStaffMutation.mutate(data))} className="space-y-4">
+                    <FormField control={staffForm.control} name="name" render={({ field }) => (
+                      <FormItem><FormLabel>{t("home.name")}</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+                    )} />
+                    <FormField control={staffForm.control} name="color" render={({ field }) => (
+                      <FormItem><FormLabel>{t("home.color")}</FormLabel><FormControl><Input type="color" {...field} /></FormControl></FormItem>
+                    )} />
+                    <FormField control={staffForm.control} name="categories" render={({ field }) => {
+                      const selectedCategories = field.value ? field.value.split(",").filter(Boolean) : [];
+                      const toggleCategory = (catName: string) => {
+                        const newCategories = selectedCategories.includes(catName)
+                          ? selectedCategories.filter(c => c !== catName)
+                          : [...selectedCategories, catName];
+                        field.onChange(newCategories.join(","));
+                      };
+                      return (
+                        <FormItem>
+                          <FormLabel>{t("home.categories")}</FormLabel>
+                          <div className="flex flex-wrap gap-2">
+                            {categories.map((cat: any) => (
+                              <Button
+                                key={cat.id}
+                                type="button"
+                                variant={selectedCategories.includes(cat.name) ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => toggleCategory(cat.name)}
+                              >
+                                {cat.name}
+                              </Button>
+                            ))}
+                          </div>
+                          <p className="text-xs text-muted-foreground">{t("home.selectCategoriesHint")}</p>
+                        </FormItem>
+                      );
+                    }} />
+                    <Button type="submit" className="w-full" disabled={createStaffMutation.isPending}>
+                      {createStaffMutation.isPending ? t("home.adding") : t("home.add")}
+                    </Button>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          {staffPerformance.length === 0 ? (
+            <Card>
+              <CardContent className="p-6">
+                <p className="text-sm text-muted-foreground text-center" data-testid="text-no-staff">{t("home.noStaffData")}</p>
               </CardContent>
             </Card>
-          ))}
-        </div>
+          ) : (
+            <div className="space-y-2">
+              {staffPerformance.map((s: any) => (
+                <Card key={s.id} className="overflow-visible" data-testid={`card-employee-${s.id}`}>
+                  <CardContent className="p-3.5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0" style={{ backgroundColor: s.color }}>
+                        {s.name?.charAt(0)?.toUpperCase()}
+                      </div>
 
-      <Card className={`hover-elevate ${closingChecklist.allGood ? 'bg-gradient-to-br from-emerald-50 to-green-100 dark:from-emerald-950/50 dark:to-green-900/30 border-emerald-200 dark:border-emerald-800' : 'bg-gradient-to-br from-amber-50 to-orange-100 dark:from-amber-950/50 dark:to-orange-900/30 border-amber-200 dark:border-amber-800'}`}>
-        <CardHeader className="p-3 md:p-6 pb-2 gap-2">
-          <CardTitle className="flex items-center gap-2 text-sm md:text-base">
-            <ClipboardCheck className={`w-4 h-4 md:w-5 md:h-5 ${closingChecklist.allGood ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`} />
-            {t("home.smartClosingDay")}
-          </CardTitle>
-          <p className="text-xs md:text-sm text-muted-foreground">{t("home.smartClosingDesc")}</p>
-        </CardHeader>
-        <CardContent className="p-3 md:p-6 pt-0">
-          <div className="space-y-2.5">
-            <div className="flex items-center gap-2.5 p-2.5 md:p-3 rounded-lg bg-background/60" data-testid="check-appointments">
-              {closingChecklist.allPaid ? (
-                <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
-              ) : closingChecklist.hasAppointments ? (
-                <XCircle className="w-5 h-5 text-red-500 shrink-0" />
-              ) : (
-                <CircleDot className="w-5 h-5 text-muted-foreground shrink-0" />
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium">{t("home.checkAllAppointments")}</p>
-                <p className={`text-xs ${closingChecklist.allPaid ? 'text-emerald-600 dark:text-emerald-400' : closingChecklist.hasAppointments ? 'text-red-500' : 'text-muted-foreground'}`}>
-                  {closingChecklist.allPaid
-                    ? t("home.allAppointmentsPaid")
-                    : closingChecklist.hasAppointments
-                      ? t("home.unpaidAppointments", { count: closingChecklist.unpaidCount })
-                      : t("home.noAppointmentsRecorded")}
-                </p>
-              </div>
-            </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                          <p className="font-bold text-sm truncate" data-testid={`text-employee-name-${s.id}`}>{s.name}</p>
+                          <div className="flex items-center gap-0.5 shrink-0">
+                            <Dialog open={!!editingStaff && editingStaff.id === s.id} onOpenChange={(open) => !open && setEditingStaff(null)}>
+                              <DialogTrigger asChild>
+                                <Button variant="ghost" size="icon" onClick={() => setEditingStaff(s)} data-testid={`button-edit-staff-${s.id}`}>
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader><DialogTitle>{t("home.editStaffData")}</DialogTitle></DialogHeader>
+                                <EditStaffForm 
+                                  staff={s} 
+                                  categories={categories} 
+                                  onSubmit={(data: any) => updateStaffMutation.mutate(data)} 
+                                  isPending={updateStaffMutation.isPending}
+                                  t={t}
+                                />
+                              </DialogContent>
+                            </Dialog>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="text-destructive"
+                              onClick={() => {
+                                if (confirm(t("home.deleteConfirm"))) {
+                                  deleteStaffMutation.mutate(s.id);
+                                }
+                              }}
+                              data-testid={`button-delete-staff-${s.id}`}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </div>
 
-            <div
-              className="flex items-center gap-2.5 p-2.5 md:p-3 rounded-lg bg-background/60 cursor-pointer hover-elevate"
-              data-testid="check-cash"
-              onClick={toggleCashVerified}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggleCashVerified(); }}
-            >
-              {cashVerified ? (
-                <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
-              ) : (
-                <CircleDot className="w-5 h-5 text-amber-500 shrink-0" />
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium">{t("home.checkCashMatch")}</p>
-                <p className={`text-xs ${cashVerified ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
-                  {cashVerified
-                    ? t("home.cashMatches")
-                    : t("home.cashTapToVerify")}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2.5 p-2.5 md:p-3 rounded-lg bg-background/60" data-testid="check-expenses">
-              {closingChecklist.hasExpenses ? (
-                <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
-              ) : (
-                <CircleDot className="w-5 h-5 text-amber-500 shrink-0" />
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium">{t("home.checkExpensesEntered")}</p>
-                <p className={`text-xs ${closingChecklist.hasExpenses ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
-                  {closingChecklist.hasExpenses
-                    ? t("home.expensesRecorded")
-                    : t("home.noExpensesRecorded")}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className={`mt-3 p-2.5 rounded-lg text-center text-xs md:text-sm font-medium ${closingChecklist.allGood ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300' : 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'}`}>
-            {closingChecklist.allGood ? t("home.closingReady") : t("home.closingNotReady")}
-          </div>
-        </CardContent>
-      </Card>
-
-      {lowStockProducts.length > 0 && (
-        <Card className="border-destructive bg-destructive/5 hover-elevate">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-destructive">
-              <AlertTriangle className="w-5 h-5" />
-              {t("home.lowStockAlert")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {lowStockProducts.map((product: any) => (
-                <div
-                  key={product.id}
-                  className="flex items-center gap-2 bg-background px-3 py-2 rounded-lg border border-destructive/30"
-                >
-                  <Package className="w-4 h-4 text-destructive" />
-                  <span className="font-medium">{product.name}</span>
-                  <span className="text-destructive font-bold">({product.quantity})</span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 ml-1"
-                    onClick={() => setLocation("/inventory")}
-                  >
-                    <Pencil className="h-3 w-3" />
-                  </Button>
-                </div>
+                        <div className="flex items-center gap-4 text-xs">
+                          <div>
+                            <span className="text-muted-foreground">{t("home.revenue")}: </span>
+                            <span className="font-semibold text-emerald-600 dark:text-emerald-400" data-testid={`text-employee-revenue-${s.id}`}>{s.revenue} DH</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">{t("home.appointments")}: </span>
+                            <span className="font-semibold" data-testid={`text-employee-appts-${s.id}`}>{s.appointmentCount}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               ))}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8">
-          <Card className="hover-elevate">
-            <CardHeader className="p-3 md:p-6 pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm md:text-base">
-                <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-primary" />
-                {t("home.todayAppointments")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-3 md:p-6 pt-0">
-              {appointments.length === 0 ? (
-                <p className="text-muted-foreground text-center py-4 md:py-8 text-sm">{t("home.noAppointmentsToday")}</p>
-              ) : (
-                <div className="space-y-2 md:space-y-4">
-                  {appointments.slice(0, 5).map((app: any) => (
-                    <div key={app.id} className="flex items-center justify-between p-2 md:p-3 rounded-lg bg-muted/50">
-                      <div className="min-w-0 flex-1">
-                        <p className="font-bold text-sm md:text-base truncate">{app.client || t("common.noClient")}</p>
-                        <p className="text-xs text-muted-foreground truncate">{app.service}</p>
+        <div data-testid="section-closing-checklist">
+          <h2 className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">{t("home.smartClosingDay")}</h2>
+          <Card>
+            <CardContent className="p-3.5">
+              <p className="text-xs text-muted-foreground mb-3">{t("home.smartClosingDesc")}</p>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-muted/40" data-testid="check-appointments">
+                  {closingChecklist.allPaid ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                  ) : closingChecklist.hasAppointments ? (
+                    <XCircle className="w-4 h-4 text-red-500 shrink-0" />
+                  ) : (
+                    <CircleDot className="w-4 h-4 text-muted-foreground shrink-0" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium">{t("home.checkAllAppointments")}</p>
+                    <p className={`text-[10px] ${closingChecklist.allPaid ? 'text-emerald-600 dark:text-emerald-400' : closingChecklist.hasAppointments ? 'text-red-500' : 'text-muted-foreground'}`}>
+                      {closingChecklist.allPaid
+                        ? t("home.allAppointmentsPaid")
+                        : closingChecklist.hasAppointments
+                          ? t("home.unpaidAppointments", { count: closingChecklist.unpaidCount })
+                          : t("home.noAppointmentsRecorded")}
+                    </p>
+                  </div>
+                </div>
+
+                <div
+                  className="flex items-center gap-2.5 p-2.5 rounded-lg bg-muted/40 cursor-pointer hover-elevate"
+                  data-testid="check-cash"
+                  onClick={toggleCashVerified}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggleCashVerified(); }}
+                >
+                  {cashVerified ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                  ) : (
+                    <CircleDot className="w-4 h-4 text-amber-500 shrink-0" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium">{t("home.checkCashMatch")}</p>
+                    <p className={`text-[10px] ${cashVerified ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                      {cashVerified ? t("home.cashMatches") : t("home.cashTapToVerify")}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-muted/40" data-testid="check-expenses">
+                  {closingChecklist.hasExpenses ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                  ) : (
+                    <CircleDot className="w-4 h-4 text-amber-500 shrink-0" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium">{t("home.checkExpensesEntered")}</p>
+                    <p className={`text-[10px] ${closingChecklist.hasExpenses ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                      {closingChecklist.hasExpenses ? t("home.expensesRecorded") : t("home.noExpensesRecorded")}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className={`mt-3 p-2 rounded-lg text-center text-xs font-semibold ${closingChecklist.allGood ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300' : 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'}`}>
+                {closingChecklist.allGood ? t("home.closingReady") : t("home.closingNotReady")}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {lowStockProducts.length > 0 && (
+          <div data-testid="section-low-stock">
+            <h2 className="text-[10px] font-bold uppercase tracking-[0.15em] text-destructive mb-3">{t("home.lowStockAlert")}</h2>
+            <Card>
+              <CardContent className="p-3.5">
+                <div className="space-y-2">
+                  {lowStockProducts.map((product: any) => (
+                    <div
+                      key={product.id}
+                      className="flex items-center justify-between gap-2 p-2.5 rounded-lg bg-destructive/5"
+                      data-testid={`card-low-stock-${product.id}`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <Package className="w-3.5 h-3.5 text-destructive shrink-0" />
+                        <span className="text-xs font-medium truncate">{product.name}</span>
                       </div>
-                      <div className={`shrink-0 ${isRtl ? "text-left ml-2" : "text-right ml-2"}`}>
-                        <p className="text-xs md:text-sm font-medium">{app.startTime}</p>
-                        <p className="text-xs text-primary font-bold">{app.total} {t("common.currency")}</p>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-xs font-bold text-destructive">({product.quantity})</span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setLocation("/inventory")}
+                          data-testid={`button-edit-stock-${product.id}`}
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
                       </div>
                     </div>
                   ))}
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
-          <Card className="hover-elevate">
-            <CardHeader className="p-3 md:p-6 pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm md:text-base">
-                <Package className="w-4 h-4 md:w-5 md:h-5 text-primary" />
-                {t("home.teamStatus")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-3 md:p-6 pt-0">
-              <div className="space-y-2 md:space-y-4">
-                {staff.map((s: any) => {
-                  const staffApps = appointments.filter((a: any) => a.staffId === s.id || (!a.staffId && a.staff === s.name)).length;
-                  return (
-                    <div key={s.id} className="flex items-center justify-between p-2 md:p-3 rounded-lg bg-muted/50 gap-2">
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
-                        <span className="font-medium text-sm md:text-base truncate">{s.name}</span>
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <span className="text-xs md:text-sm bg-background px-1.5 md:px-2 py-0.5 md:py-1 rounded-md border border-border whitespace-nowrap">
-                          {staffApps}
-                        </span>
-                        <Dialog open={!!editingStaff && editingStaff.id === s.id} onOpenChange={(open) => !open && setEditingStaff(null)}>
-                          <DialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 md:h-8 md:w-8" onClick={() => setEditingStaff(s)}>
-                              <Pencil className="h-3 w-3 md:h-4 md:w-4" />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader><DialogTitle>{t("home.editStaffData")}</DialogTitle></DialogHeader>
-                            <EditStaffForm 
-                              staff={s} 
-                              categories={categories} 
-                              onSubmit={(data: any) => updateStaffMutation.mutate(data)} 
-                              isPending={updateStaffMutation.isPending}
-                              t={t}
-                            />
-                          </DialogContent>
-                        </Dialog>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-7 w-7 md:h-8 md:w-8 text-destructive hover:text-destructive"
-                          onClick={() => {
-                            if (confirm(t("home.deleteConfirm"))) {
-                              deleteStaffMutation.mutate(s.id);
-                            }
-                          }}
-                        >
-                          <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
       </div>
     </div>
   );
