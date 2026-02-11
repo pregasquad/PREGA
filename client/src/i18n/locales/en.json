@@ -333,19 +333,7 @@
     "paymentRecorded": "Payment recorded",
     "noEarnings": "No earnings accumulated",
     "lastPaid": "Last paid",
-    "never": "Never",
-    "financialSummary": "Financial Summary",
-    "salonRevenue": "Salon Revenue",
-    "expenses": "Expenses",
-    "netProfit": "Net Profit",
-    "profitMargin": "Profit Margin",
-    "vsLastPeriod": "vs last period",
-    "highExpenses": "High Expense Ratio",
-    "excellentPerformance": "Excellent Performance",
-    "servicesRevenue": "Services Revenue",
-    "commissionRate": "Commission Rate",
-    "finalAmountDue": "Final Amount Due",
-    "serviceBreakdown": "Service Breakdown"
+    "never": "Never"
   },
   "staffPerformance": {
     "title": "Staff Performance",

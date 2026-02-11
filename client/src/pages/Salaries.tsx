@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { DollarSign, Users, CalendarIcon, TrendingUp, TrendingDown, Building2, RefreshCw, Plus, Trash2, Receipt, UserMinus, ChevronDown, CheckCircle, Pencil, Wallet, Briefcase, BarChart3, AlertTriangle, Award } from "lucide-react";
+import { DollarSign, Users, CalendarIcon, TrendingUp, Building2, RefreshCw, Plus, Trash2, Receipt, UserMinus, ChevronDown, CheckCircle, Pencil, Wallet, Briefcase, BarChart3 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
@@ -353,45 +353,6 @@ export default function Salaries() {
     return total + (staffCommission - staffDeductionAmount);
   }, 0);
 
-  const getPreviousPeriodRange = () => {
-    const { start: curStart, end: curEnd } = getDateRange();
-    const durationMs = endOfDay(curEnd).getTime() - startOfDay(curStart).getTime();
-    const prevEnd = new Date(startOfDay(curStart).getTime() - 1);
-    const prevStart = new Date(prevEnd.getTime() - durationMs);
-    return { prevStart, prevEnd };
-  };
-
-  const { prevStart, prevEnd } = getPreviousPeriodRange();
-
-  const prevFilteredAppointments = appointments.filter((apt) => {
-    const aptDate = startOfDay(parseISO(apt.date));
-    const rangeStart = startOfDay(prevStart);
-    const rangeEnd = endOfDay(prevEnd);
-    const inRange = (isAfter(aptDate, rangeStart) || isEqual(aptDate, rangeStart)) && 
-                    (isBefore(aptDate, rangeEnd) || isEqual(aptDate, rangeEnd));
-    const selectedStaffId = selectedStaff !== "all" ? parseInt(selectedStaff) : null;
-    const staffMatch = selectedStaff === "all" || (selectedStaffId && (apt.staffId === selectedStaffId || (!apt.staffId && apt.staff === staff.find(s => s.id === selectedStaffId)?.name)));
-    return inRange && staffMatch && apt.paid === true;
-  });
-
-  const prevTotalRevenue = prevFilteredAppointments.reduce((sum, apt) => sum + apt.total, 0);
-  const prevTotalCommissions = prevFilteredAppointments.reduce((sum, apt) => {
-    const commissionPercent = getServiceCommission(apt.service || "Unknown", apt.staff || undefined);
-    return sum + (apt.total * commissionPercent) / 100;
-  }, 0);
-  const prevSalonPortion = prevTotalRevenue - prevTotalCommissions;
-  const prevFilteredCharges = charges.filter(c => {
-    const chargeDate = startOfDay(parseISO(c.date));
-    return (isAfter(chargeDate, startOfDay(prevStart)) || isEqual(chargeDate, startOfDay(prevStart))) &&
-           (isBefore(chargeDate, endOfDay(prevEnd)) || isEqual(chargeDate, endOfDay(prevEnd)));
-  });
-  const prevTotalExpenses = prevFilteredCharges.reduce((sum, c) => sum + c.amount, 0);
-  const prevNetProfit = prevSalonPortion - prevTotalExpenses;
-
-  const profitMargin = salonPortion > 0 ? Math.round((netProfit / salonPortion) * 100) : 0;
-  const expenseRatio = salonPortion > 0 ? Math.round((totalExpenses / salonPortion) * 100) : 0;
-  const profitChange = prevNetProfit !== 0 ? Math.round(((netProfit - prevNetProfit) / Math.abs(prevNetProfit)) * 100) : (netProfit > 0 ? 100 : 0);
-
   const getChargeTypeLabel = (type: string) => {
     switch (type) {
       case "rent": return t("salaries.rent");
@@ -447,7 +408,7 @@ export default function Salaries() {
   };
 
   return (
-    <div className="h-full flex flex-col gap-4 p-3 animate-fade-in" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
+    <div className="h-full flex flex-col gap-3 p-2 animate-fade-in" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
       <div className="flex justify-between items-center">
         <h1 className="text-lg font-bold" data-testid="text-page-title">{t("salaries.pageTitle")}</h1>
         <Button
@@ -609,102 +570,103 @@ export default function Salaries() {
         </Select>
       </div>
 
-      {/* Financial Summary — Premium Statement */}
-      <Card className="glass-card overflow-visible" data-testid="card-financial-summary">
-        <CardContent className="p-5">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-4">{t("salaries.financialSummary")}</p>
+      {/* Summary Stats - Glass Cards */}
+      <div className="grid grid-cols-2 gap-2">
+        <Card className="glass-card" data-testid="stat-total-revenue">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2 mb-1.5">
+              <div className="w-7 h-7 rounded-lg bg-primary/15 flex items-center justify-center">
+                <DollarSign className="h-3.5 w-3.5 text-primary" />
+              </div>
+              <p className="text-xs text-muted-foreground">{t("salaries.totalRevenue")}</p>
+            </div>
+            <p className="text-xl font-bold tabular-nums" data-testid="text-total-revenue">{formatCurrency(totalRevenue)} <span className="text-sm font-normal text-muted-foreground">DH</span></p>
+          </CardContent>
+        </Card>
+        <Card className="glass-card" data-testid="stat-commissions">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2 mb-1.5">
+              <div className="w-7 h-7 rounded-lg bg-green-500/15 flex items-center justify-center">
+                <Users className="h-3.5 w-3.5 text-green-600" />
+              </div>
+              <p className="text-xs text-muted-foreground">{t("salaries.staffCommissions")}</p>
+            </div>
+            <p className="text-xl font-bold tabular-nums" data-testid="text-total-commissions">{formatCurrency(totalCommissions - totalPending)} <span className="text-sm font-normal text-muted-foreground">DH</span></p>
+          </CardContent>
+        </Card>
+        <Card className="glass-card" data-testid="stat-salon-share">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2 mb-1.5">
+              <div className="w-7 h-7 rounded-lg bg-primary/15 flex items-center justify-center">
+                <Building2 className="h-3.5 w-3.5 text-primary" />
+              </div>
+              <p className="text-xs text-muted-foreground">{t("salaries.salonShare")}</p>
+            </div>
+            <p className="text-xl font-bold tabular-nums" data-testid="text-salon-share">{formatCurrency(salonPortion)} <span className="text-sm font-normal text-muted-foreground">DH</span></p>
+          </CardContent>
+        </Card>
+        <Card className="glass-card" data-testid="stat-appointments">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2 mb-1.5">
+              <div className="w-7 h-7 rounded-lg bg-blue-500/15 flex items-center justify-center">
+                <CalendarIcon className="h-3.5 w-3.5 text-blue-600" />
+              </div>
+              <p className="text-xs text-muted-foreground">{t("salaries.appointmentsCount")}</p>
+            </div>
+            <p className="text-xl font-bold tabular-nums" data-testid="text-total-appointments">{totalAppointments}</p>
+          </CardContent>
+        </Card>
+      </div>
 
-          {/* KPI Row */}
-          <div className="grid grid-cols-3 gap-3 mb-5">
-            <div data-testid="stat-total-revenue">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">{t("salaries.totalRevenue")}</p>
-              <p className="text-lg font-bold tabular-nums" data-testid="text-total-revenue">{formatCurrency(totalRevenue)}</p>
-              <p className="text-[10px] text-muted-foreground tabular-nums" data-testid="text-total-appointments">{totalAppointments} {t("salaries.appointmentsCount").toLowerCase()}</p>
+      {/* Salon Budget - Glass Card */}
+      <Card className="glass-card" data-testid="card-salon-budget">
+        <CardHeader className="p-4 pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <div className="w-8 h-8 rounded-lg bg-primary/15 flex items-center justify-center">
+              <Briefcase className="h-4 w-4 text-primary" />
             </div>
-            <div data-testid="stat-commissions">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">{t("salaries.staffCommissions")}</p>
-              <p className="text-lg font-bold tabular-nums" data-testid="text-total-commissions">{formatCurrency(totalCommissions - totalPending)}</p>
-            </div>
-            <div data-testid="stat-salon-share">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">{t("salaries.salonShare")}</p>
-              <p className="text-lg font-bold tabular-nums" data-testid="text-salon-share">{formatCurrency(salonPortion)}</p>
-            </div>
-          </div>
-
-          {/* Salon P&L Statement */}
-          <div className="rounded-xl border border-border/40 p-4 mb-4" data-testid="card-salon-budget">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
-              <Building2 className="h-3.5 w-3.5" />
+            {t("salaries.budget")}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-4 pb-4 pt-0 space-y-4">
+          {/* Salon Account Section */}
+          <div className="p-4 rounded-xl bg-primary/5 dark:bg-primary/10">
+            <p className="text-sm font-bold flex items-center gap-2 mb-3">
+              <Building2 className="h-4 w-4 text-primary" />
               {t("salaries.salonAccount")}
             </p>
-
-            <div className="space-y-2.5">
+            <div className="space-y-2">
+              <div className="flex justify-between items-baseline text-sm">
+                <span className="text-muted-foreground">{t("salaries.salonRevenueShare")}</span>
+                <span className="font-semibold tabular-nums" data-testid="text-salon-revenue-share">{formatCurrency(salonPortion)} DH</span>
+              </div>
+              <div className="flex justify-between items-baseline text-sm">
+                <span className="text-muted-foreground">{t("salaries.totalExpenses")}</span>
+                <span className="font-semibold tabular-nums text-red-600 dark:text-red-400">- {formatCurrency(totalExpenses)} DH</span>
+              </div>
+              <div className="border-t border-border/50 my-1" />
               <div className="flex justify-between items-baseline">
-                <span className="text-sm text-muted-foreground">{t("salaries.salonRevenue")}</span>
-                <span className="text-sm font-semibold tabular-nums" data-testid="text-salon-revenue-share">{formatCurrency(salonPortion)}</span>
+                <span className="text-sm font-bold">{t("salaries.salonNetProfit")}</span>
+                <span className={`text-base font-bold tabular-nums ${netProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`} data-testid="text-net-profit">
+                  {netProfit >= 0 ? '' : '- '}{formatCurrency(Math.abs(netProfit))} DH
+                </span>
               </div>
-              <div className="flex justify-between items-baseline">
-                <span className="text-sm text-muted-foreground">{t("salaries.expenses")}</span>
-                <span className="text-sm font-semibold tabular-nums text-red-600 dark:text-red-400">-{formatCurrency(totalExpenses)}</span>
-              </div>
-
-              <div className="border-t border-border/50" />
-
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="text-sm font-bold">{t("salaries.netProfit")}</p>
-                  {salonPortion > 0 && (
-                    <p className="text-[10px] text-muted-foreground" data-testid="text-profit-margin">{t("salaries.profitMargin")}: {profitMargin}%</p>
-                  )}
-                </div>
-                <div className="text-end">
-                  <p className={`text-xl font-bold tabular-nums ${netProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`} data-testid="text-net-profit">
-                    {netProfit >= 0 ? '' : '-'}{formatCurrency(Math.abs(netProfit))}
-                  </p>
-                </div>
-              </div>
-
-              {(prevNetProfit !== 0 || netProfit !== 0) && (
-                <div className={`flex items-center gap-1.5 text-xs ${profitChange >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`} data-testid="text-profit-change">
-                  {profitChange >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                  <span className="tabular-nums font-medium">{profitChange >= 0 ? '+' : ''}{profitChange}% {t("salaries.vsLastPeriod")}</span>
-                </div>
-              )}
             </div>
-
             {totalPending > 0 && (
-              <div className="flex justify-between items-baseline text-xs text-orange-600 dark:text-orange-400 border-t border-border/30 pt-2 mt-3">
+              <div className="flex justify-between items-baseline text-xs text-orange-600 dark:text-orange-400 border-t border-border/30 pt-2 mt-2">
                 <span>{t("salaries.pendingDeductions")}</span>
-                <span className="tabular-nums font-medium">{formatCurrency(totalPending)}</span>
-              </div>
-            )}
-
-            {/* Smart Indicators */}
-            {(expenseRatio > 60 || profitMargin > 40) && (
-              <div className="flex items-center gap-2 flex-wrap mt-3">
-                {expenseRatio > 60 && (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-1 rounded-md bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400" data-testid="badge-high-expenses">
-                    <AlertTriangle className="h-3 w-3" />
-                    {t("salaries.highExpenses")}
-                  </span>
-                )}
-                {profitMargin > 40 && netProfit > 0 && (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-1 rounded-md bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400" data-testid="badge-excellent-performance">
-                    <Award className="h-3 w-3" />
-                    {t("salaries.excellentPerformance")}
-                  </span>
-                )}
+                <span className="tabular-nums">{formatCurrency(totalPending)} DH</span>
               </div>
             )}
           </div>
 
-          {/* Staff Account */}
-          <div className="rounded-xl border border-border/40 p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
-              <Users className="h-3.5 w-3.5" />
+          {/* Staff Account Section */}
+          <div className="p-4 rounded-xl bg-green-50/80 dark:bg-green-950/20">
+            <p className="text-sm font-bold flex items-center gap-2 mb-3">
+              <Users className="h-4 w-4 text-green-600" />
               {t("salaries.staffAccount")}
             </p>
-            <div className="space-y-0">
+            <div className="space-y-1.5">
               {staff.map((s) => {
                 const earning = staffEarnings.find(e => e.name === s.name);
                 const staffCommission = earning ? earning.totalCommission : 0;
@@ -714,24 +676,24 @@ export default function Salaries() {
                 const staffNet = staffCommission - staffDeductionAmount;
                 if (staffCommission === 0 && staffDeductionAmount === 0) return null;
                 return (
-                  <div key={s.id} className="flex justify-between items-center text-sm py-2 border-b border-border/15 last:border-0" data-testid={`text-staff-budget-${s.id}`}>
+                  <div key={s.id} className="flex justify-between items-center text-sm py-1 border-b border-border/20 last:border-0" data-testid={`text-staff-budget-${s.id}`}>
                     <span className="font-medium">{s.name}</span>
                     <div className="flex items-center gap-3 tabular-nums">
-                      <span className="text-muted-foreground text-xs min-w-[50px] text-end">{formatCurrency(staffCommission)}</span>
+                      <span className="text-muted-foreground min-w-[55px] text-end">{formatCurrency(staffCommission)}</span>
                       {staffDeductionAmount > 0 && (
-                        <span className="text-red-600 dark:text-red-400 text-xs min-w-[50px] text-end">-{formatCurrency(staffDeductionAmount)}</span>
+                        <span className="text-red-600 dark:text-red-400 min-w-[55px] text-end">- {formatCurrency(staffDeductionAmount)}</span>
                       )}
-                      <span className={`font-bold min-w-[55px] text-end ${staffNet < 0 ? 'text-red-600 dark:text-red-400' : ''}`}>{staffNet < 0 ? `-${formatCurrency(Math.abs(staffNet))}` : formatCurrency(staffNet)}</span>
+                      <span className={`font-bold min-w-[60px] text-end ${staffNet < 0 ? 'text-red-600 dark:text-red-400' : ''}`}>= {formatCurrency(Math.abs(staffNet))}</span>
                     </div>
                   </div>
                 );
               })}
             </div>
-            <div className="border-t border-border/40 mt-2 pt-2.5">
+            <div className="border-t border-green-200/50 dark:border-green-800/30 mt-2 pt-2">
               <div className="flex justify-between items-baseline">
                 <span className="text-sm font-bold">{t("salaries.netDueToStaff")}</span>
-                <span className={`text-lg font-bold tabular-nums ${netStaffPayable >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`} data-testid="text-net-due-staff">
-                  {formatCurrency(netStaffPayable)}
+                <span className={`text-base font-bold tabular-nums ${netStaffPayable >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`} data-testid="text-net-due-staff">
+                  {formatCurrency(netStaffPayable)} DH
                 </span>
               </div>
             </div>
@@ -741,9 +703,10 @@ export default function Salaries() {
 
       {/* Individual Staff Cards */}
       <div className="space-y-3">
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground" data-testid="text-staff-earnings-header">
+        <h2 className="text-base font-semibold flex items-center gap-2" data-testid="text-staff-earnings-header">
+          <BarChart3 className="h-4 w-4 text-primary" />
           {t("salaries.staffEarningsDetails")}
-        </p>
+        </h2>
         
         {(selectedStaff === "all" ? staff : staff.filter(s => s.id === parseInt(selectedStaff))).map((s) => {
           const earning = staffEarnings.find(e => e.name === s.name);
@@ -751,135 +714,131 @@ export default function Salaries() {
           const staffAllDeductions = filteredDeductions
             .filter(d => d.staffId === s.id || (!d.staffId && d.staffName === s.name));
           const staffDeductionAmount = staffAllDeductions.reduce((sum, d) => sum + d.amount, 0);
-          const finalAmountDue = (earning?.totalCommission || 0) - staffDeductionAmount;
-          const avgCommissionRate = earning && earning.totalRevenue > 0 ? Math.round((earning.totalCommission / earning.totalRevenue) * 100) : 0;
 
           return (
-            <Card key={s.id} className="glass-card overflow-visible" data-testid={`staff-card-${s.id}`}>
-              <CardContent className="p-5">
-                {/* Staff Header */}
-                <div className="flex items-center gap-3 mb-4">
-                  <Avatar className="h-10 w-10 border border-border/50" data-testid={`img-avatar-${s.id}`}>
-                    <AvatarImage src={s.photoUrl || undefined} alt={s.name} />
-                    <AvatarFallback className="bg-muted text-muted-foreground font-semibold">
-                      {s.name.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-sm" data-testid={`text-staff-name-${s.id}`}>{s.name}</h3>
-                    <p className="text-[10px] text-muted-foreground" data-testid={`text-staff-appointments-${s.id}`}>
-                      {earning?.appointmentsCount || 0} {t("salaries.appointmentsCount").toLowerCase()}
-                      {wallet.lastPaymentDate && (
-                        <span data-testid={`text-staff-last-paid-${s.id}`}> · {t("salaries.lastPaid")} {format(wallet.lastPaymentDate, "d/M")}</span>
-                      )}
-                    </p>
+            <Card key={s.id} className="glass-card" data-testid={`staff-card-${s.id}`}>
+              <CardContent className="p-0">
+                {/* Staff Header with Photo */}
+                <div className="p-4 pb-3">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-12 w-12 border-2 border-primary/20" data-testid={`img-avatar-${s.id}`}>
+                      <AvatarImage src={s.photoUrl || undefined} alt={s.name} />
+                      <AvatarFallback className="bg-primary/10 text-primary font-semibold text-lg">
+                        {s.name.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-base" data-testid={`text-staff-name-${s.id}`}>{s.name}</h3>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                        <span data-testid={`text-staff-appointments-${s.id}`}>{earning?.appointmentsCount || 0} {t("salaries.appointmentsCount").toLowerCase()}</span>
+                        {wallet.lastPaymentDate && (
+                          <>
+                            <span>-</span>
+                            <span data-testid={`text-staff-last-paid-${s.id}`}>{t("salaries.lastPaid")}: {format(wallet.lastPaymentDate, "d/M/yy")}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    {wallet.walletBalance > 0 && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="shrink-0"
+                        disabled={createPaymentMutation.isPending}
+                        onClick={() => createPaymentMutation.mutate({
+                          staffId: s.id,
+                          staffName: s.name,
+                          amount: Math.max(0, wallet.walletBalance),
+                        })}
+                        data-testid={`button-pay-staff-${s.id}`}
+                      >
+                        <CheckCircle className="h-3 w-3 me-1" />
+                        {t("salaries.markAsPaid")}
+                      </Button>
+                    )}
                   </div>
-                  {wallet.walletBalance > 0 && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="shrink-0"
-                      disabled={createPaymentMutation.isPending}
-                      onClick={() => createPaymentMutation.mutate({
-                        staffId: s.id,
-                        staffName: s.name,
-                        amount: Math.max(0, wallet.walletBalance),
-                      })}
-                      data-testid={`button-pay-staff-${s.id}`}
-                    >
-                      <CheckCircle className="h-3 w-3 me-1" />
-                      {t("salaries.markAsPaid")}
-                    </Button>
-                  )}
                 </div>
 
-                {/* Financial Statement Lines */}
-                {earning && earning.appointmentsCount > 0 ? (
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-baseline" data-testid={`text-staff-revenue-${s.id}`}>
-                      <span className="text-sm text-muted-foreground">{t("salaries.servicesRevenue")}</span>
-                      <span className="text-sm font-medium tabular-nums">{formatCurrency(earning.totalRevenue)}</span>
+                {/* Earnings Row */}
+                <div className="px-4 pb-3">
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="p-2.5 rounded-lg bg-muted/40 dark:bg-muted/20" data-testid={`text-staff-revenue-${s.id}`}>
+                      <p className="text-[10px] text-muted-foreground mb-1">{t("salaries.totalRevenue")}</p>
+                      <p className="text-sm font-bold tabular-nums">{formatCurrency(earning?.totalRevenue || 0)}</p>
                     </div>
-                    <div className="flex justify-between items-baseline" data-testid={`text-staff-commission-${s.id}`}>
-                      <span className="text-sm text-muted-foreground">
-                        {t("salaries.commissionRate")}
-                        <span className="text-[10px] ms-1">({avgCommissionRate}%)</span>
-                      </span>
-                      <span className="text-sm font-medium tabular-nums">{formatCurrency(earning.totalCommission)}</span>
+                    <div className="p-2.5 rounded-lg bg-green-50/80 dark:bg-green-950/20" data-testid={`text-staff-commission-${s.id}`}>
+                      <p className="text-[10px] text-muted-foreground mb-1">{t("salaries.staffCommissions")}</p>
+                      <p className="text-sm font-bold tabular-nums">{formatCurrency((earning?.totalCommission || 0) - staffDeductionAmount)}</p>
                     </div>
-
-                    {staffDeductionAmount > 0 && (
-                      <div className="flex justify-between items-baseline" data-testid={`text-staff-deductions-${s.id}`}>
-                        <span className="text-sm text-muted-foreground">{t("salaries.deductions")}</span>
-                        <span className="text-sm font-medium tabular-nums text-red-600 dark:text-red-400">-{formatCurrency(staffDeductionAmount)}</span>
-                      </div>
-                    )}
-
-                    <div className="border-t border-border/40" />
-
-                    <div className="flex justify-between items-center pt-0.5">
-                      <span className="text-sm font-bold">{t("salaries.finalAmountDue")}</span>
-                      <span className="text-xl font-bold tabular-nums" data-testid={`text-staff-final-${s.id}`}>{formatCurrency(finalAmountDue)}</span>
+                    <div className="p-2.5 rounded-lg bg-primary/5 dark:bg-primary/10" data-testid={`text-staff-wallet-${s.id}`}>
+                      <p className="text-[10px] text-muted-foreground mb-1">{t("salaries.walletBalance").split(':')[0] || "Wallet"}</p>
+                      <p className={`text-sm font-bold tabular-nums ${wallet.walletBalance < 0 ? 'text-red-600 dark:text-red-400' : wallet.walletBalance > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}>
+                        {wallet.walletBalance < 0 ? `- ${formatCurrency(Math.abs(wallet.walletBalance))}` : formatCurrency(wallet.walletBalance)}
+                      </p>
                     </div>
-
-                    {/* Wallet */}
-                    <div className="flex justify-between items-baseline pt-1" data-testid={`text-staff-wallet-${s.id}`}>
-                      <span className="text-xs text-muted-foreground">{t("salaries.walletBalance")}</span>
-                      <span className={`text-xs font-semibold tabular-nums ${wallet.walletBalance < 0 ? 'text-red-600 dark:text-red-400' : wallet.walletBalance > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}>
-                        {wallet.walletBalance < 0 ? `-${formatCurrency(Math.abs(wallet.walletBalance))}` : formatCurrency(wallet.walletBalance)}
-                      </span>
-                    </div>
-
-                    {/* Deductions Detail */}
-                    {staffAllDeductions.length > 0 && (
-                      <div className="mt-2 pt-2 border-t border-border/20">
-                        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1.5">{t("staffPortal.allDeductions")}</p>
-                        <div className="space-y-0">
-                          {staffAllDeductions.map((d) => (
-                            <div key={d.id} className="flex items-center justify-between gap-2 py-1 border-t border-border/10 first:border-0" data-testid={`text-staff-deduction-item-${d.id}`}>
-                              <div className="min-w-0 flex-1 flex items-center gap-1.5 flex-wrap">
-                                <span className="text-xs">{getDeductionTypeLabel(d.type)}</span>
-                                {d.description && (
-                                  <span className="text-[10px] text-muted-foreground">· {d.description}</span>
-                                )}
-                                {d.cleared && (
-                                  <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400">
-                                    {t("salaries.paidBack")}
-                                  </span>
-                                )}
-                              </div>
-                              <span className={`text-xs font-medium shrink-0 tabular-nums ${d.cleared ? 'text-muted-foreground line-through' : 'text-red-600 dark:text-red-400'}`}>
-                                -{formatCurrency(d.amount)}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Service Breakdown */}
-                    {Object.keys(earning.services).length > 0 && (
-                      <div className="mt-2 pt-2 border-t border-border/20">
-                        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1.5">{t("salaries.serviceBreakdown")}</p>
-                        <div className="space-y-0">
-                          {Object.entries(earning.services).map(([serviceName, data]) => (
-                            <div key={serviceName} className="flex items-center justify-between py-1.5 border-t border-border/10 first:border-0" data-testid={`text-service-${s.id}-${serviceName}`}>
-                              <div className="flex items-center gap-2 flex-1 min-w-0 flex-wrap">
-                                <span className="text-xs truncate">{serviceName}</span>
-                                <span className="text-[10px] text-muted-foreground shrink-0">x{data.count}</span>
-                              </div>
-                              <div className="flex items-center gap-3 shrink-0 tabular-nums">
-                                <span className="text-[10px] text-muted-foreground min-w-[40px] text-end">{formatCurrency(data.revenue)}</span>
-                                <span className="text-xs font-semibold min-w-[45px] text-end">{formatCurrency(data.commission)}</span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </div>
-                ) : (
-                  <p className="text-center text-xs text-muted-foreground py-3">{t("salaries.noDataForPeriod")}</p>
+                </div>
+
+                {/* Deductions */}
+                {staffAllDeductions.length > 0 && (
+                  <div className="px-4 pb-3">
+                    <div className="p-3 rounded-lg bg-orange-50/80 dark:bg-orange-950/20" data-testid={`text-staff-deductions-${s.id}`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-bold text-orange-700 dark:text-orange-400">{t("staffPortal.allDeductions")}</span>
+                        {staffDeductionAmount > 0 && (
+                          <span className="text-xs font-bold tabular-nums text-red-600 dark:text-red-400">- {formatCurrency(staffDeductionAmount)} DH</span>
+                        )}
+                      </div>
+                      <div className="space-y-1">
+                        {staffAllDeductions.map((d) => (
+                          <div key={d.id} className="flex items-center justify-between gap-2 py-1 border-t border-orange-200/30 dark:border-orange-800/20 first:border-0" data-testid={`text-staff-deduction-item-${d.id}`}>
+                            <div className="min-w-0 flex-1 flex items-center gap-1.5 flex-wrap">
+                              <span className="text-xs font-medium">{getDeductionTypeLabel(d.type)}</span>
+                              {d.description && (
+                                <span className="text-[10px] text-muted-foreground">- {d.description}</span>
+                              )}
+                              {d.cleared && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400">
+                                  {t("salaries.paidBack")}
+                                </span>
+                              )}
+                            </div>
+                            <span className={`text-xs font-medium shrink-0 tabular-nums ${d.cleared ? 'text-muted-foreground line-through' : 'text-red-600 dark:text-red-400'}`}>
+                              - {formatCurrency(d.amount)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Service Breakdown */}
+                {earning && Object.keys(earning.services).length > 0 && (
+                  <div className="px-4 pb-4">
+                    <p className="text-[10px] text-muted-foreground mb-1.5 font-medium uppercase tracking-wider">{t("reports.serviceDetailsLabel")}</p>
+                    <div className="space-y-0">
+                      {Object.entries(earning.services).map(([serviceName, data]) => (
+                        <div key={serviceName} className="flex items-center justify-between py-1.5 border-t border-border/20 first:border-0" data-testid={`text-service-${s.id}-${serviceName}`}>
+                          <div className="flex items-center gap-2 flex-1 min-w-0 flex-wrap">
+                            <span className="text-sm truncate">{serviceName}</span>
+                            <span className="liquid-glass-chip text-[10px] shrink-0">x{data.count}</span>
+                          </div>
+                          <div className="flex items-center gap-3 shrink-0 tabular-nums">
+                            <span className="text-xs text-muted-foreground min-w-[45px] text-end">{formatCurrency(data.revenue)}</span>
+                            <span className="text-sm font-semibold min-w-[50px] text-end">{formatCurrency(data.commission)}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Empty state */}
+                {(!earning || earning.appointmentsCount === 0) && (
+                  <div className="px-4 pb-4">
+                    <p className="text-center text-xs text-muted-foreground py-2">{t("salaries.noDataForPeriod")}</p>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -897,13 +856,13 @@ export default function Salaries() {
 
       {/* Expenses Section */}
       <Collapsible open={expensesOpen} onOpenChange={setExpensesOpen}>
-        <Card className="glass-card overflow-visible">
+        <Card className="glass-card">
           <CollapsibleTrigger asChild>
-            <CardHeader className="flex flex-row items-center justify-between gap-2 p-4 pb-3 cursor-pointer" data-testid="button-toggle-expenses">
-              <CardTitle className="flex items-center gap-2 text-sm font-bold">
-                <Receipt className="h-3.5 w-3.5 text-muted-foreground" />
+            <CardHeader className="flex flex-row items-center justify-between gap-2 p-3 pb-2 cursor-pointer" data-testid="button-toggle-expenses">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Receipt className="h-4 w-4 text-red-500" />
                 {t("salaries.expensesAndCosts")}
-                <span className="text-xs font-normal text-muted-foreground">({filteredCharges.length})</span>
+                <span className="text-sm font-normal text-muted-foreground">({filteredCharges.length})</span>
               </CardTitle>
               <div className="flex items-center gap-2">
                 <Dialog open={showChargeDialog} onOpenChange={setShowChargeDialog}>
@@ -1013,13 +972,13 @@ export default function Salaries() {
 
       {/* Deductions Section */}
       <Collapsible open={deductionsOpen} onOpenChange={setDeductionsOpen}>
-        <Card className="glass-card overflow-visible">
+        <Card className="glass-card">
           <CollapsibleTrigger asChild>
-            <CardHeader className="flex flex-row items-center justify-between gap-2 p-4 pb-3 cursor-pointer" data-testid="button-toggle-deductions">
-              <CardTitle className="flex items-center gap-2 text-sm font-bold">
-                <UserMinus className="h-3.5 w-3.5 text-muted-foreground" />
+            <CardHeader className="flex flex-row items-center justify-between gap-2 p-3 pb-2 cursor-pointer" data-testid="button-toggle-deductions">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <UserMinus className="h-4 w-4 text-sky-500" />
                 {t("salaries.staffDeductions")}
-                <span className="text-xs font-normal text-muted-foreground">({filteredDeductions.length})</span>
+                <span className="text-sm font-normal text-muted-foreground">({filteredDeductions.length})</span>
               </CardTitle>
               <div className="flex items-center gap-2">
                 <Dialog open={showDeductionDialog} onOpenChange={setShowDeductionDialog}>
