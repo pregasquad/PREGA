@@ -241,7 +241,9 @@
     "attachment": "Attachment",
     "addAttachment": "Attach Receipt",
     "downloadAttachment": "Download Attachment",
-    "fileTooLarge": "File too large (max 5MB)",
+    "fileTooLarge": "File too large (max 10MB)",
+    "compressionFailed": "Failed to compress file",
+    "downloadFailed": "Failed to download file",
     "noExpensesForPeriod": "No expenses for this period"
   },
   "salaries": {

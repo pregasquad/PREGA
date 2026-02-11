@@ -241,7 +241,9 @@
     "attachment": "مرفق",
     "addAttachment": "إرفاق إيصال",
     "downloadAttachment": "تحميل المرفق",
-    "fileTooLarge": "الملف كبير جداً (الحد الأقصى 5 ميغابايت)",
+    "fileTooLarge": "الملف كبير جداً (الحد الأقصى 10 ميغابايت)",
+    "compressionFailed": "فشل ضغط الملف",
+    "downloadFailed": "فشل تحميل الملف",
     "noExpensesForPeriod": "لا توجد مصاريف لهذه الفترة"
   },
   "salaries": {

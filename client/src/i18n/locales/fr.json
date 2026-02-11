@@ -241,7 +241,9 @@
     "attachment": "Pièce jointe",
     "addAttachment": "Joindre un reçu",
     "downloadAttachment": "Télécharger la pièce jointe",
-    "fileTooLarge": "Fichier trop volumineux (max 5 Mo)",
+    "fileTooLarge": "Fichier trop volumineux (max 10 Mo)",
+    "compressionFailed": "Échec de la compression du fichier",
+    "downloadFailed": "Échec du téléchargement du fichier",
     "noExpensesForPeriod": "Aucune dépense pour cette période"
   },
   "salaries": {

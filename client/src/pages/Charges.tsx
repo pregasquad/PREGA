@@ -29,7 +29,7 @@ export default function Charges() {
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [attachment, setAttachment] = useState<string | null>(null);
   const [attachmentName, setAttachmentName] = useState<string | null>(null);
-  const [previewAttachment, setPreviewAttachment] = useState<string | null>(null);
+  const [previewAttachment, setPreviewAttachment] = useState<{data: string, name: string} | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [selectedMonth, setSelectedMonth] = useState(new Date());
@@ -103,22 +103,71 @@ export default function Charges() {
     },
   });
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const compressImage = (file: File, maxWidth = 1200, quality = 0.7): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new window.Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        let width = img.width;
+        let height = img.height;
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { reject(new Error("Canvas not supported")); return; }
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressed = canvas.toDataURL("image/jpeg", quality);
+        resolve(compressed);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Failed to load image")); };
+      img.src = url;
+    });
+  };
+
+  const compressFile = async (file: File): Promise<string> => {
+    const arrayBuffer = await file.arrayBuffer();
+    const stream = new Blob([arrayBuffer]).stream();
+    const compressedStream = stream.pipeThrough(new CompressionStream("gzip"));
+    const reader = compressedStream.getReader();
+    const chunks: Uint8Array[] = [];
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+    }
+    const compressedBlob = new Blob(chunks);
+    const buffer = await compressedBlob.arrayBuffer();
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+    return `data:application/gzip;base64,${base64}`;
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const maxSize = 5 * 1024 * 1024;
-    if (file.size > maxSize) {
+    const maxRawSize = 10 * 1024 * 1024;
+    if (file.size > maxRawSize) {
       toast({ title: t("expenses.fileTooLarge"), variant: "destructive" });
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      setAttachment(reader.result as string);
+    try {
+      let result: string;
+      if (file.type.startsWith("image/")) {
+        result = await compressImage(file);
+      } else {
+        result = await compressFile(file);
+      }
+      setAttachment(result);
       setAttachmentName(file.name);
-    };
-    reader.readAsDataURL(file);
+    } catch {
+      toast({ title: t("expenses.compressionFailed"), variant: "destructive" });
+    }
   };
 
   const removeAttachment = () => {
@@ -128,6 +177,34 @@ export default function Charges() {
   };
 
   const isImageAttachment = (data: string) => data?.startsWith("data:image/");
+  const isCompressedAttachment = (data: string) => data?.startsWith("data:application/gzip;");
+
+  const downloadCompressedFile = async (data: string, fileName: string) => {
+    try {
+      const base64 = data.split(",")[1];
+      const binaryStr = atob(base64);
+      const bytes = new Uint8Array(binaryStr.length);
+      for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+      const stream = new Blob([bytes]).stream();
+      const decompressedStream = stream.pipeThrough(new DecompressionStream("gzip"));
+      const reader = decompressedStream.getReader();
+      const chunks: Uint8Array[] = [];
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+      }
+      const blob = new Blob(chunks);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName || "attachment";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast({ title: t("expenses.downloadFailed"), variant: "destructive" });
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -250,7 +327,7 @@ export default function Charges() {
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/*,.pdf"
+                  accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
                   onChange={handleFileSelect}
                   className="hidden"
                   data-testid="input-expense-attachment"
@@ -326,7 +403,7 @@ export default function Charges() {
                       variant="ghost"
                       size="icon"
                       className="h-6 w-6"
-                      onClick={() => setPreviewAttachment(charge.attachment)}
+                      onClick={() => setPreviewAttachment({data: charge.attachment, name: charge.attachmentName || 'attachment'})}
                       data-testid={`button-view-attachment-${charge.id}`}
                     >
                       <Paperclip className="w-3.5 h-3.5 text-muted-foreground" />
@@ -370,7 +447,7 @@ export default function Charges() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold">{t("expenses.attachment")}</h3>
+              <h3 className="font-semibold">{previewAttachment.name}</h3>
               <Button
                 variant="ghost"
                 size="icon"
@@ -380,18 +457,29 @@ export default function Charges() {
                 <X className="w-4 h-4" />
               </Button>
             </div>
-            {isImageAttachment(previewAttachment) ? (
+            {isImageAttachment(previewAttachment.data) ? (
               <img
-                src={previewAttachment}
+                src={previewAttachment.data}
                 alt={t("expenses.attachment")}
                 className="w-full rounded-md object-contain max-h-[60vh]"
               />
+            ) : isCompressedAttachment(previewAttachment.data) ? (
+              <div className="flex flex-col items-center gap-3 py-8">
+                <FileText className="w-12 h-12 text-muted-foreground" />
+                <Button
+                  variant="outline"
+                  onClick={() => downloadCompressedFile(previewAttachment.data, previewAttachment.name)}
+                  data-testid="button-download-compressed"
+                >
+                  {t("expenses.downloadAttachment")}
+                </Button>
+              </div>
             ) : (
               <div className="flex flex-col items-center gap-3 py-8">
                 <FileText className="w-12 h-12 text-muted-foreground" />
                 <a
-                  href={previewAttachment}
-                  download="attachment.pdf"
+                  href={previewAttachment.data}
+                  download={previewAttachment.name}
                   className="text-primary underline text-sm"
                 >
                   {t("expenses.downloadAttachment")}
