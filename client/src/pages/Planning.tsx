@@ -878,6 +878,9 @@ export default function Planning() {
   // Helper function to open an appointment for editing
   const openAppointmentForEdit = (app: any) => {
     const parsedServices = parseAppointmentServices(app);
+    setAppliedLoyaltyPoints(null);
+    setAppliedGiftCardBalance(null);
+    setSelectedPackage(null);
     setSelectedServices(parsedServices);
     const newPriceInputs: Record<string, string> = {};
     parsedServices.forEach(s => {
@@ -1046,6 +1049,7 @@ export default function Planning() {
         queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       } catch (e) {
         console.error("Gift card balance deduction failed:", e);
+        toast({ title: t("common.error"), description: t("planning.giftCardDeductionError", "Gift card deduction failed"), variant: "destructive" });
       }
     }
     
@@ -1067,6 +1071,7 @@ export default function Planning() {
         queryClient.invalidateQueries({ queryKey: ["/api/loyalty-redemptions"] });
       } catch (e) {
         console.error("Loyalty points deduction failed:", e);
+        toast({ title: t("common.error"), description: t("planning.loyaltyDeductionError", "Loyalty points deduction failed"), variant: "destructive" });
       }
     }
     
@@ -1180,7 +1185,6 @@ export default function Planning() {
 
   const handlePriceInputChange = (serviceId: string, value: string) => {
     const newPrice = parseFloat(value.replace(',', '.')) || 0;
-    console.log('Price change:', serviceId, value, '->', newPrice);
     
     setPriceInputs(prev => ({ ...prev, [serviceId]: value }));
     
@@ -1188,11 +1192,9 @@ export default function Planning() {
       const updated = prev.map(s => 
         s.id === serviceId ? { ...s, price: newPrice } : s
       );
-      // Update form totals
       const totalPrice = updated.reduce((sum, s) => sum + s.price, 0);
       form.setValue("price", totalPrice);
       form.setValue("total", totalPrice);
-      console.log('Updated services:', JSON.stringify(updated.map(s => ({ name: s.name, price: s.price }))));
       return updated;
     });
   };
@@ -1206,6 +1208,7 @@ export default function Planning() {
 
   const handleMarkAsPaid = async (e: React.MouseEvent, app: any) => {
     e.stopPropagation();
+    if (!canEdit) return;
     
     // Check if this is a temporary appointment that hasn't synced yet
     const appId = typeof app.id === 'string' ? parseInt(app.id) : app.id;
@@ -1499,7 +1502,9 @@ export default function Planning() {
                       className="p-2 border-b last:border-b-0 hover:bg-muted/50 cursor-pointer"
                       onClick={() => {
                         setDate(parseISO(app.date));
-                        openAppointmentForEdit(app);
+                        if (canEdit) {
+                          openAppointmentForEdit(app);
+                        }
                       }}
                     >
                       <div className="flex items-center justify-between gap-2">
