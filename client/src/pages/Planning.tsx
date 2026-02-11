@@ -95,6 +95,111 @@ function getWorkDayDate(openingTime?: string, closingTime?: string): Date {
   return startOfToday();
 }
 
+const ServiceSearchPopover = React.memo(function ServiceSearchPopover({
+  services,
+  selectedServices,
+  onSelectService,
+  open,
+  onOpenChange,
+}: {
+  services: Array<{ id: number; name: string; price: number; duration: number; category?: string | null; isStartingPrice?: boolean }>;
+  selectedServices: Array<{ name: string }>;
+  onSelectService: (name: string) => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const { t } = useTranslation();
+  const [search, setSearch] = useState("");
+
+  const grouped = useMemo(() => {
+    const groups: Record<string, typeof services> = {};
+    const list = search.trim()
+      ? services.filter(s => s.name.toLowerCase().includes(search.toLowerCase()))
+      : services;
+    list.forEach(s => {
+      const cat = s.category || t("common.other");
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(s);
+    });
+    return groups;
+  }, [services, search, t]);
+
+  return (
+    <Popover open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) setSearch(""); }}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          className="h-11 w-full justify-between rounded-xl text-xs border-0 bg-secondary/50 hover:bg-secondary/70 transition-colors"
+          data-testid="button-add-service"
+        >
+          <span className="flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            {t("planning.addService")}
+          </span>
+          <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-[calc(100vw-48px)] max-w-[396px] p-0 rounded-2xl glass-card shadow-2xl"
+        align="center"
+        side="top"
+        sideOffset={4}
+        onWheel={(e) => e.stopPropagation()}
+      >
+        <div className="p-3 border-b border-white/20 liquid-gradient-subtle rounded-t-2xl">
+          <Input
+            placeholder={t("planning.searchService")}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-10 text-sm rounded-xl border-0 bg-white/80 dark:bg-slate-800/80"
+            data-testid="input-service-search"
+            autoFocus
+          />
+        </div>
+        <div
+          className="max-h-[200px] overflow-y-auto p-2"
+          style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
+          onWheel={(e) => {
+            e.stopPropagation();
+            e.currentTarget.scrollTop += e.deltaY;
+          }}
+          onTouchMove={(e) => e.stopPropagation()}
+        >
+          {Object.entries(grouped).map(([category, categoryServices]) => (
+            <div key={category}>
+              <div className="px-2 py-1.5 text-[10px] font-bold gradient-text uppercase glass-subtle rounded-lg mb-1 sticky top-0">
+                {category}
+              </div>
+              {categoryServices.map(s => (
+                <div
+                  key={s.id}
+                  data-testid={`service-option-${s.id}`}
+                  className={cn(
+                    "flex items-center justify-between p-3 rounded-xl cursor-pointer text-sm mb-1",
+                    "hover:bg-primary/5 dark:hover:bg-primary/10",
+                    selectedServices.some(sel => sel.name === s.name) && "bg-primary/10 dark:bg-primary/20"
+                  )}
+                  onClick={() => {
+                    onSelectService(s.name);
+                    setSearch("");
+                  }}
+                >
+                  <span className="truncate">{s.name}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold gradient-text">{s.isStartingPrice ? `${t("services.startingFrom")} ` : ''}{s.price} DH</span>
+                    <Plus className="w-4 h-4 text-primary" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+});
+
 export default function Planning() {
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === "ar";
@@ -123,7 +228,7 @@ export default function Planning() {
       return true;
     }
   }, [currentUserRole]);
-  const [serviceSearch, setServiceSearch] = useState("");
+  // serviceSearch state moved into ServiceSearchPopover component to avoid full-page re-renders on each keystroke
   const [currentTime, setCurrentTime] = useState(new Date());
   const boardRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
@@ -1380,18 +1485,7 @@ export default function Planning() {
     return favoriteIds.map(id => services.find(s => s.id === id)).filter(Boolean);
   }, [services, favoriteIds]);
 
-  const groupedServices = useMemo(() => {
-    const groups: Record<string, typeof services> = {};
-    const list = serviceSearch.trim() 
-      ? services.filter(s => s.name.toLowerCase().includes(serviceSearch.toLowerCase()))
-      : services;
-    list.forEach(s => {
-      const cat = s.category || t("common.other");
-      if (!groups[cat]) groups[cat] = [];
-      groups[cat].push(s);
-    });
-    return groups;
-  }, [services, serviceSearch, t]);
+  // groupedServices moved into ServiceSearchPopover component
 
   const toggleFavorite = (serviceId: number) => {
     setFavoriteIds(prev => {
@@ -2440,78 +2534,16 @@ export default function Planning() {
                     name="service"
                     render={({ field }) => (
                       <FormItem className="space-y-0">
-                        <Popover open={servicePopoverOpen} onOpenChange={setServicePopoverOpen}>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                className="h-11 w-full justify-between rounded-xl text-xs border-0 bg-secondary/50 hover:bg-secondary/70 transition-colors"
-                              >
-                                <span className="flex items-center gap-2">
-                                  <Plus className="w-4 h-4" />
-                                  {t("planning.addService")}
-                                </span>
-                                <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent 
-                            className="w-[calc(100vw-48px)] max-w-[396px] p-0 rounded-2xl glass-card shadow-2xl" 
-                            align="center" 
-                            side="top" 
-                            sideOffset={4}
-                            onWheel={(e) => e.stopPropagation()}
-                          >
-                            <div className="p-3 border-b border-white/20 liquid-gradient-subtle rounded-t-2xl">
-                              <Input
-                                placeholder={t("planning.searchService")}
-                                value={serviceSearch}
-                                onChange={(e) => setServiceSearch(e.target.value)}
-                                className="h-10 text-sm rounded-xl border-0 bg-white/80 dark:bg-slate-800/80"
-                              />
-                            </div>
-                            <div 
-                              className="max-h-[200px] overflow-y-auto p-2"
-                              style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
-                              onWheel={(e) => {
-                                e.stopPropagation();
-                                const target = e.currentTarget;
-                                target.scrollTop += e.deltaY;
-                              }}
-                              onTouchMove={(e) => e.stopPropagation()}
-                            >
-                              {Object.entries(groupedServices).map(([category, categoryServices]) => (
-                                <div key={category}>
-                                  <div className="px-2 py-1.5 text-[10px] font-bold gradient-text uppercase glass-subtle rounded-lg mb-1 sticky top-0">
-                                    {category}
-                                  </div>
-                                  {categoryServices.map(s => (
-                                    <div
-                                      key={s.id}
-                                      className={cn(
-                                        "flex items-center justify-between p-3 rounded-xl cursor-pointer text-sm mb-1 transition-all",
-                                        "hover:bg-primary/5 dark:hover:bg-primary/10",
-                                        selectedServices.some(sel => sel.name === s.name) && "bg-primary/10 dark:bg-primary/20"
-                                      )}
-                                      onClick={() => {
-                                        handleServiceChange(s.name);
-                                        setServiceSearch("");
-                                        setServicePopoverOpen(false);
-                                      }}
-                                    >
-                                      <span className="truncate">{s.name}</span>
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-xs font-bold gradient-text">{s.isStartingPrice ? `${t("services.startingFrom")} ` : ''}{s.price} DH</span>
-                                        <Plus className="w-4 h-4 text-primary" />
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              ))}
-                            </div>
-                          </PopoverContent>
-                        </Popover>
+                        <ServiceSearchPopover
+                          services={services}
+                          selectedServices={selectedServices}
+                          onSelectService={(name) => {
+                            handleServiceChange(name);
+                            setServicePopoverOpen(false);
+                          }}
+                          open={servicePopoverOpen}
+                          onOpenChange={setServicePopoverOpen}
+                        />
                       </FormItem>
                     )}
                   />
