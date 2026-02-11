@@ -745,7 +745,22 @@
     "category": "Category",
     "categories": "Categories",
     "selectCategory": "Select Category",
-    "selectCategoriesHint": "Select the service categories this staff member can perform"
+    "selectCategoriesHint": "Select the service categories this staff member can perform",
+    "smartClosingDay": "Smart Closing Day",
+    "smartClosingDesc": "Before closing the day, verify:",
+    "checkAllAppointments": "All appointments recorded",
+    "checkCashMatch": "Cash matches",
+    "checkExpensesEntered": "Expenses entered",
+    "allAppointmentsPaid": "All appointments are paid",
+    "unpaidAppointments": "{{count}} unpaid appointment(s)",
+    "noAppointmentsRecorded": "No appointments recorded",
+    "cashMatches": "Amounts match",
+    "cashMismatch": "Unpaid amount: {{amount}} DH",
+    "expensesRecorded": "Expenses recorded",
+    "noExpensesRecorded": "No expenses recorded",
+    "closingReady": "All good, you can close the day!",
+    "closingNotReady": "Don't leave errors behind - review the list",
+    "cashTapToVerify": "Tap to confirm after manual verification"
   },
   "login": {
     "welcomeBack": "Welcome Back",

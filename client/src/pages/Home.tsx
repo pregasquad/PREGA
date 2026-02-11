@@ -1,7 +1,7 @@
 import { useAppointments, useStaff, useServices, useClients, useCategories } from "@/hooks/use-salon-data";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Scissors, CalendarCheck, TrendingUp, Clock, Package, UserPlus, Pencil, Trash2, LogOut, AlertTriangle, Banknote, CreditCard, RefreshCw } from "lucide-react";
+import { Users, Scissors, CalendarCheck, TrendingUp, Clock, Package, UserPlus, Pencil, Trash2, LogOut, AlertTriangle, Banknote, CreditCard, RefreshCw, ClipboardCheck, CheckCircle2, XCircle, CircleDot } from "lucide-react";
 import { format, startOfToday, subDays } from "date-fns";
 import { useState, useMemo } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -95,6 +95,9 @@ export default function Home() {
   const { data: services = [] } = useServices();
   const { data: clients = [] } = useClients();
   const { data: categories = [] } = useCategories();
+  const { data: charges = [] } = useQuery<any[]>({
+    queryKey: ["/api/charges"],
+  });
   const { data: lowStockProducts = [] } = useQuery({
     queryKey: ["/api/products/low-stock"],
     queryFn: async () => {
@@ -103,6 +106,15 @@ export default function Home() {
       return res.json();
     },
   });
+  const [cashVerified, setCashVerified] = useState(() => {
+    const stored = localStorage.getItem(`cash_verified_${todayDate}`);
+    return stored === "true";
+  });
+  const toggleCashVerified = () => {
+    const newVal = !cashVerified;
+    setCashVerified(newVal);
+    localStorage.setItem(`cash_verified_${todayDate}`, String(newVal));
+  };
   const [isStaffDialogOpen, setIsStaffDialogOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<any>(null);
   const { toast } = useToast();
@@ -161,6 +173,17 @@ export default function Home() {
     const unpaidRevenue = totalRevenue - paidRevenue;
     return { totalRevenue, paidRevenue, unpaidRevenue, count: appointments.length };
   }, [appointments]);
+
+  const closingChecklist = useMemo(() => {
+    const unpaidCount = appointments.filter((app: any) => !app.paid).length;
+    const hasAppointments = appointments.length > 0;
+    const allPaid = hasAppointments && unpaidCount === 0;
+    const unpaidAmount = appointments.filter((app: any) => !app.paid).reduce((sum: number, app: any) => sum + (app.total || 0), 0);
+    const todayCharges = charges.filter((c: any) => c.date === todayDate);
+    const hasExpenses = todayCharges.length > 0;
+    const allGood = allPaid && hasAppointments && hasExpenses && cashVerified;
+    return { unpaidCount, hasAppointments, allPaid, unpaidAmount, hasExpenses, allGood };
+  }, [appointments, charges, todayDate, cashVerified]);
 
   const stats = [
     { label: t("home.todayRevenue"), value: `${todayStats.totalRevenue} DH`, icon: Banknote, color: "text-emerald-500", highlight: true },
@@ -271,6 +294,82 @@ export default function Home() {
             </Card>
           ))}
         </div>
+
+      <Card className={`hover-elevate ${closingChecklist.allGood ? 'bg-gradient-to-br from-emerald-50 to-green-100 dark:from-emerald-950/50 dark:to-green-900/30 border-emerald-200 dark:border-emerald-800' : 'bg-gradient-to-br from-amber-50 to-orange-100 dark:from-amber-950/50 dark:to-orange-900/30 border-amber-200 dark:border-amber-800'}`}>
+        <CardHeader className="p-3 md:p-6 pb-2 gap-2">
+          <CardTitle className="flex items-center gap-2 text-sm md:text-base">
+            <ClipboardCheck className={`w-4 h-4 md:w-5 md:h-5 ${closingChecklist.allGood ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`} />
+            {t("home.smartClosingDay")}
+          </CardTitle>
+          <p className="text-xs md:text-sm text-muted-foreground">{t("home.smartClosingDesc")}</p>
+        </CardHeader>
+        <CardContent className="p-3 md:p-6 pt-0">
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-2.5 p-2.5 md:p-3 rounded-lg bg-background/60" data-testid="check-appointments">
+              {closingChecklist.allPaid ? (
+                <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+              ) : closingChecklist.hasAppointments ? (
+                <XCircle className="w-5 h-5 text-red-500 shrink-0" />
+              ) : (
+                <CircleDot className="w-5 h-5 text-muted-foreground shrink-0" />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium">{t("home.checkAllAppointments")}</p>
+                <p className={`text-xs ${closingChecklist.allPaid ? 'text-emerald-600 dark:text-emerald-400' : closingChecklist.hasAppointments ? 'text-red-500' : 'text-muted-foreground'}`}>
+                  {closingChecklist.allPaid
+                    ? t("home.allAppointmentsPaid")
+                    : closingChecklist.hasAppointments
+                      ? t("home.unpaidAppointments", { count: closingChecklist.unpaidCount })
+                      : t("home.noAppointmentsRecorded")}
+                </p>
+              </div>
+            </div>
+
+            <div
+              className="flex items-center gap-2.5 p-2.5 md:p-3 rounded-lg bg-background/60 cursor-pointer hover-elevate"
+              data-testid="check-cash"
+              onClick={toggleCashVerified}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggleCashVerified(); }}
+            >
+              {cashVerified ? (
+                <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+              ) : (
+                <CircleDot className="w-5 h-5 text-amber-500 shrink-0" />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium">{t("home.checkCashMatch")}</p>
+                <p className={`text-xs ${cashVerified ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                  {cashVerified
+                    ? t("home.cashMatches")
+                    : t("home.cashTapToVerify")}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5 p-2.5 md:p-3 rounded-lg bg-background/60" data-testid="check-expenses">
+              {closingChecklist.hasExpenses ? (
+                <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+              ) : (
+                <CircleDot className="w-5 h-5 text-amber-500 shrink-0" />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium">{t("home.checkExpensesEntered")}</p>
+                <p className={`text-xs ${closingChecklist.hasExpenses ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                  {closingChecklist.hasExpenses
+                    ? t("home.expensesRecorded")
+                    : t("home.noExpensesRecorded")}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className={`mt-3 p-2.5 rounded-lg text-center text-xs md:text-sm font-medium ${closingChecklist.allGood ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300' : 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'}`}>
+            {closingChecklist.allGood ? t("home.closingReady") : t("home.closingNotReady")}
+          </div>
+        </CardContent>
+      </Card>
 
       {lowStockProducts.length > 0 && (
         <Card className="border-destructive bg-destructive/5 hover-elevate">

@@ -745,7 +745,22 @@
     "category": "Catégorie",
     "categories": "Catégories",
     "selectCategory": "Sélectionner Catégorie",
-    "selectCategoriesHint": "Sélectionnez les catégories de services que ce membre peut effectuer"
+    "selectCategoriesHint": "Sélectionnez les catégories de services que ce membre peut effectuer",
+    "smartClosingDay": "Fermeture Intelligente",
+    "smartClosingDesc": "Avant de fermer la journée, vérifiez :",
+    "checkAllAppointments": "Tous les RDV enregistrés",
+    "checkCashMatch": "Caisse correspondante",
+    "checkExpensesEntered": "Dépenses saisies",
+    "allAppointmentsPaid": "Tous les RDV sont payés",
+    "unpaidAppointments": "{{count}} RDV non payé(s)",
+    "noAppointmentsRecorded": "Aucun RDV enregistré",
+    "cashMatches": "Les montants correspondent",
+    "cashMismatch": "Montant impayé : {{amount}} DH",
+    "expensesRecorded": "Dépenses enregistrées",
+    "noExpensesRecorded": "Aucune dépense enregistrée",
+    "closingReady": "Tout est bon, vous pouvez fermer la journée !",
+    "closingNotReady": "Ne laissez pas d'erreurs - vérifiez la liste",
+    "cashTapToVerify": "Appuyez pour confirmer après vérification manuelle"
   },
   "login": {
     "welcomeBack": "Bienvenue",

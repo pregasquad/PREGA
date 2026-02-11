@@ -705,7 +705,22 @@
     "category": "الفئة",
     "categories": "الفئات",
     "selectCategory": "اختر الفئة",
-    "selectCategoriesHint": "اختر فئات الخدمات التي يمكن لهذا العضو تقديمها"
+    "selectCategoriesHint": "اختر فئات الخدمات التي يمكن لهذا العضو تقديمها",
+    "smartClosingDay": "إغلاق اليوم الذكي",
+    "smartClosingDesc": "قبل ما تسد النهار، تأكد من:",
+    "checkAllAppointments": "كل المواعيد مسجّلة",
+    "checkCashMatch": "الكاش مطابق",
+    "checkExpensesEntered": "المصاريف داخلة",
+    "allAppointmentsPaid": "كل المواعيد مدفوعة",
+    "unpaidAppointments": "{{count}} موعد غير مدفوع",
+    "noAppointmentsRecorded": "لا توجد مواعيد مسجّلة",
+    "cashMatches": "المبالغ متطابقة",
+    "cashMismatch": "مبلغ غير مدفوع: {{amount}} DH",
+    "expensesRecorded": "تم تسجيل المصاريف",
+    "noExpensesRecorded": "لم يتم تسجيل أي مصروف",
+    "closingReady": "كل شيء تمام، يمكنك إغلاق اليوم!",
+    "closingNotReady": "ما يبقاش الخطأ - راجع القائمة",
+    "cashTapToVerify": "اضغط للتأكيد بعد التحقق يدوياً"
   },
   "login": {
     "welcomeBack": "مرحباً بعودتك",
