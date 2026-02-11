@@ -1,14 +1,14 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAppointments, useStaff, useServices, useCategories, useClients } from "@/hooks/use-salon-data";
+import { useAppointments, useStaff, useServices } from "@/hooks/use-salon-data";
 import { formatCurrency } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
-  PieChart, Pie, Legend, AreaChart, Area, LineChart, Line
+  PieChart, Pie, Legend, AreaChart, Area
 } from "recharts";
-import { TrendingUp, Users, CalendarCheck, Calendar as CalendarIcon, ChevronRight, ChevronLeft, RefreshCw, DollarSign, Clock } from "lucide-react";
+import { TrendingUp, Users, CalendarCheck, Calendar as CalendarIcon, ChevronRight, ChevronLeft, RefreshCw, DollarSign } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -45,8 +45,6 @@ export default function Reports() {
   const { data: appointments = [] } = useAppointments();
   const { data: staffList = [] } = useStaff();
   const { data: services = [] } = useServices();
-  const { data: categories = [] } = useCategories();
-  const { data: clients = [] } = useClients();
   const { data: charges = [] } = useQuery<any[]>({ queryKey: ["/api/charges"] });
   const { data: expenseCategories = [] } = useQuery<any[]>({ queryKey: ["/api/expense-categories"] });
 
@@ -132,10 +130,14 @@ export default function Reports() {
       return days.map(day => {
         const dateStr = format(day, "yyyy-MM-dd");
         const dayRevenue = filteredAppointments
-          .filter(app => app.date === dateStr)
+          .filter(app => {
+            try { return format(parseISO(app.date), "yyyy-MM-dd") === dateStr; } catch { return app.date === dateStr; }
+          })
           .reduce((sum, app) => sum + Number(app.total || 0), 0);
         const dayExpenses = filteredCharges
-          .filter((ch: any) => ch.date === dateStr)
+          .filter((ch: any) => {
+            try { return format(parseISO(ch.date), "yyyy-MM-dd") === dateStr; } catch { return ch.date === dateStr; }
+          })
           .reduce((sum: number, ch: any) => sum + Number(ch.amount || 0), 0);
         return {
           date: format(day, "d MMM", { locale: dateLocale }),
