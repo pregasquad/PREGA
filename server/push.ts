@@ -127,4 +127,41 @@ export async function checkAndNotifyLowStock(): Promise<void> {
   }
 }
 
+let lastClosingReminderDate = '';
+
+export async function sendClosingReminderNow(): Promise<void> {
+  await sendPushNotification(
+    'Closing Day Reminder',
+    'Time to check your closing day checklist before you leave!',
+    '/'
+  );
+}
+
+export async function checkAndSendClosingReminder(): Promise<void> {
+  try {
+    const settings = await storage.getBusinessSettings();
+    if (!settings) return;
+
+    const now = new Date();
+    const todayDate = now.toISOString().split('T')[0];
+
+    if (lastClosingReminderDate === todayDate) return;
+
+    const closingTime = settings.closingTime || '19:00';
+    const [closingHour, closingMin] = closingTime.split(':').map(Number);
+
+    const closingMinutes = closingHour * 60 + closingMin;
+    const reminderMinutes = Math.max(0, closingMinutes - 30);
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    if (currentMinutes >= reminderMinutes && currentMinutes <= closingMinutes) {
+      lastClosingReminderDate = todayDate;
+      await sendClosingReminderNow();
+      console.log(`[Push] Sent closing day reminder for ${todayDate}`);
+    }
+  } catch (error) {
+    console.error('[Push] Error sending closing reminder:', error);
+  }
+}
+
 export { vapidPublicKey };

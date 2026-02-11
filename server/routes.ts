@@ -5,7 +5,7 @@ import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import { setupAuth, registerAuthRoutes, isPinAuthenticated, requirePermission, checkRateLimit, recordFailedAttempt, clearAttempts } from "./replit_integrations/auth";
-import { vapidPublicKey, sendPushNotification, checkAndNotifyExpiringProducts, checkAndNotifyLowStock as broadcastLowStockNotifications } from "./push";
+import { vapidPublicKey, sendPushNotification, checkAndNotifyExpiringProducts, checkAndNotifyLowStock as broadcastLowStockNotifications, sendClosingReminderNow } from "./push";
 import { db, schema, isDatabaseOffline, checkDatabaseConnection } from "./db";
 import { eq } from "drizzle-orm";
 import { insertAdminRoleSchema, ROLE_PERMISSIONS } from "@shared/schema";
@@ -2389,6 +2389,15 @@ export async function registerRoutes(
   app.post("/api/push/check-stock", isPinAuthenticated, async (_req, res) => {
     try {
       await broadcastLowStockNotifications();
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/push/closing-reminder", isPinAuthenticated, requirePermission("admin_settings"), async (_req, res) => {
+    try {
+      await sendClosingReminderNow();
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ error: err.message });

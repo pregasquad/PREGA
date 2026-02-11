@@ -4,6 +4,7 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { initializeDatabase, warmupDatabase, ensurePushSubscriptionsTable, ensureAppointmentsAuditColumns, ensureForeignKeyConstraints, ensureAdminRolesPhotoColumn, ensureProductExpiryColumns, ensureServiceStartingPriceColumn, ensureDeductionClearedColumns, ensureStaffIdBackfillMySQL, ensureStaffPaymentsTable, ensureStaffPublicTokens, ensureAutoLockColumn } from "./db";
+import { checkAndSendClosingReminder } from "./push";
 
 const app = express();
 const httpServer = createServer(app);
@@ -123,6 +124,12 @@ const startServer = async () => {
     },
     () => {
       log(`serving on port ${PORT} (${ENV} environment)`);
+
+      setInterval(() => {
+        checkAndSendClosingReminder().catch(err =>
+          console.error('[Closing Reminder] Error:', err)
+        );
+      }, 5 * 60 * 1000);
     },
   );
 };
