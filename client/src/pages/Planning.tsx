@@ -458,7 +458,7 @@ export default function Planning() {
     return format(date, "yyyy-MM-dd") === format(workDayDate, "yyyy-MM-dd");
   }, [date, currentTime, businessSettings?.openingTime, businessSettings?.closingTime]);
 
-  const isAutoLocked = useMemo(() => {
+  const isDateAutoLocked = useCallback((checkDate: Date) => {
     if (!businessSettings?.autoLockEnabled) return false;
     if (canEditPastAppointments) return false;
 
@@ -474,7 +474,7 @@ export default function Planning() {
 
     const currentWorkDay = getWorkDayDate(openingTime, closingTime);
     const currentWorkDayStr = format(currentWorkDay, "yyyy-MM-dd");
-    const viewingDateStr = format(date, "yyyy-MM-dd");
+    const viewingDateStr = format(checkDate, "yyyy-MM-dd");
 
     if (viewingDateStr < currentWorkDayStr) return true;
 
@@ -487,7 +487,9 @@ export default function Planning() {
     }
 
     return false;
-  }, [date, currentTime, businessSettings?.autoLockEnabled, businessSettings?.closingTime, businessSettings?.openingTime, canEditPastAppointments]);
+  }, [businessSettings?.autoLockEnabled, businessSettings?.closingTime, businessSettings?.openingTime, canEditPastAppointments]);
+
+  const isAutoLocked = useMemo(() => isDateAutoLocked(date), [date, currentTime, isDateAutoLocked]);
 
   const canEdit = canEditCardboard && !isAutoLocked;
   
@@ -741,7 +743,10 @@ export default function Planning() {
     
     const targetApp = appointments.find(app => app.id === parseInt(pendingAppointmentId.current!));
     if (targetApp) {
-      openAppointmentForEdit(targetApp);
+      const appDate = parseISO(targetApp.date);
+      if (canEditCardboard && !isDateAutoLocked(appDate)) {
+        openAppointmentForEdit(targetApp);
+      }
       pendingAppointmentId.current = null;
     } else if (appointments.length > 0) {
       pendingAppointmentId.current = null;
@@ -931,6 +936,7 @@ export default function Planning() {
   };
 
   const onSubmit = async (data: AppointmentFormValues) => {
+    if (!canEdit) return;
     // Track most used services for quick access
     const stored = localStorage.getItem('mostUsedServices');
     const mostUsed = stored ? JSON.parse(stored) : {};
@@ -1501,8 +1507,9 @@ export default function Planning() {
                       key={app.id} 
                       className="p-2 border-b last:border-b-0 hover:bg-muted/50 cursor-pointer"
                       onClick={() => {
-                        setDate(parseISO(app.date));
-                        if (canEdit) {
+                        const appDate = parseISO(app.date);
+                        setDate(appDate);
+                        if (canEditCardboard && !isDateAutoLocked(appDate)) {
                           openAppointmentForEdit(app);
                         }
                       }}
@@ -2500,6 +2507,7 @@ export default function Planning() {
                     variant="destructive"
                     className="h-12 px-5 rounded-2xl font-semibold text-sm shadow-lg hover:shadow-xl transition-all"
                     onClick={() => {
+                      if (!canEdit) return;
                       if (confirm(t("planning.deleteConfirm"))) {
                         deleteMutation.mutate(editingAppointment.id);
                         setIsDialogOpen(false);
@@ -2512,7 +2520,7 @@ export default function Planning() {
                 <Button 
                   type="submit" 
                   className="flex-1 h-12 text-sm font-semibold rounded-2xl liquid-gradient shadow-lg hover:shadow-xl transition-all active:scale-[0.98]" 
-                  disabled={createMutation.isPending || updateMutation.isPending}
+                  disabled={!canEdit || createMutation.isPending || updateMutation.isPending}
                 >
                   <Sparkles className="w-4 h-4 ml-2" />
                   {editingAppointment ? t("planning.updateBooking") : t("planning.confirmBooking")}
