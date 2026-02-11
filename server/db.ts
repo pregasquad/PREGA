@@ -715,6 +715,39 @@ export async function ensureAutoLockColumn(): Promise<void> {
   }
 }
 
+export async function ensureChargeAttachmentColumns(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      const [rows] = await connection.query(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_NAME = 'charges' AND COLUMN_NAME = 'attachment'
+      `);
+      if ((rows as any[]).length === 0) {
+        await connection.query(`ALTER TABLE charges ADD COLUMN attachment LONGTEXT NULL`);
+        await connection.query(`ALTER TABLE charges ADD COLUMN attachment_name VARCHAR(500) NULL`);
+        console.log("Added attachment columns to charges table");
+      }
+      connection.release();
+    } else {
+      await pool.query(`
+        DO $$ 
+        BEGIN 
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'charges' AND column_name = 'attachment') THEN
+            ALTER TABLE charges ADD COLUMN attachment TEXT NULL;
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'charges' AND column_name = 'attachment_name') THEN
+            ALTER TABLE charges ADD COLUMN attachment_name TEXT NULL;
+          END IF;
+        END $$;
+      `);
+    }
+    console.log("Charge attachment columns ready");
+  } catch (error) {
+    console.error("Failed to ensure charge attachment columns:", error);
+  }
+}
+
 export async function ensureServiceStartingPriceColumn(): Promise<void> {
   try {
     if (dbDialect === 'mysql') {

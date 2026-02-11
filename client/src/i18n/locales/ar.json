@@ -237,7 +237,12 @@
     "water": "ماء",
     "electricity": "كهرباء",
     "salary": "راتب",
-    "other": "أخرى"
+    "other": "أخرى",
+    "attachment": "مرفق",
+    "addAttachment": "إرفاق إيصال",
+    "downloadAttachment": "تحميل المرفق",
+    "fileTooLarge": "الملف كبير جداً (الحد الأقصى 5 ميغابايت)",
+    "noExpensesForPeriod": "لا توجد مصاريف لهذه الفترة"
   },
   "salaries": {
     "title": "الرواتب",

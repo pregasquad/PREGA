@@ -237,7 +237,12 @@
     "water": "Eau",
     "electricity": "Électricité",
     "salary": "Salaire",
-    "other": "Autre"
+    "other": "Autre",
+    "attachment": "Pièce jointe",
+    "addAttachment": "Joindre un reçu",
+    "downloadAttachment": "Télécharger la pièce jointe",
+    "fileTooLarge": "Fichier trop volumineux (max 5 Mo)",
+    "noExpensesForPeriod": "Aucune dépense pour cette période"
   },
   "salaries": {
     "title": "Salaires",

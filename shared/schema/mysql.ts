@@ -140,6 +140,8 @@ export const charges = mysqlTable("charges", {
   amount: double("amount").notNull(),
   date: text("date").notNull(),
   categoryId: int("category_id"),
+  attachment: text("attachment"),
+  attachmentName: text("attachment_name"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -149,6 +151,8 @@ export const insertChargeSchema = createInsertSchema(charges).omit({ id: true, c
   amount: z.number().min(0, "Amount must be non-negative"),
   date: z.string().min(1, "Date is required"),
   categoryId: z.number().int().optional(),
+  attachment: z.string().nullable().optional(),
+  attachmentName: z.string().nullable().optional(),
 });
 export type Charge = typeof charges.$inferSelect;
 export type InsertCharge = z.infer<typeof insertChargeSchema>;

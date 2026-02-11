@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, startOfMonth, endOfMonth, parseISO, isWithinInterval, subMonths, addMonths } from "date-fns";
 import { fr, enUS, ar } from "date-fns/locale";
@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, TrendingDown, FolderPlus, RefreshCw, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+import { Plus, Trash2, TrendingDown, FolderPlus, RefreshCw, ChevronLeft, ChevronRight, Calendar, Paperclip, X, Image, FileText, Eye } from "lucide-react";
 
 const DEFAULT_CHARGE_TYPES_KEYS = [
   { id: 1, key: "expenses.product", value: "Produit" },
@@ -27,6 +27,10 @@ export default function Charges() {
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [attachment, setAttachment] = useState<string | null>(null);
+  const [attachmentName, setAttachmentName] = useState<string | null>(null);
+  const [previewAttachment, setPreviewAttachment] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const { toast } = useToast();
@@ -84,6 +88,7 @@ export default function Charges() {
       queryClient.invalidateQueries({ queryKey: ["/api/charges"] });
       setName("");
       setAmount("");
+      removeAttachment();
       toast({ title: t("expenses.expenseAdded") });
     },
   });
@@ -98,6 +103,32 @@ export default function Charges() {
     },
   });
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast({ title: t("expenses.fileTooLarge"), variant: "destructive" });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setAttachment(reader.result as string);
+      setAttachmentName(file.name);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeAttachment = () => {
+    setAttachment(null);
+    setAttachmentName(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const isImageAttachment = (data: string) => data?.startsWith("data:image/");
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !amount || !date) {
@@ -109,6 +140,8 @@ export default function Charges() {
       name: name,
       amount: Number(amount),
       date: date,
+      attachment: attachment || null,
+      attachmentName: attachmentName || null,
     });
   };
 
@@ -212,7 +245,50 @@ export default function Charges() {
                 />
               </div>
 
-              <Button type="submit" className="w-full" disabled={createMutation.isPending}>
+              <div className="space-y-2">
+                <Label>{t("expenses.attachment")}</Label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*,.pdf"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                  data-testid="input-expense-attachment"
+                />
+                {attachment ? (
+                  <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
+                    {isImageAttachment(attachment) ? (
+                      <Image className="w-4 h-4 text-muted-foreground shrink-0" />
+                    ) : (
+                      <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+                    )}
+                    <span className="text-sm truncate flex-1">{attachmentName}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 shrink-0"
+                      onClick={removeAttachment}
+                      data-testid="button-remove-attachment"
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => fileInputRef.current?.click()}
+                    data-testid="button-add-attachment"
+                  >
+                    <Paperclip className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
+                    {t("expenses.addAttachment")}
+                  </Button>
+                )}
+              </div>
+
+              <Button type="submit" className="w-full" disabled={createMutation.isPending} data-testid="button-submit-expense">
                 {t("common.add")}
               </Button>
             </form>
@@ -238,13 +314,24 @@ export default function Charges() {
         </CardHeader>
         <CardContent className="space-y-3">
           {filteredCharges.map((charge: any) => (
-            <div key={charge.id} className="p-3 bg-red-50 dark:bg-red-950/20 rounded-lg flex justify-between items-center">
+            <div key={charge.id} className="p-3 bg-red-50 dark:bg-red-950/20 rounded-lg flex justify-between items-center gap-2">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-sm font-medium truncate">{charge.name}</span>
                   <span className="text-xs px-1.5 py-0.5 bg-red-100 dark:bg-red-900/50 rounded text-red-700 dark:text-red-300">
                     {chargeTypes.find((t: any) => t.name === charge.type)?.label || charge.type}
                   </span>
+                  {charge.attachment && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => setPreviewAttachment(charge.attachment)}
+                      data-testid={`button-view-attachment-${charge.id}`}
+                    >
+                      <Paperclip className="w-3.5 h-3.5 text-muted-foreground" />
+                    </Button>
+                  )}
                 </div>
                 <div className="flex gap-2 text-sm mt-0.5">
                   <span className="text-red-600 dark:text-red-400 font-semibold">{charge.amount} {t("common.currency")}</span>
@@ -255,8 +342,9 @@ export default function Charges() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  className="h-8 w-8 shrink-0 text-destructive"
                   onClick={() => deleteMutation.mutate(charge.id)}
+                  data-testid={`button-delete-expense-${charge.id}`}
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
@@ -270,6 +358,49 @@ export default function Charges() {
           )}
         </CardContent>
       </Card>
+
+      {previewAttachment && (
+        <div
+          className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+          onClick={() => setPreviewAttachment(null)}
+          data-testid="modal-attachment-preview"
+        >
+          <div
+            className="bg-background rounded-lg max-w-lg w-full max-h-[80vh] overflow-auto p-4 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold">{t("expenses.attachment")}</h3>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setPreviewAttachment(null)}
+                data-testid="button-close-preview"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            {isImageAttachment(previewAttachment) ? (
+              <img
+                src={previewAttachment}
+                alt={t("expenses.attachment")}
+                className="w-full rounded-md object-contain max-h-[60vh]"
+              />
+            ) : (
+              <div className="flex flex-col items-center gap-3 py-8">
+                <FileText className="w-12 h-12 text-muted-foreground" />
+                <a
+                  href={previewAttachment}
+                  download="attachment.pdf"
+                  className="text-primary underline text-sm"
+                >
+                  {t("expenses.downloadAttachment")}
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

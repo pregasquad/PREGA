@@ -237,7 +237,12 @@
     "water": "Water",
     "electricity": "Electricity",
     "salary": "Salary",
-    "other": "Other"
+    "other": "Other",
+    "attachment": "Attachment",
+    "addAttachment": "Attach Receipt",
+    "downloadAttachment": "Download Attachment",
+    "fileTooLarge": "File too large (max 5MB)",
+    "noExpensesForPeriod": "No expenses for this period"
   },
   "salaries": {
     "title": "Salaries",
