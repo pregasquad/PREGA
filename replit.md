@@ -34,6 +34,7 @@ Beauty Salon Appointment Management System built with React + Express + PostgreS
 - **Database migrations**: Startup migrations in `server/db.ts` handle backfilling staffId and creating indexes
 
 ## Recent Changes
+- 2026-02-11: Redesigned Dashboard (Home.tsx) with premium SaaS fintech layout - glassmorphism 2x2 summary cards (Revenue, Appointments, Paid, Unpaid), financial overview section with dominant net profit display, Stripe-style employee performance list with avatar/commission/appointment stats, closing day checklist card, low stock alerts; full RTL Arabic support; iPhone-optimized mobile layout
 - 2026-02-11: Added expense attachment upload feature - charges can now have file attachments (images/PDF, max 5MB); stored as base64 in `attachment` column (TEXT for Postgres, LONGTEXT for MySQL); preview modal with image display or PDF download; paperclip icon indicator on expense items with attachments
 - 2026-02-11: Added automated WhatsApp appointment reminders - sends 2hr before appointments via WAWP API; scheduler runs every 5min; handles cross-midnight appointments; in-memory deduplication
 - 2026-02-11: Added Closing Day push notification reminder - sends push 30min before closing time (scheduled every 5min, deduped per day); manual trigger via POST /api/push/closing-reminder (admin only); cash verification is manual tap-to-confirm with per-day localStorage persistence
