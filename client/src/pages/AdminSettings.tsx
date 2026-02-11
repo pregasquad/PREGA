@@ -17,7 +17,7 @@ import {
   UserPlus, Users, Shield, Download, FileSpreadsheet, 
   Trash2, Edit, Calendar, User, Briefcase, Package, 
   CreditCard, Building2, Clock, Save, Camera, Loader2, RefreshCw,
-  MessageCircle, Send
+  MessageCircle, Send, Lock
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
@@ -45,6 +45,7 @@ interface BusinessSettings {
   openingTime: string;
   closingTime: string;
   workingDays: number[];
+  autoLockEnabled: boolean;
 }
 
 interface MessageTemplate {
@@ -94,6 +95,7 @@ const ALL_PERMISSIONS = [
   { key: "view_reports", labelKey: "permissions.viewReports", icon: "BarChart" },
   { key: "admin_settings", labelKey: "permissions.adminSettings", icon: "Settings" },
   { key: "export_data", labelKey: "permissions.exportData", icon: "Download" },
+  { key: "edit_past_appointments", labelKey: "permissions.editPastAppointments", icon: "Lock" },
 ];
 
 const DAYS_OF_WEEK = [
@@ -124,7 +126,8 @@ export default function AdminSettings() {
     currencySymbol: "DH",
     openingTime: "09:00",
     closingTime: "19:00",
-    workingDays: [1, 2, 3, 4, 5, 6]
+    workingDays: [1, 2, 3, 4, 5, 6],
+    autoLockEnabled: false
   });
   const [broadcastMessage, setBroadcastMessage] = useState("");
   const [broadcastResult, setBroadcastResult] = useState<{sent: number, failed: number, total: number} | null>(null);
@@ -640,6 +643,23 @@ export default function AdminSettings() {
                           </div>
                         ))}
                       </div>
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-4">
+                    <h3 className="font-medium mb-2 flex items-center gap-2">
+                      <Lock className="w-4 h-4" />
+                      {t("admin.autoLock")}
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-3">{t("admin.autoLockDesc")}</p>
+                    <div className="flex items-center gap-3">
+                      <Checkbox
+                        checked={businessForm.autoLockEnabled}
+                        onCheckedChange={(checked) => setBusinessForm(prev => ({ ...prev, autoLockEnabled: !!checked }))}
+                        id="auto-lock-toggle"
+                        data-testid="switch-auto-lock"
+                      />
+                      <label htmlFor="auto-lock-toggle" className="text-sm cursor-pointer">{t("admin.autoLockEnabled")}</label>
                     </div>
                   </div>
 

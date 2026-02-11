@@ -323,6 +323,7 @@ export const businessSettings = pgTable("business_settings", {
   referralBonusPoints: integer("referral_bonus_points").notNull().default(100),
   referralBonusReferee: integer("referral_bonus_referee").notNull().default(50),
   cancellationHours: integer("cancellation_hours").notNull().default(24),
+  autoLockEnabled: boolean("auto_lock_enabled").notNull().default(false),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 

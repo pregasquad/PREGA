@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { CalendarIcon, ChevronLeft, ChevronRight, Plus, Trash2, Check, X, Search, Star, RefreshCw, Sparkles, CreditCard, Settings2, Scissors, Clock, User, ChevronsUpDown, ListTodo, Bell, UserCheck, Gift, AlertCircle, Wallet, Users, Package } from "lucide-react";
+import { CalendarIcon, ChevronLeft, ChevronRight, Plus, Trash2, Check, X, Search, Star, RefreshCw, Sparkles, CreditCard, Settings2, Scissors, Clock, User, ChevronsUpDown, ListTodo, Bell, UserCheck, Gift, AlertCircle, Wallet, Users, Package, Lock } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
 import { cn } from "@/lib/utils";
@@ -105,13 +105,24 @@ export default function Planning() {
   const canEditCardboard = useMemo(() => {
     try {
       const permissions = JSON.parse(sessionStorage.getItem("current_user_permissions") || "[]");
-      // If no permissions set (empty array), allow full access (opt-in restriction model)
       if (permissions.length === 0) return true;
       return permissions.includes("edit_cardboard");
     } catch {
-      return true; // Default to allowing edits if parsing fails
+      return true;
     }
   }, []);
+
+  const currentUserRole = typeof window !== 'undefined' ? sessionStorage.getItem("current_user_role") : null;
+  const canEditPastAppointments = useMemo(() => {
+    if (currentUserRole === "owner") return true;
+    try {
+      const permissions = JSON.parse(sessionStorage.getItem("current_user_permissions") || "[]");
+      if (permissions.length === 0) return true;
+      return permissions.includes("edit_past_appointments");
+    } catch {
+      return true;
+    }
+  }, [currentUserRole]);
   const [serviceSearch, setServiceSearch] = useState("");
   const [currentTime, setCurrentTime] = useState(new Date());
   const boardRef = useRef<HTMLDivElement>(null);
@@ -389,6 +400,7 @@ export default function Planning() {
     openingTime?: string;
     closingTime?: string;
     workingDays?: number[];
+    autoLockEnabled?: boolean;
   }>({
     queryKey: ["/api/business-settings"],
   });
@@ -445,6 +457,39 @@ export default function Planning() {
     const workDayDate = currentTotalMinutes < overnightCutoffMinutes ? subDays(now, 1) : now;
     return format(date, "yyyy-MM-dd") === format(workDayDate, "yyyy-MM-dd");
   }, [date, currentTime, businessSettings?.openingTime, businessSettings?.closingTime]);
+
+  const isAutoLocked = useMemo(() => {
+    if (!businessSettings?.autoLockEnabled) return false;
+    if (canEditPastAppointments) return false;
+
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const openingTime = businessSettings?.openingTime || "09:00";
+    const closingTime = businessSettings?.closingTime || "19:00";
+    const [openH, openM] = openingTime.split(":").map(Number);
+    const [closeH, closeM] = closingTime.split(":").map(Number);
+    const openingMinutes = openH * 60 + openM;
+    const closingMinutes = closeH * 60 + closeM;
+    const isOvernight = closingMinutes < openingMinutes;
+
+    const currentWorkDay = getWorkDayDate(openingTime, closingTime);
+    const currentWorkDayStr = format(currentWorkDay, "yyyy-MM-dd");
+    const viewingDateStr = format(date, "yyyy-MM-dd");
+
+    if (viewingDateStr < currentWorkDayStr) return true;
+
+    if (viewingDateStr === currentWorkDayStr) {
+      if (isOvernight) {
+        return currentMinutes >= closingMinutes && currentMinutes < openingMinutes;
+      } else {
+        return currentMinutes >= closingMinutes;
+      }
+    }
+
+    return false;
+  }, [date, currentTime, businessSettings?.autoLockEnabled, businessSettings?.closingTime, businessSettings?.openingTime, canEditPastAppointments]);
+
+  const canEdit = canEditCardboard && !isAutoLocked;
   
   // INITIAL AUTO-SCROLL: Scroll once when all data loads (staff + business settings ready)
   const initialScrollDoneRef = useRef(false);
@@ -855,7 +900,7 @@ export default function Planning() {
   };
 
   const handleSlotClick = (staffName: string, time: string) => {
-    if (!canEditCardboard) return;
+    if (!canEdit) return;
     form.reset({
       date: formattedDate,
       startTime: time,
@@ -878,7 +923,7 @@ export default function Planning() {
 
   const handleAppointmentClick = (e: React.MouseEvent, app: any) => {
     e.stopPropagation();
-    if (!canEditCardboard) return;
+    if (!canEdit) return;
     openAppointmentForEdit(app);
   };
 
@@ -1191,7 +1236,7 @@ export default function Planning() {
   };
 
   const handleDragStart = (e: React.DragEvent, appointment: any) => {
-    if (!canEditCardboard) {
+    if (!canEdit) {
       e.preventDefault();
       return;
     }
@@ -1219,7 +1264,7 @@ export default function Planning() {
     e.preventDefault();
     setDragOverSlot(null);
     
-    if (!canEditCardboard || !draggedAppointment) return;
+    if (!canEdit || !draggedAppointment) return;
     
     const staffMember = staffList.find(s => s.name === staffName);
     if (!staffMember) return;
@@ -1664,6 +1709,13 @@ export default function Planning() {
           ))}
         </div>
 
+        {isAutoLocked && (
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-100 dark:bg-amber-900/30 border-b border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-sm" data-testid="banner-auto-lock">
+            <Lock className="w-3.5 h-3.5 shrink-0" />
+            <span>{t("admin.appointmentsLocked")}</span>
+          </div>
+        )}
+
         {/* Scrollable content */}
         <div ref={boardRef} className={cn("flex-1 min-h-0 overflow-auto relative free-scroll planning-scroll bg-white/80 dark:bg-slate-900/80", isMobile && "pb-24")}>
           <div 
@@ -1772,9 +1824,9 @@ export default function Planning() {
                         )}
                         style={{ 
                           background: `linear-gradient(135deg, ${s.color}ee, ${s.color}cc)`,
-                          cursor: canEditCardboard ? 'grab' : 'default'
+                          cursor: canEdit ? 'grab' : 'default'
                         }}
-                        draggable={canEditCardboard}
+                        draggable={canEdit}
                         onDragStart={(e) => handleDragStart(e, booking)}
                         onDragEnd={handleDragEnd}
                         onClick={(e) => handleAppointmentClick(e, booking)}

@@ -321,6 +321,7 @@ export const businessSettings = mysqlTable("business_settings", {
   referralBonusPoints: int("referral_bonus_points").notNull().default(100),
   referralBonusReferee: int("referral_bonus_referee").notNull().default(50),
   cancellationHours: int("cancellation_hours").notNull().default(24),
+  autoLockEnabled: boolean("auto_lock_enabled").notNull().default(false),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 

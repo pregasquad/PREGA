@@ -601,6 +601,10 @@
     "openingTime": "وقت الافتتاح",
     "closingTime": "وقت الإغلاق",
     "workingDays": "أيام العمل",
+    "autoLock": "قفل المواعيد تلقائياً",
+    "autoLockDesc": "قفل تعديل المواعيد في الأيام الماضية وبعد ساعات الإغلاق",
+    "autoLockEnabled": "تفعيل القفل التلقائي",
+    "appointmentsLocked": "المواعيد مقفلة (يوم سابق أو بعد ساعات العمل)",
     "currency": "العملة",
     "currencyCode": "رمز العملة",
     "currencySymbol": "رمز العملة",
@@ -658,7 +662,8 @@
     "manageUsers": "إدارة المستخدمين",
     "viewReports": "عرض التقارير",
     "adminSettings": "إعدادات المدير",
-    "exportData": "تصدير البيانات"
+    "exportData": "تصدير البيانات",
+    "editPastAppointments": "تعديل المواعيد السابقة/بعد ساعات العمل"
   },
   "days": {
     "sunday": "الأحد",

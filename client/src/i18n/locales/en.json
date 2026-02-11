@@ -641,6 +641,10 @@
     "openingTime": "Opening Time",
     "closingTime": "Closing Time",
     "workingDays": "Working Days",
+    "autoLock": "Auto-Lock Appointments",
+    "autoLockDesc": "Lock editing of appointments on past days and after closing time",
+    "autoLockEnabled": "Enable Auto-Lock",
+    "appointmentsLocked": "Appointments are locked (past day or after working hours)",
     "currency": "Currency",
     "currencyCode": "Currency Code",
     "currencySymbol": "Currency Symbol",
@@ -698,7 +702,8 @@
     "manageUsers": "Manage Users",
     "viewReports": "View Reports",
     "adminSettings": "Admin Settings",
-    "exportData": "Export Data"
+    "exportData": "Export Data",
+    "editPastAppointments": "Edit Past/After-Hours Appointments"
   },
   "days": {
     "sunday": "Sunday",

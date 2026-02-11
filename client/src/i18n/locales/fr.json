@@ -641,6 +641,10 @@
     "openingTime": "Heure d'Ouverture",
     "closingTime": "Heure de Fermeture",
     "workingDays": "Jours de Travail",
+    "autoLock": "Verrouillage Automatique",
+    "autoLockDesc": "Verrouiller la modification des rendez-vous passés et après les heures de fermeture",
+    "autoLockEnabled": "Activer le Verrouillage Automatique",
+    "appointmentsLocked": "Les rendez-vous sont verrouillés (jour passé ou après les heures de travail)",
     "currency": "Devise",
     "currencyCode": "Code de Devise",
     "currencySymbol": "Symbole de Devise",
@@ -698,7 +702,8 @@
     "manageUsers": "Gérer Utilisateurs",
     "viewReports": "Voir Rapports",
     "adminSettings": "Paramètres Admin",
-    "exportData": "Exporter Données"
+    "exportData": "Exporter Données",
+    "editPastAppointments": "Modifier Rendez-vous Passés/Hors Horaires"
   },
   "days": {
     "sunday": "Dimanche",
