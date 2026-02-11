@@ -333,7 +333,19 @@
     "paymentRecorded": "تم تسجيل الدفعة",
     "noEarnings": "لا توجد أرباح متراكمة",
     "lastPaid": "آخر دفعة",
-    "never": "أبداً"
+    "never": "أبداً",
+    "financialSummary": "الملخص المالي",
+    "salonRevenue": "إيرادات الصالون",
+    "expenses": "المصاريف",
+    "netProfit": "صافي الربح",
+    "profitMargin": "هامش الربح",
+    "vsLastPeriod": "مقارنة بالفترة السابقة",
+    "highExpenses": "نسبة مصاريف مرتفعة",
+    "excellentPerformance": "أداء ممتاز",
+    "servicesRevenue": "إيرادات الخدمات",
+    "commissionRate": "نسبة العمولة",
+    "finalAmountDue": "المبلغ المستحق النهائي",
+    "serviceBreakdown": "تفصيل الخدمات"
   },
   "staffPerformance": {
     "title": "أداء الموظفين",

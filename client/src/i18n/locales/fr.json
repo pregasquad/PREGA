@@ -333,7 +333,19 @@
     "paymentRecorded": "Paiement enregistré",
     "noEarnings": "Aucun gain accumulé",
     "lastPaid": "Dernier paiement",
-    "never": "Jamais"
+    "never": "Jamais",
+    "financialSummary": "Résumé Financier",
+    "salonRevenue": "Revenus du Salon",
+    "expenses": "Dépenses",
+    "netProfit": "Bénéfice Net",
+    "profitMargin": "Marge Bénéficiaire",
+    "vsLastPeriod": "vs période précédente",
+    "highExpenses": "Dépenses Élevées",
+    "excellentPerformance": "Performance Excellente",
+    "servicesRevenue": "Revenus des Services",
+    "commissionRate": "Taux de Commission",
+    "finalAmountDue": "Montant Final Dû",
+    "serviceBreakdown": "Détail des Services"
   },
   "staffPerformance": {
     "title": "Performance Staff",
