@@ -1925,7 +1925,7 @@ export default function Planning() {
                                   </div>
                                 ))}
                               </div>
-                              <div className="flex items-center gap-1 shrink-0 pointer-events-auto flex-wrap mt-auto">
+                              <div className="flex items-center gap-1 shrink-0 pointer-events-auto flex-wrap mt-auto" dir="ltr">
                                 <span className="text-[10px] opacity-80 shrink-0">{booking.startTime}</span>
                                 <span className="text-[10px] opacity-80 shrink-0">{booking.duration}′</span>
                                 <span className="shrink-0">{paidButton}</span>
