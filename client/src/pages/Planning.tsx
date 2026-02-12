@@ -1212,11 +1212,16 @@ export default function Planning() {
     }
   };
 
-  const handleMarkAsPaid = async (e: React.MouseEvent, app: any) => {
+  const markPaidRef = React.useRef<number>(0);
+  const handleMarkAsPaid = async (e: React.MouseEvent | React.TouchEvent, app: any) => {
     e.stopPropagation();
+    e.preventDefault();
     if (!canEdit) return;
     
-    // Check if this is a temporary appointment that hasn't synced yet
+    const now = Date.now();
+    if (now - markPaidRef.current < 1000) return;
+    markPaidRef.current = now;
+    
     const appId = typeof app.id === 'string' ? parseInt(app.id) : app.id;
     if (appId < 0) {
       toast({ 
@@ -1228,13 +1233,27 @@ export default function Planning() {
     }
     
     try {
-      await apiRequest("PUT", `/api/appointments/${appId}`, {
-        ...app,
+      const updateData: any = {
         paid: true,
-        updatedAt: new Date().toISOString(),
-        _store: 'appointments',
-        _offlineUpdatedAt: new Date().toISOString(),
-      });
+      };
+      if (app.date) updateData.date = app.date;
+      if (app.startTime) updateData.startTime = app.startTime;
+      if (app.duration) updateData.duration = app.duration;
+      if (app.service) updateData.service = app.service;
+      if (app.staff) updateData.staff = app.staff;
+      if (app.staffId) updateData.staffId = app.staffId;
+      if (app.client) updateData.client = app.client;
+      if (app.clientId) updateData.clientId = app.clientId;
+      if (app.phone) updateData.phone = app.phone;
+      if (app.total !== undefined) updateData.total = app.total;
+      if (app.price !== undefined) updateData.price = app.price;
+      if (app.servicesJson) {
+        updateData.servicesJson = typeof app.servicesJson === 'string' 
+          ? JSON.parse(app.servicesJson) 
+          : app.servicesJson;
+      }
+
+      await apiRequest("PUT", `/api/appointments/${appId}`, updateData);
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/appointments/all"] });
       toast({ title: t("planning.paymentConfirmed"), description: t("planning.paymentConfirmedDesc") });
@@ -1844,78 +1863,79 @@ export default function Planning() {
                         onClick={(e) => handleAppointmentClick(e, booking)}
                       >
                         <div className="water-shimmer absolute inset-0 opacity-30" />
-                        {span === 1 ? (
-                          /* Compact single-row layout for 30min appointments */
-                          <div className="relative z-10 flex items-center w-full gap-1 min-w-0 pointer-events-auto">
-                            <span className="text-[10px] font-bold bg-white/25 px-1 py-0.5 rounded shrink-0 tabular-nums">{booking.total}</span>
-                            <span className="text-[9px] opacity-90 shrink-0">{booking.startTime}</span>
-                            <span className="text-[9px] opacity-70 shrink-0">{booking.duration}′</span>
-                            {booking.paid ? (
-                              <span 
-                                className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center shrink-0" 
-                                role="status"
-                                aria-label={t("common.paid")}
-                              >
-                                <Check className="w-2.5 h-2.5 text-white" />
-                              </span>
-                            ) : (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  e.preventDefault();
-                                  handleMarkAsPaid(e, booking);
-                                }}
-                                className="w-4 h-4 bg-white/30 hover:bg-white/50 rounded-full flex items-center justify-center transition-colors shrink-0 relative z-20"
-                                aria-label={t("planning.markAsPaid")}
-                              >
-                                <CreditCard className="w-2 h-2" />
-                              </button>
-                            )}
-                          </div>
-                        ) : (
-                          /* Multi-row layout for longer appointments */
-                          <div className="relative z-10 flex flex-col justify-between h-full w-full">
-                            <div className="min-w-0 flex-1 flex flex-col justify-center">
-                              <div 
-                                className="font-bold text-[11px] leading-tight line-clamp-2" 
-                                title={booking.service}
-                              >
-                                {booking.service}
-                              </div>
-                              {booking.client && (
-                                <div className="text-[10px] opacity-80 truncate mt-0.5" title={booking.client}>
-                                  {booking.client}
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1 shrink-0 pointer-events-auto">
-                              <span className="text-[10px] font-bold bg-white/25 px-1.5 py-0.5 rounded tabular-nums shrink-0">{booking.total}</span>
-                              <span className="text-[9px] opacity-80 shrink-0">{booking.startTime}</span>
+                        {(() => {
+                          let servicesList: Array<{name: string, price: number, duration: number}> = [];
+                          if (booking.servicesJson) {
+                            try {
+                              servicesList = typeof booking.servicesJson === 'string' 
+                                ? JSON.parse(booking.servicesJson) 
+                                : booking.servicesJson;
+                            } catch { servicesList = []; }
+                          }
+                          if (servicesList.length === 0 && booking.service) {
+                            servicesList = [{ name: booking.service, price: booking.price || 0, duration: booking.duration || 30 }];
+                          }
+
+                          const paidButton = booking.paid ? (
+                            <span 
+                              className="w-7 h-7 bg-green-500 rounded-full flex items-center justify-center shrink-0" 
+                              role="status"
+                              aria-label={t("common.paid")}
+                              data-testid={`status-paid-${booking.id}`}
+                            >
+                              <Check className="w-3.5 h-3.5 text-white" />
+                            </span>
+                          ) : (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                handleMarkAsPaid(e, booking);
+                              }}
+                              onTouchEnd={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                handleMarkAsPaid(e, booking);
+                              }}
+                              className="w-7 h-7 bg-white/30 hover:bg-white/50 active:bg-white/60 rounded-full flex items-center justify-center transition-colors shrink-0 relative z-30"
+                              aria-label={t("planning.markAsPaid")}
+                              data-testid={`button-mark-paid-${booking.id}`}
+                            >
+                              <CreditCard className="w-3.5 h-3.5" />
+                            </button>
+                          );
+
+                          return span === 1 ? (
+                            <div className="relative z-10 flex items-center w-full gap-1 min-w-0 pointer-events-auto">
+                              <span className="text-[10px] font-bold bg-white/25 px-1 py-0.5 rounded shrink-0 tabular-nums">{booking.total}</span>
+                              <span className="text-[9px] opacity-90 shrink-0">{booking.startTime}</span>
                               <span className="text-[9px] opacity-70 shrink-0">{booking.duration}′</span>
-                              {booking.paid ? (
-                                <span 
-                                  className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center shrink-0 ml-auto" 
-                                  role="status"
-                                  aria-label={t("common.paid")}
-                                >
-                                  <Check className="w-2.5 h-2.5 text-white" />
-                                </span>
-                              ) : (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    e.preventDefault();
-                                    handleMarkAsPaid(e, booking);
-                                  }}
-                                  className="w-4 h-4 bg-white/30 hover:bg-white/50 rounded-full flex items-center justify-center transition-colors shrink-0 ml-auto relative z-20"
-                                  aria-label={t("planning.markAsPaid")}
-                                >
-                                  <CreditCard className="w-2.5 h-2.5" />
-                                </button>
-                              )}
+                              <span className="ml-auto shrink-0">{paidButton}</span>
                             </div>
-                          </div>
-                        )}
+                          ) : (
+                            <div className="relative z-10 flex flex-col justify-between h-full w-full">
+                              <div className="min-w-0 flex-1 flex flex-col gap-0.5 pt-0.5">
+                                {servicesList.map((svc, idx) => (
+                                  <div key={idx} className="flex items-center gap-1 min-w-0">
+                                    <span className="text-[10px] font-medium truncate flex-1 min-w-0">{svc.name}</span>
+                                    <span className="text-[9px] opacity-70 shrink-0 tabular-nums">{svc.price}</span>
+                                  </div>
+                                ))}
+                                {booking.client && (
+                                  <div className="text-[9px] opacity-70 truncate mt-0.5" title={booking.client}>
+                                    {booking.client}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1.5 shrink-0 pointer-events-auto pb-0.5">
+                                <span className="text-[11px] font-bold bg-white/25 px-1.5 py-0.5 rounded tabular-nums shrink-0">{booking.total}</span>
+                                <span className="text-[9px] opacity-80 shrink-0">{booking.startTime}</span>
+                                <span className="text-[9px] opacity-70 shrink-0">{booking.duration}′</span>
+                                <span className="ml-auto shrink-0">{paidButton}</span>
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
                   );
