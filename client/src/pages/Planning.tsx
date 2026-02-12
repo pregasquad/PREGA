@@ -1878,12 +1878,13 @@ export default function Planning() {
 
                           const paidButton = booking.paid ? (
                             <span 
-                              className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center shrink-0" 
+                              className="relative w-6 h-6 flex items-center justify-center shrink-0" 
                               role="status"
                               aria-label={t("common.paid")}
                               data-testid={`status-paid-${booking.id}`}
                             >
-                              <Check className="w-3 h-3 text-white" />
+                              <CreditCard className="w-5 h-5 text-green-400" />
+                              <Check className="w-2.5 h-2.5 text-green-400 absolute -top-0.5 -right-0.5 stroke-[3]" />
                             </span>
                           ) : (
                             <button
