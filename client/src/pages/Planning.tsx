@@ -1850,7 +1850,7 @@ export default function Planning() {
                       <div 
                         className={cn(
                           "appointment-card h-full text-white cursor-grab active:cursor-grabbing relative rounded-md shadow-md",
-                          span === 1 ? "flex items-center gap-1 px-1.5 py-0.5" : "flex flex-col px-2 py-1.5",
+                          span === 1 ? "flex items-center gap-1 px-1.5 py-0.5" : span <= 2 ? "flex flex-col px-1.5 py-1" : "flex flex-col px-2 py-1.5",
                           isDragging && "opacity-50 scale-95"
                         )}
                         style={{ 
@@ -1914,24 +1914,22 @@ export default function Planning() {
                               <span className="shrink-0" style={{ marginInlineStart: 'auto' }}>{paidButton}</span>
                             </div>
                           ) : (
-                            <div className="relative z-10 flex flex-col h-full w-full">
-                              <div className="min-w-0 flex-1 flex flex-col gap-0.5 overflow-hidden">
+                            <div className="relative z-10 flex flex-col h-full w-full min-h-0">
+                              <div className="min-w-0 flex flex-col gap-0">
                                 {servicesList.map((svc, idx) => (
-                                  <div key={idx} className="text-xs font-medium leading-snug break-words" dir="auto">
+                                  <div key={idx} className={cn(
+                                    "font-semibold leading-tight break-words",
+                                    span <= 2 ? "text-[11px]" : "text-xs"
+                                  )} dir="auto">
                                     {svc.name}
                                   </div>
                                 ))}
-                                {booking.client && (
-                                  <div className="text-[10px] opacity-70 break-words mt-0.5" dir="auto" title={booking.client}>
-                                    {booking.client}
-                                  </div>
-                                )}
                               </div>
-                              <div className="flex items-center gap-1.5 shrink-0 pointer-events-auto flex-wrap mt-auto pt-0.5">
-                                {paidButton}
-                                <span className="text-[10px] opacity-80 shrink-0">{booking.duration}′</span>
+                              <div className="flex items-center gap-1 shrink-0 pointer-events-auto flex-wrap mt-auto">
                                 <span className="text-[10px] opacity-80 shrink-0">{booking.startTime}</span>
-                                <span className="text-xs font-bold bg-white/25 px-1.5 py-0.5 rounded tabular-nums shrink-0" style={{ marginInlineStart: 'auto' }}>{booking.total}</span>
+                                <span className="text-[10px] opacity-80 shrink-0">{booking.duration}′</span>
+                                {paidButton}
+                                <span className="text-[11px] font-bold bg-white/25 px-1 py-0.5 rounded tabular-nums shrink-0" style={{ marginInlineStart: 'auto' }}>{booking.total}</span>
                               </div>
                             </div>
                           );
