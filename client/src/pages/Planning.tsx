@@ -1682,22 +1682,22 @@ export default function Planning() {
           ref={headerRef}
           className="grid glass border-b border-white/20 dark:border-white/5 z-50 shrink-0 overflow-x-hidden"
           style={{ 
-            gridTemplateColumns: `60px repeat(${staffList.length}, minmax(100px, 1fr))`,
+            gridTemplateColumns: `44px repeat(${staffList.length}, minmax(80px, 1fr))`,
           }}
         >
-          <div className={cn("bg-white/30 dark:bg-white/5 py-2 px-1", isRtl ? "border-l border-white/20 dark:border-white/5" : "border-r border-white/20 dark:border-white/5")}></div>
+          <div className={cn("bg-white/30 dark:bg-white/5 py-1 px-0.5", isRtl ? "border-l border-white/20 dark:border-white/5" : "border-r border-white/20 dark:border-white/5")}></div>
           {staffList.map((s, staffIndex) => (
             <div 
               key={s.id} 
-              className={cn("py-2 px-1 font-semibold text-center text-xs", isRtl ? "border-l border-white/10 dark:border-white/5" : "border-r border-white/10 dark:border-white/5")}
+              className={cn("py-1.5 px-0.5 font-semibold text-center text-[10px]", isRtl ? "border-l border-white/10 dark:border-white/5" : "border-r border-white/10 dark:border-white/5")}
             >
-              <div className="flex flex-col items-center justify-center gap-1.5">
+              <div className="flex flex-col items-center justify-center gap-1">
                 {s.photoUrl ? (
                   <div className="relative">
                     <img 
                       src={s.photoUrl} 
                       alt={s.name}
-                      className="w-16 h-16 rounded-full object-cover border-2 shadow-sm"
+                      className="w-12 h-12 rounded-full object-cover border-2 shadow-sm"
                       style={{ borderColor: s.color }}
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
@@ -1709,13 +1709,13 @@ export default function Planning() {
                   </div>
                 ) : (
                   <div 
-                    className="w-16 h-16 rounded-full shadow-sm flex items-center justify-center text-white font-bold text-lg border-2" 
+                    className="w-12 h-12 rounded-full shadow-sm flex items-center justify-center text-white font-bold text-sm border-2" 
                     style={{ backgroundColor: s.color, borderColor: s.color }}
                   >
                     {s.name.charAt(0).toUpperCase()}
                   </div>
                 )}
-                <span className="text-foreground/90 font-bold text-[11px] leading-tight break-words max-w-[90px]">{s.name}</span>
+                <span className="text-foreground/90 font-bold text-[10px] leading-tight break-words max-w-[80px] truncate">{s.name}</span>
               </div>
             </div>
           ))}
@@ -1733,7 +1733,7 @@ export default function Planning() {
           <div 
             className="grid relative"
             style={{ 
-              gridTemplateColumns: `60px repeat(${staffList.length}, minmax(100px, 1fr))`,
+              gridTemplateColumns: `44px repeat(${staffList.length}, minmax(80px, 1fr))`,
               gridAutoRows: '52px'
             }}
           >
@@ -1753,11 +1753,11 @@ export default function Planning() {
                   {/* Time indicator badge on left - Liquid Glass Circle */}
                   <div 
                     className="shrink-0 z-[50] flex items-center justify-center"
-                    style={{ width: '60px' }}
+                    style={{ width: '44px' }}
                   >
                     <div className="relative">
-                      <div className="w-10 h-10 rounded-full liquid-gradient shadow-xl flex items-center justify-center border-2 border-white/50 live-indicator">
-                        <Scissors className="w-5 h-5 text-white drop-shadow-md" />
+                      <div className="w-8 h-8 rounded-full liquid-gradient shadow-xl flex items-center justify-center border-2 border-white/50 live-indicator">
+                        <Scissors className="w-4 h-4 text-white drop-shadow-md" />
                       </div>
                       <div className="absolute -inset-1 rounded-full liquid-gradient blur-lg opacity-40 animate-pulse" />
                     </div>
@@ -1789,7 +1789,7 @@ export default function Planning() {
             <React.Fragment key={hour}>
               <div 
                 className={cn(
-                  "bg-white/60 dark:bg-slate-800/60 border-b border-slate-200/50 dark:border-slate-700/50 px-2 py-1 text-sm font-medium text-slate-500 dark:text-slate-400 sticky z-30 flex items-center justify-center",
+                  "bg-white/60 dark:bg-slate-800/60 border-b border-slate-200/50 dark:border-slate-700/50 px-0.5 py-1 text-[11px] font-medium text-slate-500 dark:text-slate-400 sticky z-30 flex items-center justify-center",
                   isRtl ? "right-0 border-l border-primary/20" : "left-0 border-r border-primary/20"
                 )}
                 style={{ gridColumn: 1, gridRow: rowNum }}
@@ -1822,7 +1822,7 @@ export default function Planning() {
                   return (
                     <div
                       key={`${s.id}-${hour}`}
-                      className="p-1 z-10"
+                      className="p-0.5 z-10"
                       style={{ 
                         gridColumn: colNum,
                         gridRow: `${rowNum} / span ${span}`
@@ -1830,8 +1830,8 @@ export default function Planning() {
                     >
                       <div 
                         className={cn(
-                          "appointment-card h-full px-1.5 text-white cursor-grab active:cursor-grabbing relative overflow-hidden rounded-lg shadow-lg",
-                          span === 1 ? "flex items-center gap-1.5 py-1" : "flex flex-col py-1.5",
+                          "appointment-card h-full px-1.5 text-white cursor-grab active:cursor-grabbing relative overflow-hidden rounded-md shadow-md",
+                          span === 1 ? "flex items-center gap-1 py-0.5" : "flex flex-col py-1",
                           isDragging && "opacity-50 scale-95"
                         )}
                         style={{ 
@@ -1847,6 +1847,9 @@ export default function Planning() {
                         {span === 1 ? (
                           /* Compact single-row layout for 30min appointments */
                           <div className="relative z-10 flex items-center w-full gap-1 min-w-0 pointer-events-auto">
+                            <span className="text-[10px] font-bold bg-white/25 px-1 py-0.5 rounded shrink-0 tabular-nums">{booking.total}</span>
+                            <span className="text-[9px] opacity-90 shrink-0">{booking.startTime}</span>
+                            <span className="text-[9px] opacity-70 shrink-0">{booking.duration}′</span>
                             {booking.paid ? (
                               <span 
                                 className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center shrink-0" 
@@ -1868,32 +1871,30 @@ export default function Planning() {
                                 <CreditCard className="w-2 h-2" />
                               </button>
                             )}
-                            <span className="text-[9px] opacity-90 shrink-0">{booking.startTime}</span>
-                            <span className="font-medium text-[10px] truncate flex-1 min-w-0" title={`${booking.service}${booking.client ? ` - ${booking.client}` : ''}`}>
-                              {booking.service}
-                            </span>
-                            <span className="text-[10px] font-bold bg-white/20 px-1 py-0.5 rounded shrink-0 tabular-nums">{booking.total}</span>
                           </div>
                         ) : (
                           /* Multi-row layout for longer appointments */
                           <div className="relative z-10 flex flex-col justify-between h-full w-full">
                             <div className="min-w-0 flex-1 flex flex-col justify-center">
                               <div 
-                                className="font-semibold text-xs leading-tight line-clamp-2" 
+                                className="font-bold text-[11px] leading-tight line-clamp-2" 
                                 title={booking.service}
                               >
                                 {booking.service}
                               </div>
                               {booking.client && (
-                                <div className="text-[10px] opacity-90 truncate mt-0.5" title={booking.client}>
+                                <div className="text-[10px] opacity-80 truncate mt-0.5" title={booking.client}>
                                   {booking.client}
                                 </div>
                               )}
                             </div>
-                            <div className="flex items-center gap-1 shrink-0 mt-1 pointer-events-auto">
+                            <div className="flex items-center gap-1 shrink-0 pointer-events-auto">
+                              <span className="text-[10px] font-bold bg-white/25 px-1.5 py-0.5 rounded tabular-nums shrink-0">{booking.total}</span>
+                              <span className="text-[9px] opacity-80 shrink-0">{booking.startTime}</span>
+                              <span className="text-[9px] opacity-70 shrink-0">{booking.duration}′</span>
                               {booking.paid ? (
                                 <span 
-                                  className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center shrink-0" 
+                                  className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center shrink-0 ml-auto" 
                                   role="status"
                                   aria-label={t("common.paid")}
                                 >
@@ -1906,15 +1907,12 @@ export default function Planning() {
                                     e.preventDefault();
                                     handleMarkAsPaid(e, booking);
                                   }}
-                                  className="w-5 h-5 bg-white/30 hover:bg-white/50 rounded-full flex items-center justify-center transition-colors shrink-0 relative z-20"
+                                  className="w-4 h-4 bg-white/30 hover:bg-white/50 rounded-full flex items-center justify-center transition-colors shrink-0 ml-auto relative z-20"
                                   aria-label={t("planning.markAsPaid")}
                                 >
                                   <CreditCard className="w-2.5 h-2.5" />
                                 </button>
                               )}
-                              <span className="text-[9px] opacity-80 shrink-0">{booking.startTime}</span>
-                              <span className="text-[9px] opacity-70 shrink-0">{booking.duration}′</span>
-                              <span className="text-[10px] font-bold bg-white/20 px-1 py-0.5 rounded shrink-0 ml-auto tabular-nums">{booking.total}</span>
                             </div>
                           </div>
                         )}
