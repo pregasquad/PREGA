@@ -1838,138 +1838,104 @@ export default function Planning() {
                 const isDragging = draggedAppointment?.id === booking?.id;
 
                 if (booking) {
-                  const getEndTime = (start: string, dur: number) => {
-                    const [h, m] = start.split(':').map(Number);
-                    const totalMin = h * 60 + m + dur;
-                    return `${String(Math.floor(totalMin / 60) % 24).padStart(2, '0')}:${String(totalMin % 60).padStart(2, '0')}`;
-                  };
-                  const endTime = getEndTime(booking.startTime, booking.duration);
-
-                  let servicesList: Array<{name: string, price: number, duration: number}> = [];
-                  if (booking.servicesJson) {
-                    try {
-                      servicesList = typeof booking.servicesJson === 'string'
-                        ? JSON.parse(booking.servicesJson)
-                        : booking.servicesJson;
-                    } catch { servicesList = []; }
-                  }
-                  if (servicesList.length === 0 && booking.service) {
-                    servicesList = [{ name: booking.service, price: booking.price || 0, duration: booking.duration || 30 }];
-                  }
-
-                  const statusColor = booking.paid ? 'bg-emerald-500' : 'bg-red-500';
-                  const statusBorder = booking.paid ? 'border-emerald-400/50' : 'border-red-400/50';
-
                   return (
                     <div
                       key={`${s.id}-${hour}`}
-                      className="p-[2px] z-10"
-                      style={{
+                      className="p-0.5 z-10"
+                      style={{ 
                         gridColumn: colNum,
                         gridRow: `${rowNum} / span ${span}`
                       }}
                     >
-                      <div
+                      <div 
                         className={cn(
-                          "appointment-card h-full text-white relative overflow-hidden rounded-2xl shadow-lg transition-transform duration-200",
+                          "appointment-card h-full px-1.5 text-white cursor-grab active:cursor-grabbing relative overflow-hidden rounded-md shadow-md",
+                          span === 1 ? "flex items-center gap-1 py-0.5" : "flex flex-col py-1",
                           isDragging && "opacity-50 scale-95"
                         )}
-                        style={{
-                          background: `linear-gradient(145deg, ${s.color}f0, ${s.color}d0, ${s.color}b8)`,
-                          cursor: canEdit ? 'grab' : 'pointer'
+                        style={{ 
+                          background: `linear-gradient(135deg, ${s.color}ee, ${s.color}cc)`,
+                          cursor: canEdit ? 'grab' : 'default'
                         }}
                         draggable={canEdit}
                         onDragStart={(e) => handleDragStart(e, booking)}
                         onDragEnd={handleDragEnd}
                         onClick={(e) => handleAppointmentClick(e, booking)}
-                        data-testid={`card-appointment-${booking.id}`}
                       >
-                        {span === 1 ? (
-                          <div className="relative z-10 flex items-center w-full h-full px-2 gap-1.5 pointer-events-auto">
-                            <div className={cn("w-1.5 h-full shrink-0 rounded-full absolute top-0", isRtl ? "right-0" : "left-0", statusColor)} />
-                            <div className={cn("flex-1 min-w-0 flex items-center gap-1.5", isRtl ? "mr-2" : "ml-2")}>
-                              <span className="text-xs font-bold truncate">{servicesList[0]?.name || booking.service}</span>
-                            </div>
-                            <span className="text-[11px] font-bold tabular-nums shrink-0">{booking.total}</span>
-                            {booking.paid ? (
-                              <span
-                                className="shrink-0 bg-emerald-500/90 text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider"
-                                data-testid={`status-paid-${booking.id}`}
-                              >
-                                {t("common.paid")}
-                              </span>
-                            ) : (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleMarkAsPaid(e, booking); }}
-                                onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); handleMarkAsPaid(e, booking); }}
-                                className="shrink-0 bg-red-500/80 hover:bg-red-500 active:bg-red-600 text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider transition-colors relative z-30"
-                                aria-label={t("planning.markAsPaid")}
-                                data-testid={`button-mark-paid-${booking.id}`}
-                              >
-                                {t("common.unpaid")}
-                              </button>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="relative z-10 flex flex-col h-full p-2.5 pointer-events-auto">
-                            <div className={cn("absolute top-0 w-1.5 h-full rounded-full", isRtl ? "right-0" : "left-0", statusColor)} />
+                        <div className="water-shimmer absolute inset-0 opacity-30" />
+                        {(() => {
+                          let servicesList: Array<{name: string, price: number, duration: number}> = [];
+                          if (booking.servicesJson) {
+                            try {
+                              servicesList = typeof booking.servicesJson === 'string' 
+                                ? JSON.parse(booking.servicesJson) 
+                                : booking.servicesJson;
+                            } catch { servicesList = []; }
+                          }
+                          if (servicesList.length === 0 && booking.service) {
+                            servicesList = [{ name: booking.service, price: booking.price || 0, duration: booking.duration || 30 }];
+                          }
 
-                            <div className="flex items-start justify-between gap-1 mb-1">
-                              <div className="min-w-0 flex-1">
+                          const paidButton = booking.paid ? (
+                            <span 
+                              className="w-7 h-7 bg-green-500 rounded-full flex items-center justify-center shrink-0" 
+                              role="status"
+                              aria-label={t("common.paid")}
+                              data-testid={`status-paid-${booking.id}`}
+                            >
+                              <Check className="w-3.5 h-3.5 text-white" />
+                            </span>
+                          ) : (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                handleMarkAsPaid(e, booking);
+                              }}
+                              onTouchEnd={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                handleMarkAsPaid(e, booking);
+                              }}
+                              className="w-7 h-7 bg-white/30 hover:bg-white/50 active:bg-white/60 rounded-full flex items-center justify-center transition-colors shrink-0 relative z-30"
+                              aria-label={t("planning.markAsPaid")}
+                              data-testid={`button-mark-paid-${booking.id}`}
+                            >
+                              <CreditCard className="w-3.5 h-3.5" />
+                            </button>
+                          );
+
+                          return span === 1 ? (
+                            <div className="relative z-10 flex items-center w-full gap-1 min-w-0 pointer-events-auto">
+                              <span className="text-[10px] font-bold bg-white/25 px-1 py-0.5 rounded shrink-0 tabular-nums">{booking.total}</span>
+                              <span className="text-[9px] opacity-90 shrink-0">{booking.startTime}</span>
+                              <span className="text-[9px] opacity-70 shrink-0">{booking.duration}′</span>
+                              <span className="ml-auto shrink-0">{paidButton}</span>
+                            </div>
+                          ) : (
+                            <div className="relative z-10 flex flex-col justify-between h-full w-full">
+                              <div className="min-w-0 flex-1 flex flex-col gap-0.5 pt-0.5">
+                                {servicesList.map((svc, idx) => (
+                                  <div key={idx} className="flex items-center gap-1 min-w-0">
+                                    <span className="text-[10px] font-medium truncate flex-1 min-w-0">{svc.name}</span>
+                                    <span className="text-[9px] opacity-70 shrink-0 tabular-nums">{svc.price}</span>
+                                  </div>
+                                ))}
                                 {booking.client && (
-                                  <div className="text-[11px] font-semibold text-white/80 truncate mb-0.5" title={booking.client}>
+                                  <div className="text-[9px] opacity-70 truncate mt-0.5" title={booking.client}>
                                     {booking.client}
                                   </div>
                                 )}
-                                <div className="text-sm font-bold leading-snug truncate" title={servicesList[0]?.name}>
-                                  {servicesList[0]?.name || booking.service}
-                                </div>
-                                {servicesList.length > 1 && servicesList.slice(1, 3).map((svc, idx) => (
-                                  <div key={idx} className="text-[11px] font-medium text-white/85 truncate leading-snug">
-                                    {svc.name}
-                                  </div>
-                                ))}
-                                {servicesList.length > 3 && (
-                                  <div className="text-[10px] text-white/60 font-medium">
-                                    +{servicesList.length - 3} {t("common.more") || "more"}
-                                  </div>
-                                )}
                               </div>
-
-                              {booking.paid ? (
-                                <span
-                                  className={cn("shrink-0 text-[9px] font-bold px-2 py-1 rounded-full uppercase tracking-wider border", statusColor, statusBorder)}
-                                  data-testid={`status-paid-${booking.id}`}
-                                >
-                                  {t("common.paid")}
-                                </span>
-                              ) : (
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleMarkAsPaid(e, booking); }}
-                                  onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); handleMarkAsPaid(e, booking); }}
-                                  className={cn("shrink-0 text-[9px] font-bold px-2 py-1 rounded-full uppercase tracking-wider border transition-colors hover:bg-red-600 active:bg-red-700 relative z-30", statusColor, statusBorder)}
-                                  aria-label={t("planning.markAsPaid")}
-                                  data-testid={`button-mark-paid-${booking.id}`}
-                                >
-                                  {t("common.unpaid")}
-                                </button>
-                              )}
-                            </div>
-
-                            <div className="mt-auto flex items-center justify-between gap-1">
-                              <div className="flex items-center gap-1 text-white/75">
-                                <Clock className="w-3 h-3 shrink-0" />
-                                <span className="text-[10px] font-medium tabular-nums">
-                                  {booking.startTime} - {endTime}
-                                </span>
-                                <span className="text-[10px] text-white/50">({booking.duration}′)</span>
-                              </div>
-                              <div className="text-sm font-extrabold tabular-nums shrink-0">
-                                {booking.total}
+                              <div className="flex items-center gap-1.5 shrink-0 pointer-events-auto pb-0.5">
+                                <span className="text-[11px] font-bold bg-white/25 px-1.5 py-0.5 rounded tabular-nums shrink-0">{booking.total}</span>
+                                <span className="text-[9px] opacity-80 shrink-0">{booking.startTime}</span>
+                                <span className="text-[9px] opacity-70 shrink-0">{booking.duration}′</span>
+                                <span className="ml-auto shrink-0">{paidButton}</span>
                               </div>
                             </div>
-                          </div>
-                        )}
+                          );
+                        })()}
                       </div>
                     </div>
                   );
