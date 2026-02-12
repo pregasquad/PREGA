@@ -1830,8 +1830,8 @@ export default function Planning() {
                     >
                       <div 
                         className={cn(
-                          "appointment-card h-full px-2 text-white cursor-grab active:cursor-grabbing relative overflow-hidden rounded-lg shadow-lg",
-                          span === 1 ? "flex items-center gap-2 py-1" : "flex flex-col py-1.5",
+                          "appointment-card h-full px-1.5 text-white cursor-grab active:cursor-grabbing relative overflow-hidden rounded-lg shadow-lg",
+                          span === 1 ? "flex items-center gap-1.5 py-1" : "flex flex-col py-1.5",
                           isDragging && "opacity-50 scale-95"
                         )}
                         style={{ 
@@ -1849,7 +1849,7 @@ export default function Planning() {
                           <div className="relative z-10 flex items-center w-full gap-1 min-w-0 pointer-events-auto">
                             {booking.paid ? (
                               <span 
-                                className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center shrink-0" 
+                                className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center shrink-0" 
                                 role="status"
                                 aria-label={t("common.paid")}
                               >
@@ -1862,17 +1862,17 @@ export default function Planning() {
                                   e.preventDefault();
                                   handleMarkAsPaid(e, booking);
                                 }}
-                                className="w-5 h-5 bg-white/30 hover:bg-white/50 rounded-full flex items-center justify-center transition-colors shrink-0 relative z-20"
+                                className="w-4 h-4 bg-white/30 hover:bg-white/50 rounded-full flex items-center justify-center transition-colors shrink-0 relative z-20"
                                 aria-label={t("planning.markAsPaid")}
                               >
-                                <CreditCard className="w-2.5 h-2.5" />
+                                <CreditCard className="w-2 h-2" />
                               </button>
                             )}
-                            <span className="text-[10px] opacity-90 shrink-0">{booking.startTime}</span>
-                            <span className="font-medium text-[11px] truncate flex-1 min-w-0" title={`${booking.service}${booking.client ? ` - ${booking.client}` : ''}`}>
+                            <span className="text-[9px] opacity-90 shrink-0">{booking.startTime}</span>
+                            <span className="font-medium text-[10px] truncate flex-1 min-w-0" title={`${booking.service}${booking.client ? ` - ${booking.client}` : ''}`}>
                               {booking.service}
                             </span>
-                            <span className="text-[10px] font-bold bg-white/20 px-1 py-0.5 rounded shrink-0">{booking.total}</span>
+                            <span className="text-[10px] font-bold bg-white/20 px-1 py-0.5 rounded shrink-0 tabular-nums">{booking.total}</span>
                           </div>
                         ) : (
                           /* Multi-row layout for longer appointments */
@@ -1912,9 +1912,9 @@ export default function Planning() {
                                   <CreditCard className="w-2.5 h-2.5" />
                                 </button>
                               )}
-                              <span className="text-[10px] opacity-80 shrink-0">{booking.duration}′</span>
-                              <span className="text-[10px] opacity-90 shrink-0">{booking.startTime}</span>
-                              <span className="text-[10px] font-bold bg-white/20 px-1 py-0.5 rounded shrink-0 ml-auto">{booking.total}</span>
+                              <span className="text-[9px] opacity-80 shrink-0">{booking.startTime}</span>
+                              <span className="text-[9px] opacity-70 shrink-0">{booking.duration}′</span>
+                              <span className="text-[10px] font-bold bg-white/20 px-1 py-0.5 rounded shrink-0 ml-auto tabular-nums">{booking.total}</span>
                             </div>
                           </div>
                         )}
