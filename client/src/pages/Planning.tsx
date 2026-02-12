@@ -1849,8 +1849,8 @@ export default function Planning() {
                     >
                       <div 
                         className={cn(
-                          "appointment-card h-full px-1.5 text-white cursor-grab active:cursor-grabbing relative overflow-hidden rounded-md shadow-md",
-                          span === 1 ? "flex items-center gap-1 py-0.5" : "flex flex-col py-1",
+                          "appointment-card h-full text-white cursor-grab active:cursor-grabbing relative rounded-md shadow-md",
+                          span === 1 ? "flex items-center gap-1 px-1.5 py-0.5" : "flex flex-col px-2 py-1.5",
                           isDragging && "opacity-50 scale-95"
                         )}
                         style={{ 
@@ -1878,12 +1878,12 @@ export default function Planning() {
 
                           const paidButton = booking.paid ? (
                             <span 
-                              className="w-7 h-7 bg-green-500 rounded-full flex items-center justify-center shrink-0" 
+                              className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center shrink-0" 
                               role="status"
                               aria-label={t("common.paid")}
                               data-testid={`status-paid-${booking.id}`}
                             >
-                              <Check className="w-3.5 h-3.5 text-white" />
+                              <Check className="w-3 h-3 text-white" />
                             </span>
                           ) : (
                             <button
@@ -1897,11 +1897,11 @@ export default function Planning() {
                                 e.preventDefault();
                                 handleMarkAsPaid(e, booking);
                               }}
-                              className="w-7 h-7 bg-white/30 hover:bg-white/50 active:bg-white/60 rounded-full flex items-center justify-center transition-colors shrink-0 relative z-30"
+                              className="w-8 h-8 min-w-[32px] min-h-[32px] bg-white/30 hover:bg-white/50 active:bg-white/60 rounded-full flex items-center justify-center transition-colors shrink-0 relative z-30"
                               aria-label={t("planning.markAsPaid")}
                               data-testid={`button-mark-paid-${booking.id}`}
                             >
-                              <CreditCard className="w-3.5 h-3.5" />
+                              <CreditCard className="w-4 h-4" />
                             </button>
                           );
 
@@ -1910,28 +1910,27 @@ export default function Planning() {
                               <span className="text-[10px] font-bold bg-white/25 px-1 py-0.5 rounded shrink-0 tabular-nums">{booking.total}</span>
                               <span className="text-[9px] opacity-90 shrink-0">{booking.startTime}</span>
                               <span className="text-[9px] opacity-70 shrink-0">{booking.duration}′</span>
-                              <span className="ml-auto shrink-0">{paidButton}</span>
+                              <span className="shrink-0" style={{ marginInlineStart: 'auto' }}>{paidButton}</span>
                             </div>
                           ) : (
-                            <div className="relative z-10 flex flex-col justify-between h-full w-full">
-                              <div className="min-w-0 flex-1 flex flex-col gap-0.5 pt-0.5">
+                            <div className="relative z-10 flex flex-col justify-between h-full w-full overflow-hidden">
+                              <div className="min-w-0 flex-1 flex flex-col gap-1">
                                 {servicesList.map((svc, idx) => (
-                                  <div key={idx} className="flex items-center gap-1 min-w-0">
-                                    <span className="text-[10px] font-medium truncate flex-1 min-w-0">{svc.name}</span>
-                                    <span className="text-[9px] opacity-70 shrink-0 tabular-nums">{svc.price}</span>
+                                  <div key={idx} className="text-xs font-medium leading-snug break-words" dir="auto">
+                                    {svc.name}
                                   </div>
                                 ))}
                                 {booking.client && (
-                                  <div className="text-[9px] opacity-70 truncate mt-0.5" title={booking.client}>
+                                  <div className="text-[10px] opacity-70 break-words mt-0.5" dir="auto" title={booking.client}>
                                     {booking.client}
                                   </div>
                                 )}
                               </div>
-                              <div className="flex items-center gap-1.5 shrink-0 pointer-events-auto pb-0.5">
-                                <span className="text-[11px] font-bold bg-white/25 px-1.5 py-0.5 rounded tabular-nums shrink-0">{booking.total}</span>
-                                <span className="text-[9px] opacity-80 shrink-0">{booking.startTime}</span>
-                                <span className="text-[9px] opacity-70 shrink-0">{booking.duration}′</span>
-                                <span className="ml-auto shrink-0">{paidButton}</span>
+                              <div className="flex items-center gap-1.5 shrink-0 pointer-events-auto flex-wrap">
+                                {paidButton}
+                                <span className="text-[10px] opacity-80 shrink-0">{booking.duration}′</span>
+                                <span className="text-[10px] opacity-80 shrink-0">{booking.startTime}</span>
+                                <span className="text-xs font-bold bg-white/25 px-1.5 py-0.5 rounded tabular-nums shrink-0" style={{ marginInlineStart: 'auto' }}>{booking.total}</span>
                               </div>
                             </div>
                           );
