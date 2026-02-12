@@ -1929,7 +1929,7 @@ export default function Planning() {
                                 <span className="text-[10px] opacity-80 shrink-0">{booking.startTime}</span>
                                 <span className="text-[10px] opacity-80 shrink-0">{booking.duration}′</span>
                                 <span className="text-[11px] font-bold bg-white/25 px-1 py-0.5 rounded tabular-nums shrink-0">{booking.total}</span>
-                                <span className="shrink-0" style={{ marginInlineStart: 'auto' }}>{paidButton}</span>
+                                <span className="shrink-0 ml-auto">{paidButton}</span>
                               </div>
                             </div>
                           );
