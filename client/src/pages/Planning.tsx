@@ -1914,8 +1914,8 @@ export default function Planning() {
                               <span className="shrink-0" style={{ marginInlineStart: 'auto' }}>{paidButton}</span>
                             </div>
                           ) : (
-                            <div className="relative z-10 flex flex-col justify-between h-full w-full overflow-hidden">
-                              <div className="min-w-0 flex-1 flex flex-col gap-1">
+                            <div className="relative z-10 flex flex-col h-full w-full">
+                              <div className="min-w-0 flex-1 flex flex-col gap-0.5 overflow-hidden">
                                 {servicesList.map((svc, idx) => (
                                   <div key={idx} className="text-xs font-medium leading-snug break-words" dir="auto">
                                     {svc.name}
@@ -1927,7 +1927,7 @@ export default function Planning() {
                                   </div>
                                 )}
                               </div>
-                              <div className="flex items-center gap-1.5 shrink-0 pointer-events-auto flex-wrap">
+                              <div className="flex items-center gap-1.5 shrink-0 pointer-events-auto flex-wrap mt-auto pt-0.5">
                                 {paidButton}
                                 <span className="text-[10px] opacity-80 shrink-0">{booking.duration}′</span>
                                 <span className="text-[10px] opacity-80 shrink-0">{booking.startTime}</span>
