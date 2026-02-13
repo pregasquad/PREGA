@@ -17,11 +17,12 @@ import {
   UserPlus, Users, Shield, Download, FileSpreadsheet, 
   Trash2, Edit, Calendar, User, Briefcase, Package, 
   CreditCard, Building2, Clock, Save, Camera, Loader2, RefreshCw,
-  MessageCircle, Send, Lock
+  MessageCircle, Send, Lock, LayoutGrid
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { SHORTCUT_OPTIONS, DEFAULT_SHORTCUTS } from "@/lib/shortcuts";
 
 interface AdminRole {
   id: number;
@@ -46,6 +47,7 @@ interface BusinessSettings {
   closingTime: string;
   workingDays: number[];
   autoLockEnabled: boolean;
+  planningShortcuts: string[];
 }
 
 interface MessageTemplate {
@@ -127,7 +129,8 @@ export default function AdminSettings() {
     openingTime: "09:00",
     closingTime: "19:00",
     workingDays: [1, 2, 3, 4, 5, 6],
-    autoLockEnabled: false
+    autoLockEnabled: false,
+    planningShortcuts: DEFAULT_SHORTCUTS
   });
   const [broadcastMessage, setBroadcastMessage] = useState("");
   const [broadcastResult, setBroadcastResult] = useState<{sent: number, failed: number, total: number} | null>(null);
@@ -660,6 +663,45 @@ export default function AdminSettings() {
                         data-testid="switch-auto-lock"
                       />
                       <label htmlFor="auto-lock-toggle" className="text-sm cursor-pointer">{t("admin.autoLockEnabled")}</label>
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-4">
+                    <h3 className="font-medium mb-2 flex items-center gap-2">
+                      <LayoutGrid className="w-4 h-4" />
+                      {t("admin.planningShortcuts")}
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-3">{t("admin.planningShortcutsDesc")}</p>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {[0, 1, 2, 3].map((slotIndex) => (
+                        <div key={slotIndex} className="space-y-1">
+                          <Label>{t("admin.shortcutSlot")} {slotIndex + 1}</Label>
+                          <Select
+                            value={businessForm.planningShortcuts?.[slotIndex] || ""}
+                            onValueChange={(val) => {
+                              setBusinessForm(prev => {
+                                const shortcuts = [...(prev.planningShortcuts || DEFAULT_SHORTCUTS)];
+                                shortcuts[slotIndex] = val;
+                                return { ...prev, planningShortcuts: shortcuts };
+                              });
+                            }}
+                          >
+                            <SelectTrigger data-testid={`select-shortcut-${slotIndex}`}>
+                              <SelectValue placeholder={t("admin.selectShortcut")} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {SHORTCUT_OPTIONS.map(opt => (
+                                <SelectItem key={opt.key} value={opt.key}>
+                                  <span className="flex items-center gap-2">
+                                    <opt.icon className="w-4 h-4" />
+                                    {t(opt.labelKey)}
+                                  </span>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      ))}
                     </div>
                   </div>
 
