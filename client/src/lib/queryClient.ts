@@ -239,6 +239,7 @@ export const getQueryFn: <T>(options: {
       if (unauthorizedBehavior === "returnNull" && res.status === 401) {
         // Clear session and redirect on 401
         sessionStorage.clear();
+        localStorage.clear();
         window.location.href = "/";
         return null;
       }
@@ -246,6 +247,7 @@ export const getQueryFn: <T>(options: {
       if (res.status === 401) {
         // Clear session and redirect on 401
         sessionStorage.clear();
+        localStorage.clear();
         window.location.href = "/";
         throw new Error("401: Unauthorized");
       }
