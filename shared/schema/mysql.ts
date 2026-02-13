@@ -326,6 +326,7 @@ export const businessSettings = mysqlTable("business_settings", {
   referralBonusReferee: int("referral_bonus_referee").notNull().default(50),
   cancellationHours: int("cancellation_hours").notNull().default(24),
   autoLockEnabled: boolean("auto_lock_enabled").notNull().default(false),
+  planningShortcuts: json("planning_shortcuts").$type<string[]>().notNull().default(["Soin Visage", "Soin Corps", "Massage", "Manucure", "Pédicure", "Épilation", "Coiffure", "Maquillage"]),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
