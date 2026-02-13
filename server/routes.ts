@@ -2843,7 +2843,9 @@ export async function registerRoutes(
           currencySymbol: "DH",
           openingTime: "09:00",
           closingTime: "19:00",
-          workingDays: [1, 2, 3, 4, 5, 6]
+          workingDays: [1, 2, 3, 4, 5, 6],
+          autoLockEnabled: false,
+          planningShortcuts: ["services", "clients", "salaries", "inventory"]
         });
       }
       res.json(settings);

@@ -155,7 +155,11 @@ export default function AdminSettings() {
   // Update business form when data loads
   useEffect(() => {
     if (businessSettings) {
-      setBusinessForm(businessSettings);
+      setBusinessForm(prev => ({
+        ...prev,
+        ...businessSettings,
+        planningShortcuts: businessSettings.planningShortcuts || DEFAULT_SHORTCUTS,
+      }));
     }
   }, [businessSettings]);
 
