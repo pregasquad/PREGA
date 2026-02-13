@@ -237,7 +237,17 @@ export const getQueryFn: <T>(options: {
       }
 
       if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+        // Clear session and redirect on 401
+        sessionStorage.clear();
+        window.location.href = "/";
         return null;
+      }
+
+      if (res.status === 401) {
+        // Clear session and redirect on 401
+        sessionStorage.clear();
+        window.location.href = "/";
+        throw new Error("401: Unauthorized");
       }
 
       await throwIfResNotOk(res);

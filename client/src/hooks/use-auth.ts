@@ -7,6 +7,8 @@ async function fetchUser(): Promise<User | null> {
   });
 
   if (response.status === 401) {
+    // Clear local session storage if we get a 401 from the server
+    sessionStorage.clear();
     return null;
   }
 
