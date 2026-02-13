@@ -512,6 +512,19 @@ export async function ensureForeignKeyConstraints(): Promise<void> {
       END $$;
     `);
     
+    // PostgreSQL version
+    await pool.query(`
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'appointments' AND column_name = 'staff_id') THEN
+          ALTER TABLE appointments ADD COLUMN staff_id INTEGER;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'staff_deductions' AND column_name = 'staff_id') THEN
+          ALTER TABLE staff_deductions ADD COLUMN staff_id INTEGER;
+        END IF;
+      END $$;
+    `);
+
     // Backfill staffId for appointments and staff_deductions from staff name
     await pool.query(`
       UPDATE appointments a
@@ -786,7 +799,10 @@ export async function ensurePlanningShortcutsColumn(): Promise<void> {
         WHERE TABLE_NAME = 'business_settings' AND COLUMN_NAME = 'planning_shortcuts'
       `);
       if ((rows as any[]).length === 0) {
-        await connection.query(`ALTER TABLE business_settings ADD COLUMN planning_shortcuts JSON DEFAULT ('["services","clients","salaries","inventory"]')`);
+        // In MySQL/TiDB, JSON columns cannot have a literal string default in older versions
+        // Add column without default, then update existing rows
+        await connection.query(`ALTER TABLE business_settings ADD COLUMN planning_shortcuts JSON`);
+        await connection.query(`UPDATE business_settings SET planning_shortcuts = '["services","clients","salaries","inventory"]' WHERE planning_shortcuts IS NULL`);
         console.log("Added planning_shortcuts column to business_settings table");
       }
       connection.release();
