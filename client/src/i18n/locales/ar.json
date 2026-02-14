@@ -453,7 +453,12 @@
     "catFinancial": "المالية",
     "catStaff": "الموظفين",
     "catScheduling": "الجدولة",
-    "catClients": "العملاء"
+    "catClients": "العملاء",
+    "revenue": "الإيرادات",
+    "expenses": "المصاريف",
+    "appointments": "المواعيد",
+    "paid": "مدفوع",
+    "unpaid": "غير مدفوع"
   },
   "booking": {
     "title": "احجز موعدك",

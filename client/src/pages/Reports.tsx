@@ -169,6 +169,7 @@ export default function Reports() {
         dayCounts[dayIdx]++;
       } catch {}
     });
+    // Reorder to start from Monday (1) to Sunday (0) for the chart
     return [1, 2, 3, 4, 5, 6, 0].map(i => ({
       day: dayNames[i],
       count: dayCounts[i],
