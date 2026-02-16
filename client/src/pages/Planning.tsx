@@ -1516,16 +1516,14 @@ export default function Planning() {
             )}
             {showSearchInput && appointmentSearch && searchResults.count > 0 && createPortal(
               <div 
-                className="fixed z-[99999] w-72 md:w-80 rounded-2xl max-h-64 overflow-auto shadow-xl border bg-background"
+                className="fixed z-[99999] rounded-2xl max-h-[60vh] overflow-auto shadow-xl border bg-background"
                 style={{
                   top: (() => {
                     const rect = searchContainerRef.current?.getBoundingClientRect();
                     return rect ? rect.bottom + 8 : 0;
                   })(),
-                  ...(isRtl 
-                    ? { left: (() => { const rect = searchContainerRef.current?.getBoundingClientRect(); return rect ? rect.left : 0; })() }
-                    : { right: (() => { const rect = searchContainerRef.current?.getBoundingClientRect(); return rect ? window.innerWidth - rect.right : 0; })() }
-                  ),
+                  left: 8,
+                  right: 8,
                 }}
               >
                 <div className="p-2 border-b bg-muted/50 sticky top-0">
