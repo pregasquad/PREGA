@@ -15,22 +15,51 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import { io, Socket } from "socket.io-client";
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay, parseISO, isAfter, isBefore, isEqual } from "date-fns";
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay, parseISO, isAfter, isBefore, isEqual, subDays, startOfToday } from "date-fns";
 import { ar, enUS, fr } from "date-fns/locale";
 import { apiRequest } from "@/lib/queryClient";
+import { useBusinessSettings } from "@/hooks/use-salon-data";
 import type { Staff, Service, Appointment, Charge, StaffDeduction, StaffPayment } from "@shared/schema";
 
 type PeriodType = "day" | "week" | "month" | "custom";
 
+function getWorkDayDate(openingTime?: string, closingTime?: string): Date {
+  const now = new Date();
+  const hour = now.getHours();
+  const minutes = now.getMinutes();
+  const currentTotalMinutes = hour * 60 + minutes;
+  if (openingTime && closingTime) {
+    const [openH, openM] = openingTime.split(":").map(Number);
+    const [closeH, closeM] = closingTime.split(":").map(Number);
+    const openingMinutes = openH * 60 + openM;
+    const closingMinutes = closeH * 60 + closeM;
+    if (closingMinutes < openingMinutes) {
+      if (currentTotalMinutes < closingMinutes) {
+        return subDays(startOfToday(), 1);
+      }
+    } else {
+      if (currentTotalMinutes < openingMinutes) {
+        return subDays(startOfToday(), 1);
+      }
+    }
+  } else {
+    if (currentTotalMinutes < 2 * 60) {
+      return subDays(startOfToday(), 1);
+    }
+  }
+  return startOfToday();
+}
 
 export default function Salaries() {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const { data: bSettings } = useBusinessSettings();
+  const workDayToday = getWorkDayDate(bSettings?.openingTime, bSettings?.closingTime);
+  const [selectedDate, setSelectedDate] = useState<Date>(workDayToday);
   const [period, setPeriod] = useState<PeriodType>("day");
-  const [customStartDate, setCustomStartDate] = useState<Date>(new Date());
-  const [customEndDate, setCustomEndDate] = useState<Date>(new Date());
+  const [customStartDate, setCustomStartDate] = useState<Date>(workDayToday);
+  const [customEndDate, setCustomEndDate] = useState<Date>(workDayToday);
   const [selectedStaff, setSelectedStaff] = useState<string>("all");
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [showChargeDialog, setShowChargeDialog] = useState(false);
@@ -41,8 +70,8 @@ export default function Salaries() {
   const [editingCharge, setEditingCharge] = useState<Charge | null>(null);
   const [editingDeduction, setEditingDeduction] = useState<StaffDeduction | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [newCharge, setNewCharge] = useState({ type: "rent", name: "", amount: 0, date: format(new Date(), "yyyy-MM-dd") });
-  const [newDeduction, setNewDeduction] = useState<{ staffName: string; type: "advance" | "loan" | "penalty" | "other"; description: string; amount: number; date: string }>({ staffName: "", type: "advance", description: "", amount: 0, date: format(new Date(), "yyyy-MM-dd") });
+  const [newCharge, setNewCharge] = useState({ type: "rent", name: "", amount: 0, date: format(workDayToday, "yyyy-MM-dd") });
+  const [newDeduction, setNewDeduction] = useState<{ staffName: string; type: "advance" | "loan" | "penalty" | "other"; description: string; amount: number; date: string }>({ staffName: "", type: "advance", description: "", amount: 0, date: format(workDayToday, "yyyy-MM-dd") });
 
   const getDateLocale = () => {
     switch (i18n.language) {
@@ -51,6 +80,15 @@ export default function Salaries() {
       default: return enUS;
     }
   };
+
+  useEffect(() => {
+    if (bSettings) {
+      const wd = getWorkDayDate(bSettings.openingTime, bSettings.closingTime);
+      setSelectedDate(wd);
+      setCustomStartDate(wd);
+      setCustomEndDate(wd);
+    }
+  }, [bSettings?.openingTime, bSettings?.closingTime]);
 
   useEffect(() => {
     const socket: Socket = io();
@@ -118,7 +156,7 @@ export default function Salaries() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/charges"] });
       setShowChargeDialog(false);
-      setNewCharge({ type: "rent", name: "", amount: 0, date: format(new Date(), "yyyy-MM-dd") });
+      setNewCharge({ type: "rent", name: "", amount: 0, date: format(getWorkDayDate(bSettings?.openingTime, bSettings?.closingTime), "yyyy-MM-dd") });
     },
   });
 
@@ -139,7 +177,7 @@ export default function Salaries() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/staff-deductions"] });
       setShowDeductionDialog(false);
-      setNewDeduction({ staffName: "", type: "advance", description: "", amount: 0, date: format(new Date(), "yyyy-MM-dd") });
+      setNewDeduction({ staffName: "", type: "advance", description: "", amount: 0, date: format(getWorkDayDate(bSettings?.openingTime, bSettings?.closingTime), "yyyy-MM-dd") });
     },
   });
 
