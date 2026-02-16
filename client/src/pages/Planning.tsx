@@ -1430,8 +1430,6 @@ export default function Planning() {
       {/* Header - Single row */}
       <div className="mb-1 shrink-0">
         <div className="flex items-center gap-1.5 md:gap-2 w-full">
-          <h1 className="text-lg md:text-2xl font-semibold gradient-text whitespace-nowrap">{t("planning.title")}</h1>
-
           {/* Staff pills */}
           {stats.perStaff.map(s => {
             const staffMember = staffList.find(st => st.id === s.id);
