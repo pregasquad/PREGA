@@ -1428,8 +1428,8 @@ export default function Planning() {
       onTouchEnd={isMobile ? handleTouchEnd : undefined}
     >
       {/* Header - Single row */}
-      <div className="mb-1 shrink-0">
-        <div className="flex items-center gap-1.5 md:gap-2 w-full">
+      <div className="mb-1 shrink-0 relative z-50 overflow-visible">
+        <div className="flex items-center gap-1.5 md:gap-2 w-full overflow-x-auto overflow-y-visible">
           {/* Staff pills */}
           {stats.perStaff.map(s => {
             const staffMember = staffList.find(st => st.id === s.id);
@@ -1513,7 +1513,7 @@ export default function Planning() {
               </button>
             )}
             {showSearchInput && appointmentSearch && searchResults.count > 0 && (
-              <div className="absolute top-full mt-2 ltr:right-0 rtl:left-0 z-50 w-72 md:w-80 glass-card rounded-2xl max-h-64 overflow-auto shadow-xl">
+              <div className="absolute top-full mt-2 ltr:right-0 rtl:left-0 z-[9999] w-72 md:w-80 glass-card rounded-2xl max-h-64 overflow-auto shadow-xl">
                 <div className="p-2 border-b bg-muted/50 sticky top-0">
                   <span className="text-xs font-medium text-muted-foreground">
                     {searchResults.count} {t("common.results")}
