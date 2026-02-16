@@ -1,11 +1,7 @@
 #!/bin/bash
 echo "=== Fixing git for GitHub sync ==="
-echo "Step 1: Removing large files from tracking..."
-git rm -r --cached attached_assets/ 2>/dev/null
-git add .gitignore
-git commit -m "Remove large attached_assets files from tracking" 2>/dev/null || true
-
-echo "Step 2: Force pushing to GitHub (overwrites remote)..."
-git push origin main --force
-
+echo "Step 1: Pulling remote with unrelated histories..."
+git pull origin main --allow-unrelated-histories --no-edit
+echo "Step 2: Pushing to GitHub..."
+git push origin main
 echo "=== Done! Git tab should work normally now ==="
