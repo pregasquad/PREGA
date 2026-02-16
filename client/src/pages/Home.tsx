@@ -1,4 +1,4 @@
-import { useAppointments, useStaff, useServices, useClients, useCategories } from "@/hooks/use-salon-data";
+import { useAppointments, useStaff, useServices, useClients, useCategories, useBusinessSettings } from "@/hooks/use-salon-data";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Scissors, CalendarCheck, TrendingUp, Clock, Package, UserPlus, Pencil, Trash2, LogOut, AlertTriangle, Banknote, CreditCard, RefreshCw, ClipboardCheck, CheckCircle2, XCircle, CircleDot, ArrowUpRight, ArrowDownRight, Minus } from "lucide-react";
@@ -19,11 +19,29 @@ import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
-function getWorkDayDate(): Date {
+function getWorkDayDate(openingTime?: string, closingTime?: string): Date {
   const now = new Date();
   const hour = now.getHours();
-  if (hour < 2) {
-    return subDays(startOfToday(), 1);
+  const minutes = now.getMinutes();
+  const currentTotalMinutes = hour * 60 + minutes;
+  if (openingTime && closingTime) {
+    const [openH, openM] = openingTime.split(":").map(Number);
+    const [closeH, closeM] = closingTime.split(":").map(Number);
+    const openingMinutes = openH * 60 + openM;
+    const closingMinutes = closeH * 60 + closeM;
+    if (closingMinutes < openingMinutes) {
+      if (currentTotalMinutes < closingMinutes) {
+        return subDays(startOfToday(), 1);
+      }
+    } else {
+      if (currentTotalMinutes < openingMinutes) {
+        return subDays(startOfToday(), 1);
+      }
+    }
+  } else {
+    if (currentTotalMinutes < 2 * 60) {
+      return subDays(startOfToday(), 1);
+    }
   }
   return startOfToday();
 }
@@ -90,7 +108,8 @@ function EditStaffForm({ staff, categories, onSubmit, isPending, t }: {
 export default function Home() {
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === "ar";
-  const todayDate = useMemo(() => format(getWorkDayDate(), "yyyy-MM-dd"), []);
+  const { data: bSettings } = useBusinessSettings();
+  const todayDate = useMemo(() => format(getWorkDayDate(bSettings?.openingTime, bSettings?.closingTime), "yyyy-MM-dd"), [bSettings?.openingTime, bSettings?.closingTime]);
   const { data: appointments = [] } = useAppointments(todayDate);
   const { data: staff = [] } = useStaff();
   const { data: services = [] } = useServices();

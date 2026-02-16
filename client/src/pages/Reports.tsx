@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAppointments, useStaff, useServices } from "@/hooks/use-salon-data";
+import { useAppointments, useStaff, useServices, useBusinessSettings } from "@/hooks/use-salon-data";
 import { formatCurrency } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
@@ -29,7 +29,7 @@ const tooltipStyle = {
 
 const RTLXTick = ({ x, y, payload, fontSize = 11 }: any) => (
   <foreignObject x={x - 40} y={y + 2} width={80} height={22} overflow="visible" style={{ pointerEvents: 'none' }}>
-    <div xmlns="http://www.w3.org/1999/xhtml" style={{ textAlign: 'center', fontSize, color: 'hsl(var(--muted-foreground))', direction: 'rtl', lineHeight: '18px', whiteSpace: 'nowrap' }}>
+    <div style={{ textAlign: 'center', fontSize, color: 'hsl(var(--muted-foreground))', direction: 'rtl' as const, lineHeight: '18px', whiteSpace: 'nowrap' }}>
       {payload.value}
     </div>
   </foreignObject>
@@ -37,7 +37,7 @@ const RTLXTick = ({ x, y, payload, fontSize = 11 }: any) => (
 
 const RTLYTick = ({ x, y, payload, fontSize = 11, width = 70 }: any) => (
   <foreignObject x={x - width} y={y - 10} width={width} height={22} overflow="visible" style={{ pointerEvents: 'none' }}>
-    <div xmlns="http://www.w3.org/1999/xhtml" style={{ textAlign: 'end', fontSize, color: 'hsl(var(--muted-foreground))', direction: 'rtl', lineHeight: '20px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+    <div style={{ textAlign: 'end', fontSize, color: 'hsl(var(--muted-foreground))', direction: 'rtl' as const, lineHeight: '20px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
       {payload.value}
     </div>
   </foreignObject>
@@ -50,7 +50,7 @@ const RTLPieLabel = ({ cx, cy, midAngle, outerRadius, name, percent }: any) => {
   const y = cy + radius * Math.sin(-midAngle * RADIAN);
   return (
     <foreignObject x={x - 55} y={y - 12} width={110} height={24}>
-      <div xmlns="http://www.w3.org/1999/xhtml" style={{ textAlign: 'center', fontSize: 11, direction: 'rtl', whiteSpace: 'nowrap', color: 'hsl(var(--foreground))' }}>
+      <div style={{ textAlign: 'center', fontSize: 11, direction: 'rtl' as const, whiteSpace: 'nowrap', color: 'hsl(var(--foreground))' }}>
         {name} {(percent * 100).toFixed(0)}%
       </div>
     </foreignObject>
@@ -78,6 +78,7 @@ export default function Reports() {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<ReportCategory>("financial");
 
+  const { data: bSettings } = useBusinessSettings();
   const { data: appointments = [] } = useAppointments();
   const { data: staffList = [] } = useStaff();
   const { data: services = [] } = useServices();
@@ -244,6 +245,8 @@ export default function Reports() {
   }, [filteredAppointments]);
 
   const hourlyData = useMemo(() => {
+    const openH = parseInt(bSettings?.openingTime?.split(":")[0] || "9", 10);
+    const closeH = parseInt(bSettings?.closingTime?.split(":")[0] || "19", 10);
     const hours: Record<number, number> = {};
     filteredAppointments.forEach(app => {
       try {
@@ -252,11 +255,11 @@ export default function Reports() {
       } catch {}
     });
     const result = [];
-    for (let h = 8; h <= 21; h++) {
+    for (let h = openH; h <= closeH; h++) {
       result.push({ hour: `${h}:00`, count: hours[h] || 0 });
     }
     return result;
-  }, [filteredAppointments]);
+  }, [filteredAppointments, bSettings]);
 
   const expenseCategoryData = useMemo(() => {
     const catMap: Record<number, string> = {};
