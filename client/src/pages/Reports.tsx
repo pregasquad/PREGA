@@ -84,6 +84,9 @@ export default function Reports() {
   const { data: services = [] } = useServices();
   const { data: charges = [] } = useQuery<any[]>({ queryKey: ["/api/charges"] });
   const { data: expenseCategories = [] } = useQuery<any[]>({ queryKey: ["/api/expense-categories"] });
+  const { data: staffCommissions = [] } = useQuery<{ id: number; staffId: number; serviceId: number; percentage: number }[]>({
+    queryKey: ["/api/staff-commissions"],
+  });
 
   const dateLocale = useMemo(() => {
     if (i18n.language === "ar") return ar;
@@ -138,7 +141,23 @@ export default function Reports() {
     const paidRevenue = filteredAppointments.filter(app => app.paid).reduce((sum, app) => sum + Number(app.total || 0), 0);
     const unpaidRevenue = totalRevenue - paidRevenue;
     const totalExpenses = filteredCharges.reduce((sum: number, ch: any) => sum + Number(ch.amount || 0), 0);
-    const netProfit = totalRevenue - totalExpenses;
+
+    let totalCommissions = 0;
+    filteredAppointments.forEach((app: any) => {
+      const service = services.find((s: any) => s.name === app.service);
+      let commissionRate = service?.commissionPercent ?? 50;
+      if (service) {
+        const staffMember = staffList.find((s: any) => s.name === app.staff || s.id === app.staffId);
+        if (staffMember) {
+          const customComm = staffCommissions.find(c => c.staffId === staffMember.id && c.serviceId === service.id);
+          if (customComm) commissionRate = customComm.percentage;
+        }
+      }
+      totalCommissions += Number(app.total || 0) * (commissionRate / 100);
+    });
+
+    const salonPortion = totalRevenue - totalCommissions;
+    const netProfit = salonPortion - totalExpenses;
     const totalAppointments = filteredAppointments.length;
 
     const staffRevenue = staffList.map(s => {
@@ -159,7 +178,7 @@ export default function Reports() {
       .slice(0, 6);
 
     return { totalRevenue, paidRevenue, unpaidRevenue, totalExpenses, netProfit, totalAppointments, staffRevenue, serviceData };
-  }, [filteredAppointments, filteredCharges, staffList]);
+  }, [filteredAppointments, filteredCharges, staffList, services, staffCommissions]);
 
   const dailyRevenueData = useMemo(() => {
     try {

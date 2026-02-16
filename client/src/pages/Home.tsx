@@ -182,19 +182,39 @@ export default function Home() {
     }
   });
 
+  const { data: staffCommissions = [] } = useQuery<{ id: number; staffId: number; serviceId: number; percentage: number }[]>({
+    queryKey: ["/api/staff-commissions"],
+  });
+
   const todayStats = useMemo(() => {
     const totalRevenue = appointments.reduce((sum, app: any) => sum + (app.total || 0), 0);
     const paidRevenue = appointments.filter((app: any) => app.paid).reduce((sum, app: any) => sum + (app.total || 0), 0);
     const unpaidRevenue = totalRevenue - paidRevenue;
-    return { totalRevenue, paidRevenue, unpaidRevenue, count: appointments.length };
-  }, [appointments]);
+
+    let totalCommissions = 0;
+    appointments.forEach((app: any) => {
+      const service = services.find((s: any) => s.name === app.service);
+      let commissionRate = service?.commissionPercent ?? 50;
+      if (service) {
+        const staffMember = staff.find((s: any) => s.name === app.staff || s.id === app.staffId);
+        if (staffMember) {
+          const customComm = staffCommissions.find(c => c.staffId === staffMember.id && c.serviceId === service.id);
+          if (customComm) commissionRate = customComm.percentage;
+        }
+      }
+      totalCommissions += (app.total || 0) * (commissionRate / 100);
+    });
+
+    return { totalRevenue, paidRevenue, unpaidRevenue, totalCommissions, count: appointments.length };
+  }, [appointments, services, staff, staffCommissions]);
 
   const todayExpenses = useMemo(() => {
     const todayCharges = charges.filter((c: any) => c.date === todayDate);
     return todayCharges.reduce((sum: number, c: any) => sum + (c.amount || 0), 0);
   }, [charges, todayDate]);
 
-  const netProfit = todayStats.totalRevenue - todayExpenses;
+  const salonPortion = todayStats.totalRevenue - todayStats.totalCommissions;
+  const netProfit = salonPortion - todayExpenses;
 
   const closingChecklist = useMemo(() => {
     const unpaidCount = appointments.filter((app: any) => !app.paid).length;

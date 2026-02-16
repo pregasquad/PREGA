@@ -388,7 +388,7 @@ export default function Salaries() {
     const staffDeductionAmount = pendingDeductions
       .filter(d => d.staffId === s.id || (!d.staffId && d.staffName === s.name))
       .reduce((sum, d) => sum + d.amount, 0);
-    return total + (staffCommission - staffDeductionAmount);
+    return total + Math.max(0, staffCommission - staffDeductionAmount);
   }, 0);
 
   const getChargeTypeLabel = (type: string) => {
