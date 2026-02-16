@@ -28,15 +28,19 @@ const tooltipStyle = {
 };
 
 const RTLXTick = ({ x, y, payload, fontSize = 11 }: any) => (
-  <text x={x} y={y + 14} textAnchor="middle" fontSize={fontSize} fill="hsl(var(--muted-foreground))">
-    {payload.value}
-  </text>
+  <foreignObject x={x} y={y + 2} width={1} height={1} overflow="visible">
+    <div xmlns="http://www.w3.org/1999/xhtml" style={{ width: '80px', marginLeft: '-40px', textAlign: 'center', fontSize, color: 'hsl(var(--muted-foreground))', direction: 'rtl', lineHeight: '18px', whiteSpace: 'nowrap' }}>
+      {payload.value}
+    </div>
+  </foreignObject>
 );
 
 const RTLYTick = ({ x, y, payload, fontSize = 11 }: any) => (
-  <text x={x - 4} y={y + 4} textAnchor="end" fontSize={fontSize} fill="hsl(var(--muted-foreground))">
-    {payload.value}
-  </text>
+  <foreignObject x={x - 1} y={y - 10} width={1} height={1} overflow="visible">
+    <div xmlns="http://www.w3.org/1999/xhtml" style={{ width: '80px', marginLeft: '-80px', textAlign: 'end', fontSize, color: 'hsl(var(--muted-foreground))', direction: 'rtl', lineHeight: '20px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+      {payload.value}
+    </div>
+  </foreignObject>
 );
 
 const RTLPieLabel = ({ cx, cy, midAngle, outerRadius, name, percent }: any) => {
