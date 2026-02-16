@@ -15,7 +15,9 @@ android/
 # Large files
 *.zip
 *.exe
-attached_assets/*.zip
+
+# Attached assets (screenshots and reference files)
+attached_assets/
 
 # Electron cache
 .cache/
