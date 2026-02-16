@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { format, addDays, startOfToday, parseISO, subDays } from "date-fns";
 import { useTranslation } from "react-i18next";
@@ -323,6 +324,7 @@ export default function Planning() {
   const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
   const [appointmentSearch, setAppointmentSearch] = useState("");
   const [showSearchInput, setShowSearchInput] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
   const [draggedAppointment, setDraggedAppointment] = useState<any>(null);
   const [dragOverSlot, setDragOverSlot] = useState<{staff: string, time: string} | null>(null);
   const pageRef = useRef<HTMLDivElement>(null);
@@ -1428,8 +1430,8 @@ export default function Planning() {
       onTouchEnd={isMobile ? handleTouchEnd : undefined}
     >
       {/* Header - Single row */}
-      <div className="mb-1 shrink-0 relative z-50 overflow-visible">
-        <div className="flex items-center gap-1.5 md:gap-2 w-full overflow-x-auto overflow-y-visible">
+      <div className="mb-1 shrink-0">
+        <div className="flex items-center gap-1.5 md:gap-2 w-full">
           {/* Staff pills */}
           {stats.perStaff.map(s => {
             const staffMember = staffList.find(st => st.id === s.id);
@@ -1489,7 +1491,7 @@ export default function Planning() {
           )}
 
           {/* Search */}
-          <div className="relative shrink-0">
+          <div className="relative shrink-0" ref={searchContainerRef}>
             {showSearchInput ? (
               <div className="flex items-center gap-0.5 md:gap-1 glass-card px-1.5 md:px-2 py-0.5 md:py-1 rounded-full">
                 <Input
@@ -1512,8 +1514,20 @@ export default function Planning() {
                 <Search className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground" />
               </button>
             )}
-            {showSearchInput && appointmentSearch && searchResults.count > 0 && (
-              <div className="absolute top-full mt-2 ltr:right-0 rtl:left-0 z-[9999] w-72 md:w-80 glass-card rounded-2xl max-h-64 overflow-auto shadow-xl">
+            {showSearchInput && appointmentSearch && searchResults.count > 0 && createPortal(
+              <div 
+                className="fixed z-[99999] w-72 md:w-80 rounded-2xl max-h-64 overflow-auto shadow-xl border bg-background"
+                style={{
+                  top: (() => {
+                    const rect = searchContainerRef.current?.getBoundingClientRect();
+                    return rect ? rect.bottom + 8 : 0;
+                  })(),
+                  ...(isRtl 
+                    ? { left: (() => { const rect = searchContainerRef.current?.getBoundingClientRect(); return rect ? rect.left : 0; })() }
+                    : { right: (() => { const rect = searchContainerRef.current?.getBoundingClientRect(); return rect ? window.innerWidth - rect.right : 0; })() }
+                  ),
+                }}
+              >
                 <div className="p-2 border-b bg-muted/50 sticky top-0">
                   <span className="text-xs font-medium text-muted-foreground">
                     {searchResults.count} {t("common.results")}
@@ -1568,7 +1582,8 @@ export default function Planning() {
                     <span>{searchResults.total} DH</span>
                   </div>
                 </div>
-              </div>
+              </div>,
+              document.body
             )}
           </div>
 
