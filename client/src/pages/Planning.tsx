@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { createPortal } from "react-dom";
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { format, addDays, startOfToday, parseISO, subDays } from "date-fns";
 import { useTranslation } from "react-i18next";
@@ -1491,7 +1490,7 @@ export default function Planning() {
           )}
 
           {/* Search */}
-          <div className="relative shrink-0" ref={searchContainerRef}>
+          <div className="shrink-0" ref={searchContainerRef}>
             {showSearchInput ? (
               <div className="flex items-center gap-0.5 md:gap-1 glass-card px-1.5 md:px-2 py-0.5 md:py-1 rounded-full">
                 <Input
@@ -1513,75 +1512,6 @@ export default function Planning() {
               <button className="p-1 md:p-1" onClick={() => setShowSearchInput(true)}>
                 <Search className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground" />
               </button>
-            )}
-            {showSearchInput && appointmentSearch && searchResults.count > 0 && createPortal(
-              <div 
-                className="fixed z-[99999] rounded-2xl max-h-[60vh] overflow-auto shadow-xl border bg-background"
-                style={{
-                  top: (() => {
-                    const rect = searchContainerRef.current?.getBoundingClientRect();
-                    return rect ? rect.bottom + 8 : 0;
-                  })(),
-                  left: 8,
-                  right: 8,
-                }}
-              >
-                <div className="p-2 border-b bg-muted/50 sticky top-0">
-                  <span className="text-xs font-medium text-muted-foreground">
-                    {searchResults.count} {t("common.results")}
-                  </span>
-                </div>
-                {searchResults.matches.map((app) => {
-                  const staffMember = staffList.find(s => s.name === app.staff);
-                  return (
-                    <div 
-                      key={app.id} 
-                      className="p-2 border-b last:border-b-0 hover:bg-muted/50 cursor-pointer"
-                      onClick={() => {
-                        const appDate = parseISO(app.date);
-                        setDate(appDate);
-                        if (canEditCardboard && !isDateAutoLocked(appDate)) {
-                          openAppointmentForEdit(app);
-                        }
-                      }}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div 
-                            className="w-2 h-2 rounded-full shrink-0" 
-                            style={{ backgroundColor: staffMember?.color || '#666' }} 
-                          />
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium truncate">{app.client || "-"}</p>
-                            <div className="text-xs text-muted-foreground">
-                              {app.service?.includes(',') ? (
-                                app.service.split(',').map((svc: string, idx: number) => (
-                                  <div key={idx} className="truncate">- {svc.trim()}</div>
-                                ))
-                              ) : (
-                                <div className="truncate">{app.service}</div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <p className="text-sm font-bold">{app.total} DH</p>
-                          <p className="text-xs text-muted-foreground">
-                            {format(parseISO(app.date), "dd/MM")} {app.startTime} {app.staff}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-                <div className="p-2.5 bg-emerald-500/90 text-white sticky bottom-0 rounded-b-2xl">
-                  <div className="flex justify-between items-center text-sm font-bold">
-                    <span>Total</span>
-                    <span>{searchResults.total} DH</span>
-                  </div>
-                </div>
-              </div>,
-              document.body
             )}
           </div>
 
@@ -1707,8 +1637,68 @@ export default function Planning() {
         </Collapsible>
       )}
 
+      {/* Search Results - Inline */}
+      {showSearchInput && appointmentSearch && searchResults.count > 0 && (
+        <div className="flex-1 min-h-0 overflow-auto rounded-2xl border bg-background mb-2">
+          <div className="p-2 border-b bg-muted/50 sticky top-0 z-10">
+            <span className="text-xs font-medium text-muted-foreground">
+              {searchResults.count} {t("common.results")}
+            </span>
+          </div>
+          {searchResults.matches.map((app) => {
+            const staffMember = staffList.find(s => s.name === app.staff);
+            return (
+              <div 
+                key={app.id} 
+                className="p-2 border-b last:border-b-0 hover:bg-muted/50 cursor-pointer"
+                onClick={() => {
+                  const appDate = parseISO(app.date);
+                  setDate(appDate);
+                  if (canEditCardboard && !isDateAutoLocked(appDate)) {
+                    openAppointmentForEdit(app);
+                  }
+                }}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div 
+                      className="w-2 h-2 rounded-full shrink-0" 
+                      style={{ backgroundColor: staffMember?.color || '#666' }} 
+                    />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{app.client || "-"}</p>
+                      <div className="text-xs text-muted-foreground">
+                        {app.service?.includes(',') ? (
+                          app.service.split(',').map((svc: string, idx: number) => (
+                            <div key={idx} className="truncate">- {svc.trim()}</div>
+                          ))
+                        ) : (
+                          <div className="truncate">{app.service}</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-bold">{app.total} DH</p>
+                    <p className="text-xs text-muted-foreground">
+                      {format(parseISO(app.date), "dd/MM")} {app.startTime} {app.staff}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          <div className="p-2.5 bg-emerald-500/90 text-white sticky bottom-0">
+            <div className="flex justify-between items-center text-sm font-bold">
+              <span>Total</span>
+              <span>{searchResults.total} DH</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Board with sticky header - Glass Container */}
-      <div className="flex-1 min-h-0 flex flex-col glass-card rounded-3xl overflow-hidden" dir={isRtl ? "rtl" : "ltr"}>
+      <div className={cn("flex-1 min-h-0 flex flex-col glass-card rounded-3xl overflow-hidden", showSearchInput && appointmentSearch && searchResults.count > 0 && "hidden")} dir={isRtl ? "rtl" : "ltr"}>
         {/* Sticky Staff Headers - iOS Liquid Glass Style */}
         <div 
           ref={headerRef}
