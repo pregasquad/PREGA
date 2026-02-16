@@ -1498,7 +1498,7 @@ export default function Planning() {
                   placeholder={t("common.search") + "..."}
                   value={appointmentSearch}
                   onChange={(e) => setAppointmentSearch(e.target.value)}
-                  className="h-6 w-24 md:h-7 md:w-44 text-[11px] md:text-sm border-0 bg-transparent focus-visible:ring-0 px-1"
+                  className="h-5 w-16 md:h-6 md:w-32 text-[10px] md:text-xs border-0 bg-transparent focus-visible:ring-0 px-1"
                   autoFocus
                 />
                 {appointmentSearch && searchResults.count > 0 && (
