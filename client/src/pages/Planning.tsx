@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef, useCallback } from "react"
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { format, addDays, startOfToday, parseISO, subDays } from "date-fns";
 import { useTranslation } from "react-i18next";
-import { useAppointments, useStaff, useServices, useCreateAppointment, useUpdateAppointment, useDeleteAppointment } from "@/hooks/use-salon-data";
+import { useAppointments, useStaff, useServices, useCreateAppointment, useUpdateAppointment, useDeleteAppointment, useBusinessSettings } from "@/hooks/use-salon-data";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useSearch, useLocation } from "wouter";
@@ -26,6 +26,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { insertAppointmentSchema, insertStaffSchema } from "@shared/schema";
 import { SHORTCUT_OPTIONS, DEFAULT_SHORTCUTS } from "@/lib/shortcuts";
 import { useToast } from "@/hooks/use-toast";
+import { printReceipt } from "@/lib/printReceipt";
 
 const DEFAULT_HOURS = [
   "10:00","10:30","11:00","11:30","12:00","12:30",
@@ -384,6 +385,7 @@ export default function Planning() {
   const [appliedGiftCardBalance, setAppliedGiftCardBalance] = useState<{clientId: number; amount: number; discountAmount: number} | null>(null);
   const priceInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const { toast } = useToast();
+  const { data: salonSettings } = useBusinessSettings();
 
   const formattedDate = format(date, "yyyy-MM-dd");
   
@@ -1041,7 +1043,23 @@ export default function Planning() {
       updateMutation.mutate({ id: editingAppointment.id, ...submitData });
     } else {
       const currentUser = sessionStorage.getItem("current_user") || "Unknown";
-      createMutation.mutate({ ...submitData, createdBy: currentUser });
+      const printData = {
+        businessName: salonSettings?.businessName || "PREGASQUAD SALON",
+        currency: salonSettings?.currencySymbol || "DH",
+        clientName: (submitData.client || data.client || "").replace(/\s*\([^)]*\)\s*$/, ""),
+        clientPhone: (submitData.client || data.client || "").match(/\(([^)]+)\)/)?.[1] || "",
+        services: serviceDescription || "",
+        staffName: data.staff || "",
+        date: format(date, "dd/MM/yyyy"),
+        time: data.startTime || "",
+        duration: submitData.duration || 0,
+        total: finalTotal,
+      };
+      createMutation.mutate({ ...submitData, createdBy: currentUser }, {
+        onSuccess: (result: any) => {
+          printReceipt({ ...printData, appointmentId: result?.id });
+        },
+      });
       playSuccessSound();
     }
     

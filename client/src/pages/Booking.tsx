@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { z } from "zod";
 import { trackEvent } from "@/lib/analytics";
 import { io, Socket } from "socket.io-client";
+import { printReceipt } from "@/lib/printReceipt";
 
 const bookingSchema = z.object({
   client: z.string().min(1),
@@ -316,6 +317,20 @@ export default function Booking() {
       setSelectedServices([]);
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
       trackEvent("booking_completed", "booking", serviceNames, totalPrice);
+      
+      printReceipt({
+        businessName: businessName,
+        currency: "DH",
+        clientName: data.client,
+        clientPhone: data.phone || "",
+        services: serviceNames,
+        staffName: data.staff || "",
+        date: format(date!, "dd/MM/yyyy"),
+        time: selectedTime!,
+        duration: totalDuration,
+        total: totalPrice,
+        appointmentId: result.id,
+      });
     } catch (error) {
       console.error("Booking failed:", error);
     } finally {
