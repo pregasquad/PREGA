@@ -28,16 +28,16 @@ const tooltipStyle = {
 };
 
 const RTLXTick = ({ x, y, payload, fontSize = 11 }: any) => (
-  <foreignObject x={x} y={y + 2} width={1} height={1} overflow="visible">
-    <div xmlns="http://www.w3.org/1999/xhtml" style={{ width: '80px', marginLeft: '-40px', textAlign: 'center', fontSize, color: 'hsl(var(--muted-foreground))', direction: 'rtl', lineHeight: '18px', whiteSpace: 'nowrap' }}>
+  <foreignObject x={x - 40} y={y + 2} width={80} height={22} overflow="visible" style={{ pointerEvents: 'none' }}>
+    <div xmlns="http://www.w3.org/1999/xhtml" style={{ textAlign: 'center', fontSize, color: 'hsl(var(--muted-foreground))', direction: 'rtl', lineHeight: '18px', whiteSpace: 'nowrap' }}>
       {payload.value}
     </div>
   </foreignObject>
 );
 
-const RTLYTick = ({ x, y, payload, fontSize = 11 }: any) => (
-  <foreignObject x={x - 1} y={y - 10} width={1} height={1} overflow="visible">
-    <div xmlns="http://www.w3.org/1999/xhtml" style={{ width: '80px', marginLeft: '-80px', textAlign: 'end', fontSize, color: 'hsl(var(--muted-foreground))', direction: 'rtl', lineHeight: '20px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+const RTLYTick = ({ x, y, payload, fontSize = 11, width = 70 }: any) => (
+  <foreignObject x={x - width} y={y - 10} width={width} height={22} overflow="visible" style={{ pointerEvents: 'none' }}>
+    <div xmlns="http://www.w3.org/1999/xhtml" style={{ textAlign: 'end', fontSize, color: 'hsl(var(--muted-foreground))', direction: 'rtl', lineHeight: '20px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
       {payload.value}
     </div>
   </foreignObject>
