@@ -27,12 +27,46 @@ const tooltipStyle = {
   fontSize: '12px',
 };
 
+const RTLXTick = ({ x, y, payload, fontSize = 11 }: any) => (
+  <foreignObject x={x - 40} y={y} width={80} height={24}>
+    <div xmlns="http://www.w3.org/1999/xhtml" style={{ textAlign: 'center', fontSize, color: 'hsl(var(--muted-foreground))', direction: 'rtl', lineHeight: '20px', whiteSpace: 'nowrap', overflow: 'hidden' }}>
+      {payload.value}
+    </div>
+  </foreignObject>
+);
+
+const RTLYTick = ({ x, y, payload, fontSize = 11, width = 70 }: any) => (
+  <foreignObject x={x - width} y={y - 10} width={width} height={22}>
+    <div xmlns="http://www.w3.org/1999/xhtml" style={{ textAlign: 'end', fontSize, color: 'hsl(var(--muted-foreground))', direction: 'rtl', lineHeight: '20px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+      {payload.value}
+    </div>
+  </foreignObject>
+);
+
+const RTLPieLabel = ({ cx, cy, midAngle, outerRadius, name, percent }: any) => {
+  const RADIAN = Math.PI / 180;
+  const radius = outerRadius + 28;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+  return (
+    <foreignObject x={x - 55} y={y - 12} width={110} height={24}>
+      <div xmlns="http://www.w3.org/1999/xhtml" style={{ textAlign: 'center', fontSize: 11, direction: 'rtl', whiteSpace: 'nowrap', color: 'hsl(var(--foreground))' }}>
+        {name} {(percent * 100).toFixed(0)}%
+      </div>
+    </foreignObject>
+  );
+};
+
 type ViewMode = "weekly" | "monthly" | "custom";
 type ReportCategory = "financial" | "staff" | "scheduling" | "clients";
 
 export default function Reports() {
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === "ar";
+  const rtlTooltipStyle = useMemo(() => ({
+    ...tooltipStyle,
+    ...(isRtl ? { direction: 'rtl' as const, textAlign: 'right' as const } : {}),
+  }), [isRtl]);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [viewMode, setViewMode] = useState<ViewMode>("weekly");
@@ -454,9 +488,9 @@ export default function Reports() {
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                    <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+                    <XAxis dataKey="date" tick={isRtl ? <RTLXTick fontSize={10} /> : { fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
                     <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} width={50} />
-                    <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [`${formatCurrency(v)} DH`]} />
+                    <Tooltip contentStyle={rtlTooltipStyle} formatter={(v: number) => [`${formatCurrency(v)} DH`]} />
                     <Area type="monotone" dataKey="revenue" stroke="#6366f1" fill="url(#gradRevenue)" strokeWidth={2} name={t("reports.revenue")} />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -474,9 +508,9 @@ export default function Reports() {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={dailyRevenueData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                    <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+                    <XAxis dataKey="date" tick={isRtl ? <RTLXTick fontSize={10} /> : { fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
                     <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} width={50} />
-                    <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [`${formatCurrency(v)} DH`]} />
+                    <Tooltip contentStyle={rtlTooltipStyle} formatter={(v: number) => [`${formatCurrency(v)} DH`]} />
                     <Legend wrapperStyle={{ fontSize: '12px' }} />
                     <Bar dataKey="revenue" fill="#6366f1" radius={[4, 4, 0, 0]} name={t("reports.revenue")} />
                     <Bar dataKey="expenses" fill="#ef4444" radius={[4, 4, 0, 0]} name={t("reports.expenses")} />
@@ -496,12 +530,12 @@ export default function Reports() {
                 {noData(paymentStatusData) ? <EmptyState /> : (
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={paymentStatusData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={5} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                      <Pie data={paymentStatusData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={5} dataKey="value" label={isRtl ? RTLPieLabel : ({ name, percent }: any) => `${name} ${(percent * 100).toFixed(0)}%`}>
                         {paymentStatusData.map((entry, i) => (
                           <Cell key={i} fill={entry.color} />
                         ))}
                       </Pie>
-                      <Tooltip contentStyle={tooltipStyle} />
+                      <Tooltip contentStyle={rtlTooltipStyle} />
                       <Legend wrapperStyle={{ fontSize: '12px' }} />
                     </PieChart>
                   </ResponsiveContainer>
@@ -523,7 +557,7 @@ export default function Reports() {
                           <Cell key={i} fill={COLORS[i % COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [`${formatCurrency(v)} DH`]} />
+                      <Tooltip contentStyle={rtlTooltipStyle} formatter={(v: number) => [`${formatCurrency(v)} DH`]} />
                       <Legend wrapperStyle={{ fontSize: '11px' }} />
                     </PieChart>
                   </ResponsiveContainer>
@@ -546,7 +580,7 @@ export default function Reports() {
                         <Cell key={i} fill={COLORS[(i + 3) % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [`${formatCurrency(v)} DH`]} />
+                    <Tooltip contentStyle={rtlTooltipStyle} formatter={(v: number) => [`${formatCurrency(v)} DH`]} />
                     <Legend wrapperStyle={{ fontSize: '11px' }} />
                   </PieChart>
                 </ResponsiveContainer>
@@ -571,8 +605,8 @@ export default function Reports() {
                     <BarChart data={stats.staffRevenue} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" horizontal={false} opacity={0.2} />
                       <XAxis type="number" hide />
-                      <YAxis dataKey="name" type="category" width={70} tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
-                      <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'transparent' }} formatter={(v: number) => [`${formatCurrency(v)} DH`, t("reports.revenue")]} />
+                      <YAxis dataKey="name" type="category" width={70} tick={isRtl ? <RTLYTick fontSize={11} width={70} /> : { fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
+                      <Tooltip contentStyle={rtlTooltipStyle} cursor={{ fill: 'transparent' }} formatter={(v: number) => [`${formatCurrency(v)} DH`, t("reports.revenue")]} />
                       <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={24}>
                         {stats.staffRevenue.map((entry, i) => (
                           <Cell key={i} fill={entry.color} />
@@ -595,8 +629,8 @@ export default function Reports() {
                     <BarChart data={staffAppointmentsData} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" horizontal={false} opacity={0.2} />
                       <XAxis type="number" allowDecimals={false} hide />
-                      <YAxis dataKey="name" type="category" width={70} tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
-                      <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'transparent' }} />
+                      <YAxis dataKey="name" type="category" width={70} tick={isRtl ? <RTLYTick fontSize={11} width={70} /> : { fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
+                      <Tooltip contentStyle={rtlTooltipStyle} cursor={{ fill: 'transparent' }} />
                       <Bar dataKey="count" radius={[0, 4, 4, 0]} barSize={24} name={t("reports.count")}>
                         {staffAppointmentsData.map((entry, i) => (
                           <Cell key={i} fill={entry.color} />
@@ -684,9 +718,9 @@ export default function Reports() {
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={appointmentsByDayData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                      <XAxis dataKey="day" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
+                      <XAxis dataKey="day" tick={isRtl ? <RTLXTick fontSize={11} /> : { fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
                       <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} allowDecimals={false} width={30} />
-                      <Tooltip contentStyle={tooltipStyle} />
+                      <Tooltip contentStyle={rtlTooltipStyle} />
                       <Bar dataKey="count" fill="#06b6d4" radius={[4, 4, 0, 0]} name={t("reports.count")} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -706,7 +740,7 @@ export default function Reports() {
                       <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
                       <XAxis dataKey="hour" tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))' }} />
                       <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} allowDecimals={false} width={25} />
-                      <Tooltip contentStyle={tooltipStyle} />
+                      <Tooltip contentStyle={rtlTooltipStyle} />
                       <Bar dataKey="count" fill="#8b5cf6" radius={[4, 4, 0, 0]} name={t("reports.count")} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -729,7 +763,7 @@ export default function Reports() {
                         <Cell key={i} fill={COLORS[i % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip contentStyle={tooltipStyle} />
+                    <Tooltip contentStyle={rtlTooltipStyle} />
                     <Legend wrapperStyle={{ fontSize: '11px' }} />
                   </PieChart>
                 </ResponsiveContainer>
@@ -753,8 +787,8 @@ export default function Reports() {
                   <BarChart data={clientFrequencyData} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" horizontal={false} opacity={0.2} />
                     <XAxis type="number" allowDecimals={false} hide />
-                    <YAxis dataKey="name" type="category" width={90} tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
-                    <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'transparent' }} formatter={(v: number) => [`${v} ${t("reports.visits")}`]} />
+                    <YAxis dataKey="name" type="category" width={90} tick={isRtl ? <RTLYTick fontSize={11} width={90} /> : { fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
+                    <Tooltip contentStyle={rtlTooltipStyle} cursor={{ fill: 'transparent' }} formatter={(v: number) => [`${v} ${t("reports.visits")}`]} />
                     <Bar dataKey="count" fill="#f59e0b" radius={[0, 4, 4, 0]} barSize={20} name={t("reports.visits")} />
                   </BarChart>
                 </ResponsiveContainer>
