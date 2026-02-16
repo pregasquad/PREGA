@@ -1430,8 +1430,8 @@ export default function Planning() {
       onTouchEnd={isMobile ? handleTouchEnd : undefined}
     >
       {/* Header - Single row */}
-      <div className="mb-1 shrink-0">
-        <div className="flex items-center gap-1.5 md:gap-2 w-full">
+      <div className="mb-1 shrink-0 overflow-x-auto overflow-y-visible">
+        <div className="flex items-center gap-1.5 md:gap-2 w-max min-w-full">
           {/* Staff pills */}
           {stats.perStaff.map(s => {
             const staffMember = staffList.find(st => st.id === s.id);
