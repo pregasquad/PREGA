@@ -28,13 +28,13 @@ const tooltipStyle = {
 };
 
 const RTLXTick = ({ x, y, payload, fontSize = 11 }: any) => (
-  <text x={x} y={y + 14} textAnchor="middle" fontSize={fontSize} fill="hsl(var(--muted-foreground))" direction="rtl">
+  <text x={x} y={y + 14} textAnchor="middle" fontSize={fontSize} fill="hsl(var(--muted-foreground))">
     {payload.value}
   </text>
 );
 
 const RTLYTick = ({ x, y, payload, fontSize = 11 }: any) => (
-  <text x={x - 4} y={y + 4} textAnchor="end" fontSize={fontSize} fill="hsl(var(--muted-foreground))" direction="rtl">
+  <text x={x - 4} y={y + 4} textAnchor="end" fontSize={fontSize} fill="hsl(var(--muted-foreground))">
     {payload.value}
   </text>
 );
