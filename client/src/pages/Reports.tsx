@@ -28,19 +28,15 @@ const tooltipStyle = {
 };
 
 const RTLXTick = ({ x, y, payload, fontSize = 11 }: any) => (
-  <foreignObject x={x - 40} y={y} width={80} height={24}>
-    <div xmlns="http://www.w3.org/1999/xhtml" style={{ textAlign: 'center', fontSize, color: 'hsl(var(--muted-foreground))', direction: 'rtl', lineHeight: '20px', whiteSpace: 'nowrap', overflow: 'hidden' }}>
-      {payload.value}
-    </div>
-  </foreignObject>
+  <text x={x} y={y + 14} textAnchor="middle" fontSize={fontSize} fill="hsl(var(--muted-foreground))" direction="rtl">
+    {payload.value}
+  </text>
 );
 
-const RTLYTick = ({ x, y, payload, fontSize = 11, width = 70 }: any) => (
-  <foreignObject x={x - width} y={y - 10} width={width} height={22}>
-    <div xmlns="http://www.w3.org/1999/xhtml" style={{ textAlign: 'end', fontSize, color: 'hsl(var(--muted-foreground))', direction: 'rtl', lineHeight: '20px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-      {payload.value}
-    </div>
-  </foreignObject>
+const RTLYTick = ({ x, y, payload, fontSize = 11 }: any) => (
+  <text x={x - 4} y={y + 4} textAnchor="end" fontSize={fontSize} fill="hsl(var(--muted-foreground))" direction="rtl">
+    {payload.value}
+  </text>
 );
 
 const RTLPieLabel = ({ cx, cy, midAngle, outerRadius, name, percent }: any) => {
