@@ -1,4 +1,4 @@
-import { isQzConnected, silentPrint } from "./qzPrint";
+import { isQzConnected, silentPrint, silentPrintExpense } from "./qzPrint";
 
 export interface ReceiptData {
   businessName: string;
@@ -174,6 +174,159 @@ function browserPrint(data: ReceiptData): void {
   <div class="footer">
     <div class="thanks">Merci de votre visite!</div>
     <div>شكرا لزيارتكم</div>
+    <div>${e(timestamp)}</div>
+  </div>
+</body>
+</html>`;
+
+  const printWindow = window.open("", "_blank", "width=320,height=600");
+  if (!printWindow) return;
+
+  printWindow.document.open();
+  printWindow.document.write(html);
+  printWindow.document.close();
+
+  printWindow.onload = () => {
+    printWindow.focus();
+    printWindow.print();
+  };
+
+  setTimeout(() => {
+    if (printWindow.document.readyState === "complete") {
+      printWindow.focus();
+      printWindow.print();
+    }
+  }, 600);
+}
+
+export interface ExpenseReceiptData {
+  businessName: string;
+  currency: string;
+  expenseType: string;
+  expenseName: string;
+  amount: number;
+  date: string;
+}
+
+export async function autoPrintExpense(data: ExpenseReceiptData): Promise<void> {
+  if (isQzConnected()) {
+    await silentPrintExpense(data);
+    return;
+  }
+  browserPrintExpense(data);
+}
+
+function browserPrintExpense(data: ExpenseReceiptData): void {
+  const e = escapeHtml;
+  const now = new Date();
+  const timestamp = now.toLocaleDateString("fr-FR") + " " + now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Expense Receipt</title>
+<style>
+  @page {
+    margin: 0;
+    padding: 0;
+    size: 80mm auto;
+  }
+  @media print {
+    html, body { width: 80mm; }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Courier New', 'Lucida Console', monospace;
+    font-size: 13px;
+    line-height: 1.4;
+    width: 72mm;
+    max-width: 72mm;
+    margin: 0 auto;
+    padding: 3mm 0;
+    color: #000;
+    background: #fff;
+  }
+  .biz-name {
+    text-align: center;
+    font-size: 20px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    padding: 2mm 0;
+  }
+  .sep-double {
+    border-top: 3px double #000;
+    margin: 2mm 0;
+  }
+  .sep-single {
+    border-top: 1px dashed #000;
+    margin: 2mm 0;
+  }
+  .row {
+    display: flex;
+    justify-content: space-between;
+    gap: 2mm;
+    padding: 0.5mm 0;
+  }
+  .row span:first-child {
+    color: #333;
+  }
+  .row span:last-child {
+    font-weight: 600;
+    text-align: right;
+  }
+  .title {
+    text-align: center;
+    font-weight: bold;
+    font-size: 15px;
+    padding: 1mm 0;
+  }
+  .total-box {
+    text-align: center;
+    padding: 3mm 0;
+    margin: 1mm 0;
+    border-top: 2px solid #000;
+    border-bottom: 2px solid #000;
+  }
+  .total-label {
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 1px;
+  }
+  .total-amount {
+    font-size: 22px;
+    font-weight: bold;
+    letter-spacing: 1px;
+  }
+  .footer {
+    text-align: center;
+    margin-top: 3mm;
+    font-size: 12px;
+    color: #333;
+  }
+</style>
+</head>
+<body>
+  <div class="biz-name">${e(data.businessName)}</div>
+  <div class="sep-double"></div>
+
+  <div class="title">RECU DE DEPENSE / ايصال مصروف</div>
+  <div class="sep-single"></div>
+
+  <div class="row"><span>Date:</span><span>${e(data.date)}</span></div>
+  <div class="row"><span>Heure / الوقت:</span><span>${e(timestamp.split(" ")[1] || "")}</span></div>
+  <div class="sep-single"></div>
+
+  <div class="row"><span>Categorie / الفئة:</span><span>${e(data.expenseType)}</span></div>
+  <div class="row"><span>Description / الوصف:</span><span>${e(data.expenseName)}</span></div>
+
+  <div class="total-box">
+    <div class="total-label">MONTANT / المبلغ</div>
+    <div class="total-amount">${data.amount.toFixed(2)} ${e(data.currency)}</div>
+  </div>
+
+  <div class="sep-double"></div>
+  <div class="footer">
     <div>${e(timestamp)}</div>
   </div>
 </body>

@@ -248,6 +248,76 @@ export async function silentPrint(data: SilentPrintData): Promise<boolean> {
   }
 }
 
+interface ExpenseReceiptData {
+  businessName: string;
+  currency: string;
+  expenseType: string;
+  expenseName: string;
+  amount: number;
+  date: string;
+}
+
+function buildExpenseReceiptHex(data: ExpenseReceiptData): string {
+  const parts: string[] = [];
+
+  parts.push(hexCmd(0x1B, 0x40));
+
+  parts.push(hexCmd(0x1B, 0x61, 0x01));
+  parts.push(hexCmd(0x1D, 0x21, 0x11));
+  parts.push(textToHex(data.businessName + "\n"));
+  parts.push(hexCmd(0x1D, 0x21, 0x00));
+  parts.push(textToHex(SEP_DOUBLE + "\n"));
+
+  parts.push(hexCmd(0x1B, 0x61, 0x01));
+  parts.push(hexCmd(0x1B, 0x45, 0x01));
+  parts.push(textToHex("RECU DE DEPENSE\n"));
+  parts.push(hexCmd(0x1B, 0x45, 0x00));
+  parts.push(textToHex(SEP_SINGLE + "\n"));
+
+  parts.push(hexCmd(0x1B, 0x61, 0x00));
+  parts.push(textToHex(padRow("Date:", data.date) + "\n"));
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  parts.push(textToHex(padRow("Heure:", timeStr) + "\n"));
+  parts.push(textToHex(SEP_SINGLE + "\n"));
+
+  parts.push(textToHex(padRow("Categorie:", data.expenseType) + "\n"));
+  parts.push(textToHex(padRow("Description:", data.expenseName) + "\n"));
+  parts.push(textToHex(SEP_DOUBLE + "\n"));
+
+  parts.push(hexCmd(0x1B, 0x61, 0x01));
+  parts.push(hexCmd(0x1B, 0x45, 0x01));
+  parts.push(hexCmd(0x1D, 0x21, 0x11));
+  parts.push(textToHex("MONTANT: " + data.amount.toFixed(2) + " " + data.currency + "\n"));
+  parts.push(hexCmd(0x1D, 0x21, 0x00));
+  parts.push(hexCmd(0x1B, 0x45, 0x00));
+  parts.push(hexCmd(0x1B, 0x61, 0x00));
+
+  parts.push(textToHex(SEP_DOUBLE + "\n"));
+  parts.push(hexCmd(0x1B, 0x61, 0x01));
+  parts.push(textToHex("\n"));
+  parts.push(textToHex(now.toLocaleDateString("fr-FR") + " " + timeStr + "\n"));
+  parts.push(textToHex("\n\n\n\n"));
+
+  parts.push(hexCmd(0x1D, 0x56, 0x01));
+
+  return parts.join("");
+}
+
+export async function silentPrintExpense(data: ExpenseReceiptData): Promise<boolean> {
+  if (!isQzConnected()) return false;
+
+  try {
+    const config = qz.configs.create(printerName!);
+    const hexData = buildExpenseReceiptHex(data);
+    await qz.print(config, [{ type: "raw", format: "hex", data: hexData }]);
+    return true;
+  } catch (e) {
+    console.error("QZ Tray expense print failed:", e);
+    return false;
+  }
+}
+
 export async function openCashDrawer(): Promise<boolean> {
   if (!isQzConnected()) return false;
   try {

@@ -11,6 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, TrendingDown, FolderPlus, RefreshCw, ChevronLeft, ChevronRight, Calendar, Paperclip, X, Image, FileText, Eye } from "lucide-react";
+import { autoPrintExpense } from "@/lib/printReceipt";
+import { useBusinessSettings } from "@/hooks/use-salon-data";
 
 const DEFAULT_CHARGE_TYPES_KEYS = [
   { id: 1, key: "expenses.product", value: "Produit" },
@@ -36,6 +38,7 @@ export default function Charges() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isAdmin = sessionStorage.getItem("admin_authenticated") === "true";
+  const { data: salonSettings } = useBusinessSettings();
 
   const getLocale = () => {
     switch (i18n.language) {
@@ -82,10 +85,20 @@ export default function Charges() {
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
       const res = await apiRequest("POST", "/api/charges", data);
-      return res.json();
+      return { ...data, ...(await res.json()) };
     },
-    onSuccess: () => {
+    onSuccess: (savedData: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/charges"] });
+
+      autoPrintExpense({
+        businessName: salonSettings?.businessName || "PREGASQUAD SALON",
+        currency: salonSettings?.currencySymbol || "DH",
+        expenseType: savedData.type || "",
+        expenseName: savedData.name || "",
+        amount: Number(savedData.amount) || 0,
+        date: savedData.date || format(new Date(), "yyyy-MM-dd"),
+      });
+
       setName("");
       setAmount("");
       removeAttachment();
