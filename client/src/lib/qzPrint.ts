@@ -15,10 +15,34 @@ export function getSelectedPrinter(): string | null {
 function setupSecurity() {
   if (setupDone) return;
   setupDone = true;
-  qz.security.setCertificatePromise(function (resolve) {
-    resolve("");
+
+  qz.security.setCertificatePromise(function (resolve: (cert: string) => void) {
+    fetch("/api/qz/cert")
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to fetch certificate");
+        return res.text();
+      })
+      .then(resolve)
+      .catch(() => resolve(""));
   });
+
   qz.security.setSignatureAlgorithm("SHA512");
+
+  (qz.security as any).setSignaturePromise(function (toSign: string) {
+    return function (resolve: (sig: string) => void, reject: (err: Error) => void) {
+      fetch("/api/qz/sign", {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: toSign,
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error("Failed to sign");
+          return res.text();
+        })
+        .then(resolve)
+        .catch(reject);
+    };
+  });
 }
 
 export async function connectQz(): Promise<boolean> {

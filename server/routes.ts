@@ -13,6 +13,8 @@ import bcrypt from "bcryptjs";
 import multer from "multer";
 import { offlineStorage } from "./offline-storage";
 import { createClient } from "@supabase/supabase-js";
+import crypto from "crypto";
+import fs from "fs";
 
 import path from "path";
 
@@ -972,6 +974,34 @@ export async function registerRoutes(
   });
 
   // Public endpoint to get cancellation settings
+  // QZ Tray certificate and signing endpoints
+  const qzCertPath = path.join(process.cwd(), "server/certs/qz-cert.pem");
+  const qzKeyPath = path.join(process.cwd(), "server/certs/qz-private-key.pem");
+
+  app.get("/api/qz/cert", (_req, res) => {
+    try {
+      const cert = fs.readFileSync(qzCertPath, "utf-8");
+      res.type("text/plain").send(cert);
+    } catch {
+      res.status(404).send("Certificate not found");
+    }
+  });
+
+  app.post("/api/qz/sign", express.text({ type: "*/*" }), (req, res) => {
+    try {
+      const toSign = typeof req.body === "string" ? req.body : String(req.body);
+      const privateKey = fs.readFileSync(qzKeyPath, "utf-8");
+      const sign = crypto.createSign("SHA512");
+      sign.update(toSign);
+      sign.end();
+      const signature = sign.sign(privateKey, "base64");
+      res.type("text/plain").send(signature);
+    } catch (e: any) {
+      console.error("QZ sign error:", e.message);
+      res.status(500).send("Signing failed");
+    }
+  });
+
   app.get("/api/public/settings", publicRateLimitMiddleware, async (_req, res) => {
     try {
       const settings = await storage.getBusinessSettings();
