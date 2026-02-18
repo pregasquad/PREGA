@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 import { z } from "zod";
 import { trackEvent } from "@/lib/analytics";
 import { io, Socket } from "socket.io-client";
-import { printReceipt } from "@/lib/printReceipt";
+import { printReceipt, openReceiptWindow } from "@/lib/printReceipt";
 
 const bookingSchema = z.object({
   client: z.string().min(1),
@@ -300,6 +300,7 @@ export default function Booking() {
       servicesJson: selectedServices,
     };
     
+    const receiptWindow = openReceiptWindow();
     try {
       const res = await fetch("/api/public/appointments", {
         method: "POST",
@@ -309,6 +310,7 @@ export default function Booking() {
       
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
+        if (receiptWindow) receiptWindow.close();
         throw new Error(errorData.message || "Failed to book appointment");
       }
       
@@ -332,7 +334,7 @@ export default function Booking() {
         total: totalPrice,
         appointmentId: result.id,
         loyaltyPointsBalance: result.loyaltyPointsBalance,
-      });
+      }, receiptWindow);
     } catch (error) {
       console.error("Booking failed:", error);
     } finally {

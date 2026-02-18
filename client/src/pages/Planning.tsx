@@ -26,7 +26,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { insertAppointmentSchema, insertStaffSchema } from "@shared/schema";
 import { SHORTCUT_OPTIONS, DEFAULT_SHORTCUTS } from "@/lib/shortcuts";
 import { useToast } from "@/hooks/use-toast";
-import { printReceipt } from "@/lib/printReceipt";
+import { printReceipt, openReceiptWindow } from "@/lib/printReceipt";
 
 const DEFAULT_HOURS = [
   "10:00","10:30","11:00","11:30","12:00","12:30",
@@ -1055,6 +1055,7 @@ export default function Planning() {
         duration: submitData.duration || 0,
         total: finalTotal,
       };
+      const receiptWindow = openReceiptWindow();
       createMutation.mutate({ ...submitData, createdBy: currentUser }, {
         onSuccess: async (result: any) => {
           let loyaltyPointsEarned = 0;
@@ -1082,7 +1083,7 @@ export default function Planning() {
             appointmentId: result?.id,
             loyaltyPointsEarned: loyaltyPointsEarned > 0 ? loyaltyPointsEarned : undefined,
             loyaltyPointsBalance: loyaltyPointsBalance > 0 ? loyaltyPointsBalance : undefined,
-          });
+          }, receiptWindow);
         },
       });
       playSuccessSound();

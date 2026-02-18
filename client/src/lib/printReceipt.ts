@@ -14,8 +14,16 @@ interface ReceiptData {
   loyaltyPointsBalance?: number;
 }
 
-export function printReceipt(data: ReceiptData) {
+export function openReceiptWindow(): Window | null {
   const printWindow = window.open("", "_blank", "width=320,height=600");
+  if (printWindow) {
+    printWindow.document.write("<html><body><p style='text-align:center;padding:20px;font-family:sans-serif'>Preparing receipt...</p></body></html>");
+  }
+  return printWindow;
+}
+
+export function printReceipt(data: ReceiptData, existingWindow?: Window | null) {
+  const printWindow = existingWindow || window.open("", "_blank", "width=320,height=600");
   if (!printWindow) return;
 
   const loyaltySection = (data.loyaltyPointsEarned !== undefined && data.loyaltyPointsEarned > 0) || (data.loyaltyPointsBalance !== undefined && data.loyaltyPointsBalance > 0) ? `
@@ -144,6 +152,7 @@ export function printReceipt(data: ReceiptData) {
 </body>
 </html>`;
 
+  printWindow.document.open();
   printWindow.document.write(receiptHTML);
   printWindow.document.close();
 }
