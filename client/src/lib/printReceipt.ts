@@ -15,15 +15,15 @@ interface ReceiptData {
 }
 
 export function openReceiptWindow(): Window | null {
-  const printWindow = window.open("", "_blank", "width=320,height=600");
+  const printWindow = window.open("", "_blank", "width=400,height=700");
   if (printWindow) {
-    printWindow.document.write("<html><body><p style='text-align:center;padding:20px;font-family:sans-serif'>Preparing receipt...</p></body></html>");
+    printWindow.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/></head><body><p style="text-align:center;padding:20px;font-family:Arial,sans-serif;font-size:14px">Preparing receipt...</p></body></html>`);
   }
   return printWindow;
 }
 
 export function printReceipt(data: ReceiptData, existingWindow?: Window | null) {
-  const printWindow = existingWindow || window.open("", "_blank", "width=320,height=600");
+  const printWindow = existingWindow || window.open("", "_blank", "width=400,height=700");
   if (!printWindow) return;
 
   const loyaltySection = (data.loyaltyPointsEarned !== undefined && data.loyaltyPointsEarned > 0) || (data.loyaltyPointsBalance !== undefined && data.loyaltyPointsBalance > 0) ? `
@@ -49,42 +49,71 @@ export function printReceipt(data: ReceiptData, existingWindow?: Window | null) 
 <html dir="ltr">
 <head>
 <meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Receipt</title>
 <style>
   @page { margin: 0; size: 80mm auto; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
-    font-family: 'Courier New', monospace;
-    font-size: 12px;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 13px;
+    line-height: 1.4;
     width: 80mm;
-    padding: 4mm;
+    padding: 5mm;
     color: #000;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   .center { text-align: center; }
-  .bold { font-weight: bold; }
-  .salon-name { font-size: 16px; font-weight: bold; margin-bottom: 4px; }
+  .bold { font-weight: 700; }
+  .salon-name {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
   .divider {
+    border: none;
     border-top: 1px dashed #000;
-    margin: 6px 0;
+    margin: 8px 0;
   }
   .row {
     display: flex;
     justify-content: space-between;
-    gap: 4px;
-    padding: 2px 0;
+    gap: 6px;
+    padding: 3px 0;
+    font-size: 13px;
   }
-  .row .label { color: #333; flex-shrink: 0; }
+  .row .label { color: #000; flex-shrink: 0; font-weight: 500; }
   .row .value { text-align: right; word-break: break-word; }
   .total-row {
     display: flex;
     justify-content: space-between;
-    font-size: 16px;
-    font-weight: bold;
-    padding: 4px 0;
+    font-size: 18px;
+    font-weight: 700;
+    padding: 6px 0;
+    letter-spacing: 0.3px;
   }
-  .footer { margin-top: 8px; font-size: 10px; color: #666; }
-  .services-list { padding: 2px 0; word-break: break-word; }
-  .loyalty-section { padding: 2px 0; }
+  .footer {
+    margin-top: 10px;
+    font-size: 11px;
+    color: #444;
+    line-height: 1.5;
+  }
+  .services-list {
+    padding: 3px 0;
+    word-break: break-word;
+    font-size: 13px;
+  }
+  .loyalty-section { padding: 3px 0; }
+  .loyalty-section .row .label { font-size: 12px; }
+  .loyalty-section .row .value { font-size: 13px; }
+  @media print {
+    body { width: 80mm; padding: 3mm; }
+  }
 </style>
 </head>
 <body>
@@ -92,7 +121,7 @@ export function printReceipt(data: ReceiptData, existingWindow?: Window | null) 
     <div class="salon-name">${escapeHtml(data.businessName)}</div>
   </div>
   <div class="divider"></div>
-  
+
   <div class="row">
     <span class="label">Date:</span>
     <span class="value">${escapeHtml(data.date)}</span>
@@ -102,9 +131,9 @@ export function printReceipt(data: ReceiptData, existingWindow?: Window | null) 
     <span class="value">${escapeHtml(data.time)}</span>
   </div>
   ${data.appointmentId ? `<div class="row"><span class="label">#</span><span class="value">${data.appointmentId}</span></div>` : ""}
-  
+
   <div class="divider"></div>
-  
+
   <div class="row">
     <span class="label">Client:</span>
     <span class="value">${escapeHtml(data.clientName)}</span>
@@ -114,9 +143,9 @@ export function printReceipt(data: ReceiptData, existingWindow?: Window | null) 
     <span class="label">Staff:</span>
     <span class="value">${escapeHtml(data.staffName)}</span>
   </div>
-  
+
   <div class="divider"></div>
-  
+
   <div class="row">
     <span class="label bold">Services:</span>
   </div>
@@ -125,18 +154,18 @@ export function printReceipt(data: ReceiptData, existingWindow?: Window | null) 
     <span class="label">Duration:</span>
     <span class="value">${data.duration} min</span>
   </div>
-  
+
   <div class="divider"></div>
-  
+
   <div class="total-row">
     <span>TOTAL</span>
     <span>${data.total.toFixed(2)} ${escapeHtml(data.currency)}</span>
   </div>
-  
+
   ${loyaltySection}
-  
+
   <div class="divider"></div>
-  
+
   <div class="center footer">
     Thank you / شكراً
     <br/>
