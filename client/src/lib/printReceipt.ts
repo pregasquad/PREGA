@@ -172,6 +172,11 @@ export function printReceipt(data: ReceiptData, existingWindow?: Window | null) 
     ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
   </div>
 
+  <style media="print">
+    #cash-drawer-cmd { display: block !important; }
+  </style>
+  <span id="cash-drawer-cmd" style="display:none;position:absolute;overflow:hidden;width:0;height:0;font-size:0;line-height:0;">\x1Bp\x00\x19\xFA</span>
+
   <script>
     window.onload = function() {
       window.print();
