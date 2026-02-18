@@ -96,73 +96,98 @@ interface SilentPrintData {
   loyaltyPointsBalance?: number;
 }
 
-function buildEscPosReceipt(data: SilentPrintData): string[] {
-  const cmds: string[] = [];
-  const ESC = "\x1B";
-  const GS = "\x1D";
+function toHex(str: string): string {
+  let hex = "";
+  for (let i = 0; i < str.length; i++) {
+    const code = str.charCodeAt(i);
+    hex += code.toString(16).padStart(2, "0");
+  }
+  return hex;
+}
 
-  cmds.push(ESC + "@");
-  cmds.push(ESC + "p" + "\x00" + "\x19" + "\xFA");
-  cmds.push(ESC + "a" + "\x01");
-  cmds.push(GS + "!" + "\x11");
-  cmds.push(data.businessName + "\n");
-  cmds.push(GS + "!" + "\x00");
-  cmds.push("================================\n");
-  cmds.push(ESC + "a" + "\x00");
-  cmds.push(padRow("Date:", data.date) + "\n");
-  cmds.push(padRow("Time:", data.time) + "\n");
+function hexCmd(...bytes: number[]): string {
+  return bytes.map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+function textToHex(text: string): string {
+  return toHex(text);
+}
+
+function buildReceiptHex(data: SilentPrintData): string {
+  const parts: string[] = [];
+
+  parts.push(hexCmd(0x1B, 0x40));
+
+  parts.push(hexCmd(0x1B, 0x70, 0x00, 0x19, 0xFA));
+
+  parts.push(hexCmd(0x1B, 0x70, 0x01, 0x19, 0xFA));
+
+  parts.push(hexCmd(0x1B, 0x61, 0x01));
+  parts.push(hexCmd(0x1D, 0x21, 0x11));
+  parts.push(textToHex(data.businessName + "\n"));
+  parts.push(hexCmd(0x1D, 0x21, 0x00));
+  parts.push(textToHex("================================\n"));
+
+  parts.push(hexCmd(0x1B, 0x61, 0x00));
+  parts.push(textToHex(padRow("Date:", data.date) + "\n"));
+  parts.push(textToHex(padRow("Time:", data.time) + "\n"));
   if (data.appointmentId) {
-    cmds.push(padRow("#:", String(data.appointmentId)) + "\n");
+    parts.push(textToHex(padRow("#:", String(data.appointmentId)) + "\n"));
   }
-  cmds.push("--------------------------------\n");
-  cmds.push(padRow("Client:", data.clientName) + "\n");
+  parts.push(textToHex("--------------------------------\n"));
+  parts.push(textToHex(padRow("Client:", data.clientName) + "\n"));
   if (data.clientPhone) {
-    cmds.push(padRow("Phone:", data.clientPhone) + "\n");
+    parts.push(textToHex(padRow("Phone:", data.clientPhone) + "\n"));
   }
-  cmds.push(padRow("Staff:", data.staffName) + "\n");
-  cmds.push("--------------------------------\n");
-  cmds.push(ESC + "E" + "\x01");
-  cmds.push("Services:\n");
-  cmds.push(ESC + "E" + "\x00");
-  cmds.push(data.services + "\n");
-  cmds.push(padRow("Duration:", data.duration + " min") + "\n");
-  cmds.push("================================\n");
-  cmds.push(ESC + "E" + "\x01");
-  cmds.push(GS + "!" + "\x01");
-  cmds.push(padRow("TOTAL", data.total.toFixed(2) + " " + data.currency) + "\n");
-  cmds.push(GS + "!" + "\x00");
-  cmds.push(ESC + "E" + "\x00");
+  parts.push(textToHex(padRow("Staff:", data.staffName) + "\n"));
+  parts.push(textToHex("--------------------------------\n"));
+
+  parts.push(hexCmd(0x1B, 0x45, 0x01));
+  parts.push(textToHex("Services:\n"));
+  parts.push(hexCmd(0x1B, 0x45, 0x00));
+  parts.push(textToHex(data.services + "\n"));
+  parts.push(textToHex(padRow("Duration:", data.duration + " min") + "\n"));
+  parts.push(textToHex("================================\n"));
+
+  parts.push(hexCmd(0x1B, 0x45, 0x01));
+  parts.push(hexCmd(0x1D, 0x21, 0x01));
+  parts.push(textToHex(padRow("TOTAL", data.total.toFixed(2) + " " + data.currency) + "\n"));
+  parts.push(hexCmd(0x1D, 0x21, 0x00));
+  parts.push(hexCmd(0x1B, 0x45, 0x00));
 
   if (
     (data.loyaltyPointsEarned !== undefined && data.loyaltyPointsEarned > 0) ||
     (data.loyaltyPointsBalance !== undefined && data.loyaltyPointsBalance > 0)
   ) {
-    cmds.push("--------------------------------\n");
-    cmds.push(ESC + "E" + "\x01");
-    cmds.push("Fidelite / نقاط الولاء\n");
-    cmds.push(ESC + "E" + "\x00");
+    parts.push(textToHex("--------------------------------\n"));
+    parts.push(hexCmd(0x1B, 0x45, 0x01));
+    parts.push(textToHex("Fidelite / Points\n"));
+    parts.push(hexCmd(0x1B, 0x45, 0x00));
     if (data.loyaltyPointsEarned !== undefined && data.loyaltyPointsEarned > 0) {
-      cmds.push(padRow("Points earned:", "+" + data.loyaltyPointsEarned) + "\n");
+      parts.push(textToHex(padRow("Points earned:", "+" + data.loyaltyPointsEarned) + "\n"));
     }
     if (data.loyaltyPointsBalance !== undefined) {
-      cmds.push(padRow("Balance:", String(data.loyaltyPointsBalance)) + "\n");
+      parts.push(textToHex(padRow("Balance:", String(data.loyaltyPointsBalance)) + "\n"));
     }
   }
 
-  cmds.push("================================\n");
-  cmds.push(ESC + "a" + "\x01");
-  cmds.push("Thank you / شكراً\n");
+  parts.push(textToHex("================================\n"));
+  parts.push(hexCmd(0x1B, 0x61, 0x01));
+  parts.push(textToHex("Thank you / Merci\n"));
   const now = new Date();
-  cmds.push(
-    now.toLocaleDateString() +
-      " " +
-      now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) +
-      "\n"
+  parts.push(
+    textToHex(
+      now.toLocaleDateString() +
+        " " +
+        now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) +
+        "\n"
+    )
   );
-  cmds.push("\n\n\n");
-  cmds.push(GS + "V" + "\x01");
+  parts.push(textToHex("\n\n\n"));
 
-  return cmds;
+  parts.push(hexCmd(0x1D, 0x56, 0x01));
+
+  return parts.join("");
 }
 
 function padRow(label: string, value: string, width = 32): string {
@@ -177,9 +202,9 @@ export async function silentPrint(data: SilentPrintData): Promise<boolean> {
   if (!isQzConnected()) return false;
 
   try {
-    const config = qz.configs.create(printerName!, { encoding: "UTF-8" });
-    const cmds = buildEscPosReceipt(data);
-    await qz.print(config, [{ type: "raw", format: "plain", data: cmds.join("") }]);
+    const config = qz.configs.create(printerName!);
+    const hexData = buildReceiptHex(data);
+    await qz.print(config, [{ type: "raw", format: "hex", data: hexData }]);
     return true;
   } catch (e) {
     console.error("QZ Tray print failed:", e);
@@ -191,8 +216,8 @@ export async function openCashDrawer(): Promise<boolean> {
   if (!isQzConnected()) return false;
   try {
     const config = qz.configs.create(printerName!);
-    const cmd = "\x1B" + "p" + "\x00" + "\x19" + "\xFA";
-    await qz.print(config, [{ type: "raw", format: "plain", data: cmd }]);
+    const hexData = hexCmd(0x1B, 0x40) + hexCmd(0x1B, 0x70, 0x00, 0x19, 0xFA) + hexCmd(0x1B, 0x70, 0x01, 0x19, 0xFA);
+    await qz.print(config, [{ type: "raw", format: "hex", data: hexData }]);
     return true;
   } catch {
     return false;
