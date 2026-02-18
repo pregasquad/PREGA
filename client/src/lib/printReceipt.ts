@@ -1,4 +1,6 @@
-interface ReceiptData {
+import { isQzConnected, silentPrint } from "./qzPrint";
+
+export interface ReceiptData {
   businessName: string;
   currency: string;
   clientName: string;
@@ -14,15 +16,40 @@ interface ReceiptData {
   loyaltyPointsBalance?: number;
 }
 
-export function openReceiptWindow(): Window | null {
+export interface PreparedReceipt {
+  silent: boolean;
+  window: Window | null;
+}
+
+export function prepareReceipt(): PreparedReceipt {
+  if (isQzConnected()) {
+    return { silent: true, window: null };
+  }
   const printWindow = window.open("", "_blank", "width=400,height=700");
   if (printWindow) {
     printWindow.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/></head><body><p style="text-align:center;padding:20px;font-family:Arial,sans-serif;font-size:14px">Preparing receipt...</p></body></html>`);
   }
-  return printWindow;
+  return { silent: false, window: printWindow };
 }
 
-export function printReceipt(data: ReceiptData, existingWindow?: Window | null) {
+export async function executeReceipt(data: ReceiptData, prepared: PreparedReceipt) {
+  if (prepared.silent) {
+    const ok = await silentPrint(data);
+    if (!ok) {
+      popupPrint(data, null);
+    }
+    return;
+  }
+  popupPrint(data, prepared.window);
+}
+
+export function cancelReceipt(prepared: PreparedReceipt) {
+  if (prepared.window) {
+    prepared.window.close();
+  }
+}
+
+function popupPrint(data: ReceiptData, existingWindow: Window | null) {
   const printWindow = existingWindow || window.open("", "_blank", "width=400,height=700");
   if (!printWindow) return;
 
@@ -171,11 +198,6 @@ export function printReceipt(data: ReceiptData, existingWindow?: Window | null) 
     <br/>
     ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
   </div>
-
-  <style media="print">
-    #cash-drawer-cmd { display: block !important; }
-  </style>
-  <span id="cash-drawer-cmd" style="display:none;position:absolute;overflow:hidden;width:0;height:0;font-size:0;line-height:0;">\x1Bp\x00\x19\xFA</span>
 
   <script>
     window.onload = function() {

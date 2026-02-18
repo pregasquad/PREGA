@@ -33,6 +33,12 @@ Beauty Salon Appointment Management System built with React + Express + PostgreS
 - **Photo storage**: Staff profile photos stored as base64 in database (`photo` column) to survive ephemeral filesystem
 - **Database migrations**: Startup migrations in `server/db.ts` handle backfilling staffId and creating indexes
 
+## Receipt Printing Architecture
+- **QZ Tray integration** (`client/src/lib/qzPrint.ts`): Silent printing via QZ Tray desktop app with ESC/POS commands, auto cash drawer kick, auto-selects default printer on first connection
+- **Unified print API** (`client/src/lib/printReceipt.ts`): `prepareReceipt()` → `executeReceipt()` pattern; tries QZ Tray silent print first, falls back to browser popup with `window.print()` if QZ Tray not installed
+- **Popup anti-blocking**: Receipt window opened synchronously on user click via `prepareReceipt()`, content written later in async callback to avoid browser popup blockers
+- **QZ Tray requirement**: Users must install free QZ Tray desktop app (qz.io) on their POS computer for fully automatic silent printing + cash drawer
+
 ## Recent Changes
 - 2026-02-11: Redesigned Dashboard (Home.tsx) with premium SaaS fintech layout - glassmorphism 2x2 summary cards (Revenue, Appointments, Paid, Unpaid), financial overview section with dominant net profit display, Stripe-style employee performance list with avatar/commission/appointment stats, closing day checklist card, low stock alerts; full RTL Arabic support; iPhone-optimized mobile layout
 - 2026-02-11: Added expense attachment upload feature - charges can now have file attachments (images/PDF, max 5MB); stored as base64 in `attachment` column (TEXT for Postgres, LONGTEXT for MySQL); preview modal with image display or PDF download; paperclip icon indicator on expense items with attachments

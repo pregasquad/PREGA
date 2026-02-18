@@ -10,6 +10,7 @@ import { Suspense, lazy, useEffect } from "react";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
 import { initGA } from "./lib/analytics";
 import { useAnalytics } from "./hooks/use-analytics";
+import { connectQz } from "./lib/qzPrint";
 
 // Core pages - loaded immediately
 import Planning from "@/pages/Planning";
@@ -207,6 +208,7 @@ function App() {
     if (import.meta.env.VITE_GA_MEASUREMENT_ID) {
       initGA();
     }
+    connectQz().catch(() => {});
   }, []);
 
   return (
