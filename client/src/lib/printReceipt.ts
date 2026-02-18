@@ -10,11 +10,31 @@ interface ReceiptData {
   duration: number;
   total: number;
   appointmentId?: number;
+  loyaltyPointsEarned?: number;
+  loyaltyPointsBalance?: number;
 }
 
 export function printReceipt(data: ReceiptData) {
   const printWindow = window.open("", "_blank", "width=320,height=600");
   if (!printWindow) return;
+
+  const loyaltySection = (data.loyaltyPointsEarned !== undefined && data.loyaltyPointsEarned > 0) || (data.loyaltyPointsBalance !== undefined && data.loyaltyPointsBalance > 0) ? `
+  <div class="divider"></div>
+  <div class="loyalty-section">
+    <div class="row">
+      <span class="label bold">Fidélité / نقاط الولاء</span>
+    </div>
+    ${data.loyaltyPointsEarned !== undefined && data.loyaltyPointsEarned > 0 ? `
+    <div class="row">
+      <span class="label">Points earned / مكتسبة:</span>
+      <span class="value bold">+${data.loyaltyPointsEarned}</span>
+    </div>` : ""}
+    ${data.loyaltyPointsBalance !== undefined ? `
+    <div class="row">
+      <span class="label">Balance / الرصيد:</span>
+      <span class="value bold">${data.loyaltyPointsBalance}</span>
+    </div>` : ""}
+  </div>` : "";
 
   const receiptHTML = `
 <!DOCTYPE html>
@@ -56,6 +76,7 @@ export function printReceipt(data: ReceiptData) {
   }
   .footer { margin-top: 8px; font-size: 10px; color: #666; }
   .services-list { padding: 2px 0; word-break: break-word; }
+  .loyalty-section { padding: 2px 0; }
 </style>
 </head>
 <body>
@@ -103,6 +124,8 @@ export function printReceipt(data: ReceiptData) {
     <span>TOTAL</span>
     <span>${data.total.toFixed(2)} ${escapeHtml(data.currency)}</span>
   </div>
+  
+  ${loyaltySection}
   
   <div class="divider"></div>
   

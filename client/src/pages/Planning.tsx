@@ -1056,8 +1056,33 @@ export default function Planning() {
         total: finalTotal,
       };
       createMutation.mutate({ ...submitData, createdBy: currentUser }, {
-        onSuccess: (result: any) => {
-          printReceipt({ ...printData, appointmentId: result?.id });
+        onSuccess: async (result: any) => {
+          let loyaltyPointsEarned = 0;
+          let loyaltyPointsBalance = 0;
+          try {
+            const clientMatch = clients.find(c => 
+              (submitData.client || data.client || "").includes(c.name)
+            );
+            if (clientMatch && clientMatch.loyaltyEnrolled) {
+              const pointsPerDh = businessSettings?.loyaltyPointsPerDh ?? 1;
+              loyaltyPointsEarned = Math.floor(finalTotal * pointsPerDh);
+              const res = await fetch(`/api/clients/${clientMatch.id}`, {
+                headers: { "x-user-pin": sessionStorage.getItem("user_pin") || "" },
+              });
+              if (res.ok) {
+                const updatedClient = await res.json();
+                loyaltyPointsBalance = updatedClient.loyaltyPoints ?? 0;
+              }
+            }
+          } catch (e) {
+            console.error("Failed to fetch loyalty points:", e);
+          }
+          printReceipt({ 
+            ...printData, 
+            appointmentId: result?.id,
+            loyaltyPointsEarned: loyaltyPointsEarned > 0 ? loyaltyPointsEarned : undefined,
+            loyaltyPointsBalance: loyaltyPointsBalance > 0 ? loyaltyPointsBalance : undefined,
+          });
         },
       });
       playSuccessSound();

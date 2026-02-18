@@ -80,6 +80,7 @@ interface BookingResult {
   startTime?: string;
   service?: string;
   staff?: string;
+  loyaltyPointsBalance?: number;
   appointments?: Array<{
     id: number;
     date: string;
@@ -330,6 +331,7 @@ export default function Booking() {
         duration: totalDuration,
         total: totalPrice,
         appointmentId: result.id,
+        loyaltyPointsBalance: result.loyaltyPointsBalance,
       });
     } catch (error) {
       console.error("Booking failed:", error);

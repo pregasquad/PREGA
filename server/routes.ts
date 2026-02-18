@@ -720,6 +720,19 @@ export async function registerRoutes(
         }
       }
       
+      // Fetch client loyalty points for receipt
+      let loyaltyPointsBalance: number | undefined;
+      if (input.client) {
+        try {
+          const client = await storage.getClientByName(input.client.split(" (")[0]);
+          if (client && client.loyaltyEnrolled) {
+            loyaltyPointsBalance = client.loyaltyPoints;
+          }
+        } catch (e) {
+          console.log("Failed to fetch client loyalty for booking response:", e);
+        }
+      }
+
       // Return confirmation info for all created appointments
       if (createdAppointments.length === 1) {
         const item = createdAppointments[0];
@@ -729,7 +742,8 @@ export async function registerRoutes(
           date: item.date,
           startTime: item.startTime,
           service: item.service,
-          staff: item.staff
+          staff: item.staff,
+          loyaltyPointsBalance,
         });
       } else {
         // Multiple appointments created
@@ -737,6 +751,7 @@ export async function registerRoutes(
           success: true,
           multipleAppointments: true,
           count: createdAppointments.length,
+          loyaltyPointsBalance,
           appointments: createdAppointments.map(item => ({
             id: item.id,
             date: item.date,
