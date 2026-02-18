@@ -30,32 +30,26 @@ function escapeHtml(str: string): string {
   return div.innerHTML;
 }
 
-function padRow(label: string, value: string, width = 40): string {
-  const gap = width - label.length - value.length;
-  if (gap > 0) {
-    return label + "\u00A0".repeat(gap) + value;
-  }
-  return label + " " + value;
-}
-
 function browserPrint(data: ReceiptData): void {
   const e = escapeHtml;
   const now = new Date();
-  const timestamp = now.toLocaleDateString() + " " + now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const timestamp = now.toLocaleDateString("fr-FR") + " " + now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+
+  const serviceLines = data.services.split(",").map(s => s.trim()).filter(Boolean);
+  const servicesHtml = serviceLines.map(s => `<div class="svc-item">${e(s)}</div>`).join("");
 
   let loyaltyHtml = "";
   if (
     (data.loyaltyPointsEarned !== undefined && data.loyaltyPointsEarned > 0) ||
     (data.loyaltyPointsBalance !== undefined && data.loyaltyPointsBalance > 0)
   ) {
-    loyaltyHtml = `
-      <div class="sep">--------------------------------</div>
-      <div class="bold">Fidelite / نقاط الولاء</div>`;
+    loyaltyHtml = `<div class="sep-single"></div>
+      <div class="section-title">Fidelite / نقاط الولاء</div>`;
     if (data.loyaltyPointsEarned !== undefined && data.loyaltyPointsEarned > 0) {
-      loyaltyHtml += `<div class="row"><span>Points / نقاط:</span><span>+${data.loyaltyPointsEarned}</span></div>`;
+      loyaltyHtml += `<div class="row"><span>Points gagnes / نقاط</span><span>+${data.loyaltyPointsEarned}</span></div>`;
     }
     if (data.loyaltyPointsBalance !== undefined && data.loyaltyPointsBalance > 0) {
-      loyaltyHtml += `<div class="row"><span>Solde / رصيد:</span><span>${data.loyaltyPointsBalance}</span></div>`;
+      loyaltyHtml += `<div class="row"><span>Solde / رصيد</span><span>${data.loyaltyPointsBalance}</span></div>`;
     }
   }
 
@@ -65,57 +59,127 @@ function browserPrint(data: ReceiptData): void {
 <meta charset="utf-8">
 <title>Receipt</title>
 <style>
-  @page { margin: 0; size: 80mm auto; }
+  @page {
+    margin: 0;
+    padding: 0;
+    size: 80mm auto;
+  }
+  @media print {
+    html, body { width: 80mm; }
+  }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
-    font-family: 'Courier New', monospace;
-    font-size: 12px;
-    width: 80mm;
-    padding: 4mm;
+    font-family: 'Courier New', 'Lucida Console', monospace;
+    font-size: 13px;
+    line-height: 1.4;
+    width: 72mm;
+    max-width: 72mm;
+    margin: 0 auto;
+    padding: 3mm 0;
     color: #000;
+    background: #fff;
   }
-  .center { text-align: center; }
-  .bold { font-weight: bold; }
-  .big { font-size: 16px; font-weight: bold; }
-  .sep { text-align: center; letter-spacing: 1px; margin: 2px 0; }
-  .row { display: flex; justify-content: space-between; gap: 4px; }
-  .total-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 14px; margin: 4px 0; }
-  .footer { text-align: center; margin-top: 8px; font-size: 11px; }
-  .rtl { direction: rtl; text-align: right; }
+  .biz-name {
+    text-align: center;
+    font-size: 20px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    padding: 2mm 0;
+  }
+  .sep-double {
+    border-top: 3px double #000;
+    margin: 2mm 0;
+  }
+  .sep-single {
+    border-top: 1px dashed #000;
+    margin: 2mm 0;
+  }
+  .row {
+    display: flex;
+    justify-content: space-between;
+    gap: 2mm;
+    padding: 0.5mm 0;
+  }
+  .row span:first-child {
+    color: #333;
+  }
+  .row span:last-child {
+    font-weight: 600;
+    text-align: right;
+  }
+  .section-title {
+    font-weight: bold;
+    padding: 1mm 0;
+    font-size: 13px;
+  }
+  .svc-item {
+    padding: 0.3mm 0 0.3mm 3mm;
+  }
+  .total-box {
+    text-align: center;
+    padding: 3mm 0;
+    margin: 1mm 0;
+    border-top: 2px solid #000;
+    border-bottom: 2px solid #000;
+  }
+  .total-label {
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 1px;
+  }
+  .total-amount {
+    font-size: 22px;
+    font-weight: bold;
+    letter-spacing: 1px;
+  }
+  .footer {
+    text-align: center;
+    margin-top: 3mm;
+    font-size: 12px;
+    color: #333;
+  }
+  .footer .thanks {
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 1mm;
+  }
 </style>
 </head>
 <body>
-  <div class="center big">${e(data.businessName)}</div>
-  <div class="sep">================================</div>
+  <div class="biz-name">${e(data.businessName)}</div>
+  <div class="sep-double"></div>
 
   <div class="row"><span>Date:</span><span>${e(data.date)}</span></div>
   <div class="row"><span>Heure / الوقت:</span><span>${e(data.time)}</span></div>
-  ${data.appointmentId ? `<div class="row"><span>#:</span><span>${data.appointmentId}</span></div>` : ""}
-  <div class="sep">--------------------------------</div>
+  ${data.appointmentId ? `<div class="row"><span>Ticket #:</span><span>${data.appointmentId}</span></div>` : ""}
+  <div class="sep-single"></div>
 
   <div class="row"><span>Client(e) / العميل:</span><span>${e(data.clientName)}</span></div>
   ${data.clientPhone ? `<div class="row"><span>Tel / الهاتف:</span><span>${e(data.clientPhone)}</span></div>` : ""}
   <div class="row"><span>Staff / الموظف:</span><span>${e(data.staffName)}</span></div>
-  <div class="sep">--------------------------------</div>
+  <div class="sep-single"></div>
 
-  <div class="bold">Services / الخدمات:</div>
-  <div>${e(data.services)}</div>
+  <div class="section-title">Services / الخدمات:</div>
+  ${servicesHtml}
   <div class="row"><span>Duree / المدة:</span><span>${data.duration} min</span></div>
-  <div class="sep">================================</div>
 
-  <div class="total-row"><span>TOTAL / المجموع</span><span>${data.total.toFixed(2)} ${e(data.currency)}</span></div>
+  <div class="total-box">
+    <div class="total-label">TOTAL / المجموع</div>
+    <div class="total-amount">${data.total.toFixed(2)} ${e(data.currency)}</div>
+  </div>
 
   ${loyaltyHtml}
 
-  <div class="sep">================================</div>
+  <div class="sep-double"></div>
   <div class="footer">
-    Merci / شكرا لكم<br>
-    ${e(timestamp)}
+    <div class="thanks">Merci de votre visite!</div>
+    <div>شكرا لزيارتكم</div>
+    <div>${e(timestamp)}</div>
   </div>
 </body>
 </html>`;
 
-  const printWindow = window.open("", "_blank", "width=350,height=600");
+  const printWindow = window.open("", "_blank", "width=320,height=600");
   if (!printWindow) return;
 
   printWindow.document.open();
@@ -132,5 +196,5 @@ function browserPrint(data: ReceiptData): void {
       printWindow.focus();
       printWindow.print();
     }
-  }, 500);
+  }, 600);
 }

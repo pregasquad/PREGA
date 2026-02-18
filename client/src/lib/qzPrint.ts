@@ -137,85 +137,97 @@ function textToHex(text: string): string {
   return toHex(text);
 }
 
+const LINE_WIDTH = 48;
+const SEP_DOUBLE = "=".repeat(LINE_WIDTH);
+const SEP_SINGLE = "-".repeat(LINE_WIDTH);
+
 function buildReceiptHex(data: SilentPrintData): string {
   const parts: string[] = [];
 
   parts.push(hexCmd(0x1B, 0x40));
 
   parts.push(hexCmd(0x1B, 0x70, 0x00, 0x19, 0xFA));
-
   parts.push(hexCmd(0x1B, 0x70, 0x01, 0x19, 0xFA));
 
   parts.push(hexCmd(0x1B, 0x61, 0x01));
   parts.push(hexCmd(0x1D, 0x21, 0x11));
   parts.push(textToHex(data.businessName + "\n"));
   parts.push(hexCmd(0x1D, 0x21, 0x00));
-  parts.push(textToHex("================================\n"));
+  parts.push(textToHex(SEP_DOUBLE + "\n"));
 
   parts.push(hexCmd(0x1B, 0x61, 0x00));
   parts.push(textToHex(padRow("Date:", data.date) + "\n"));
-  parts.push(textToHex(padRow("Time:", data.time) + "\n"));
+  parts.push(textToHex(padRow("Heure:", data.time) + "\n"));
   if (data.appointmentId) {
-    parts.push(textToHex(padRow("#:", String(data.appointmentId)) + "\n"));
+    parts.push(textToHex(padRow("Ticket #:", String(data.appointmentId)) + "\n"));
   }
-  parts.push(textToHex("--------------------------------\n"));
-  parts.push(textToHex(padRow("Client:", data.clientName) + "\n"));
+  parts.push(textToHex(SEP_SINGLE + "\n"));
+
+  parts.push(textToHex(padRow("Client(e):", data.clientName) + "\n"));
   if (data.clientPhone) {
-    parts.push(textToHex(padRow("Phone:", data.clientPhone) + "\n"));
+    parts.push(textToHex(padRow("Tel:", data.clientPhone) + "\n"));
   }
   parts.push(textToHex(padRow("Staff:", data.staffName) + "\n"));
-  parts.push(textToHex("--------------------------------\n"));
+  parts.push(textToHex(SEP_SINGLE + "\n"));
 
   parts.push(hexCmd(0x1B, 0x45, 0x01));
   parts.push(textToHex("Services:\n"));
   parts.push(hexCmd(0x1B, 0x45, 0x00));
-  parts.push(textToHex(data.services + "\n"));
-  parts.push(textToHex(padRow("Duration:", data.duration + " min") + "\n"));
-  parts.push(textToHex("================================\n"));
 
+  const serviceLines = data.services.split(",").map(s => s.trim()).filter(Boolean);
+  for (const svc of serviceLines) {
+    parts.push(textToHex("  " + svc + "\n"));
+  }
+
+  parts.push(textToHex(padRow("Duree:", data.duration + " min") + "\n"));
+  parts.push(textToHex(SEP_DOUBLE + "\n"));
+
+  parts.push(hexCmd(0x1B, 0x61, 0x01));
   parts.push(hexCmd(0x1B, 0x45, 0x01));
-  parts.push(hexCmd(0x1D, 0x21, 0x01));
-  parts.push(textToHex(padRow("TOTAL", data.total.toFixed(2) + " " + data.currency) + "\n"));
+  parts.push(hexCmd(0x1D, 0x21, 0x11));
+  parts.push(textToHex("TOTAL: " + data.total.toFixed(2) + " " + data.currency + "\n"));
   parts.push(hexCmd(0x1D, 0x21, 0x00));
   parts.push(hexCmd(0x1B, 0x45, 0x00));
+  parts.push(hexCmd(0x1B, 0x61, 0x00));
 
   if (
     (data.loyaltyPointsEarned !== undefined && data.loyaltyPointsEarned > 0) ||
     (data.loyaltyPointsBalance !== undefined && data.loyaltyPointsBalance > 0)
   ) {
-    parts.push(textToHex("--------------------------------\n"));
+    parts.push(textToHex(SEP_SINGLE + "\n"));
     parts.push(hexCmd(0x1B, 0x45, 0x01));
     parts.push(textToHex("Fidelite / Points\n"));
     parts.push(hexCmd(0x1B, 0x45, 0x00));
     if (data.loyaltyPointsEarned !== undefined && data.loyaltyPointsEarned > 0) {
-      parts.push(textToHex(padRow("Points earned:", "+" + data.loyaltyPointsEarned) + "\n"));
+      parts.push(textToHex(padRow("Points gagnes:", "+" + data.loyaltyPointsEarned) + "\n"));
     }
     if (data.loyaltyPointsBalance !== undefined) {
-      parts.push(textToHex(padRow("Balance:", String(data.loyaltyPointsBalance)) + "\n"));
+      parts.push(textToHex(padRow("Solde:", String(data.loyaltyPointsBalance)) + "\n"));
     }
   }
 
-  parts.push(textToHex("================================\n"));
+  parts.push(textToHex(SEP_DOUBLE + "\n"));
   parts.push(hexCmd(0x1B, 0x61, 0x01));
-  parts.push(textToHex("Thank you / Merci\n"));
+  parts.push(textToHex("\n"));
+  parts.push(textToHex("Merci de votre visite!\n"));
   const now = new Date();
   parts.push(
     textToHex(
-      now.toLocaleDateString() +
+      now.toLocaleDateString("fr-FR") +
         " " +
-        now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) +
+        now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) +
         "\n"
     )
   );
-  parts.push(textToHex("\n\n\n"));
+  parts.push(textToHex("\n\n\n\n"));
 
   parts.push(hexCmd(0x1D, 0x56, 0x01));
 
   return parts.join("");
 }
 
-function padRow(label: string, value: string, width = 32): string {
-  const gap = width - label.length - value.length;
+function padRow(label: string, value: string): string {
+  const gap = LINE_WIDTH - label.length - value.length;
   if (gap > 0) {
     return label + " ".repeat(gap) + value;
   }
