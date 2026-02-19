@@ -2059,28 +2059,9 @@ export default function Planning() {
         }
       }}>
         <DialogContent 
-          className="w-[calc(100vw-24px)] max-w-[420px] max-h-[90vh] p-0 border-0 rounded-3xl overflow-hidden animate-fade-in-scale flex flex-col liquid-glass-modal" 
+          className="w-[calc(100vw-16px)] max-w-[400px] p-0 border-0 rounded-2xl overflow-hidden animate-fade-in-scale flex flex-col liquid-glass-modal" 
           dir={isRtl ? "rtl" : "ltr"}
         >
-          {/* iOS 26 Liquid Glass Header */}
-          <div className="liquid-glass-header px-5 py-4 relative overflow-hidden shrink-0">
-            <div className="liquid-glass-shimmer absolute inset-0" />
-            <div className="liquid-glass-reflection absolute inset-0" />
-            <DialogHeader className="relative z-10">
-              <DialogTitle className="text-lg font-semibold flex items-center gap-2 text-slate-800 dark:text-white">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-400 to-cyan-500 flex items-center justify-center shadow-lg">
-                  <Sparkles className="w-4 h-4 text-white" />
-                </div>
-                {editingAppointment ? t("planning.editBooking") : t("planning.newBooking")}
-              </DialogTitle>
-              {editingAppointment?.createdBy && (
-                <p className="text-xs text-slate-600 dark:text-white/70 mt-1">
-                  {t("planning.createdBy")}: <span className="font-medium text-slate-800 dark:text-white">{editingAppointment.createdBy}</span>
-                </p>
-              )}
-            </DialogHeader>
-          </div>
-          
           <Form {...form}>
             <form 
               onSubmit={form.handleSubmit(onSubmit)} 
@@ -2093,57 +2074,69 @@ export default function Planning() {
                   }
                 }
               }}
-              className="p-5 space-y-4 overflow-y-auto flex-1"
+              className="flex flex-col"
             >
-              
-              {/* Price Row - iOS 26 Liquid Glass Style */}
-              <div className="flex items-center gap-3 liquid-glass-field rounded-2xl p-4">
-                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/25">
-                  <CreditCard className="w-5 h-5 text-white" />
-                </div>
-                <div className="flex-1">
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    value={totalInputValue}
-                    onChange={(e) => {
-                      setTotalInputValue(e.target.value);
-                      form.setValue("total", parseFloat(e.target.value) || 0);
-                    }}
-                    placeholder="0"
-                    onClick={(e) => e.stopPropagation()}
-                    onFocus={(e) => e.target.select()}
-                    className="w-full text-2xl h-12 font-bold border border-white/30 dark:border-white/10 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-xl text-center shadow-inner focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 focus:outline-none transition-all"
-                    style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
-                  />
-                </div>
-                <span className="text-base font-bold text-emerald-600 dark:text-emerald-400">DH</span>
-                <FormField
-                  control={form.control}
-                  name="paid"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center gap-2 space-y-0 liquid-glass-chip rounded-xl px-3 py-2">
-                      <FormControl>
-                        <input
-                          type="checkbox"
-                          checked={field.value}
-                          onChange={field.onChange}
-                          className="w-4 h-4 accent-emerald-500 rounded"
-                        />
-                      </FormControl>
-                      <FormLabel className="!mt-0 text-xs font-medium">{t("common.paid")}</FormLabel>
-                    </FormItem>
+              {/* Header + Price merged row */}
+              <div className="liquid-glass-header px-3 py-2.5 relative overflow-hidden shrink-0">
+                <div className="liquid-glass-shimmer absolute inset-0" />
+                <div className="liquid-glass-reflection absolute inset-0" />
+                <div className="relative z-10 flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-400 to-cyan-500 flex items-center justify-center shadow-md shrink-0">
+                    <Sparkles className="w-3.5 h-3.5 text-white" />
+                  </div>
+                  <span className="text-sm font-semibold text-slate-800 dark:text-white truncate">
+                    {editingAppointment ? t("planning.editBooking") : t("planning.newBooking")}
+                  </span>
+                  {editingAppointment?.createdBy && (
+                    <span className="text-[10px] text-slate-500 dark:text-white/60 truncate">
+                      {editingAppointment.createdBy}
+                    </span>
                   )}
-                />
+                  <div className="flex items-center gap-1.5 ml-auto shrink-0">
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      value={totalInputValue}
+                      onChange={(e) => {
+                        setTotalInputValue(e.target.value);
+                        form.setValue("total", parseFloat(e.target.value) || 0);
+                      }}
+                      placeholder="0"
+                      onClick={(e) => e.stopPropagation()}
+                      onFocus={(e) => e.target.select()}
+                      className="w-20 h-9 text-lg font-bold border border-white/30 dark:border-white/10 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-lg text-center focus:ring-2 focus:ring-cyan-400/50 focus:outline-none"
+                      style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
+                    />
+                    <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">DH</span>
+                    <FormField
+                      control={form.control}
+                      name="paid"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center gap-1 space-y-0 px-2 py-1 rounded-lg bg-white/30 dark:bg-slate-800/30">
+                          <FormControl>
+                            <input
+                              type="checkbox"
+                              checked={field.value}
+                              onChange={field.onChange}
+                              className="w-3.5 h-3.5 accent-emerald-500 rounded"
+                            />
+                          </FormControl>
+                          <FormLabel className="!mt-0 text-[10px] font-medium">{t("common.paid")}</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
               </div>
-
-              {/* Compact Fields - Glass Style */}
-              <div className="grid grid-cols-3 gap-2.5">
+              
+              {/* Form body */}
+              <div className="px-3 py-2 space-y-2">
+                {/* Row 1: Client full width */}
                 <FormField
                   control={form.control}
                   name="client"
                   render={({ field }) => (
-                    <FormItem className="col-span-3 space-y-0">
+                    <FormItem className="space-y-0">
                       <Popover open={clientPopoverOpen} onOpenChange={setClientPopoverOpen}>
                         <PopoverTrigger asChild>
                           <FormControl>
@@ -2152,15 +2145,15 @@ export default function Planning() {
                               role="combobox"
                               aria-expanded={clientPopoverOpen}
                               className={cn(
-                                "w-full h-11 justify-between rounded-xl text-sm border-0 bg-secondary/50 hover:bg-secondary/70 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary/30 transition-all",
+                                "w-full h-9 justify-between rounded-lg text-xs border-0 bg-secondary/50 hover:bg-secondary/70 transition-all",
                                 !field.value && "text-muted-foreground"
                               )}
                             >
-                              <span className="flex items-center gap-2 truncate">
-                                <User className="w-4 h-4 shrink-0 opacity-50" />
+                              <span className="flex items-center gap-1.5 truncate">
+                                <User className="w-3.5 h-3.5 shrink-0 opacity-50" />
                                 {field.value || t("planning.client")}
                               </span>
-                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 opacity-50" />
                             </Button>
                           </FormControl>
                         </PopoverTrigger>
@@ -2178,63 +2171,36 @@ export default function Planning() {
                                       field.onChange(client.name);
                                       form.setValue("clientId" as any, client.id);
                                       setClientPopoverOpen(false);
-                                      
-                                      // Get current total for calculations
                                       let runningTotal = parseFloat(totalInputValue || "0");
-                                      
-                                      // Auto-apply loyalty points if client has usePoints enabled
                                       if (client.usePoints && client.loyaltyPoints > 0 && businessSettings?.loyaltyEnabled) {
                                         const pointsValue = businessSettings?.loyaltyPointsValue || 0.1;
                                         const maxDiscount = client.loyaltyPoints * pointsValue;
                                         const discountAmount = Math.min(maxDiscount, runningTotal);
                                         const pointsUsed = Math.ceil(discountAmount / pointsValue);
-                                        
                                         if (discountAmount > 0) {
-                                          setAppliedLoyaltyPoints({
-                                            clientId: client.id,
-                                            points: pointsUsed,
-                                            discountAmount
-                                          });
+                                          setAppliedLoyaltyPoints({ clientId: client.id, points: pointsUsed, discountAmount });
                                           runningTotal = Math.max(0, runningTotal - discountAmount);
                                           setTotalInputValue(String(runningTotal));
                                           form.setValue("total", runningTotal);
                                           toast({ title: t("clients.pointsApplied", "Loyalty points applied!") + ` -${discountAmount.toFixed(2)} DH` });
                                         }
-                                      } else {
-                                        setAppliedLoyaltyPoints(null);
-                                      }
-                                      
-                                      // Auto-apply gift card balance if client has useGiftCardBalance enabled
+                                      } else { setAppliedLoyaltyPoints(null); }
                                       if (client.useGiftCardBalance && client.giftCardBalance > 0) {
                                         const discountAmount = Math.min(client.giftCardBalance, runningTotal);
-                                        
                                         if (discountAmount > 0) {
-                                          setAppliedGiftCardBalance({
-                                            clientId: client.id,
-                                            amount: client.giftCardBalance,
-                                            discountAmount
-                                          });
+                                          setAppliedGiftCardBalance({ clientId: client.id, amount: client.giftCardBalance, discountAmount });
                                           runningTotal = Math.max(0, runningTotal - discountAmount);
                                           setTotalInputValue(String(runningTotal));
                                           form.setValue("total", runningTotal);
                                           toast({ title: t("giftCard.balanceApplied", "Gift card balance applied!") + ` -${discountAmount.toFixed(2)} DH` });
                                         }
-                                      } else {
-                                        setAppliedGiftCardBalance(null);
-                                      }
+                                      } else { setAppliedGiftCardBalance(null); }
                                     }}
                                   >
-                                    <Check
-                                      className={cn(
-                                        "mr-2 h-4 w-4",
-                                        field.value === client.name ? "opacity-100" : "opacity-0"
-                                      )}
-                                    />
+                                    <Check className={cn("mr-2 h-4 w-4", field.value === client.name ? "opacity-100" : "opacity-0")} />
                                     <div className="flex flex-col">
                                       <span>{client.name}</span>
-                                      {client.phone && (
-                                        <span className="text-xs text-muted-foreground">{client.phone}</span>
-                                      )}
+                                      {client.phone && <span className="text-xs text-muted-foreground">{client.phone}</span>}
                                     </div>
                                   </CommandItem>
                                 ))}
@@ -2247,177 +2213,124 @@ export default function Planning() {
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="staff"
-                  render={({ field }) => (
-                    <FormItem className="space-y-0">
-                      <Select onValueChange={field.onChange} value={field.value}>
+                {/* Row 2: Staff + Time + Duration in 3 cols */}
+                <div className="grid grid-cols-3 gap-1.5">
+                  <FormField
+                    control={form.control}
+                    name="staff"
+                    render={({ field }) => (
+                      <FormItem className="space-y-0">
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="h-9 rounded-lg text-[11px] border-0 bg-secondary/50">
+                              <SelectValue placeholder={t("planning.staff")} />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent className="rounded-xl glass-card shadow-xl">
+                            {staffList.map(s => (
+                              <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="startTime"
+                    render={({ field }) => (
+                      <FormItem className="space-y-0">
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="h-9 rounded-lg text-[11px] border-0 bg-secondary/50">
+                              <SelectValue placeholder={t("planning.time")} />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent className="max-h-60 rounded-xl glass-card shadow-xl">
+                            {hours.map(h => (
+                              <SelectItem key={h} value={h}>{h}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="duration"
+                    render={({ field }) => (
+                      <FormItem className="space-y-0">
                         <FormControl>
-                          <SelectTrigger className="h-11 rounded-xl text-xs border-0 bg-secondary/50">
-                            <SelectValue placeholder={t("planning.staff")} />
-                          </SelectTrigger>
+                          <Input type="number" inputMode="numeric" placeholder={t("common.duration")} className="h-9 rounded-lg text-[11px] border-0 bg-secondary/50" {...field} />
                         </FormControl>
-                        <SelectContent className="rounded-2xl glass-card shadow-xl">
-                          {staffList.map(s => (
-                            <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )}
-                />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
-                <FormField
-                  control={form.control}
-                  name="startTime"
-                  render={({ field }) => (
-                    <FormItem className="space-y-0">
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger className="h-11 rounded-xl text-xs border-0 bg-secondary/50">
-                            <SelectValue placeholder={t("planning.time")} />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="max-h-60 rounded-2xl glass-card shadow-xl">
-                          {hours.map(h => (
-                            <SelectItem key={h} value={h}>{h}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="duration"
-                  render={({ field }) => (
-                    <FormItem className="space-y-0">
-                      <FormControl>
-                        <Input type="number" inputMode="numeric" placeholder={t("common.duration")} className="h-11 rounded-xl text-xs border-0 bg-secondary/50" {...field} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                {/* Packages Section - Dropdown */}
+                {/* Packages - compact */}
                 {activePackages.length > 0 && (
-                  <div className="col-span-3 space-y-2">
-                    <Label className="flex items-center gap-2 text-xs font-medium">
-                      <Gift className="w-3.5 h-3.5 text-primary" />
-                      {t("booking.packages", { defaultValue: "Forfaits" })}
-                    </Label>
-                    <Select
-                      value={selectedPackage?.id?.toString() || ""}
-                      onValueChange={(value) => {
-                        if (value === "none") {
-                          handleClearPackage();
-                        } else {
-                          const pkg = activePackages.find(p => p.id.toString() === value);
-                          if (pkg) handleSelectPackage(pkg);
-                        }
-                      }}
-                    >
-                      <SelectTrigger className="w-full h-10 rounded-xl border-border/50 bg-background/50">
-                        <SelectValue placeholder={t("booking.selectPackage", { defaultValue: "Sélectionner un forfait" })} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">
-                          <span className="text-muted-foreground">{t("booking.noPackage", { defaultValue: "Aucun forfait" })}</span>
-                        </SelectItem>
-                        {activePackages.map(pkg => {
-                          const savings = pkg.originalPrice - pkg.discountedPrice;
-                          const savingsPercent = pkg.originalPrice > 0 ? Math.round((savings / pkg.originalPrice) * 100) : 0;
-                          return (
-                            <SelectItem key={pkg.id} value={pkg.id.toString()}>
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">{pkg.name}</span>
-                                <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 text-[10px] font-bold">
-                                  -{savingsPercent}%
-                                </span>
-                                <span className="text-primary font-bold">{pkg.discountedPrice} DH</span>
-                                <span className="text-xs text-muted-foreground line-through">{pkg.originalPrice}</span>
-                              </div>
-                            </SelectItem>
-                          );
-                        })}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <Select
+                    value={selectedPackage?.id?.toString() || ""}
+                    onValueChange={(value) => {
+                      if (value === "none") { handleClearPackage(); }
+                      else { const pkg = activePackages.find(p => p.id.toString() === value); if (pkg) handleSelectPackage(pkg); }
+                    }}
+                  >
+                    <SelectTrigger className="w-full h-9 rounded-lg text-[11px] border-0 bg-secondary/50">
+                      <span className="flex items-center gap-1.5"><Gift className="w-3 h-3 text-primary shrink-0" /><SelectValue placeholder={t("booking.selectPackage", { defaultValue: "Forfait" })} /></span>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none"><span className="text-muted-foreground">{t("booking.noPackage", { defaultValue: "Aucun" })}</span></SelectItem>
+                      {activePackages.map(pkg => {
+                        const savingsPercent = pkg.originalPrice > 0 ? Math.round(((pkg.originalPrice - pkg.discountedPrice) / pkg.originalPrice) * 100) : 0;
+                        return (
+                          <SelectItem key={pkg.id} value={pkg.id.toString()}>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{pkg.name}</span>
+                              <span className="text-[10px] font-bold text-emerald-600">-{savingsPercent}%</span>
+                              <span className="text-primary font-bold">{pkg.discountedPrice} DH</span>
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
                 )}
 
-                {/* Applied Gift Card Balance */}
-                {appliedGiftCardBalance && (
-                  <div className="col-span-3 space-y-2">
-                    <Label className="flex items-center gap-2 text-xs font-medium">
-                      <Gift className="w-3.5 h-3.5 text-green-500" />
-                      {t("giftCard.balanceDiscount", "Solde Carte Cadeau")}
-                    </Label>
-                    <div className="flex items-center justify-between p-3 bg-green-500/10 border border-green-500/30 rounded-xl">
-                      <div className="flex items-center gap-2">
-                        <Gift className="w-4 h-4 text-green-600" />
-                        <span className="font-medium text-sm">{Number(appliedGiftCardBalance.amount ?? 0).toFixed(2)} DH</span>
-                        <span className="text-green-600 font-bold">-{Number(appliedGiftCardBalance.discountAmount ?? 0).toFixed(2)} DH</span>
+                {/* Applied discounts - compact inline */}
+                {(appliedGiftCardBalance || appliedLoyaltyPoints) && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {appliedGiftCardBalance && (
+                      <div className="flex items-center gap-1.5 px-2 py-1 bg-green-500/10 border border-green-500/20 rounded-lg text-[11px]">
+                        <Gift className="w-3 h-3 text-green-600 shrink-0" />
+                        <span className="text-green-700 dark:text-green-400 font-semibold">-{Number(appliedGiftCardBalance.discountAmount ?? 0).toFixed(0)} DH</span>
+                        <button type="button" onClick={handleClearGiftCardBalance} className="w-4 h-4 rounded-full bg-destructive/20 flex items-center justify-center"><X className="w-2.5 h-2.5 text-destructive" /></button>
                       </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleClearGiftCardBalance}
-                        className="h-7 text-xs text-destructive hover:text-destructive"
-                      >
-                        <X className="w-3 h-3 mr-1" />
-                        {t("common.remove", "Retirer")}
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Applied Loyalty Points */}
-                {appliedLoyaltyPoints && (
-                  <div className="col-span-3 space-y-2">
-                    <Label className="flex items-center gap-2 text-xs font-medium">
-                      <Star className="w-3.5 h-3.5 text-yellow-500" />
-                      {t("clients.loyaltyPointsDiscount", "Points de fidélité")}
-                    </Label>
-                    <div className="flex items-center justify-between p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl">
-                      <div className="flex items-center gap-2">
-                        <Star className="w-4 h-4 text-yellow-600" />
-                        <span className="font-medium text-sm">{appliedLoyaltyPoints.points} {t("clients.points", "points")}</span>
-                        <span className="text-yellow-600 font-bold">-{Number(appliedLoyaltyPoints.discountAmount ?? 0).toFixed(2)} DH</span>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
+                    )}
+                    {appliedLoyaltyPoints && (
+                      <div className="flex items-center gap-1.5 px-2 py-1 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-[11px]">
+                        <Star className="w-3 h-3 text-yellow-600 shrink-0" />
+                        <span className="text-yellow-700 dark:text-yellow-400 font-semibold">-{Number(appliedLoyaltyPoints.discountAmount ?? 0).toFixed(0)} DH</span>
+                        <button type="button" onClick={() => {
                           const currentTotal = parseFloat(totalInputValue || "0");
                           const newTotal = currentTotal + appliedLoyaltyPoints.discountAmount;
                           setTotalInputValue(String(newTotal));
                           form.setValue("total", newTotal);
                           setAppliedLoyaltyPoints(null);
-                        }}
-                        className="h-7 text-xs text-destructive hover:text-destructive"
-                      >
-                        <X className="w-3 h-3 mr-1" />
-                        {t("common.remove", "Retirer")}
-                      </Button>
-                    </div>
+                        }} className="w-4 h-4 rounded-full bg-destructive/20 flex items-center justify-center"><X className="w-2.5 h-2.5 text-destructive" /></button>
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {/* Service - Multi-select with Pills */}
-                <div className="col-span-3 space-y-2">
-                  {/* Selected Services Pills */}
+                {/* Services section - compact */}
+                <div className="space-y-1.5">
                   {selectedServices.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 p-2 bg-secondary/30 rounded-xl">
+                    <div className="flex flex-wrap gap-1 p-1.5 bg-secondary/30 rounded-lg">
                       {selectedServices.map((s, index) => (
-                        <div
-                          key={s.id}
-                          className="flex items-center gap-1.5 px-2.5 py-1.5 bg-primary/10 dark:bg-primary/20 rounded-full text-xs"
-                        >
-                          <span className="font-medium">{s.name}</span>
+                        <div key={s.id} className="flex items-center gap-1 px-2 py-1 bg-primary/10 dark:bg-primary/20 rounded-full text-[11px]">
+                          <span className="font-medium truncate max-w-[80px]">{s.name}</span>
                           <input
                             type="number"
                             inputMode="decimal"
@@ -2425,15 +2338,10 @@ export default function Planning() {
                             defaultValue={s.price}
                             onClick={(e) => e.stopPropagation()}
                             onFocus={(e) => e.target.select()}
-                            className="w-20 h-7 px-2 text-sm text-center font-bold rounded-lg border-2 border-primary/50 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none"
+                            className="w-14 h-6 px-1 text-[11px] text-center font-bold rounded border border-primary/40 bg-white dark:bg-slate-800 focus:ring-1 focus:ring-primary focus:outline-none"
                             style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
                           />
-                          <span className="text-muted-foreground text-[10px]">DH</span>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveService(index)}
-                            className="w-4 h-4 rounded-full bg-destructive/20 hover:bg-destructive/40 flex items-center justify-center transition-colors"
-                          >
+                          <button type="button" onClick={() => handleRemoveService(index)} className="w-4 h-4 rounded-full bg-destructive/20 flex items-center justify-center">
                             <X className="w-2.5 h-2.5 text-destructive" />
                           </button>
                         </div>
@@ -2441,13 +2349,9 @@ export default function Planning() {
                     </div>
                   )}
                   
-                  {/* Summary Row */}
                   {selectedServices.length > 0 && (
-                    <div className="flex items-center justify-between px-3 py-2 bg-primary/5 dark:bg-primary/10 rounded-xl text-xs">
-                      <div className="flex items-center gap-3">
-                        <span className="text-muted-foreground">{selectedServices.length} {t("common.services")}</span>
-                        <span className="font-medium">{selectedServices.reduce((sum, s) => sum + s.duration, 0)}′</span>
-                      </div>
+                    <div className="flex items-center justify-between gap-2 px-2 py-1 bg-primary/5 dark:bg-primary/10 rounded-lg text-[11px]">
+                      <span className="text-muted-foreground">{selectedServices.length} {t("common.services")} / {selectedServices.reduce((sum, s) => sum + s.duration, 0)}min</span>
                       <span className="font-bold gradient-text">
                         {selectedServices.reduce((sum, s) => {
                           const inputVal = priceInputs[s.id];
@@ -2458,7 +2362,6 @@ export default function Planning() {
                     </div>
                   )}
 
-                  {/* Add Service Popover */}
                   <FormField
                     control={form.control}
                     name="service"
@@ -2467,67 +2370,50 @@ export default function Planning() {
                         <Popover open={servicePopoverOpen} onOpenChange={setServicePopoverOpen}>
                           <PopoverTrigger asChild>
                             <FormControl>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                className="h-11 w-full justify-between rounded-xl text-xs border-0 bg-secondary/50 hover:bg-secondary/70 transition-colors"
-                              >
-                                <span className="flex items-center gap-2">
-                                  <Plus className="w-4 h-4" />
-                                  {t("planning.addService")}
-                                </span>
-                                <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+                              <Button variant="outline" role="combobox" className="h-9 w-full justify-between rounded-lg text-[11px] border-0 bg-secondary/50 hover:bg-secondary/70 transition-colors">
+                                <span className="flex items-center gap-1.5"><Plus className="w-3.5 h-3.5" />{t("planning.addService")}</span>
+                                <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                               </Button>
                             </FormControl>
                           </PopoverTrigger>
                           <PopoverContent 
-                            className="w-[calc(100vw-48px)] max-w-[396px] p-0 rounded-2xl glass-card shadow-2xl" 
+                            className="w-[calc(100vw-48px)] max-w-[376px] p-0 rounded-xl glass-card shadow-2xl" 
                             align="center" 
                             side="top" 
                             sideOffset={4}
                             onWheel={(e) => e.stopPropagation()}
                           >
-                            <div className="p-3 border-b border-white/20 liquid-gradient-subtle rounded-t-2xl">
+                            <div className="p-2 border-b border-white/20 liquid-gradient-subtle rounded-t-xl">
                               <Input
                                 placeholder={t("planning.searchService")}
                                 value={serviceSearch}
                                 onChange={(e) => setServiceSearch(e.target.value)}
-                                className="h-10 text-sm rounded-xl border-0 bg-white/80 dark:bg-slate-800/80"
+                                className="h-9 text-sm rounded-lg border-0 bg-white/80 dark:bg-slate-800/80"
                               />
                             </div>
                             <div 
-                              className="max-h-[200px] overflow-y-auto p-2"
+                              className="max-h-[180px] overflow-y-auto p-1.5"
                               style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
-                              onWheel={(e) => {
-                                e.stopPropagation();
-                                const target = e.currentTarget;
-                                target.scrollTop += e.deltaY;
-                              }}
+                              onWheel={(e) => { e.stopPropagation(); e.currentTarget.scrollTop += e.deltaY; }}
                               onTouchMove={(e) => e.stopPropagation()}
                             >
                               {Object.entries(groupedServices).map(([category, categoryServices]) => (
                                 <div key={category}>
-                                  <div className="px-2 py-1.5 text-[10px] font-bold gradient-text uppercase glass-subtle rounded-lg mb-1 sticky top-0">
-                                    {category}
-                                  </div>
+                                  <div className="px-2 py-1 text-[10px] font-bold gradient-text uppercase glass-subtle rounded-md mb-0.5 sticky top-0">{category}</div>
                                   {categoryServices.map(s => (
                                     <div
                                       key={s.id}
                                       className={cn(
-                                        "flex items-center justify-between p-3 rounded-xl cursor-pointer text-sm mb-1 transition-all",
+                                        "flex items-center justify-between gap-2 px-2 py-2 rounded-lg cursor-pointer text-xs mb-0.5 transition-all",
                                         "hover:bg-primary/5 dark:hover:bg-primary/10",
                                         selectedServices.some(sel => sel.name === s.name) && "bg-primary/10 dark:bg-primary/20"
                                       )}
-                                      onClick={() => {
-                                        handleServiceChange(s.name);
-                                        setServiceSearch("");
-                                        setServicePopoverOpen(false);
-                                      }}
+                                      onClick={() => { handleServiceChange(s.name); setServiceSearch(""); setServicePopoverOpen(false); }}
                                     >
                                       <span className="truncate">{s.name}</span>
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-xs font-bold gradient-text">{s.isStartingPrice ? `${t("services.startingFrom")} ` : ''}{s.price} DH</span>
-                                        <Plus className="w-4 h-4 text-primary" />
+                                      <div className="flex items-center gap-1.5 shrink-0">
+                                        <span className="text-[11px] font-bold gradient-text">{s.isStartingPrice ? `${t("services.startingFrom")} ` : ''}{s.price} DH</span>
+                                        <Plus className="w-3.5 h-3.5 text-primary" />
                                       </div>
                                     </div>
                                   ))}
@@ -2541,9 +2427,9 @@ export default function Planning() {
                   />
                 </div>
 
-                {/* Quick Favorites - Glass Pills */}
+                {/* Quick Favorites - compact */}
                 {!editingAppointment && (
-                  <div className="col-span-3 flex items-center gap-1.5">
+                  <div className="flex items-center gap-1 flex-wrap">
                     {favoriteServices.slice(0, 4).map((s: any) => (
                       <Button
                         key={s.id}
@@ -2551,32 +2437,26 @@ export default function Planning() {
                         variant={form.watch("service") === s.name ? "default" : "outline"}
                         size="sm"
                         className={cn(
-                          "h-8 text-[10px] px-3 rounded-full font-medium transition-all whitespace-nowrap",
+                          "h-7 text-[10px] px-2.5 rounded-full font-medium whitespace-nowrap",
                           form.watch("service") === s.name 
-                            ? "liquid-gradient border-0 text-white shadow-md" 
-                            : "border-0 bg-secondary/50 hover:bg-secondary/70"
+                            ? "liquid-gradient border-0 text-white shadow-sm" 
+                            : "border-0 bg-secondary/50"
                         )}
                         onClick={() => handleServiceChange(s.name)}
                       >
                         {s.name}
                       </Button>
                     ))}
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0 rounded-full hover:bg-primary/10"
-                      onClick={() => setIsEditFavoritesOpen(!isEditFavoritesOpen)}
-                    >
-                      <Settings2 className="w-3.5 h-3.5" />
+                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={() => setIsEditFavoritesOpen(!isEditFavoritesOpen)}>
+                      <Settings2 className="w-3 h-3" />
                     </Button>
                   </div>
                 )}
                 
                 {isEditFavoritesOpen && (
-                  <div className="col-span-3 border border-dashed border-primary/30 rounded-xl p-2.5 glass-subtle">
-                    <ScrollArea className="h-[80px]">
-                      <div className="flex flex-wrap gap-1.5">
+                  <div className="border border-dashed border-primary/30 rounded-lg p-2 glass-subtle">
+                    <ScrollArea className="h-[60px]">
+                      <div className="flex flex-wrap gap-1">
                         {services.map((s) => (
                           <Button
                             key={s.id}
@@ -2584,7 +2464,7 @@ export default function Planning() {
                             variant={favoriteIds.includes(s.id) ? "default" : "outline"}
                             size="sm"
                             className={cn(
-                              "h-7 text-[9px] px-2.5 rounded-full transition-all",
+                              "h-6 text-[9px] px-2 rounded-full",
                               favoriteIds.includes(s.id) ? "liquid-gradient border-0 text-white" : "border-0 bg-white/50 dark:bg-slate-800/50"
                             )}
                             onClick={() => toggleFavorite(s.id)}
@@ -2598,13 +2478,14 @@ export default function Planning() {
                 )}
               </div>
 
-              {/* Action Buttons - Glass Style */}
-              <div className="flex gap-3 pt-3">
+              {/* Action Buttons - fixed bottom */}
+              <div className="flex gap-2 px-3 py-2 border-t border-white/10 shrink-0">
                 {editingAppointment && (
                   <Button
                     type="button"
                     variant="destructive"
-                    className="h-12 px-5 rounded-2xl font-semibold text-sm shadow-lg hover:shadow-xl transition-all"
+                    size="icon"
+                    className="h-10 w-10 rounded-xl shrink-0"
                     onClick={() => {
                       if (!canEdit) return;
                       if (confirm(t("planning.deleteConfirm"))) {
@@ -2618,10 +2499,10 @@ export default function Planning() {
                 )}
                 <Button 
                   type="submit" 
-                  className="flex-1 h-12 text-sm font-semibold rounded-2xl liquid-gradient shadow-lg hover:shadow-xl transition-all active:scale-[0.98]" 
+                  className="flex-1 h-10 text-sm font-semibold rounded-xl liquid-gradient shadow-md active:scale-[0.98]" 
                   disabled={!canEdit || createMutation.isPending || updateMutation.isPending}
                 >
-                  <Sparkles className="w-4 h-4 ml-2" />
+                  <Sparkles className="w-4 h-4 ml-1" />
                   {editingAppointment ? t("planning.updateBooking") : t("planning.confirmBooking")}
                 </Button>
               </div>
