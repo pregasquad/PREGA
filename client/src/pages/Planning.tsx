@@ -2081,7 +2081,7 @@ export default function Planning() {
                 <div className="liquid-glass-shimmer absolute inset-0" />
                 <div className="liquid-glass-reflection absolute inset-0" />
                 <div className="relative z-10 flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-400 to-cyan-500 flex items-center justify-center shadow-md shrink-0">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-pink-400 to-rose-400 flex items-center justify-center shadow-md shrink-0">
                     <Sparkles className="w-3.5 h-3.5 text-white" />
                   </div>
                   <span className="text-sm font-semibold text-slate-800 dark:text-white truncate">
@@ -2104,7 +2104,7 @@ export default function Planning() {
                       placeholder="0"
                       onClick={(e) => e.stopPropagation()}
                       onFocus={(e) => e.target.select()}
-                      className="w-20 h-9 text-lg font-bold border border-white/30 dark:border-white/10 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-lg text-center focus:ring-2 focus:ring-cyan-400/50 focus:outline-none"
+                      className="w-20 h-9 text-lg font-bold border border-white/30 dark:border-white/10 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-lg text-center focus:ring-2 focus:ring-pink-400/50 focus:outline-none"
                       style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
                     />
                     <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">DH</span>

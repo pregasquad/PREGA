@@ -21,49 +21,49 @@
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
   --font-display: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
 
-  /* iOS 26 Liquid Glass Theme - Light Mode */
-  --background: 210 40% 98%;
-  --foreground: 222 47% 11%;
+  /* iOS 26 Liquid Glass Theme - Light Mode (Baby Pink) */
+  --background: 340 30% 98%;
+  --foreground: 340 20% 12%;
   
   /* Card: Frosted glass effect base */
   --card: 0 0% 100%;
-  --card-foreground: 222 47% 11%;
+  --card-foreground: 340 20% 12%;
   
   /* Popover/Dropdown: Glass effect */
   --popover: 0 0% 100%;
-  --popover-foreground: 222 47% 11%;
+  --popover-foreground: 340 20% 12%;
   
-  /* Primary: iOS Cyan/Teal (Liquid Glass) */
-  --primary: 192 91% 48%;
+  /* Primary: Baby Pink (Liquid Glass) */
+  --primary: 340 82% 65%;
   --primary-foreground: 0 0% 100%;
   
-  /* Secondary: Cool Slate */
-  --secondary: 210 40% 96%;
-  --secondary-foreground: 222 47% 11%;
+  /* Secondary: Warm Rose */
+  --secondary: 340 25% 96%;
+  --secondary-foreground: 340 20% 12%;
   
-  --muted: 210 40% 96%;
-  --muted-foreground: 215 16% 47%;
+  --muted: 340 20% 96%;
+  --muted-foreground: 340 10% 47%;
   
-  /* Accent: Teal/Cyan highlight */
-  --accent: 192 91% 95%;
-  --accent-foreground: 192 91% 35%;
+  /* Accent: Soft Pink highlight */
+  --accent: 340 80% 95%;
+  --accent-foreground: 340 70% 45%;
   
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
   
-  --border: 214 32% 91%;
-  --input: 214 32% 91%;
-  --ring: 192 91% 48%;
+  --border: 340 20% 91%;
+  --input: 340 20% 91%;
+  --ring: 340 82% 65%;
   
-  /* Sidebar: Dark glass with blue tint */
-  --sidebar-background: 222 47% 11%;
-  --sidebar-foreground: 210 40% 98%;
-  --sidebar-primary: 192 91% 48%;
+  /* Sidebar: Dark glass with pink tint */
+  --sidebar-background: 340 25% 12%;
+  --sidebar-foreground: 340 20% 98%;
+  --sidebar-primary: 340 82% 65%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 217 33% 17%;
-  --sidebar-accent-foreground: 210 40% 98%;
-  --sidebar-border: 217 33% 17%;
-  --sidebar-ring: 192 91% 48%;
+  --sidebar-accent: 340 20% 18%;
+  --sidebar-accent-foreground: 340 20% 98%;
+  --sidebar-border: 340 20% 18%;
+  --sidebar-ring: 340 82% 65%;
   
   --radius: 1rem;
 
@@ -79,11 +79,11 @@
   --glass-specular: rgba(255, 255, 255, 0.4);
   --glass-refraction: rgba(255, 255, 255, 0.08);
   
-  /* iOS 26 Water Colors */
-  --water-cyan: 192 91% 48%;
-  --water-teal: 173 80% 40%;
-  --water-sky: 199 89% 48%;
-  --water-emerald: 160 84% 39%;
+  /* Baby Pink Water Colors */
+  --water-cyan: 340 82% 65%;
+  --water-teal: 330 70% 55%;
+  --water-sky: 350 75% 62%;
+  --water-emerald: 320 65% 58%;
 }
 
 .dark {
@@ -99,39 +99,39 @@
   --popover: 217 33% 10%;
   --popover-foreground: 210 40% 98%;
   
-  /* Primary: Cyan/Teal (Liquid Glass) */
-  --primary: 192 91% 50%;
+  /* Primary: Baby Pink (Liquid Glass) */
+  --primary: 340 82% 70%;
   --primary-foreground: 0 0% 100%;
   
-  --secondary: 217 33% 15%;
-  --secondary-foreground: 210 40% 98%;
+  --secondary: 340 15% 15%;
+  --secondary-foreground: 340 20% 98%;
   
-  --muted: 217 33% 15%;
-  --muted-foreground: 215 20% 65%;
+  --muted: 340 15% 15%;
+  --muted-foreground: 340 12% 65%;
   
-  --accent: 217 33% 18%;
-  --accent-foreground: 192 91% 70%;
+  --accent: 340 20% 18%;
+  --accent-foreground: 340 75% 75%;
   
   --destructive: 0 62% 50%;
   --destructive-foreground: 0 0% 100%;
   
-  --border: 217 33% 18%;
-  --input: 217 33% 18%;
-  --ring: 192 91% 50%;
+  --border: 340 15% 18%;
+  --input: 340 15% 18%;
+  --ring: 340 82% 70%;
   
-  /* Sidebar: Dark elegant with blue tint */
-  --sidebar-background: 222 47% 4%;
-  --sidebar-foreground: 210 40% 98%;
-  --sidebar-primary: 192 91% 50%;
+  /* Sidebar: Dark elegant with pink tint */
+  --sidebar-background: 340 20% 5%;
+  --sidebar-foreground: 340 20% 98%;
+  --sidebar-primary: 340 82% 70%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 217 33% 12%;
-  --sidebar-accent-foreground: 210 40% 98%;
-  --sidebar-border: 217 33% 15%;
-  --sidebar-ring: 192 91% 50%;
+  --sidebar-accent: 340 15% 12%;
+  --sidebar-accent-foreground: 340 20% 98%;
+  --sidebar-border: 340 15% 15%;
+  --sidebar-ring: 340 82% 70%;
 
   /* iOS 26 Dark Liquid Glass Variables */
-  --glass-bg: rgba(30, 41, 59, 0.25);
-  --glass-bg-solid: rgba(30, 41, 59, 0.9);
+  --glass-bg: rgba(45, 30, 38, 0.25);
+  --glass-bg-solid: rgba(45, 30, 38, 0.9);
   --glass-border: rgba(255, 255, 255, 0.12);
   --glass-border-highlight: rgba(255, 255, 255, 0.2);
   --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
@@ -139,11 +139,11 @@
   --glass-specular: rgba(255, 255, 255, 0.15);
   --glass-refraction: rgba(255, 255, 255, 0.03);
   
-  /* iOS 26 Water Colors - Dark Mode */
-  --water-cyan: 192 91% 50%;
-  --water-teal: 173 80% 45%;
-  --water-sky: 199 89% 50%;
-  --water-emerald: 160 84% 45%;
+  /* Baby Pink Water Colors - Dark Mode */
+  --water-cyan: 340 82% 70%;
+  --water-teal: 330 70% 60%;
+  --water-sky: 350 75% 65%;
+  --water-emerald: 320 65% 62%;
 }
 
 @layer base {
@@ -336,29 +336,29 @@
     inset 0 -1px 0 rgba(255, 255, 255, 0.05);
 }
 
-/* Liquid Glass Modal Header - Water effect */
+/* Liquid Glass Modal Header - Baby Pink effect */
 .liquid-glass-header {
   background: linear-gradient(
     135deg,
-    rgba(56, 189, 248, 0.15) 0%,
-    rgba(34, 211, 238, 0.1) 25%,
-    rgba(167, 243, 208, 0.1) 50%,
-    rgba(56, 189, 248, 0.08) 75%,
+    rgba(236, 142, 172, 0.18) 0%,
+    rgba(248, 180, 200, 0.12) 25%,
+    rgba(255, 200, 215, 0.1) 50%,
+    rgba(236, 142, 172, 0.08) 75%,
     rgba(255, 255, 255, 0.9) 100%
   );
-  border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+  border-bottom: 1px solid rgba(236, 142, 172, 0.25);
 }
 
 .dark .liquid-glass-header {
   background: linear-gradient(
     135deg,
-    rgba(56, 189, 248, 0.1) 0%,
-    rgba(34, 211, 238, 0.08) 25%,
-    rgba(20, 184, 166, 0.08) 50%,
-    rgba(56, 189, 248, 0.05) 75%,
-    rgba(30, 41, 59, 0.95) 100%
+    rgba(236, 142, 172, 0.12) 0%,
+    rgba(220, 120, 155, 0.08) 25%,
+    rgba(200, 100, 140, 0.08) 50%,
+    rgba(236, 142, 172, 0.05) 75%,
+    rgba(30, 20, 28, 0.95) 100%
   );
-  border-bottom: 1px solid rgba(56, 189, 248, 0.15);
+  border-bottom: 1px solid rgba(236, 142, 172, 0.2);
 }
 
 /* Liquid glass shimmer animation */
@@ -372,7 +372,7 @@
     120deg,
     transparent 0%,
     rgba(255, 255, 255, 0.4) 25%,
-    rgba(56, 189, 248, 0.2) 50%,
+    rgba(236, 142, 172, 0.2) 50%,
     rgba(255, 255, 255, 0.4) 75%,
     transparent 100%
   );
@@ -437,14 +437,14 @@
 .liquid-glass-button {
   background: linear-gradient(
     135deg,
-    rgba(56, 189, 248, 0.9) 0%,
-    rgba(34, 211, 238, 0.9) 100%
+    rgba(236, 142, 172, 0.9) 0%,
+    rgba(248, 180, 200, 0.9) 100%
   );
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.3);
   box-shadow: 
-    0 8px 24px rgba(56, 189, 248, 0.3),
+    0 8px 24px rgba(236, 142, 172, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.4);
   color: white;
   font-weight: 600;
@@ -454,7 +454,7 @@
 .liquid-glass-button:hover {
   transform: translateY(-2px);
   box-shadow: 
-    0 12px 32px rgba(56, 189, 248, 0.4),
+    0 12px 32px rgba(236, 142, 172, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
@@ -472,47 +472,47 @@
   border-top: 0.5px solid rgba(255, 255, 255, 0.1);
 }
 
-/* iOS 26 Water/Liquid Gradients */
+/* Baby Pink Liquid Gradients */
 .liquid-gradient {
   background: linear-gradient(135deg, 
-    hsl(192, 91%, 48%) 0%, 
-    hsl(173, 80%, 40%) 25%,
-    hsl(160, 84%, 39%) 50%,
-    hsl(192, 91%, 48%) 75%,
-    hsl(199, 89%, 48%) 100%
+    hsl(340, 82%, 65%) 0%, 
+    hsl(330, 70%, 58%) 25%,
+    hsl(350, 75%, 62%) 50%,
+    hsl(340, 82%, 65%) 75%,
+    hsl(320, 65%, 60%) 100%
   );
 }
 
 .liquid-gradient-subtle {
   background: linear-gradient(135deg, 
-    hsl(192, 91%, 97%) 0%, 
-    hsl(173, 80%, 97%) 50%,
-    hsl(199, 89%, 98%) 100%
+    hsl(340, 80%, 97%) 0%, 
+    hsl(330, 70%, 97%) 50%,
+    hsl(350, 75%, 98%) 100%
   );
 }
 
 .dark .liquid-gradient-subtle {
   background: linear-gradient(135deg, 
-    hsl(217, 33%, 15%) 0%, 
-    hsl(222, 47%, 12%) 50%,
-    hsl(217, 33%, 10%) 100%
+    hsl(340, 15%, 15%) 0%, 
+    hsl(340, 20%, 12%) 50%,
+    hsl(340, 15%, 10%) 100%
   );
 }
 
-/* Water shimmer gradient */
+/* Pink shimmer gradient */
 .water-gradient {
   background: linear-gradient(135deg, 
-    hsl(192, 91%, 48%) 0%, 
-    hsl(199, 89%, 48%) 50%,
-    hsl(173, 80%, 40%) 100%
+    hsl(340, 82%, 65%) 0%, 
+    hsl(350, 75%, 62%) 50%,
+    hsl(330, 70%, 58%) 100%
   );
 }
 
 /* Accent gradient for important elements */
 .accent-gradient {
   background: linear-gradient(135deg, 
-    hsl(192, 91%, 48%) 0%, 
-    hsl(160, 84%, 39%) 100%
+    hsl(340, 82%, 65%) 0%, 
+    hsl(330, 70%, 58%) 100%
   );
 }
 
@@ -802,7 +802,7 @@
 
 /* Gradient Text */
 .gradient-text {
-  background: linear-gradient(135deg, hsl(192, 91%, 48%), hsl(160, 84%, 39%));
+  background: linear-gradient(135deg, hsl(340, 82%, 65%), hsl(330, 70%, 55%));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
