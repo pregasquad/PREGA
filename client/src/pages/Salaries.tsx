@@ -19,6 +19,7 @@ import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, e
 import { ar, enUS, fr } from "date-fns/locale";
 import { apiRequest } from "@/lib/queryClient";
 import { useBusinessSettings } from "@/hooks/use-salon-data";
+import { connectQz, openCashDrawer } from "@/lib/qzPrint";
 import type { Staff, Service, Appointment, Charge, StaffDeduction, StaffPayment } from "@shared/schema";
 
 type PeriodType = "day" | "week" | "month" | "custom";
@@ -227,9 +228,13 @@ export default function Salaries() {
       const res = await apiRequest("POST", "/api/staff-payments", payment);
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ["/api/staff-payments"] });
       toast({ title: t("salaries.paymentRecorded") });
+      try {
+        await connectQz();
+        await openCashDrawer();
+      } catch {}
     },
   });
 
