@@ -360,13 +360,35 @@ function ensurePrintSocket(): Socket {
       printStationAvailable = available;
     });
     printSocket.on("connect", () => {
+      console.log("[print-relay] Socket connected:", printSocket?.id);
       if (stationRegistered && isQzConnected()) {
         printSocket!.emit("print:register");
         bindStationListeners();
       }
     });
+    printSocket.on("disconnect", () => {
+      console.log("[print-relay] Socket disconnected");
+      printStationAvailable = false;
+    });
   }
   return printSocket;
+}
+
+export function initPrintSocket(): void {
+  ensurePrintSocket();
+}
+
+function waitForSocketConnected(sock: Socket, timeoutMs: number): Promise<boolean> {
+  if (sock.connected) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    const timeout = setTimeout(() => {
+      resolve(false);
+    }, timeoutMs);
+    sock.once("connect", () => {
+      clearTimeout(timeout);
+      resolve(true);
+    });
+  });
 }
 
 function bindStationListeners(): void {
@@ -376,14 +398,17 @@ function bindStationListeners(): void {
   printSocket.off("print:execute-drawer");
 
   printSocket.on("print:execute-receipt", async (data: SilentPrintData) => {
+    console.log("[print-relay] Executing receipt print from relay");
     await silentPrint(data);
   });
 
   printSocket.on("print:execute-expense", async (data: ExpenseReceiptData) => {
+    console.log("[print-relay] Executing expense print from relay");
     await silentPrintExpense(data);
   });
 
   printSocket.on("print:execute-drawer", async () => {
+    console.log("[print-relay] Executing cash drawer from relay");
     await openCashDrawer();
   });
 }
@@ -393,6 +418,7 @@ export function registerAsPrintStation(): void {
   const sock = ensurePrintSocket();
   stationRegistered = true;
   sock.emit("print:register");
+  console.log("[print-relay] Registered as print station");
   bindStationListeners();
 }
 
@@ -406,39 +432,50 @@ export function unregisterPrintStation(): void {
 }
 
 export async function checkPrintStationAsync(): Promise<boolean> {
+  const sock = ensurePrintSocket();
+  const socketReady = await waitForSocketConnected(sock, 3000);
+  if (!socketReady) {
+    console.log("[print-relay] Socket connection timeout");
+    return false;
+  }
   return new Promise((resolve) => {
-    const sock = ensurePrintSocket();
     const timeout = setTimeout(() => {
+      console.log("[print-relay] Station check timeout");
       resolve(false);
-    }, 1000);
+    }, 2000);
     sock.emit("print:check-station");
     sock.once("print:station-status", (available: boolean) => {
       clearTimeout(timeout);
       printStationAvailable = available;
+      console.log("[print-relay] Station available:", available);
       resolve(available);
     });
   });
 }
 
-export function checkPrintStation(): void {
-  const sock = ensurePrintSocket();
-  sock.emit("print:check-station");
-}
-
 export async function remotePrint(data: SilentPrintData): Promise<boolean> {
   const sock = ensurePrintSocket();
+  const ready = await waitForSocketConnected(sock, 3000);
+  if (!ready) return false;
+  console.log("[print-relay] Sending remote receipt print");
   sock.emit("print:remote-receipt", data);
   return true;
 }
 
 export async function remotePrintExpense(data: ExpenseReceiptData): Promise<boolean> {
   const sock = ensurePrintSocket();
+  const ready = await waitForSocketConnected(sock, 3000);
+  if (!ready) return false;
+  console.log("[print-relay] Sending remote expense print");
   sock.emit("print:remote-expense", data);
   return true;
 }
 
 export async function remoteOpenDrawer(): Promise<boolean> {
   const sock = ensurePrintSocket();
+  const ready = await waitForSocketConnected(sock, 3000);
+  if (!ready) return false;
+  console.log("[print-relay] Sending remote drawer open");
   sock.emit("print:remote-drawer");
   return true;
 }

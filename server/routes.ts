@@ -99,29 +99,46 @@ export async function registerRoutes(
     });
 
     socket.on("print:remote-receipt", (data: any) => {
+      console.log("[print-relay] Remote receipt request from:", socket.id, "station:", printStationId);
       if (printStationId && printStationId !== socket.id) {
         io.to(printStationId).emit("print:execute-receipt", data);
+        console.log("[print-relay] Receipt relayed to station");
+      } else {
+        console.log("[print-relay] No station available for receipt relay");
       }
     });
 
     socket.on("print:remote-expense", (data: any) => {
+      console.log("[print-relay] Remote expense request from:", socket.id, "station:", printStationId);
       if (printStationId && printStationId !== socket.id) {
         io.to(printStationId).emit("print:execute-expense", data);
+        console.log("[print-relay] Expense relayed to station");
+      } else {
+        console.log("[print-relay] No station available for expense relay");
       }
     });
 
     let lastDrawerTime = 0;
     socket.on("print:remote-drawer", () => {
       const now = Date.now();
-      if (now - lastDrawerTime < 2000) return;
+      if (now - lastDrawerTime < 2000) {
+        console.log("[print-relay] Drawer rate-limited");
+        return;
+      }
       lastDrawerTime = now;
+      console.log("[print-relay] Remote drawer request from:", socket.id, "station:", printStationId);
       if (printStationId && printStationId !== socket.id) {
         io.to(printStationId).emit("print:execute-drawer");
+        console.log("[print-relay] Drawer command relayed to station");
+      } else {
+        console.log("[print-relay] No station available for drawer relay");
       }
     });
 
     socket.on("print:check-station", () => {
-      socket.emit("print:station-status", printStationId !== null && printStationId !== socket.id);
+      const available = printStationId !== null && printStationId !== socket.id;
+      console.log("[print-relay] Station check from:", socket.id, "available:", available, "stationId:", printStationId);
+      socket.emit("print:station-status", available);
     });
 
     // Handle booking page join

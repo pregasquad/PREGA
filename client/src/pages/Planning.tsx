@@ -1083,7 +1083,9 @@ export default function Planning() {
             appointmentId: result?.id,
             loyaltyPointsEarned: loyaltyPointsEarned > 0 ? loyaltyPointsEarned : undefined,
             loyaltyPointsBalance: loyaltyPointsBalance > 0 ? loyaltyPointsBalance : undefined,
-          }).catch(() => {});
+          }).catch((err) => {
+            console.error("[print-relay] autoPrint failed:", err);
+          });
         },
       });
       playSuccessSound();
