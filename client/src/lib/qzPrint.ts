@@ -222,7 +222,7 @@ function buildReceiptHex(data: SilentPrintData): string {
         "\n"
     )
   );
-  parts.push(textToHex("\n\n\n"));
+  parts.push(textToHex("\n\n\n\n\n\n"));
 
   parts.push(hexCmd(0x1D, 0x56, 0x01));
 
@@ -300,9 +300,8 @@ function buildExpenseReceiptHex(data: ExpenseReceiptData): string {
 
   parts.push(textToHex(SEP_DOUBLE + "\n"));
   parts.push(hexCmd(0x1B, 0x61, 0x01));
-  parts.push(textToHex("\n"));
   parts.push(textToHex(now.toLocaleDateString("fr-FR") + " " + timeStr + "\n"));
-  parts.push(textToHex("\n\n\n\n"));
+  parts.push(textToHex("\n\n\n\n\n\n"));
 
   parts.push(hexCmd(0x1D, 0x56, 0x01));
 
