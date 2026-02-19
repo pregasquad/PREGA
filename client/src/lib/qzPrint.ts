@@ -1,11 +1,19 @@
 import qz from "qz-tray";
+import { io, Socket } from "socket.io-client";
 
 let connected = false;
 let printerName: string | null = null;
 let setupDone = false;
+let printSocket: Socket | null = null;
+let printStationAvailable = false;
+let stationRegistered = false;
 
 export function isQzConnected(): boolean {
   return connected && printerName !== null && qz.websocket.isActive();
+}
+
+export function isPrintStationAvailable(): boolean {
+  return printStationAvailable;
 }
 
 export function getSelectedPrinter(): string | null {
@@ -61,6 +69,10 @@ export async function connectQz(): Promise<boolean> {
       printerName = saved;
     } else {
       await autoSelectPrinter();
+    }
+
+    if (isQzConnected()) {
+      registerAsPrintStation();
     }
     return true;
   } catch {
@@ -337,4 +349,96 @@ export async function openCashDrawer(): Promise<boolean> {
   } finally {
     setTimeout(() => { drawerInFlight = false; }, 2000);
   }
+}
+
+function ensurePrintSocket(): Socket {
+  if (!printSocket) {
+    printSocket = io(window.location.origin, {
+      transports: ["websocket", "polling"],
+    });
+    printSocket.on("print:station-status", (available: boolean) => {
+      printStationAvailable = available;
+    });
+    printSocket.on("connect", () => {
+      if (stationRegistered && isQzConnected()) {
+        printSocket!.emit("print:register");
+        bindStationListeners();
+      }
+    });
+  }
+  return printSocket;
+}
+
+function bindStationListeners(): void {
+  if (!printSocket) return;
+  printSocket.off("print:execute-receipt");
+  printSocket.off("print:execute-expense");
+  printSocket.off("print:execute-drawer");
+
+  printSocket.on("print:execute-receipt", async (data: SilentPrintData) => {
+    await silentPrint(data);
+  });
+
+  printSocket.on("print:execute-expense", async (data: ExpenseReceiptData) => {
+    await silentPrintExpense(data);
+  });
+
+  printSocket.on("print:execute-drawer", async () => {
+    await openCashDrawer();
+  });
+}
+
+export function registerAsPrintStation(): void {
+  if (stationRegistered) return;
+  const sock = ensurePrintSocket();
+  stationRegistered = true;
+  sock.emit("print:register");
+  bindStationListeners();
+}
+
+export function unregisterPrintStation(): void {
+  if (!stationRegistered || !printSocket) return;
+  stationRegistered = false;
+  printSocket.emit("print:unregister");
+  printSocket.off("print:execute-receipt");
+  printSocket.off("print:execute-expense");
+  printSocket.off("print:execute-drawer");
+}
+
+export async function checkPrintStationAsync(): Promise<boolean> {
+  return new Promise((resolve) => {
+    const sock = ensurePrintSocket();
+    const timeout = setTimeout(() => {
+      resolve(false);
+    }, 1000);
+    sock.emit("print:check-station");
+    sock.once("print:station-status", (available: boolean) => {
+      clearTimeout(timeout);
+      printStationAvailable = available;
+      resolve(available);
+    });
+  });
+}
+
+export function checkPrintStation(): void {
+  const sock = ensurePrintSocket();
+  sock.emit("print:check-station");
+}
+
+export async function remotePrint(data: SilentPrintData): Promise<boolean> {
+  const sock = ensurePrintSocket();
+  sock.emit("print:remote-receipt", data);
+  return true;
+}
+
+export async function remotePrintExpense(data: ExpenseReceiptData): Promise<boolean> {
+  const sock = ensurePrintSocket();
+  sock.emit("print:remote-expense", data);
+  return true;
+}
+
+export async function remoteOpenDrawer(): Promise<boolean> {
+  const sock = ensurePrintSocket();
+  sock.emit("print:remote-drawer");
+  return true;
 }

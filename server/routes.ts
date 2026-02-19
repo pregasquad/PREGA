@@ -79,9 +79,50 @@ export async function registerRoutes(
 
   // Track active booking page viewers
   const bookingPageViewers = new Set<string>();
+  // Track print station (POS computer with QZ Tray)
+  let printStationId: string | null = null;
 
   io.on("connection", (socket) => {
     console.log("Client connected:", socket.id);
+
+    socket.on("print:register", () => {
+      printStationId = socket.id;
+      console.log("Print station registered:", socket.id);
+      io.emit("print:station-status", true);
+    });
+
+    socket.on("print:unregister", () => {
+      if (printStationId === socket.id) {
+        printStationId = null;
+        io.emit("print:station-status", false);
+      }
+    });
+
+    socket.on("print:remote-receipt", (data: any) => {
+      if (printStationId && printStationId !== socket.id) {
+        io.to(printStationId).emit("print:execute-receipt", data);
+      }
+    });
+
+    socket.on("print:remote-expense", (data: any) => {
+      if (printStationId && printStationId !== socket.id) {
+        io.to(printStationId).emit("print:execute-expense", data);
+      }
+    });
+
+    let lastDrawerTime = 0;
+    socket.on("print:remote-drawer", () => {
+      const now = Date.now();
+      if (now - lastDrawerTime < 2000) return;
+      lastDrawerTime = now;
+      if (printStationId && printStationId !== socket.id) {
+        io.to(printStationId).emit("print:execute-drawer");
+      }
+    });
+
+    socket.on("print:check-station", () => {
+      socket.emit("print:station-status", printStationId !== null && printStationId !== socket.id);
+    });
 
     // Handle booking page join
     socket.on("booking:join", () => {
@@ -97,7 +138,10 @@ export async function registerRoutes(
 
     socket.on("disconnect", () => {
       console.log("Client disconnected:", socket.id);
-      // Remove from booking viewers if they were viewing
+      if (printStationId === socket.id) {
+        printStationId = null;
+        io.emit("print:station-status", false);
+      }
       if (bookingPageViewers.has(socket.id)) {
         bookingPageViewers.delete(socket.id);
         io.emit("booking:viewers", bookingPageViewers.size);

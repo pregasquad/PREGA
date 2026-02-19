@@ -19,7 +19,7 @@ import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, e
 import { ar, enUS, fr } from "date-fns/locale";
 import { apiRequest } from "@/lib/queryClient";
 import { useBusinessSettings } from "@/hooks/use-salon-data";
-import { connectQz, openCashDrawer } from "@/lib/qzPrint";
+import { connectQz, openCashDrawer, isQzConnected, checkPrintStationAsync, remoteOpenDrawer } from "@/lib/qzPrint";
 import type { Staff, Service, Appointment, Charge, StaffDeduction, StaffPayment } from "@shared/schema";
 
 type PeriodType = "day" | "week" | "month" | "custom";
@@ -233,8 +233,15 @@ export default function Salaries() {
       toast({ title: t("salaries.paymentRecorded") });
       try {
         await connectQz();
-        await openCashDrawer();
+        if (isQzConnected()) {
+          await openCashDrawer();
+          return;
+        }
       } catch {}
+      const available = await checkPrintStationAsync();
+      if (available) {
+        await remoteOpenDrawer();
+      }
     },
   });
 

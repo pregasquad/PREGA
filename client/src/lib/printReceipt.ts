@@ -1,4 +1,4 @@
-import { isQzConnected, silentPrint, silentPrintExpense } from "./qzPrint";
+import { isQzConnected, silentPrint, silentPrintExpense, remotePrint, remotePrintExpense, checkPrintStationAsync } from "./qzPrint";
 
 export interface ReceiptData {
   businessName: string;
@@ -19,6 +19,11 @@ export interface ReceiptData {
 export async function autoPrint(data: ReceiptData): Promise<void> {
   if (isQzConnected()) {
     await silentPrint(data);
+    return;
+  }
+  const stationAvailable = await checkPrintStationAsync();
+  if (stationAvailable) {
+    await remotePrint(data);
     return;
   }
   browserPrint(data);
@@ -213,6 +218,11 @@ export interface ExpenseReceiptData {
 export async function autoPrintExpense(data: ExpenseReceiptData): Promise<void> {
   if (isQzConnected()) {
     await silentPrintExpense(data);
+    return;
+  }
+  const stationAvailable = await checkPrintStationAsync();
+  if (stationAvailable) {
+    await remotePrintExpense(data);
     return;
   }
   browserPrintExpense(data);

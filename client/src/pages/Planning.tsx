@@ -27,7 +27,7 @@ import { insertAppointmentSchema, insertStaffSchema } from "@shared/schema";
 import { SHORTCUT_OPTIONS, DEFAULT_SHORTCUTS } from "@/lib/shortcuts";
 import { useToast } from "@/hooks/use-toast";
 import { autoPrint } from "@/lib/printReceipt";
-import { connectQz, openCashDrawer } from "@/lib/qzPrint";
+import { connectQz, openCashDrawer, isQzConnected, checkPrintStationAsync, remoteOpenDrawer } from "@/lib/qzPrint";
 
 const DEFAULT_HOURS = [
   "10:00","10:30","11:00","11:30","12:00","12:30",
@@ -1541,8 +1541,15 @@ export default function Planning() {
               onClick={async () => {
                 try {
                   await connectQz();
-                  await openCashDrawer();
+                  if (isQzConnected()) {
+                    await openCashDrawer();
+                    return;
+                  }
                 } catch {}
+                const available = await checkPrintStationAsync();
+                if (available) {
+                  await remoteOpenDrawer();
+                }
               }}
               data-testid="button-open-cash-drawer"
             >

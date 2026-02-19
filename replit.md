@@ -36,6 +36,9 @@ Beauty Salon Appointment Management System built with React + Express + PostgreS
 ## Receipt Printing Architecture
 - **QZ Tray integration** (`client/src/lib/qzPrint.ts`): Silent printing via QZ Tray desktop app with ESC/POS commands, auto cash drawer kick, auto-selects default printer on first connection
 - **Fully automatic print** (`client/src/lib/printReceipt.ts`): `autoPrint()` sends receipt directly to thermal printer via QZ Tray - no popup windows, no print dialogs, completely silent
+- **Remote print relay**: Socket.IO relay allows phone/tablet clients to print and open cash drawer through POS computer. POS auto-registers as print station when QZ connects; remote clients use `checkPrintStationAsync()` → `remotePrint()`/`remoteOpenDrawer()` fallback chain
+- **Print fallback chain**: Local QZ Tray → Remote relay via Socket.IO → Browser print dialog
+- **Cash drawer debounce**: 2s in-flight guard on local `openCashDrawer()` + 2s server-side rate limit on remote drawer commands; single drawer kick per receipt (pin 0 only)
 - **QZ Tray requirement**: Users must install free QZ Tray desktop app (qz.io) on their POS computer for fully automatic silent printing + cash drawer
 
 ## Recent Changes
