@@ -19,9 +19,9 @@ export function OfflineIndicator() {
         !isOnline
           ? 'bg-sky-500/90 text-white backdrop-blur-sm'
           : syncStatus === 'syncing'
-          ? 'bg-blue-500/90 text-white backdrop-blur-sm'
+          ? 'bg-pink-500/90 text-white backdrop-blur-sm'
           : pendingCount > 0
-          ? 'bg-cyan-500/90 text-white backdrop-blur-sm'
+          ? 'bg-pink-400/90 text-white backdrop-blur-sm'
           : 'bg-green-500/90 text-white backdrop-blur-sm'
       )}
     >

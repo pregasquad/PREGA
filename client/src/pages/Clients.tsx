@@ -366,7 +366,7 @@ export default function Clients() {
     if (points >= 1000) return { name: t("clients.vip"), color: "bg-yellow-500", icon: Crown };
     if (points >= 500) return { name: t("clients.gold"), color: "bg-sky-500", icon: Award };
     if (points >= 100) return { name: t("clients.silver"), color: "bg-gray-400", icon: Star };
-    return { name: t("clients.bronze"), color: "bg-cyan-600", icon: Star };
+    return { name: t("clients.bronze"), color: "bg-pink-600", icon: Star };
   };
 
   const filteredClients = clients.filter(
@@ -474,8 +474,8 @@ export default function Clients() {
         <Card>
           <CardContent className="p-3 md:pt-6 md:px-6">
             <div className="flex items-center gap-2 md:gap-3">
-              <div className="p-1.5 md:p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
-                <User className="w-4 h-4 md:w-5 md:h-5 text-cyan-600" />
+              <div className="p-1.5 md:p-2 bg-pink-100 dark:bg-pink-900/30 rounded-lg">
+                <User className="w-4 h-4 md:w-5 md:h-5 text-pink-600" />
               </div>
               <div>
                 <p className="text-xs md:text-sm text-muted-foreground">{t("clients.title")}</p>
@@ -517,8 +517,8 @@ export default function Clients() {
         <Card>
           <CardContent className="p-3 md:pt-6 md:px-6">
             <div className="flex items-center gap-2 md:gap-3">
-              <div className="p-1.5 md:p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
-                <CalendarIcon className="w-4 h-4 md:w-5 md:h-5 text-cyan-600" />
+              <div className="p-1.5 md:p-2 bg-pink-100 dark:bg-pink-900/30 rounded-lg">
+                <CalendarIcon className="w-4 h-4 md:w-5 md:h-5 text-pink-600" />
               </div>
               <div>
                 <p className="text-xs md:text-sm text-muted-foreground">{t("clients.totalAppointments")}</p>

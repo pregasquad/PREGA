@@ -939,8 +939,8 @@ export default function LoyaltyRewards() {
             <Card className="glass-card">
               <CardContent className="pt-6">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-full bg-cyan-500/10">
-                    <Star className="w-6 h-6 text-cyan-500" />
+                  <div className="p-3 rounded-full bg-pink-500/10">
+                    <Star className="w-6 h-6 text-pink-500" />
                   </div>
                   <div>
                     <p className="text-2xl font-bold">{totalPointsAwarded}</p>
@@ -1071,7 +1071,7 @@ export default function LoyaltyRewards() {
                             "w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm",
                             index === 0 && "bg-yellow-500/20 text-yellow-600",
                             index === 1 && "bg-gray-400/20 text-gray-600",
-                            index === 2 && "bg-teal-500/20 text-teal-600",
+                            index === 2 && "bg-pink-500/20 text-pink-600",
                             index > 2 && "bg-muted text-muted-foreground"
                           )}
                         >

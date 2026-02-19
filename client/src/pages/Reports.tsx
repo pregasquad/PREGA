@@ -459,7 +459,7 @@ export default function Reports() {
           <CardContent className="p-3 md:p-4">
             <div className="flex items-center justify-between gap-1">
               <p className="text-xs text-muted-foreground font-medium">{t("reports.netProfit")}</p>
-              <TrendingUp className="w-4 h-4 text-cyan-500 shrink-0" />
+              <TrendingUp className="w-4 h-4 text-pink-500 shrink-0" />
             </div>
             <p className={`text-lg md:text-2xl font-bold mt-1 ${stats.netProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`} data-testid="text-net-profit">
               {formatCurrency(stats.netProfit)} DH

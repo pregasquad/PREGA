@@ -1637,7 +1637,7 @@ export default function Planning() {
                       <span className={cn(
                         "px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0",
                         entry.status === "waiting" && "bg-sky-100 text-sky-700",
-                        entry.status === "notified" && "bg-blue-100 text-blue-700",
+                        entry.status === "notified" && "bg-pink-100 text-pink-700",
                         entry.status === "booked" && "bg-green-100 text-green-700",
                         entry.status === "expired" && "bg-gray-100 text-gray-500"
                       )}>

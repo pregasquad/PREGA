@@ -700,8 +700,8 @@ export default function Salaries() {
         <Card className="glass-card" data-testid="stat-appointments">
           <CardContent className="p-3">
             <div className="flex items-center gap-2 mb-1.5">
-              <div className="w-7 h-7 rounded-lg bg-blue-500/15 flex items-center justify-center">
-                <CalendarIcon className="h-3.5 w-3.5 text-blue-600" />
+              <div className="w-7 h-7 rounded-lg bg-pink-500/15 flex items-center justify-center">
+                <CalendarIcon className="h-3.5 w-3.5 text-pink-600" />
               </div>
               <p className="text-xs text-muted-foreground">{t("salaries.appointmentsCount")}</p>
             </div>
@@ -1044,7 +1044,7 @@ export default function Salaries() {
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     <Button variant="ghost" size="icon" onClick={() => setEditingCharge(charge)} data-testid={`button-edit-expense-${charge.id}`}>
-                      <Pencil className="h-4 w-4 text-blue-600" />
+                      <Pencil className="h-4 w-4 text-pink-600" />
                     </Button>
                     <Button variant="ghost" size="icon" onClick={() => deleteChargeMutation.mutate(charge.id)} data-testid={`button-delete-expense-${charge.id}`}>
                       <Trash2 className="h-4 w-4 text-destructive" />
@@ -1190,7 +1190,7 @@ export default function Salaries() {
                       </Button>
                     )}
                     <Button variant="ghost" size="icon" onClick={() => setEditingDeduction(deduction)} data-testid={`button-edit-deduction-${deduction.id}`}>
-                      <Pencil className="h-4 w-4 text-blue-600" />
+                      <Pencil className="h-4 w-4 text-pink-600" />
                     </Button>
                     <Button variant="ghost" size="icon" onClick={() => deleteDeductionMutation.mutate(deduction.id)} data-testid={`button-delete-deduction-${deduction.id}`}>
                       <Trash2 className="h-4 w-4 text-destructive" />

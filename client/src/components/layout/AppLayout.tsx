@@ -20,7 +20,7 @@ function MobileBusinessName() {
       data-testid="link-home-logo"
     >
       <img src="/logo.png" alt={businessName} className="w-8 h-8 rounded-full object-cover" />
-      <span className="text-sm font-bold text-cyan-500">{businessName}</span>
+      <span className="text-sm font-bold text-pink-500">{businessName}</span>
     </div>
   );
 }

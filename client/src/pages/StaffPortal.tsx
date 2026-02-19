@@ -318,16 +318,16 @@ export default function StaffPortal() {
               </Card>
               <Card>
                 <CardContent className="p-3 text-center">
-                  <TrendingUp className="w-5 h-5 mx-auto text-cyan-600 mb-1" />
+                  <TrendingUp className="w-5 h-5 mx-auto text-pink-600 mb-1" />
                   <p className="text-xs text-muted-foreground">{t("staffPortal.commission")}</p>
-                  <p className="text-lg font-bold text-cyan-600" data-testid="text-total-commission">
+                  <p className="text-lg font-bold text-pink-600" data-testid="text-total-commission">
                     {formatCurrency(earnings?.totalCommission ?? 0)} DH
                   </p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-3 text-center">
-                  <Calendar className="w-5 h-5 mx-auto text-blue-600 mb-1" />
+                  <Calendar className="w-5 h-5 mx-auto text-pink-600 mb-1" />
                   <p className="text-xs text-muted-foreground">{t("staffPortal.appointments")}</p>
                   <p className="text-lg font-bold" data-testid="text-total-appointments">
                     {earnings?.totalAppointments ?? 0}
@@ -429,7 +429,7 @@ export default function StaffPortal() {
                           </div>
                           <div className="text-right shrink-0">
                             <p className="text-sm text-green-600">{formatCurrency(svc.revenue)} DH</p>
-                            <p className="text-xs text-cyan-600">{formatCurrency(svc.commission)} DH {t("staffPortal.commission")}</p>
+                            <p className="text-xs text-pink-600">{formatCurrency(svc.commission)} DH {t("staffPortal.commission")}</p>
                           </div>
                         </div>
                       ))}

@@ -449,7 +449,7 @@ export default function MyBookings() {
                                   {t("myBookings.awaitingAssignment", { defaultValue: "En attente" })}
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center gap-1 text-xs text-blue-600">
+                                <span className="inline-flex items-center gap-1 text-xs text-pink-600">
                                   <Clock className="w-3 h-3" />
                                   {t("myBookings.pending", { defaultValue: "En cours" })}
                                 </span>
