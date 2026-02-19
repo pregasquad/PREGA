@@ -717,7 +717,8 @@
     "viewReports": "عرض التقارير",
     "adminSettings": "إعدادات المدير",
     "exportData": "تصدير البيانات",
-    "editPastAppointments": "تعديل المواعيد السابقة/بعد ساعات العمل"
+    "editPastAppointments": "تعديل المواعيد السابقة/بعد ساعات العمل",
+    "openCashDrawer": "فتح درج النقود"
   },
   "days": {
     "sunday": "الأحد",

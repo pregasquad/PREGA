@@ -98,6 +98,7 @@ const ALL_PERMISSIONS = [
   { key: "admin_settings", labelKey: "permissions.adminSettings", icon: "Settings" },
   { key: "export_data", labelKey: "permissions.exportData", icon: "Download" },
   { key: "edit_past_appointments", labelKey: "permissions.editPastAppointments", icon: "Lock" },
+  { key: "open_cash_drawer", labelKey: "permissions.openCashDrawer", icon: "Wallet" },
 ];
 
 const DAYS_OF_WEEK = [

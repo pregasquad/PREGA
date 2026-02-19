@@ -752,7 +752,8 @@
     "viewReports": "View Reports",
     "adminSettings": "Admin Settings",
     "exportData": "Export Data",
-    "editPastAppointments": "Edit Past/After-Hours Appointments"
+    "editPastAppointments": "Edit Past/After-Hours Appointments",
+    "openCashDrawer": "Open Cash Drawer"
   },
   "days": {
     "sunday": "Sunday",

@@ -752,7 +752,8 @@
     "viewReports": "Voir Rapports",
     "adminSettings": "Paramètres Admin",
     "exportData": "Exporter Données",
-    "editPastAppointments": "Modifier Rendez-vous Passés/Hors Horaires"
+    "editPastAppointments": "Modifier Rendez-vous Passés/Hors Horaires",
+    "openCashDrawer": "Ouvrir Tiroir-Caisse"
   },
   "days": {
     "sunday": "Dimanche",

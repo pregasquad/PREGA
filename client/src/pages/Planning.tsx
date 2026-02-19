@@ -27,6 +27,7 @@ import { insertAppointmentSchema, insertStaffSchema } from "@shared/schema";
 import { SHORTCUT_OPTIONS, DEFAULT_SHORTCUTS } from "@/lib/shortcuts";
 import { useToast } from "@/hooks/use-toast";
 import { autoPrint } from "@/lib/printReceipt";
+import { connectQz, openCashDrawer } from "@/lib/qzPrint";
 
 const DEFAULT_HOURS = [
   "10:00","10:30","11:00","11:30","12:00","12:30",
@@ -1530,6 +1531,23 @@ export default function Planning() {
 
           {isNonWorkingDay && (
             <AlertCircle className="w-4 h-4 md:w-5 md:h-5 text-sky-500 shrink-0" />
+          )}
+
+          {hasPermission("open_cash_drawer") && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 md:h-9 md:w-9 rounded-full p-0"
+              onClick={async () => {
+                try {
+                  await connectQz();
+                  await openCashDrawer();
+                } catch {}
+              }}
+              data-testid="button-open-cash-drawer"
+            >
+              <Wallet className="w-4 h-4 md:w-5 md:h-5" />
+            </Button>
           )}
 
           {/* Search */}
