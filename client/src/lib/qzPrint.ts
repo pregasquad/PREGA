@@ -146,6 +146,8 @@ function buildReceiptHex(data: SilentPrintData): string {
 
   parts.push(hexCmd(0x1B, 0x40));
 
+  parts.push(hexCmd(0x1B, 0x33, 0x16));
+
   parts.push(hexCmd(0x1B, 0x70, 0x00, 0x19, 0xFA));
   parts.push(hexCmd(0x1B, 0x70, 0x01, 0x19, 0xFA));
 
@@ -208,8 +210,9 @@ function buildReceiptHex(data: SilentPrintData): string {
 
   parts.push(textToHex(SEP_DOUBLE + "\n"));
   parts.push(hexCmd(0x1B, 0x61, 0x01));
-  parts.push(textToHex("\n"));
   parts.push(textToHex("Merci de votre visite!\n"));
+  parts.push(textToHex("Tel: 0635198816\n"));
+  parts.push(textToHex("IG: @pregasquad.women\n"));
   const now = new Date();
   parts.push(
     textToHex(
@@ -219,7 +222,7 @@ function buildReceiptHex(data: SilentPrintData): string {
         "\n"
     )
   );
-  parts.push(textToHex("\n\n\n\n"));
+  parts.push(textToHex("\n\n\n"));
 
   parts.push(hexCmd(0x1D, 0x56, 0x01));
 
@@ -261,6 +264,8 @@ function buildExpenseReceiptHex(data: ExpenseReceiptData): string {
   const parts: string[] = [];
 
   parts.push(hexCmd(0x1B, 0x40));
+
+  parts.push(hexCmd(0x1B, 0x33, 0x16));
 
   parts.push(hexCmd(0x1B, 0x61, 0x01));
   parts.push(hexCmd(0x1D, 0x21, 0x11));

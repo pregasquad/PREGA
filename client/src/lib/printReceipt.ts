@@ -71,11 +71,11 @@ function browserPrint(data: ReceiptData): void {
   body {
     font-family: 'Courier New', 'Lucida Console', monospace;
     font-size: 13px;
-    line-height: 1.4;
+    line-height: 1.2;
     width: 72mm;
     max-width: 72mm;
     margin: 0 auto;
-    padding: 3mm 0;
+    padding: 2mm 0;
     color: #000;
     background: #fff;
   }
@@ -84,21 +84,21 @@ function browserPrint(data: ReceiptData): void {
     font-size: 20px;
     font-weight: bold;
     letter-spacing: 1px;
-    padding: 2mm 0;
+    padding: 1mm 0;
   }
   .sep-double {
     border-top: 3px double #000;
-    margin: 2mm 0;
+    margin: 1mm 0;
   }
   .sep-single {
     border-top: 1px dashed #000;
-    margin: 2mm 0;
+    margin: 1mm 0;
   }
   .row {
     display: flex;
     justify-content: space-between;
     gap: 2mm;
-    padding: 0.5mm 0;
+    padding: 0.3mm 0;
   }
   .row span:first-child {
     color: #333;
@@ -174,7 +174,9 @@ function browserPrint(data: ReceiptData): void {
   <div class="footer">
     <div class="thanks">Merci de votre visite!</div>
     <div>شكرا لزيارتكم</div>
-    <div>${e(timestamp)}</div>
+    <div style="margin-top:1mm">Tel: 0635198816</div>
+    <div>IG: @pregasquad.women</div>
+    <div style="margin-top:1mm">${e(timestamp)}</div>
   </div>
 </body>
 </html>`;
@@ -239,11 +241,11 @@ function browserPrintExpense(data: ExpenseReceiptData): void {
   body {
     font-family: 'Courier New', 'Lucida Console', monospace;
     font-size: 13px;
-    line-height: 1.4;
+    line-height: 1.2;
     width: 72mm;
     max-width: 72mm;
     margin: 0 auto;
-    padding: 3mm 0;
+    padding: 2mm 0;
     color: #000;
     background: #fff;
   }
@@ -252,21 +254,21 @@ function browserPrintExpense(data: ExpenseReceiptData): void {
     font-size: 20px;
     font-weight: bold;
     letter-spacing: 1px;
-    padding: 2mm 0;
+    padding: 1mm 0;
   }
   .sep-double {
     border-top: 3px double #000;
-    margin: 2mm 0;
+    margin: 1mm 0;
   }
   .sep-single {
     border-top: 1px dashed #000;
-    margin: 2mm 0;
+    margin: 1mm 0;
   }
   .row {
     display: flex;
     justify-content: space-between;
     gap: 2mm;
-    padding: 0.5mm 0;
+    padding: 0.3mm 0;
   }
   .row span:first-child {
     color: #333;
