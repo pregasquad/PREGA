@@ -389,6 +389,14 @@ export default function Planning() {
   const { data: salonSettings } = useBusinessSettings();
 
   const formattedDate = format(date, "yyyy-MM-dd");
+
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/services"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/business-settings"] });
+  }, []);
   
   const { data: appointments = [], isLoading: loadingApps } = useAppointments(formattedDate);
   const { data: allAppointments = [] } = useAppointments();

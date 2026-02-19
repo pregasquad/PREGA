@@ -114,6 +114,17 @@ export default function Salaries() {
     };
   }, [queryClient]);
 
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/services"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/appointments/all"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/charges"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/staff-deductions"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/staff-commissions"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/staff-payments"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/business-settings"] });
+  }, []);
+
   const { data: staff = [] } = useQuery<Staff[]>({
     queryKey: ["/api/staff"],
   });
@@ -129,7 +140,7 @@ export default function Salaries() {
       if (!res.ok) return [];
       return res.json();
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0,
     refetchOnWindowFocus: false,
   });
 
