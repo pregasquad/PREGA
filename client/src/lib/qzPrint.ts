@@ -159,7 +159,7 @@ function buildReceiptHex(data: SilentPrintData): string {
 
   parts.push(hexCmd(0x1B, 0x61, 0x00));
   parts.push(textToHex(padRow("Date:", data.date) + "\n"));
-  parts.push(textToHex(padRow("Heure:", data.time) + "\n"));
+  parts.push(textToHex(padRow("Heure / Time:", data.time) + "\n"));
   if (data.appointmentId) {
     parts.push(textToHex(padRow("Ticket #:", String(data.appointmentId)) + "\n"));
   }
@@ -181,7 +181,7 @@ function buildReceiptHex(data: SilentPrintData): string {
     parts.push(textToHex("  " + svc + "\n"));
   }
 
-  parts.push(textToHex(padRow("Duree:", data.duration + " min") + "\n"));
+  parts.push(textToHex(padRow("Duree / Duration:", data.duration + " min") + "\n"));
   parts.push(textToHex(SEP_DOUBLE + "\n"));
 
   parts.push(hexCmd(0x1B, 0x61, 0x01));
@@ -211,6 +211,7 @@ function buildReceiptHex(data: SilentPrintData): string {
   parts.push(textToHex(SEP_DOUBLE + "\n"));
   parts.push(hexCmd(0x1B, 0x61, 0x01));
   parts.push(textToHex("Merci de votre visite!\n"));
+  parts.push(textToHex("Thank you for your visit!\n"));
   parts.push(textToHex("Tel: 0635198816\n"));
   parts.push(textToHex("IG: @pregasquad.women\n"));
   const now = new Date();
