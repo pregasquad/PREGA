@@ -149,7 +149,6 @@ function buildReceiptHex(data: SilentPrintData): string {
   parts.push(hexCmd(0x1B, 0x33, 0x16));
 
   parts.push(hexCmd(0x1B, 0x70, 0x00, 0x19, 0xFA));
-  parts.push(hexCmd(0x1B, 0x70, 0x01, 0x19, 0xFA));
 
   parts.push(hexCmd(0x1B, 0x61, 0x01));
   parts.push(hexCmd(0x1D, 0x21, 0x11));
@@ -323,14 +322,19 @@ export async function silentPrintExpense(data: ExpenseReceiptData): Promise<bool
   }
 }
 
+let drawerInFlight = false;
 export async function openCashDrawer(): Promise<boolean> {
   if (!isQzConnected()) return false;
+  if (drawerInFlight) return false;
+  drawerInFlight = true;
   try {
     const config = qz.configs.create(printerName!);
-    const hexData = hexCmd(0x1B, 0x40) + hexCmd(0x1B, 0x70, 0x00, 0x19, 0xFA) + hexCmd(0x1B, 0x70, 0x01, 0x19, 0xFA);
+    const hexData = hexCmd(0x1B, 0x40) + hexCmd(0x1B, 0x70, 0x00, 0x19, 0xFA);
     await qz.print(config, [{ type: "raw", format: "hex", data: hexData }]);
     return true;
   } catch {
     return false;
+  } finally {
+    setTimeout(() => { drawerInFlight = false; }, 2000);
   }
 }
