@@ -2145,15 +2145,17 @@ export default function Planning() {
                               role="combobox"
                               aria-expanded={clientPopoverOpen}
                               className={cn(
-                                "w-full h-9 justify-between rounded-lg text-xs border-0 bg-secondary/50 hover:bg-secondary/70 transition-all",
+                                "w-full h-10 justify-between rounded-xl text-sm font-medium border border-border/60 bg-background shadow-sm hover:shadow transition-all",
                                 !field.value && "text-muted-foreground"
                               )}
                             >
-                              <span className="flex items-center gap-1.5 truncate">
-                                <User className="w-3.5 h-3.5 shrink-0 opacity-50" />
+                              <span className="flex items-center gap-2 truncate">
+                                <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                                  <User className="w-3.5 h-3.5 text-primary" />
+                                </div>
                                 {field.value || t("planning.client")}
                               </span>
-                              <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 opacity-50" />
+                              <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-40" />
                             </Button>
                           </FormControl>
                         </PopoverTrigger>
@@ -2370,9 +2372,14 @@ export default function Planning() {
                         <Popover open={servicePopoverOpen} onOpenChange={setServicePopoverOpen}>
                           <PopoverTrigger asChild>
                             <FormControl>
-                              <Button variant="outline" role="combobox" className="h-9 w-full justify-between rounded-lg text-[11px] border-0 bg-secondary/50 hover:bg-secondary/70 transition-colors">
-                                <span className="flex items-center gap-1.5"><Plus className="w-3.5 h-3.5" />{t("planning.addService")}</span>
-                                <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                              <Button variant="outline" role="combobox" className="h-10 w-full justify-between rounded-xl text-sm font-medium border border-dashed border-primary/40 bg-primary/5 dark:bg-primary/10 hover:bg-primary/10 dark:hover:bg-primary/15 transition-colors">
+                                <span className="flex items-center gap-2 text-primary">
+                                  <div className="w-6 h-6 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
+                                    <Plus className="w-3.5 h-3.5" />
+                                  </div>
+                                  {t("planning.addService")}
+                                </span>
+                                <Search className="h-4 w-4 shrink-0 text-primary/40" />
                               </Button>
                             </FormControl>
                           </PopoverTrigger>
