@@ -114,50 +114,81 @@ export default function Salaries() {
     };
   }, [queryClient]);
 
+  const [refreshKey, setRefreshKey] = useState(0);
   useEffect(() => {
-    queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/services"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/appointments/all"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/charges"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/staff-deductions"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/staff-commissions"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/staff-payments"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/business-settings"] });
-  }, []);
+    const onPageShow = () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/services"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments/all"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/charges"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/staff-deductions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/staff-commissions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/staff-payments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/business-settings"] });
+      setRefreshKey(k => k + 1);
+    };
+    onPageShow();
+    window.addEventListener("focus", onPageShow);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") onPageShow();
+    });
+    return () => {
+      window.removeEventListener("focus", onPageShow);
+    };
+  }, [queryClient]);
 
   const { data: staff = [] } = useQuery<Staff[]>({
-    queryKey: ["/api/staff"],
+    queryKey: ["/api/staff", refreshKey],
+    queryFn: async () => { const res = await fetch("/api/staff"); if (!res.ok) return []; return res.json(); },
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const { data: services = [] } = useQuery<Service[]>({
-    queryKey: ["/api/services"],
+    queryKey: ["/api/services", refreshKey],
+    queryFn: async () => { const res = await fetch("/api/services"); if (!res.ok) return []; return res.json(); },
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const { data: appointments = [], refetch: refetchAppointments } = useQuery<Appointment[]>({
-    queryKey: ["/api/appointments/all"],
+    queryKey: ["/api/appointments/all", refreshKey],
     queryFn: async () => {
       const res = await fetch("/api/appointments/all");
       if (!res.ok) return [];
       return res.json();
     },
     staleTime: 0,
+    refetchOnMount: "always",
     refetchOnWindowFocus: false,
   });
 
   const { data: charges = [] } = useQuery<Charge[]>({
-    queryKey: ["/api/charges"],
+    queryKey: ["/api/charges", refreshKey],
+    queryFn: async () => { const res = await fetch("/api/charges"); if (!res.ok) return []; return res.json(); },
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const { data: deductions = [] } = useQuery<StaffDeduction[]>({
-    queryKey: ["/api/staff-deductions"],
+    queryKey: ["/api/staff-deductions", refreshKey],
+    queryFn: async () => { const res = await fetch("/api/staff-deductions"); if (!res.ok) return []; return res.json(); },
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const { data: staffCommissions = [] } = useQuery<{ id: number; staffId: number; serviceId: number; percentage: number }[]>({
-    queryKey: ["/api/staff-commissions"],
+    queryKey: ["/api/staff-commissions", refreshKey],
+    queryFn: async () => { const res = await fetch("/api/staff-commissions"); if (!res.ok) return []; return res.json(); },
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const { data: staffPayments = [] } = useQuery<StaffPayment[]>({
-    queryKey: ["/api/staff-payments"],
+    queryKey: ["/api/staff-payments", refreshKey],
+    queryFn: async () => { const res = await fetch("/api/staff-payments"); if (!res.ok) return []; return res.json(); },
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const createChargeMutation = useMutation({
