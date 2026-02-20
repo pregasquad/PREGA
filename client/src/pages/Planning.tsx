@@ -128,6 +128,7 @@ export default function Planning() {
   }, [currentUserRole]);
   const [serviceSearch, setServiceSearch] = useState("");
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [drawerState, setDrawerState] = useState<"idle" | "opening" | "success" | "fail">("idle");
   const boardRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const liveLineRef = useRef<HTMLDivElement>(null);
@@ -1547,23 +1548,40 @@ export default function Planning() {
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7 md:h-9 md:w-9 rounded-full p-0"
+              className={cn(
+                "h-7 w-7 md:h-9 md:w-9 rounded-full p-0 transition-all duration-300",
+                drawerState === "opening" && "animate-pulse opacity-70",
+                drawerState === "success" && "text-emerald-500 scale-110",
+                drawerState === "fail" && "text-red-400"
+              )}
+              disabled={drawerState === "opening"}
               onClick={async () => {
+                setDrawerState("opening");
+                let opened = false;
                 try {
                   await connectQz();
                   if (isQzConnected()) {
                     await openCashDrawer();
-                    return;
+                    opened = true;
                   }
                 } catch {}
-                const available = await checkPrintStationAsync();
-                if (available) {
-                  await remoteOpenDrawer();
+                if (!opened) {
+                  const available = await checkPrintStationAsync();
+                  if (available) {
+                    await remoteOpenDrawer();
+                    opened = true;
+                  }
                 }
+                setDrawerState(opened ? "success" : "fail");
+                setTimeout(() => setDrawerState("idle"), 1800);
               }}
               data-testid="button-open-cash-drawer"
             >
-              <Wallet className="w-4 h-4 md:w-5 md:h-5" />
+              {drawerState === "success" ? (
+                <Check className="w-4 h-4 md:w-5 md:h-5" />
+              ) : (
+                <Wallet className="w-4 h-4 md:w-5 md:h-5" />
+              )}
             </Button>
           )}
 
