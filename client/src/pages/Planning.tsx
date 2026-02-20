@@ -1880,19 +1880,19 @@ export default function Planning() {
                       <div className="absolute -inset-1 rounded-full liquid-gradient blur-lg opacity-40 animate-pulse" />
                     </div>
                   </div>
-                  {/* Thick glowing line - Liquid gradient */}
+                  {/* Thick glowing line - Baby pink gradient */}
                   <div className="flex-1 relative">
                     <div 
                       className="h-1 rounded-full shadow-lg"
                       style={{
-                        background: 'linear-gradient(to right, hsl(211, 100%, 50%), hsl(187, 100%, 50%), hsl(163, 100%, 45%))',
-                        boxShadow: '0 0 16px rgba(59, 130, 246, 0.5), 0 0 32px rgba(59, 130, 246, 0.25)',
+                        background: 'linear-gradient(to right, hsl(340, 82%, 55%), hsl(340, 90%, 65%), hsl(350, 80%, 70%))',
+                        boxShadow: '0 0 16px rgba(236, 72, 153, 0.5), 0 0 32px rgba(236, 72, 153, 0.25)',
                       }}
                     />
                     <div 
                       className="absolute inset-0 h-1 rounded-full opacity-50 blur-sm"
                       style={{
-                        background: 'linear-gradient(to right, hsl(211, 100%, 50%), hsl(187, 100%, 50%))',
+                        background: 'linear-gradient(to right, hsl(340, 82%, 55%), hsl(340, 90%, 65%))',
                       }}
                     />
                   </div>
