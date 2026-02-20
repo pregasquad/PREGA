@@ -7,6 +7,7 @@ let setupDone = false;
 let printSocket: Socket | null = null;
 let printStationAvailable = false;
 let stationRegistered = false;
+let qzConnecting: Promise<boolean> | null = null;
 
 export function isQzConnected(): boolean {
   return connected && printerName !== null && qz.websocket.isActive();
@@ -54,6 +55,16 @@ function setupSecurity() {
 }
 
 export async function connectQz(): Promise<boolean> {
+  if (qzConnecting) return qzConnecting;
+  qzConnecting = _doConnectQz();
+  try {
+    return await qzConnecting;
+  } finally {
+    qzConnecting = null;
+  }
+}
+
+async function _doConnectQz(): Promise<boolean> {
   try {
     setupSecurity();
 
@@ -79,6 +90,11 @@ export async function connectQz(): Promise<boolean> {
     connected = false;
     return false;
   }
+}
+
+export async function ensureQzConnected(): Promise<boolean> {
+  if (isQzConnected()) return true;
+  return connectQz();
 }
 
 async function autoSelectPrinter() {
@@ -361,9 +377,20 @@ function ensurePrintSocket(): Socket {
     });
     printSocket.on("connect", () => {
       console.log("[print-relay] Socket connected:", printSocket?.id);
-      if (stationRegistered && isQzConnected()) {
-        printSocket!.emit("print:register");
-        bindStationListeners();
+      if (stationRegistered) {
+        if (isQzConnected()) {
+          printSocket!.emit("print:register");
+          bindStationListeners();
+          console.log("[print-relay] Re-registered as print station after reconnect");
+        } else {
+          connectQz().then((ok) => {
+            if (ok && printSocket?.connected) {
+              printSocket.emit("print:register");
+              bindStationListeners();
+              console.log("[print-relay] Re-registered as print station after QZ reconnect");
+            }
+          }).catch(() => {});
+        }
       }
     });
     printSocket.on("disconnect", () => {

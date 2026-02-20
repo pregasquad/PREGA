@@ -1,4 +1,4 @@
-import { isQzConnected, silentPrint, silentPrintExpense, remotePrint, remotePrintExpense, remoteOpenDrawer, checkPrintStationAsync } from "./qzPrint";
+import { isQzConnected, silentPrint, silentPrintExpense, remotePrint, remotePrintExpense, remoteOpenDrawer, checkPrintStationAsync, ensureQzConnected } from "./qzPrint";
 
 export interface ReceiptData {
   businessName: string;
@@ -21,6 +21,14 @@ export async function autoPrint(data: ReceiptData): Promise<void> {
     await silentPrint(data);
     return;
   }
+
+  const qzOk = await ensureQzConnected();
+  if (qzOk && isQzConnected()) {
+    console.log("[print] QZ connected on retry, printing silently");
+    await silentPrint(data);
+    return;
+  }
+
   const stationAvailable = await checkPrintStationAsync();
   if (stationAvailable) {
     console.log("[print-relay] Remote print station found, sending receipt");
@@ -222,6 +230,14 @@ export async function autoPrintExpense(data: ExpenseReceiptData): Promise<void> 
     await silentPrintExpense(data);
     return;
   }
+
+  const qzOk = await ensureQzConnected();
+  if (qzOk && isQzConnected()) {
+    console.log("[print] QZ connected on retry, printing expense silently");
+    await silentPrintExpense(data);
+    return;
+  }
+
   const stationAvailable = await checkPrintStationAsync();
   if (stationAvailable) {
     console.log("[print-relay] Remote print station found, sending expense receipt");
