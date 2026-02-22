@@ -1019,6 +1019,31 @@ export default function Planning() {
     };
 
     if (editingAppointment) {
+      // Pre-validate loyalty/gift card balances before saving edit
+      if (appliedLoyaltyPoints) {
+        const oldPoints = Number(editingAppointment.loyaltyPointsRedeemed) || 0;
+        const newPoints = appliedLoyaltyPoints.points;
+        const delta = newPoints - oldPoints;
+        if (delta > 0) {
+          const client = clients.find(c => c.id === appliedLoyaltyPoints.clientId);
+          if (client && client.loyaltyPoints < delta) {
+            toast({ title: t("common.error"), description: t("planning.insufficientPoints", "Insufficient loyalty points"), variant: "destructive" });
+            return;
+          }
+        }
+      }
+      if (appliedGiftCardBalance) {
+        const oldGiftCard = Number(editingAppointment.giftCardDiscountAmount) || 0;
+        const newGiftCard = appliedGiftCardBalance.discountAmount;
+        const delta = newGiftCard - oldGiftCard;
+        if (delta > 0) {
+          const client = clients.find(c => c.id === appliedGiftCardBalance.clientId);
+          if (client && Number(client.giftCardBalance) < delta) {
+            toast({ title: t("common.error"), description: t("planning.insufficientGiftCard", "Insufficient gift card balance"), variant: "destructive" });
+            return;
+          }
+        }
+      }
       updateMutation.mutate({ id: editingAppointment.id, ...submitData });
     } else {
       const currentUser = sessionStorage.getItem("current_user") || "Unknown";

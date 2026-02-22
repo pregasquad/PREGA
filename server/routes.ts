@@ -1250,7 +1250,6 @@ export async function registerRoutes(
             const product = await storage.getProducts().then(prods => prods.find(p => p.id === service.linkedProductId));
             if (product && product.quantity > 0) {
               await storage.updateProductQuantity(product.id, product.quantity - 1);
-              // Check and notify if product is now low on stock
               checkAndNotifyLowStock(product.id);
             }
           }
@@ -1266,7 +1265,6 @@ export async function registerRoutes(
             if (pointsToAdd > 0) {
               const updatedClient = await storage.updateClientLoyalty(client.id, pointsToAdd, item.total);
               console.log(`Awarded ${pointsToAdd} loyalty points to ${client.name} for appointment #${item.id}`);
-              // Emit real-time update for loyalty points
               io.emit("client:loyaltyUpdated", { 
                 clientId: client.id, 
                 clientName: client.name,
@@ -1274,7 +1272,28 @@ export async function registerRoutes(
                 newTotal: updatedClient.loyaltyPoints 
               });
             }
-            
+          }
+        }
+      }
+      
+      // When appointment becomes unpaid (paid→unpaid), reverse loyalty points that were earned
+      if (!item.paid && oldAppointment && oldAppointment.paid) {
+        if (oldAppointment.client && oldAppointment.total && oldAppointment.total > 0) {
+          const client = await storage.getClientByName(oldAppointment.client);
+          if (client && client.loyaltyEnrolled) {
+            const settings = await storage.getBusinessSettings();
+            const pointsPerDh = settings?.loyaltyPointsPerDh ?? 1;
+            const pointsToRemove = Math.floor(oldAppointment.total * pointsPerDh);
+            if (pointsToRemove > 0) {
+              const updatedClient = await storage.subtractClientLoyalty(client.id, pointsToRemove);
+              console.log(`Reversed ${pointsToRemove} loyalty points from ${client.name} for appointment #${item.id} (paid→unpaid)`);
+              io.emit("client:loyaltyUpdated", { 
+                clientId: client.id, 
+                clientName: client.name,
+                pointsAdded: -pointsToRemove, 
+                newTotal: updatedClient.loyaltyPoints 
+              });
+            }
           }
         }
       }
