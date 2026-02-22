@@ -1197,8 +1197,8 @@ export async function registerRoutes(
       }
       
       // Award loyalty points if appointment is created as paid
-      if (item.paid && item.client && item.total && item.total > 0) {
-        const client = await storage.getClientByName(item.client);
+      if (item.paid && item.total && item.total > 0 && (item.clientId || item.client)) {
+        const client = item.clientId ? await storage.getClient(item.clientId) : await storage.getClientByName(item.client!);
         if (client && client.loyaltyEnrolled) {
           const settings = await storage.getBusinessSettings();
           const pointsPerDh = settings?.loyaltyPointsPerDh ?? 1;
@@ -1256,8 +1256,8 @@ export async function registerRoutes(
         }
         
         // Award loyalty points to client
-        if (item.client && item.total && item.total > 0) {
-          const client = await storage.getClientByName(item.client);
+        if (item.total && item.total > 0 && (item.clientId || item.client)) {
+          const client = item.clientId ? await storage.getClient(item.clientId) : await storage.getClientByName(item.client!);
           if (client && client.loyaltyEnrolled) {
             const settings = await storage.getBusinessSettings();
             const pointsPerDh = settings?.loyaltyPointsPerDh ?? 1;
@@ -1278,8 +1278,8 @@ export async function registerRoutes(
       
       // When appointment becomes unpaid (paid→unpaid), reverse loyalty points that were earned
       if (!item.paid && oldAppointment && oldAppointment.paid) {
-        if (oldAppointment.client && oldAppointment.total && oldAppointment.total > 0) {
-          const client = await storage.getClientByName(oldAppointment.client);
+        if (oldAppointment.total && oldAppointment.total > 0 && (oldAppointment.clientId || oldAppointment.client)) {
+          const client = oldAppointment.clientId ? await storage.getClient(oldAppointment.clientId) : await storage.getClientByName(oldAppointment.client!);
           if (client && client.loyaltyEnrolled) {
             const settings = await storage.getBusinessSettings();
             const pointsPerDh = settings?.loyaltyPointsPerDh ?? 1;
@@ -1316,8 +1316,8 @@ export async function registerRoutes(
     const appointmentId = Number(req.params.id);
     const appointment = await storage.getAppointment(appointmentId);
     
-    if (appointment && appointment.paid && appointment.client) {
-      const client = await storage.getClientByName(appointment.client);
+    if (appointment && appointment.paid && (appointment.clientId || appointment.client)) {
+      const client = appointment.clientId ? await storage.getClient(appointment.clientId) : await storage.getClientByName(appointment.client!);
       
       // Remove loyalty points if appointment was paid
       if (client && client.loyaltyEnrolled && appointment.total && appointment.total > 0) {
