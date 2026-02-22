@@ -1021,27 +1021,31 @@ export default function Planning() {
     if (editingAppointment) {
       // Pre-validate loyalty/gift card balances before saving edit
       if (appliedLoyaltyPoints) {
+        const client = clients.find(c => c.id === appliedLoyaltyPoints.clientId);
+        if (!client) {
+          toast({ title: t("common.error"), description: t("planning.clientNotFound", "Client not found for loyalty discount"), variant: "destructive" });
+          return;
+        }
         const oldPoints = Number(editingAppointment.loyaltyPointsRedeemed) || 0;
         const newPoints = appliedLoyaltyPoints.points;
         const delta = newPoints - oldPoints;
-        if (delta > 0) {
-          const client = clients.find(c => c.id === appliedLoyaltyPoints.clientId);
-          if (client && client.loyaltyPoints < delta) {
-            toast({ title: t("common.error"), description: t("planning.insufficientPoints", "Insufficient loyalty points"), variant: "destructive" });
-            return;
-          }
+        if (delta > 0 && client.loyaltyPoints < delta) {
+          toast({ title: t("common.error"), description: t("planning.insufficientPoints", "Insufficient loyalty points"), variant: "destructive" });
+          return;
         }
       }
       if (appliedGiftCardBalance) {
+        const client = clients.find(c => c.id === appliedGiftCardBalance.clientId);
+        if (!client) {
+          toast({ title: t("common.error"), description: t("planning.clientNotFound", "Client not found for gift card discount"), variant: "destructive" });
+          return;
+        }
         const oldGiftCard = Number(editingAppointment.giftCardDiscountAmount) || 0;
         const newGiftCard = appliedGiftCardBalance.discountAmount;
         const delta = newGiftCard - oldGiftCard;
-        if (delta > 0) {
-          const client = clients.find(c => c.id === appliedGiftCardBalance.clientId);
-          if (client && Number(client.giftCardBalance) < delta) {
-            toast({ title: t("common.error"), description: t("planning.insufficientGiftCard", "Insufficient gift card balance"), variant: "destructive" });
-            return;
-          }
+        if (delta > 0 && Number(client.giftCardBalance) < delta) {
+          toast({ title: t("common.error"), description: t("planning.insufficientGiftCard", "Insufficient gift card balance"), variant: "destructive" });
+          return;
         }
       }
       updateMutation.mutate({ id: editingAppointment.id, ...submitData });
