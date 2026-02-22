@@ -1312,17 +1312,17 @@ export async function registerRoutes(
     const appointmentId = Number(req.params.id);
     const appointment = await storage.getAppointment(appointmentId);
     
-    // Remove loyalty points if appointment was paid
-    if (appointment && appointment.paid && appointment.client && appointment.total && appointment.total > 0) {
+    if (appointment && appointment.paid && appointment.client) {
       const client = await storage.getClientByName(appointment.client);
-      if (client && client.loyaltyEnrolled) {
+      
+      // Remove loyalty points if appointment was paid
+      if (client && client.loyaltyEnrolled && appointment.total && appointment.total > 0) {
         const settings = await storage.getBusinessSettings();
         const pointsPerDh = settings?.loyaltyPointsPerDh ?? 1;
         const pointsToRemove = Math.floor(appointment.total * pointsPerDh);
         if (pointsToRemove > 0) {
           const updatedClient = await storage.subtractClientLoyalty(client.id, pointsToRemove);
           console.log(`Removed ${pointsToRemove} loyalty points from ${client.name} for deleted appointment #${appointmentId}`);
-          // Emit real-time update for loyalty points removal
           io.emit("client:loyaltyUpdated", { 
             clientId: client.id, 
             clientName: client.name,
@@ -1330,6 +1330,24 @@ export async function registerRoutes(
             newTotal: updatedClient.loyaltyPoints 
           });
         }
+      }
+      
+      // Restore loyalty points that were redeemed for this appointment
+      if (client && appointment.loyaltyPointsRedeemed && appointment.loyaltyPointsRedeemed > 0) {
+        await storage.updateClientLoyalty(client.id, appointment.loyaltyPointsRedeemed, 0);
+        console.log(`Restored ${appointment.loyaltyPointsRedeemed} redeemed loyalty points to ${client.name} for deleted appointment #${appointmentId}`);
+      }
+      
+      // Restore gift card balance that was used for this appointment
+      if (client && appointment.giftCardDiscountAmount && appointment.giftCardDiscountAmount > 0) {
+        await storage.updateClientGiftCardBalance(client.id, appointment.giftCardDiscountAmount);
+        console.log(`Restored ${appointment.giftCardDiscountAmount} gift card balance to ${client.name} for deleted appointment #${appointmentId}`);
+        io.emit("client:giftCardUpdated", {
+          clientId: client.id,
+          clientName: client.name,
+          amountDeducted: -appointment.giftCardDiscountAmount,
+          newBalance: (Number(client.giftCardBalance) || 0) + appointment.giftCardDiscountAmount
+        });
       }
     }
     
@@ -2170,6 +2188,14 @@ export async function registerRoutes(
       if (isNaN(numAmount)) {
         return res.status(400).json({ message: "Invalid amount" });
       }
+      if (numAmount < 0) {
+        const client = await storage.getClient(clientId);
+        if (!client) return res.status(404).json({ message: "Client not found" });
+        const currentBalance = Number(client.giftCardBalance) || 0;
+        if (Math.abs(numAmount) > currentBalance + 0.01) {
+          return res.status(400).json({ message: `Insufficient gift card balance: has ${currentBalance}, requested deduction ${Math.abs(numAmount)}` });
+        }
+      }
       const item = await storage.updateClientGiftCardBalance(clientId, numAmount);
       res.json(item);
     } catch (err) {
@@ -2220,7 +2246,18 @@ export async function registerRoutes(
 
   app.post("/api/loyalty-redemptions", isPinAuthenticated, requirePermission("manage_clients"), async (req, res) => {
     try {
-      const item = await storage.createLoyaltyRedemption(req.body);
+      const { clientId, pointsUsed, rewardDescription, date } = req.body;
+      if (!clientId || !pointsUsed || pointsUsed <= 0) {
+        return res.status(400).json({ message: "Invalid redemption: clientId and positive pointsUsed required" });
+      }
+      const client = await storage.getClient(clientId);
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+      if (client.loyaltyPoints < pointsUsed) {
+        return res.status(400).json({ message: `Insufficient loyalty points: has ${client.loyaltyPoints}, requested ${pointsUsed}` });
+      }
+      const item = await storage.createLoyaltyRedemption({ clientId, pointsUsed, rewardDescription, date });
       res.status(201).json(item);
     } catch (err) {
       res.status(400).json({ message: "Failed to redeem points" });

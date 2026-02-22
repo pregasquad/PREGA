@@ -93,6 +93,9 @@ export const appointments = mysqlTable("appointments", {
   total: double("total").notNull(),
   paid: boolean("paid").default(false).notNull(),
   loyaltyPointsEarned: int("loyalty_points_earned").default(0),
+  loyaltyDiscountAmount: double("loyalty_discount_amount").default(0),
+  loyaltyPointsRedeemed: int("loyalty_points_redeemed").default(0),
+  giftCardDiscountAmount: double("gift_card_discount_amount").default(0),
   createdBy: text("created_by"),
   createdAt: timestamp("created_at").defaultNow(),
 });

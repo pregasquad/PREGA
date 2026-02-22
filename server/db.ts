@@ -249,6 +249,45 @@ export async function ensureAppointmentsAuditColumns(): Promise<void> {
   }
 }
 
+export async function ensureAppointmentDiscountColumns(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      const discountCols = ['loyalty_discount_amount', 'loyalty_points_redeemed', 'gift_card_discount_amount'];
+      for (const col of discountCols) {
+        const [rows] = await connection.query(
+          `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'appointments' AND COLUMN_NAME = ?`,
+          [col]
+        );
+        if ((rows as any[]).length === 0) {
+          const colType = col.includes('points') ? 'INT DEFAULT 0' : 'DOUBLE DEFAULT 0';
+          await connection.query(`ALTER TABLE appointments ADD COLUMN ${col} ${colType}`);
+          console.log(`Added ${col} column to appointments table`);
+        }
+      }
+      connection.release();
+    } else {
+      await pool.query(`
+        DO $$ 
+        BEGIN 
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'appointments' AND column_name = 'loyalty_discount_amount') THEN
+            ALTER TABLE appointments ADD COLUMN loyalty_discount_amount DOUBLE PRECISION DEFAULT 0;
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'appointments' AND column_name = 'loyalty_points_redeemed') THEN
+            ALTER TABLE appointments ADD COLUMN loyalty_points_redeemed INTEGER DEFAULT 0;
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'appointments' AND column_name = 'gift_card_discount_amount') THEN
+            ALTER TABLE appointments ADD COLUMN gift_card_discount_amount DOUBLE PRECISION DEFAULT 0;
+          END IF;
+        END $$;
+      `);
+    }
+    console.log("Appointment discount columns ready");
+  } catch (error) {
+    console.error("Failed to ensure appointment discount columns:", error);
+  }
+}
+
 // Backfill staffId and ensure missing columns for MySQL/TiDB databases
 export async function ensureStaffIdBackfillMySQL(): Promise<void> {
   if (dbDialect !== 'mysql') return;

@@ -847,8 +847,6 @@ export default function Planning() {
   // Helper function to open an appointment for editing
   const openAppointmentForEdit = (app: any) => {
     const parsedServices = parseAppointmentServices(app);
-    setAppliedLoyaltyPoints(null);
-    setAppliedGiftCardBalance(null);
     setSelectedPackage(null);
     setManualTotalOverride(false);
     setSelectedServices(parsedServices);
@@ -857,6 +855,22 @@ export default function Planning() {
       newPriceInputs[s.id] = String(s.price);
     });
     setPriceInputs(newPriceInputs);
+    
+    const loyaltyDiscount = Number(app.loyaltyDiscountAmount) || 0;
+    const loyaltyPointsUsed = Number(app.loyaltyPointsRedeemed) || 0;
+    const giftCardDiscount = Number(app.giftCardDiscountAmount) || 0;
+    
+    if (loyaltyDiscount > 0 && loyaltyPointsUsed > 0 && app.clientId) {
+      setAppliedLoyaltyPoints({ clientId: app.clientId, points: loyaltyPointsUsed, discountAmount: loyaltyDiscount });
+    } else {
+      setAppliedLoyaltyPoints(null);
+    }
+    if (giftCardDiscount > 0 && app.clientId) {
+      setAppliedGiftCardBalance({ clientId: app.clientId, amount: giftCardDiscount, discountAmount: giftCardDiscount });
+    } else {
+      setAppliedGiftCardBalance(null);
+    }
+    
     form.reset({
       date: app.date,
       startTime: app.startTime,
@@ -868,6 +882,7 @@ export default function Planning() {
       total: app.total,
       paid: app.paid,
     });
+    setTotalInputValue(String(app.total));
     setEditingAppointment(app);
     setIsDialogOpen(true);
   };
@@ -998,6 +1013,9 @@ export default function Planning() {
       duration: servicesToSave.length > 0 ? servicesToSave.reduce((sum, s) => sum + s.duration, 0) : data.duration,
       price: finalTotal,
       total: finalTotal,
+      loyaltyDiscountAmount: appliedLoyaltyPoints?.discountAmount || 0,
+      loyaltyPointsRedeemed: appliedLoyaltyPoints?.points || 0,
+      giftCardDiscountAmount: appliedGiftCardBalance?.discountAmount || 0,
     };
 
     if (editingAppointment) {
@@ -2132,6 +2150,8 @@ export default function Planning() {
                         setTotalInputValue(e.target.value);
                         form.setValue("total", parseFloat(e.target.value) || 0);
                         setManualTotalOverride(true);
+                        setAppliedLoyaltyPoints(null);
+                        setAppliedGiftCardBalance(null);
                       }}
                       placeholder="0"
                       onClick={(e) => e.stopPropagation()}
@@ -2355,20 +2375,28 @@ export default function Planning() {
                           data-testid="toggle-loyalty-points"
                           onClick={() => {
                             if (appliedLoyaltyPoints) {
-                              const currentTotal = parseFloat(totalInputValue || "0");
-                              const newTotal = currentTotal + appliedLoyaltyPoints.discountAmount;
-                              setTotalInputValue(String(newTotal));
-                              form.setValue("total", newTotal);
+                              const baseTotal = computeBaseTotal();
                               setAppliedLoyaltyPoints(null);
+                              setManualTotalOverride(false);
+                              const finalTotal = appliedGiftCardBalance
+                                ? Math.max(0, baseTotal - appliedGiftCardBalance.discountAmount)
+                                : baseTotal;
+                              setTotalInputValue(String(finalTotal));
+                              form.setValue("total", finalTotal);
                             } else {
                               const pointsValue = businessSettings?.loyaltyPointsValue || 0.1;
                               const maxDiscount = client.loyaltyPoints * pointsValue;
-                              const currentTotal = parseFloat(totalInputValue || "0");
-                              const discountAmount = Math.min(maxDiscount, currentTotal);
+                              const baseTotal = computeBaseTotal();
+                              let afterGiftCard = baseTotal;
+                              if (appliedGiftCardBalance) {
+                                afterGiftCard = Math.max(0, baseTotal - appliedGiftCardBalance.discountAmount);
+                              }
+                              const discountAmount = Math.min(maxDiscount, afterGiftCard);
                               const pointsUsed = Math.ceil(discountAmount / pointsValue);
                               if (discountAmount > 0) {
                                 setAppliedLoyaltyPoints({ clientId: client.id, points: pointsUsed, discountAmount });
-                                const newTotal = Math.max(0, currentTotal - discountAmount);
+                                setManualTotalOverride(false);
+                                const newTotal = Math.max(0, afterGiftCard - discountAmount);
                                 setTotalInputValue(String(newTotal));
                                 form.setValue("total", newTotal);
                               }
@@ -2393,13 +2421,25 @@ export default function Planning() {
                           data-testid="toggle-gift-card"
                           onClick={() => {
                             if (appliedGiftCardBalance) {
-                              handleClearGiftCardBalance();
+                              const baseTotal = computeBaseTotal();
+                              setAppliedGiftCardBalance(null);
+                              setManualTotalOverride(false);
+                              const finalTotal = appliedLoyaltyPoints
+                                ? Math.max(0, baseTotal - appliedLoyaltyPoints.discountAmount)
+                                : baseTotal;
+                              setTotalInputValue(String(finalTotal));
+                              form.setValue("total", finalTotal);
                             } else {
-                              const currentTotal = parseFloat(totalInputValue || "0");
-                              const discountAmount = Math.min(Number(client.giftCardBalance), currentTotal);
+                              const baseTotal = computeBaseTotal();
+                              let afterLoyalty = baseTotal;
+                              if (appliedLoyaltyPoints) {
+                                afterLoyalty = Math.max(0, baseTotal - appliedLoyaltyPoints.discountAmount);
+                              }
+                              const discountAmount = Math.min(Number(client.giftCardBalance), afterLoyalty);
                               if (discountAmount > 0) {
                                 setAppliedGiftCardBalance({ clientId: client.id, amount: Number(client.giftCardBalance), discountAmount });
-                                const newTotal = Math.max(0, currentTotal - discountAmount);
+                                setManualTotalOverride(false);
+                                const newTotal = Math.max(0, afterLoyalty - discountAmount);
                                 setTotalInputValue(String(newTotal));
                                 form.setValue("total", newTotal);
                               }
