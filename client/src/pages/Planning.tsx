@@ -2336,31 +2336,88 @@ export default function Planning() {
                   </Select>
                 )}
 
-                {/* Applied discounts - compact inline */}
-                {(appliedGiftCardBalance || appliedLoyaltyPoints) && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {appliedGiftCardBalance && (
-                      <div className="flex items-center gap-1.5 px-2 py-1 bg-green-500/10 border border-green-500/20 rounded-lg text-[11px]">
-                        <Gift className="w-3 h-3 text-green-600 shrink-0" />
-                        <span className="text-green-700 dark:text-green-400 font-semibold">-{Number(appliedGiftCardBalance.discountAmount ?? 0).toFixed(0)} DH</span>
-                        <button type="button" onClick={handleClearGiftCardBalance} className="w-4 h-4 rounded-full bg-destructive/20 flex items-center justify-center"><X className="w-2.5 h-2.5 text-destructive" /></button>
-                      </div>
-                    )}
-                    {appliedLoyaltyPoints && (
-                      <div className="flex items-center gap-1.5 px-2 py-1 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-[11px]">
-                        <Star className="w-3 h-3 text-yellow-600 shrink-0" />
-                        <span className="text-yellow-700 dark:text-yellow-400 font-semibold">-{Number(appliedLoyaltyPoints.discountAmount ?? 0).toFixed(0)} DH</span>
-                        <button type="button" onClick={() => {
-                          const currentTotal = parseFloat(totalInputValue || "0");
-                          const newTotal = currentTotal + appliedLoyaltyPoints.discountAmount;
-                          setTotalInputValue(String(newTotal));
-                          form.setValue("total", newTotal);
-                          setAppliedLoyaltyPoints(null);
-                        }} className="w-4 h-4 rounded-full bg-destructive/20 flex items-center justify-center"><X className="w-2.5 h-2.5 text-destructive" /></button>
-                      </div>
-                    )}
-                  </div>
-                )}
+                {/* Loyalty & Gift Card toggles - show when client has available points/balance */}
+                {(() => {
+                  const clientName = form.getValues("client");
+                  const client = clientName ? clients.find(c => c.name === clientName) : null;
+                  if (!client) return null;
+                  const hasPoints = client.loyaltyEnrolled && client.loyaltyPoints > 0 && businessSettings?.loyaltyEnabled;
+                  const hasGiftCard = Number(client.giftCardBalance) > 0;
+                  if (!hasPoints && !hasGiftCard) return null;
+                  return (
+                    <div className="flex flex-wrap gap-1.5">
+                      {hasPoints && (
+                        <button
+                          type="button"
+                          data-testid="toggle-loyalty-points"
+                          onClick={() => {
+                            if (appliedLoyaltyPoints) {
+                              const currentTotal = parseFloat(totalInputValue || "0");
+                              const newTotal = currentTotal + appliedLoyaltyPoints.discountAmount;
+                              setTotalInputValue(String(newTotal));
+                              form.setValue("total", newTotal);
+                              setAppliedLoyaltyPoints(null);
+                            } else {
+                              const pointsValue = businessSettings?.loyaltyPointsValue || 0.1;
+                              const maxDiscount = client.loyaltyPoints * pointsValue;
+                              const currentTotal = parseFloat(totalInputValue || "0");
+                              const discountAmount = Math.min(maxDiscount, currentTotal);
+                              const pointsUsed = Math.ceil(discountAmount / pointsValue);
+                              if (discountAmount > 0) {
+                                setAppliedLoyaltyPoints({ clientId: client.id, points: pointsUsed, discountAmount });
+                                const newTotal = Math.max(0, currentTotal - discountAmount);
+                                setTotalInputValue(String(newTotal));
+                                form.setValue("total", newTotal);
+                              }
+                            }
+                          }}
+                          className={cn(
+                            "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all",
+                            appliedLoyaltyPoints
+                              ? "bg-yellow-500/15 border border-yellow-500/30 text-yellow-700 dark:text-yellow-400"
+                              : "bg-secondary/50 border border-transparent text-muted-foreground hover:bg-yellow-500/10 hover:border-yellow-500/20"
+                          )}
+                        >
+                          <Star className="w-3 h-3 shrink-0" />
+                          <span>{client.loyaltyPoints} pts</span>
+                          {appliedLoyaltyPoints && <span className="text-yellow-600 dark:text-yellow-300">-{Number(appliedLoyaltyPoints.discountAmount ?? 0).toFixed(0)} DH</span>}
+                          {appliedLoyaltyPoints && <X className="w-3 h-3 text-destructive" />}
+                        </button>
+                      )}
+                      {hasGiftCard && (
+                        <button
+                          type="button"
+                          data-testid="toggle-gift-card"
+                          onClick={() => {
+                            if (appliedGiftCardBalance) {
+                              handleClearGiftCardBalance();
+                            } else {
+                              const currentTotal = parseFloat(totalInputValue || "0");
+                              const discountAmount = Math.min(Number(client.giftCardBalance), currentTotal);
+                              if (discountAmount > 0) {
+                                setAppliedGiftCardBalance({ clientId: client.id, amount: Number(client.giftCardBalance), discountAmount });
+                                const newTotal = Math.max(0, currentTotal - discountAmount);
+                                setTotalInputValue(String(newTotal));
+                                form.setValue("total", newTotal);
+                              }
+                            }
+                          }}
+                          className={cn(
+                            "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all",
+                            appliedGiftCardBalance
+                              ? "bg-green-500/15 border border-green-500/30 text-green-700 dark:text-green-400"
+                              : "bg-secondary/50 border border-transparent text-muted-foreground hover:bg-green-500/10 hover:border-green-500/20"
+                          )}
+                        >
+                          <Gift className="w-3 h-3 shrink-0" />
+                          <span>{Number(client.giftCardBalance).toFixed(0)} DH</span>
+                          {appliedGiftCardBalance && <span className="text-green-600 dark:text-green-300">-{Number(appliedGiftCardBalance.discountAmount ?? 0).toFixed(0)} DH</span>}
+                          {appliedGiftCardBalance && <X className="w-3 h-3 text-destructive" />}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* Services section - compact */}
                 <div className="space-y-1.5">
