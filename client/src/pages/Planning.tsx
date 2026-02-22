@@ -800,78 +800,22 @@ export default function Planning() {
   // Watch the client field to trigger recalculation when client changes
   const watchedClient = form.watch("client");
   
-  // Recalculate discounts when services change and a client with discounts is selected
+  // Clear discounts and restore base total when client changes or is cleared
+  const prevClientRef = useRef<string>("");
   useEffect(() => {
     if (!isDialogOpen) return;
-    if (manualTotalOverride) return;
-    
-    const clientName = watchedClient;
-    if (!clientName) return;
-    
-    const client = clients.find(c => c.name === clientName);
-    if (!client) return;
-    
-    // Calculate base total - use package discounted price if a package is selected, otherwise sum of services (with custom prices from priceInputs)
-    const baseTotal = selectedPackage 
-      ? selectedPackage.discountedPrice 
-      : selectedServices.reduce((sum, s) => {
-          const p = priceInputs[s.id];
-          return sum + (p !== undefined ? (parseFloat(p) || 0) : s.price);
-        }, 0);
-    if (baseTotal <= 0) {
-      // Reset discounts if no services
-      if (appliedLoyaltyPoints) setAppliedLoyaltyPoints(null);
-      if (appliedGiftCardBalance) setAppliedGiftCardBalance(null);
-      return;
+    const currentClient = watchedClient || "";
+    if (prevClientRef.current && currentClient !== prevClientRef.current) {
+      const baseTotal = computeBaseTotal();
+      setAppliedLoyaltyPoints(null);
+      setAppliedGiftCardBalance(null);
+      setManualTotalOverride(false);
+      setTotalInputValue(String(baseTotal));
+      form.setValue("total", baseTotal);
+      form.setValue("price", baseTotal);
     }
-    
-    let runningTotal = baseTotal;
-    let newLoyaltyPoints: typeof appliedLoyaltyPoints = null;
-    let newGiftCardBalance: typeof appliedGiftCardBalance = null;
-    
-    // Apply loyalty points if enabled
-    if (client.usePoints && client.loyaltyPoints > 0 && businessSettings?.loyaltyEnabled) {
-      const pointsValue = businessSettings?.loyaltyPointsValue || 0.1;
-      const maxDiscount = client.loyaltyPoints * pointsValue;
-      const discountAmount = Math.min(maxDiscount, runningTotal);
-      const pointsUsed = Math.ceil(discountAmount / pointsValue);
-      
-      if (discountAmount > 0) {
-        newLoyaltyPoints = {
-          clientId: client.id,
-          points: pointsUsed,
-          discountAmount
-        };
-        runningTotal = Math.max(0, runningTotal - discountAmount);
-      }
-    }
-    
-    // Apply gift card balance if enabled
-    if (client.useGiftCardBalance && client.giftCardBalance > 0) {
-      const discountAmount = Math.min(client.giftCardBalance, runningTotal);
-      
-      if (discountAmount > 0) {
-        newGiftCardBalance = {
-          clientId: client.id,
-          amount: client.giftCardBalance,
-          discountAmount
-        };
-        runningTotal = Math.max(0, runningTotal - discountAmount);
-      }
-    }
-    
-    // Update state if changed
-    if (JSON.stringify(newLoyaltyPoints) !== JSON.stringify(appliedLoyaltyPoints)) {
-      setAppliedLoyaltyPoints(newLoyaltyPoints);
-    }
-    if (JSON.stringify(newGiftCardBalance) !== JSON.stringify(appliedGiftCardBalance)) {
-      setAppliedGiftCardBalance(newGiftCardBalance);
-    }
-    
-    // Update the total state
-    form.setValue("total", runningTotal);
-    setTotalInputValue(String(runningTotal));
-  }, [selectedServices, selectedPackage, isDialogOpen, clients, businessSettings, form, appliedLoyaltyPoints, appliedGiftCardBalance, watchedClient, priceInputs, manualTotalOverride]);
+    prevClientRef.current = currentClient;
+  }, [watchedClient, isDialogOpen]);
 
   // Helper function to parse services from an appointment
   const parseAppointmentServices = (app: any): Array<{id: string, name: string, price: number, duration: number}> => {
@@ -1154,6 +1098,51 @@ export default function Planning() {
     setIsDialogOpen(false);
   };
 
+  const computeBaseTotal = (svcList?: typeof selectedServices, prices?: Record<string, string>, pkg?: typeof selectedPackage) => {
+    const svcs = svcList ?? selectedServices;
+    const pInputs = prices ?? priceInputs;
+    const pkgSel = pkg !== undefined ? pkg : selectedPackage;
+    if (pkgSel) return pkgSel.discountedPrice;
+    return svcs.reduce((sum, s) => {
+      const p = pInputs[s.id];
+      return sum + (p !== undefined ? (parseFloat(p) || 0) : s.price);
+    }, 0);
+  };
+
+  const recalcTotalWithDiscounts = (baseTotal: number) => {
+    if (manualTotalOverride) return parseFloat(totalInputValue || "0");
+    let runningTotal = baseTotal;
+    let newLoyalty: typeof appliedLoyaltyPoints = null;
+    let newGiftCard: typeof appliedGiftCardBalance = null;
+    
+    if (appliedLoyaltyPoints) {
+      const clientName = form.getValues("client");
+      const client = clientName ? clients.find(c => c.name === clientName) : null;
+      if (client && client.loyaltyPoints > 0 && businessSettings?.loyaltyEnabled) {
+        const pointsValue = businessSettings?.loyaltyPointsValue || 0.1;
+        const maxDiscount = client.loyaltyPoints * pointsValue;
+        const discountAmount = Math.min(maxDiscount, runningTotal);
+        const pointsUsed = Math.ceil(discountAmount / pointsValue);
+        if (discountAmount > 0) {
+          newLoyalty = { clientId: client.id, points: pointsUsed, discountAmount };
+          runningTotal = Math.max(0, runningTotal - discountAmount);
+        }
+      }
+    }
+    
+    if (appliedGiftCardBalance) {
+      const discountAmount = Math.min(appliedGiftCardBalance.amount, runningTotal);
+      if (discountAmount > 0) {
+        newGiftCard = { ...appliedGiftCardBalance, discountAmount };
+        runningTotal = Math.max(0, runningTotal - discountAmount);
+      }
+    }
+    
+    setAppliedLoyaltyPoints(newLoyalty);
+    setAppliedGiftCardBalance(newGiftCard);
+    return runningTotal;
+  };
+
   const handleAddService = (service: {name: string, price: number, duration: number}) => {
     const serviceId = `svc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const newService = {
@@ -1174,8 +1163,9 @@ export default function Planning() {
     form.setValue("service", updated.map(s => s.name).join(', '));
     form.setValue("duration", totalDuration);
     form.setValue("price", totalPrice);
-    form.setValue("total", totalPrice);
-    setTotalInputValue(String(totalPrice));
+    const finalTotal = recalcTotalWithDiscounts(totalPrice);
+    form.setValue("total", finalTotal);
+    setTotalInputValue(String(finalTotal));
   };
 
   const handleRemoveService = (index: number) => {
@@ -1198,8 +1188,9 @@ export default function Planning() {
     form.setValue("service", updated.map(s => s.name).join(', '));
     form.setValue("duration", totalDuration);
     form.setValue("price", totalPrice);
-    form.setValue("total", totalPrice);
-    setTotalInputValue(String(totalPrice));
+    const finalTotal = recalcTotalWithDiscounts(totalPrice);
+    form.setValue("total", finalTotal);
+    setTotalInputValue(String(finalTotal));
   };
 
   const handleSelectPackage = (pkg: {id: number; name: string; services: number[]; originalPrice: number; discountedPrice: number}) => {
@@ -1227,8 +1218,11 @@ export default function Planning() {
     const totalDuration = packageServices.reduce((sum, s) => sum + s.duration, 0);
     form.setValue("service", packageServices.map(s => s.name).join(', '));
     form.setValue("duration", totalDuration);
-    form.setValue("total", pkg.discountedPrice);
-    setTotalInputValue(String(pkg.discountedPrice));
+    form.setValue("price", pkg.discountedPrice);
+    setManualTotalOverride(false);
+    const finalTotal = recalcTotalWithDiscounts(pkg.discountedPrice);
+    form.setValue("total", finalTotal);
+    setTotalInputValue(String(finalTotal));
   };
 
   const handleClearPackage = () => {
@@ -1236,6 +1230,8 @@ export default function Planning() {
     setSelectedServices([]);
     setPriceInputs({});
     setManualTotalOverride(false);
+    setAppliedLoyaltyPoints(null);
+    setAppliedGiftCardBalance(null);
     form.setValue("service", "");
     form.setValue("duration", 30);
     form.setValue("total", 0);
@@ -2209,7 +2205,15 @@ export default function Planning() {
                                       field.onChange(client.name);
                                       form.setValue("clientId" as any, client.id);
                                       setClientPopoverOpen(false);
-                                      let runningTotal = parseFloat(totalInputValue || "0");
+                                      
+                                      const baseTotal = computeBaseTotal();
+                                      
+                                      setAppliedLoyaltyPoints(null);
+                                      setAppliedGiftCardBalance(null);
+                                      setManualTotalOverride(false);
+                                      
+                                      let runningTotal = baseTotal;
+                                      
                                       if (client.usePoints && client.loyaltyPoints > 0 && businessSettings?.loyaltyEnabled) {
                                         const pointsValue = businessSettings?.loyaltyPointsValue || 0.1;
                                         const maxDiscount = client.loyaltyPoints * pointsValue;
@@ -2218,21 +2222,20 @@ export default function Planning() {
                                         if (discountAmount > 0) {
                                           setAppliedLoyaltyPoints({ clientId: client.id, points: pointsUsed, discountAmount });
                                           runningTotal = Math.max(0, runningTotal - discountAmount);
-                                          setTotalInputValue(String(runningTotal));
-                                          form.setValue("total", runningTotal);
-                                          toast({ title: t("clients.pointsApplied", "Loyalty points applied!") + ` -${discountAmount.toFixed(2)} DH` });
+                                          toast({ title: t("clients.pointsApplied", "Loyalty points applied!") + ` -${discountAmount.toFixed(0)} DH` });
                                         }
-                                      } else { setAppliedLoyaltyPoints(null); }
-                                      if (client.useGiftCardBalance && client.giftCardBalance > 0) {
-                                        const discountAmount = Math.min(client.giftCardBalance, runningTotal);
+                                      }
+                                      if (client.useGiftCardBalance && Number(client.giftCardBalance) > 0) {
+                                        const discountAmount = Math.min(Number(client.giftCardBalance), runningTotal);
                                         if (discountAmount > 0) {
-                                          setAppliedGiftCardBalance({ clientId: client.id, amount: client.giftCardBalance, discountAmount });
+                                          setAppliedGiftCardBalance({ clientId: client.id, amount: Number(client.giftCardBalance), discountAmount });
                                           runningTotal = Math.max(0, runningTotal - discountAmount);
-                                          setTotalInputValue(String(runningTotal));
-                                          form.setValue("total", runningTotal);
-                                          toast({ title: t("giftCard.balanceApplied", "Gift card balance applied!") + ` -${discountAmount.toFixed(2)} DH` });
+                                          toast({ title: t("giftCard.balanceApplied", "Gift card balance applied!") + ` -${discountAmount.toFixed(0)} DH` });
                                         }
-                                      } else { setAppliedGiftCardBalance(null); }
+                                      }
+                                      
+                                      setTotalInputValue(String(runningTotal));
+                                      form.setValue("total", runningTotal);
                                     }}
                                   >
                                     <Check className={cn("mr-2 h-4 w-4", field.value === client.name ? "opacity-100" : "opacity-0")} />
@@ -2438,13 +2441,14 @@ export default function Planning() {
                               const updatedPrices = { ...priceInputs, [s.id]: newVal };
                               setPriceInputs(updatedPrices);
                               if (!manualTotalOverride) {
-                                const newTotal = selectedServices.reduce((sum, svc) => {
+                                const baseTotal = selectedServices.reduce((sum, svc) => {
                                   const p = svc.id === s.id ? newVal : (updatedPrices[svc.id] ?? String(svc.price));
                                   return sum + (parseFloat(p) || 0);
                                 }, 0);
-                                setTotalInputValue(String(newTotal));
-                                form.setValue("total", newTotal);
-                                form.setValue("price", newTotal);
+                                form.setValue("price", baseTotal);
+                                const finalTotal = recalcTotalWithDiscounts(baseTotal);
+                                setTotalInputValue(String(finalTotal));
+                                form.setValue("total", finalTotal);
                               }
                             }}
                             onBlur={(e) => {
@@ -2452,13 +2456,14 @@ export default function Planning() {
                                 const updatedPrices = { ...priceInputs, [s.id]: String(s.price) };
                                 setPriceInputs(updatedPrices);
                                 if (!manualTotalOverride) {
-                                  const newTotal = selectedServices.reduce((sum, svc) => {
+                                  const baseTotal = selectedServices.reduce((sum, svc) => {
                                     const p = updatedPrices[svc.id] ?? String(svc.price);
                                     return sum + (parseFloat(p) || 0);
                                   }, 0);
-                                  setTotalInputValue(String(newTotal));
-                                  form.setValue("total", newTotal);
-                                  form.setValue("price", newTotal);
+                                  form.setValue("price", baseTotal);
+                                  const finalTotal = recalcTotalWithDiscounts(baseTotal);
+                                  setTotalInputValue(String(finalTotal));
+                                  form.setValue("total", finalTotal);
                                 }
                               }
                             }}
