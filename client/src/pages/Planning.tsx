@@ -1048,7 +1048,157 @@ export default function Planning() {
           return;
         }
       }
-      updateMutation.mutate({ id: editingAppointment.id, ...submitData });
+    }
+
+    const capturedLoyalty = appliedLoyaltyPoints ? { ...appliedLoyaltyPoints } : null;
+    const capturedGiftCard = appliedGiftCardBalance ? { ...appliedGiftCardBalance } : null;
+    const capturedEditingAppointment = editingAppointment ? { ...editingAppointment } : null;
+    const capturedDate = format(date, "yyyy-MM-dd");
+
+    const performDeductions = async () => {
+      if (capturedEditingAppointment) {
+        const oldGiftCardDiscount = Number(capturedEditingAppointment.giftCardDiscountAmount) || 0;
+        const newGiftCardDiscount = capturedGiftCard?.discountAmount || 0;
+
+        if (capturedGiftCard && capturedEditingAppointment.clientId && capturedEditingAppointment.clientId !== capturedGiftCard.clientId) {
+          try {
+            if (oldGiftCardDiscount > 0) {
+              await apiRequest("PATCH", `/api/clients/${capturedEditingAppointment.clientId}/gift-card-balance`, {
+                amount: oldGiftCardDiscount
+              });
+            }
+            if (newGiftCardDiscount > 0) {
+              await apiRequest("PATCH", `/api/clients/${capturedGiftCard.clientId}/gift-card-balance`, {
+                amount: -newGiftCardDiscount
+              });
+              await apiRequest("PATCH", `/api/clients/${capturedGiftCard.clientId}/use-gift-card-balance`, {
+                useGiftCardBalance: false
+              });
+            }
+            queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+          } catch (e) {
+            console.error("Gift card balance client-change adjustment failed:", e);
+            toast({ title: t("common.error"), description: t("planning.giftCardDeductionError", "Gift card deduction failed"), variant: "destructive" });
+          }
+        } else {
+          const giftCardDelta = newGiftCardDiscount - oldGiftCardDiscount;
+          if (giftCardDelta !== 0 && (capturedGiftCard || oldGiftCardDiscount > 0)) {
+            try {
+              const clientId = capturedGiftCard?.clientId || capturedEditingAppointment.clientId;
+              if (clientId) {
+                await apiRequest("PATCH", `/api/clients/${clientId}/gift-card-balance`, {
+                  amount: -giftCardDelta
+                });
+                if (newGiftCardDiscount > 0) {
+                  await apiRequest("PATCH", `/api/clients/${clientId}/use-gift-card-balance`, {
+                    useGiftCardBalance: false
+                  });
+                }
+                queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+              }
+            } catch (e) {
+              console.error("Gift card balance delta adjustment failed:", e);
+              toast({ title: t("common.error"), description: t("planning.giftCardDeductionError", "Gift card deduction failed"), variant: "destructive" });
+            }
+          }
+        }
+
+        const oldLoyaltyPoints = Number(capturedEditingAppointment.loyaltyPointsRedeemed) || 0;
+        const newLoyaltyPoints = capturedLoyalty?.points || 0;
+
+        if (capturedLoyalty && capturedEditingAppointment.clientId && capturedEditingAppointment.clientId !== capturedLoyalty.clientId) {
+          try {
+            if (oldLoyaltyPoints > 0 && capturedEditingAppointment.clientId) {
+              await apiRequest("PATCH", `/api/clients/${capturedEditingAppointment.clientId}/restore-loyalty-points`, {
+                points: oldLoyaltyPoints
+              });
+            }
+            if (newLoyaltyPoints > 0) {
+              await apiRequest("POST", "/api/loyalty-redemptions", {
+                clientId: capturedLoyalty.clientId,
+                pointsUsed: newLoyaltyPoints,
+                rewardDescription: `Réduction (modifié): -${Number(capturedLoyalty.discountAmount ?? 0).toFixed(2)} DH`,
+                date: capturedDate
+              });
+              await apiRequest("PATCH", `/api/clients/${capturedLoyalty.clientId}/use-points`, {
+                usePoints: false
+              });
+            }
+            queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/loyalty-redemptions"] });
+          } catch (e) {
+            console.error("Loyalty points client-change adjustment failed:", e);
+          }
+        } else {
+          const loyaltyDelta = newLoyaltyPoints - oldLoyaltyPoints;
+          if (loyaltyDelta > 0 && capturedLoyalty) {
+            try {
+              await apiRequest("POST", "/api/loyalty-redemptions", {
+                clientId: capturedLoyalty.clientId,
+                pointsUsed: loyaltyDelta,
+                rewardDescription: `Réduction (modifié): -${Number(capturedLoyalty.discountAmount ?? 0).toFixed(2)} DH`,
+                date: capturedDate
+              });
+              await apiRequest("PATCH", `/api/clients/${capturedLoyalty.clientId}/use-points`, {
+                usePoints: false
+              });
+              queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/loyalty-redemptions"] });
+            } catch (e) {
+              console.error("Loyalty points delta deduction failed:", e);
+            }
+          } else if (loyaltyDelta < 0 && capturedEditingAppointment.clientId) {
+            try {
+              await apiRequest("PATCH", `/api/clients/${capturedEditingAppointment.clientId}/restore-loyalty-points`, {
+                points: Math.abs(loyaltyDelta)
+              });
+              queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+            } catch (e) {
+              console.error("Loyalty points restore failed:", e);
+            }
+          }
+        }
+      } else {
+        if (capturedGiftCard && capturedGiftCard.discountAmount > 0) {
+          try {
+            await apiRequest("PATCH", `/api/clients/${capturedGiftCard.clientId}/gift-card-balance`, {
+              amount: -capturedGiftCard.discountAmount
+            });
+            await apiRequest("PATCH", `/api/clients/${capturedGiftCard.clientId}/use-gift-card-balance`, {
+              useGiftCardBalance: false
+            });
+            queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+          } catch (e) {
+            console.error("Gift card balance deduction failed:", e);
+            toast({ title: t("common.error"), description: t("planning.giftCardDeductionError", "Gift card deduction failed"), variant: "destructive" });
+          }
+        }
+
+        if (capturedLoyalty && capturedLoyalty.points > 0) {
+          try {
+            await apiRequest("POST", "/api/loyalty-redemptions", {
+              clientId: capturedLoyalty.clientId,
+              pointsUsed: capturedLoyalty.points,
+              rewardDescription: `Réduction automatique: -${Number(capturedLoyalty.discountAmount ?? 0).toFixed(2)} DH`,
+              date: capturedDate
+            });
+            await apiRequest("PATCH", `/api/clients/${capturedLoyalty.clientId}/use-points`, {
+              usePoints: false
+            });
+            queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/loyalty-redemptions"] });
+          } catch (e) {
+            console.error("Loyalty points deduction failed:", e);
+            toast({ title: t("common.error"), description: t("planning.loyaltyDeductionError", "Loyalty points deduction failed"), variant: "destructive" });
+          }
+        }
+      }
+    };
+
+    if (editingAppointment) {
+      updateMutation.mutate({ id: editingAppointment.id, ...submitData }, {
+        onSuccess: async () => { await performDeductions(); }
+      });
     } else {
       const currentUser = sessionStorage.getItem("current_user") || "Unknown";
       const printData = {
@@ -1093,99 +1243,12 @@ export default function Planning() {
           }).catch((err) => {
             console.error("[print-relay] autoPrint failed:", err);
           });
+          await performDeductions();
         },
       });
       playSuccessSound();
     }
-    
-    // Deduct gift card balance from client if applied
-    if (editingAppointment) {
-      const oldGiftCardDiscount = Number(editingAppointment.giftCardDiscountAmount) || 0;
-      const newGiftCardDiscount = appliedGiftCardBalance?.discountAmount || 0;
-      const giftCardDelta = newGiftCardDiscount - oldGiftCardDiscount;
-      if (giftCardDelta !== 0 && (appliedGiftCardBalance || oldGiftCardDiscount > 0)) {
-        try {
-          const clientId = appliedGiftCardBalance?.clientId || editingAppointment.clientId;
-          if (clientId) {
-            await apiRequest("PATCH", `/api/clients/${clientId}/gift-card-balance`, {
-              amount: -giftCardDelta
-            });
-            if (newGiftCardDiscount > 0) {
-              await apiRequest("PATCH", `/api/clients/${clientId}/use-gift-card-balance`, {
-                useGiftCardBalance: false
-              });
-            }
-            queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
-          }
-        } catch (e) {
-          console.error("Gift card balance delta adjustment failed:", e);
-        }
-      }
-    } else if (appliedGiftCardBalance && appliedGiftCardBalance.discountAmount > 0) {
-      try {
-        await apiRequest("PATCH", `/api/clients/${appliedGiftCardBalance.clientId}/gift-card-balance`, {
-          amount: -appliedGiftCardBalance.discountAmount
-        });
-        await apiRequest("PATCH", `/api/clients/${appliedGiftCardBalance.clientId}/use-gift-card-balance`, {
-          useGiftCardBalance: false
-        });
-        queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
-      } catch (e) {
-        console.error("Gift card balance deduction failed:", e);
-        toast({ title: t("common.error"), description: t("planning.giftCardDeductionError", "Gift card deduction failed"), variant: "destructive" });
-      }
-    }
-    
-    // Deduct loyalty points if applied
-    if (editingAppointment) {
-      const oldLoyaltyPoints = Number(editingAppointment.loyaltyPointsRedeemed) || 0;
-      const newLoyaltyPoints = appliedLoyaltyPoints?.points || 0;
-      const loyaltyDelta = newLoyaltyPoints - oldLoyaltyPoints;
-      if (loyaltyDelta > 0 && appliedLoyaltyPoints) {
-        try {
-          await apiRequest("POST", "/api/loyalty-redemptions", {
-            clientId: appliedLoyaltyPoints.clientId,
-            pointsUsed: loyaltyDelta,
-            rewardDescription: `Réduction (modifié): -${Number(appliedLoyaltyPoints.discountAmount ?? 0).toFixed(2)} DH`,
-            date: format(date, "yyyy-MM-dd")
-          });
-          await apiRequest("PATCH", `/api/clients/${appliedLoyaltyPoints.clientId}/use-points`, {
-            usePoints: false
-          });
-          queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
-          queryClient.invalidateQueries({ queryKey: ["/api/loyalty-redemptions"] });
-        } catch (e) {
-          console.error("Loyalty points delta deduction failed:", e);
-        }
-      } else if (loyaltyDelta < 0 && editingAppointment.clientId) {
-        try {
-          await apiRequest("PATCH", `/api/clients/${editingAppointment.clientId}/restore-loyalty-points`, {
-            points: Math.abs(loyaltyDelta)
-          });
-          queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
-        } catch (e) {
-          console.error("Loyalty points restore failed:", e);
-        }
-      }
-    } else if (appliedLoyaltyPoints && appliedLoyaltyPoints.points > 0) {
-      try {
-        await apiRequest("POST", "/api/loyalty-redemptions", {
-          clientId: appliedLoyaltyPoints.clientId,
-          pointsUsed: appliedLoyaltyPoints.points,
-          rewardDescription: `Réduction automatique: -${Number(appliedLoyaltyPoints.discountAmount ?? 0).toFixed(2)} DH`,
-          date: format(date, "yyyy-MM-dd")
-        });
-        await apiRequest("PATCH", `/api/clients/${appliedLoyaltyPoints.clientId}/use-points`, {
-          usePoints: false
-        });
-        queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/loyalty-redemptions"] });
-      } catch (e) {
-        console.error("Loyalty points deduction failed:", e);
-        toast({ title: t("common.error"), description: t("planning.loyaltyDeductionError", "Loyalty points deduction failed"), variant: "destructive" });
-      }
-    }
-    
+
     setSelectedServices([]);
     setPriceInputs({});
     setSelectedPackage(null);
@@ -2456,27 +2519,32 @@ export default function Planning() {
                               const baseTotal = computeBaseTotal();
                               setAppliedLoyaltyPoints(null);
                               setManualTotalOverride(false);
-                              const finalTotal = appliedGiftCardBalance
-                                ? Math.max(0, baseTotal - appliedGiftCardBalance.discountAmount)
-                                : baseTotal;
-                              setTotalInputValue(String(finalTotal));
-                              form.setValue("total", finalTotal);
+                              if (appliedGiftCardBalance) {
+                                const newGiftCardDiscount = Math.min(appliedGiftCardBalance.amount, baseTotal);
+                                setAppliedGiftCardBalance({ ...appliedGiftCardBalance, discountAmount: newGiftCardDiscount });
+                                setTotalInputValue(String(Math.max(0, baseTotal - newGiftCardDiscount)));
+                                form.setValue("total", Math.max(0, baseTotal - newGiftCardDiscount));
+                              } else {
+                                setTotalInputValue(String(baseTotal));
+                                form.setValue("total", baseTotal);
+                              }
                             } else {
                               const pointsValue = businessSettings?.loyaltyPointsValue || 0.1;
                               const maxDiscount = client.loyaltyPoints * pointsValue;
                               const baseTotal = computeBaseTotal();
-                              let afterGiftCard = baseTotal;
-                              if (appliedGiftCardBalance) {
-                                afterGiftCard = Math.max(0, baseTotal - appliedGiftCardBalance.discountAmount);
-                              }
-                              const discountAmount = Math.min(maxDiscount, afterGiftCard);
+                              const discountAmount = Math.min(maxDiscount, baseTotal);
                               const pointsUsed = Math.ceil(discountAmount / pointsValue);
                               if (discountAmount > 0) {
                                 setAppliedLoyaltyPoints({ clientId: client.id, points: pointsUsed, discountAmount });
                                 setManualTotalOverride(false);
-                                const newTotal = Math.max(0, afterGiftCard - discountAmount);
-                                setTotalInputValue(String(newTotal));
-                                form.setValue("total", newTotal);
+                                let runningTotal = Math.max(0, baseTotal - discountAmount);
+                                if (appliedGiftCardBalance) {
+                                  const newGiftCardDiscount = Math.min(appliedGiftCardBalance.amount, runningTotal);
+                                  setAppliedGiftCardBalance({ ...appliedGiftCardBalance, discountAmount: newGiftCardDiscount });
+                                  runningTotal = Math.max(0, runningTotal - newGiftCardDiscount);
+                                }
+                                setTotalInputValue(String(runningTotal));
+                                form.setValue("total", runningTotal);
                               }
                             }
                           }}
