@@ -809,10 +809,13 @@ export default function Planning() {
     const client = clients.find(c => c.name === clientName);
     if (!client) return;
     
-    // Calculate base total - use package discounted price if a package is selected, otherwise sum of services
+    // Calculate base total - use package discounted price if a package is selected, otherwise sum of services (with custom prices from priceInputs)
     const baseTotal = selectedPackage 
       ? selectedPackage.discountedPrice 
-      : selectedServices.reduce((sum, s) => sum + s.price, 0);
+      : selectedServices.reduce((sum, s) => {
+          const p = priceInputs[s.id];
+          return sum + (p !== undefined ? (parseFloat(p) || 0) : s.price);
+        }, 0);
     if (baseTotal <= 0) {
       // Reset discounts if no services
       if (appliedLoyaltyPoints) setAppliedLoyaltyPoints(null);
@@ -866,7 +869,7 @@ export default function Planning() {
     // Update the total state
     form.setValue("total", runningTotal);
     setTotalInputValue(String(runningTotal));
-  }, [selectedServices, selectedPackage, isDialogOpen, clients, businessSettings, form, appliedLoyaltyPoints, appliedGiftCardBalance, watchedClient]);
+  }, [selectedServices, selectedPackage, isDialogOpen, clients, businessSettings, form, appliedLoyaltyPoints, appliedGiftCardBalance, watchedClient, priceInputs]);
 
   // Helper function to parse services from an appointment
   const parseAppointmentServices = (app: any): Array<{id: string, name: string, price: number, duration: number}> => {
@@ -1171,14 +1174,17 @@ export default function Planning() {
     const updated = selectedServices.filter((_, i) => i !== index);
     setSelectedServices(updated);
     setSelectedPackage(null);
+    let newPriceInputs = { ...priceInputs };
     if (removedService) {
-      setPriceInputs(prev => {
-        const { [removedService.id]: _, ...rest } = prev;
-        return rest;
-      });
+      const { [removedService.id]: _, ...rest } = newPriceInputs;
+      newPriceInputs = rest;
     }
+    setPriceInputs(newPriceInputs);
     const totalDuration = updated.reduce((sum, s) => sum + s.duration, 0);
-    const totalPrice = updated.reduce((sum, s) => sum + s.price, 0);
+    const totalPrice = updated.reduce((sum, s) => {
+      const p = newPriceInputs[s.id];
+      return sum + (p !== undefined ? (parseFloat(p) || 0) : s.price);
+    }, 0);
     form.setValue("service", updated.map(s => s.name).join(', '));
     form.setValue("duration", totalDuration);
     form.setValue("price", totalPrice);
@@ -2355,9 +2361,21 @@ export default function Planning() {
                             type="number"
                             inputMode="decimal"
                             id={`price-input-${s.id}`}
-                            defaultValue={s.price}
+                            value={priceInputs[s.id] ?? String(s.price)}
                             onClick={(e) => e.stopPropagation()}
                             onFocus={(e) => e.target.select()}
+                            onChange={(e) => {
+                              const newVal = e.target.value;
+                              const updatedPrices = { ...priceInputs, [s.id]: newVal };
+                              setPriceInputs(updatedPrices);
+                              const newTotal = selectedServices.reduce((sum, svc) => {
+                                const p = svc.id === s.id ? newVal : (updatedPrices[svc.id] ?? String(svc.price));
+                                return sum + (parseFloat(p) || 0);
+                              }, 0);
+                              setTotalInputValue(String(newTotal));
+                              form.setValue("total", newTotal);
+                              form.setValue("price", newTotal);
+                            }}
                             className="w-14 h-6 px-1 text-[11px] text-center font-bold rounded border border-primary/40 bg-white dark:bg-slate-800 focus:ring-1 focus:ring-primary focus:outline-none"
                             style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
                           />
