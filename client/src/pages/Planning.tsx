@@ -1070,12 +1070,33 @@ export default function Planning() {
     }
     
     // Deduct gift card balance from client if applied
-    if (appliedGiftCardBalance && appliedGiftCardBalance.discountAmount > 0) {
+    if (editingAppointment) {
+      const oldGiftCardDiscount = Number(editingAppointment.giftCardDiscountAmount) || 0;
+      const newGiftCardDiscount = appliedGiftCardBalance?.discountAmount || 0;
+      const giftCardDelta = newGiftCardDiscount - oldGiftCardDiscount;
+      if (giftCardDelta !== 0 && (appliedGiftCardBalance || oldGiftCardDiscount > 0)) {
+        try {
+          const clientId = appliedGiftCardBalance?.clientId || editingAppointment.clientId;
+          if (clientId) {
+            await apiRequest("PATCH", `/api/clients/${clientId}/gift-card-balance`, {
+              amount: -giftCardDelta
+            });
+            if (newGiftCardDiscount > 0) {
+              await apiRequest("PATCH", `/api/clients/${clientId}/use-gift-card-balance`, {
+                useGiftCardBalance: false
+              });
+            }
+            queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+          }
+        } catch (e) {
+          console.error("Gift card balance delta adjustment failed:", e);
+        }
+      }
+    } else if (appliedGiftCardBalance && appliedGiftCardBalance.discountAmount > 0) {
       try {
         await apiRequest("PATCH", `/api/clients/${appliedGiftCardBalance.clientId}/gift-card-balance`, {
           amount: -appliedGiftCardBalance.discountAmount
         });
-        // Also disable useGiftCardBalance after using it
         await apiRequest("PATCH", `/api/clients/${appliedGiftCardBalance.clientId}/use-gift-card-balance`, {
           useGiftCardBalance: false
         });
@@ -1087,16 +1108,44 @@ export default function Planning() {
     }
     
     // Deduct loyalty points if applied
-    if (appliedLoyaltyPoints && appliedLoyaltyPoints.points > 0) {
+    if (editingAppointment) {
+      const oldLoyaltyPoints = Number(editingAppointment.loyaltyPointsRedeemed) || 0;
+      const newLoyaltyPoints = appliedLoyaltyPoints?.points || 0;
+      const loyaltyDelta = newLoyaltyPoints - oldLoyaltyPoints;
+      if (loyaltyDelta > 0 && appliedLoyaltyPoints) {
+        try {
+          await apiRequest("POST", "/api/loyalty-redemptions", {
+            clientId: appliedLoyaltyPoints.clientId,
+            pointsUsed: loyaltyDelta,
+            rewardDescription: `Réduction (modifié): -${Number(appliedLoyaltyPoints.discountAmount ?? 0).toFixed(2)} DH`,
+            date: format(date, "yyyy-MM-dd")
+          });
+          await apiRequest("PATCH", `/api/clients/${appliedLoyaltyPoints.clientId}/use-points`, {
+            usePoints: false
+          });
+          queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/loyalty-redemptions"] });
+        } catch (e) {
+          console.error("Loyalty points delta deduction failed:", e);
+        }
+      } else if (loyaltyDelta < 0 && editingAppointment.clientId) {
+        try {
+          await apiRequest("PATCH", `/api/clients/${editingAppointment.clientId}/restore-loyalty-points`, {
+            points: Math.abs(loyaltyDelta)
+          });
+          queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+        } catch (e) {
+          console.error("Loyalty points restore failed:", e);
+        }
+      }
+    } else if (appliedLoyaltyPoints && appliedLoyaltyPoints.points > 0) {
       try {
-        // Create a loyalty redemption record which also deducts the points
         await apiRequest("POST", "/api/loyalty-redemptions", {
           clientId: appliedLoyaltyPoints.clientId,
           pointsUsed: appliedLoyaltyPoints.points,
           rewardDescription: `Réduction automatique: -${Number(appliedLoyaltyPoints.discountAmount ?? 0).toFixed(2)} DH`,
           date: format(date, "yyyy-MM-dd")
         });
-        // Also disable usePoints after using them
         await apiRequest("PATCH", `/api/clients/${appliedLoyaltyPoints.clientId}/use-points`, {
           usePoints: false
         });
