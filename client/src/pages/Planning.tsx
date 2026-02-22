@@ -382,6 +382,7 @@ export default function Planning() {
   const [selectedServices, setSelectedServices] = useState<Array<{id: string, name: string, price: number, duration: number}>>([]);
   const [priceInputs, setPriceInputs] = useState<Record<string, string>>({});
   const [totalInputValue, setTotalInputValue] = useState<string>("0");
+  const [manualTotalOverride, setManualTotalOverride] = useState<boolean>(false);
   const [selectedPackage, setSelectedPackage] = useState<{id: number; name: string; discountedPrice: number; originalPrice: number} | null>(null);
   const [appliedLoyaltyPoints, setAppliedLoyaltyPoints] = useState<{clientId: number; points: number; discountAmount: number} | null>(null);
   const [appliedGiftCardBalance, setAppliedGiftCardBalance] = useState<{clientId: number; amount: number; discountAmount: number} | null>(null);
@@ -802,6 +803,7 @@ export default function Planning() {
   // Recalculate discounts when services change and a client with discounts is selected
   useEffect(() => {
     if (!isDialogOpen) return;
+    if (manualTotalOverride) return;
     
     const clientName = watchedClient;
     if (!clientName) return;
@@ -869,7 +871,7 @@ export default function Planning() {
     // Update the total state
     form.setValue("total", runningTotal);
     setTotalInputValue(String(runningTotal));
-  }, [selectedServices, selectedPackage, isDialogOpen, clients, businessSettings, form, appliedLoyaltyPoints, appliedGiftCardBalance, watchedClient, priceInputs]);
+  }, [selectedServices, selectedPackage, isDialogOpen, clients, businessSettings, form, appliedLoyaltyPoints, appliedGiftCardBalance, watchedClient, priceInputs, manualTotalOverride]);
 
   // Helper function to parse services from an appointment
   const parseAppointmentServices = (app: any): Array<{id: string, name: string, price: number, duration: number}> => {
@@ -904,6 +906,7 @@ export default function Planning() {
     setAppliedLoyaltyPoints(null);
     setAppliedGiftCardBalance(null);
     setSelectedPackage(null);
+    setManualTotalOverride(false);
     setSelectedServices(parsedServices);
     const newPriceInputs: Record<string, string> = {};
     parsedServices.forEach(s => {
@@ -943,6 +946,7 @@ export default function Planning() {
     setSelectedPackage(null);
     setAppliedLoyaltyPoints(null);
     setAppliedGiftCardBalance(null);
+    setManualTotalOverride(false);
     setEditingAppointment(null);
     setIsDialogOpen(true);
   };
@@ -1158,10 +1162,15 @@ export default function Planning() {
     };
     const updated = [...selectedServices, newService];
     setSelectedServices(updated);
-    setSelectedPackage(null); // Clear package when adding individual services
-    setPriceInputs(prev => ({ ...prev, [serviceId]: String(service.price) }));
+    setSelectedPackage(null);
+    const updatedPrices = { ...priceInputs, [serviceId]: String(service.price) };
+    setPriceInputs(updatedPrices);
+    setManualTotalOverride(false);
     const totalDuration = updated.reduce((sum, s) => sum + s.duration, 0);
-    const totalPrice = updated.reduce((sum, s) => sum + s.price, 0);
+    const totalPrice = updated.reduce((sum, s) => {
+      const p = updatedPrices[s.id];
+      return sum + (p !== undefined ? (parseFloat(p) || 0) : s.price);
+    }, 0);
     form.setValue("service", updated.map(s => s.name).join(', '));
     form.setValue("duration", totalDuration);
     form.setValue("price", totalPrice);
@@ -1180,6 +1189,7 @@ export default function Planning() {
       newPriceInputs = rest;
     }
     setPriceInputs(newPriceInputs);
+    setManualTotalOverride(false);
     const totalDuration = updated.reduce((sum, s) => sum + s.duration, 0);
     const totalPrice = updated.reduce((sum, s) => {
       const p = newPriceInputs[s.id];
@@ -1225,6 +1235,7 @@ export default function Planning() {
     setSelectedPackage(null);
     setSelectedServices([]);
     setPriceInputs({});
+    setManualTotalOverride(false);
     form.setValue("service", "");
     form.setValue("duration", 30);
     form.setValue("total", 0);
@@ -2124,6 +2135,7 @@ export default function Planning() {
                       onChange={(e) => {
                         setTotalInputValue(e.target.value);
                         form.setValue("total", parseFloat(e.target.value) || 0);
+                        setManualTotalOverride(true);
                       }}
                       placeholder="0"
                       onClick={(e) => e.stopPropagation()}
@@ -2368,13 +2380,30 @@ export default function Planning() {
                               const newVal = e.target.value;
                               const updatedPrices = { ...priceInputs, [s.id]: newVal };
                               setPriceInputs(updatedPrices);
-                              const newTotal = selectedServices.reduce((sum, svc) => {
-                                const p = svc.id === s.id ? newVal : (updatedPrices[svc.id] ?? String(svc.price));
-                                return sum + (parseFloat(p) || 0);
-                              }, 0);
-                              setTotalInputValue(String(newTotal));
-                              form.setValue("total", newTotal);
-                              form.setValue("price", newTotal);
+                              if (!manualTotalOverride) {
+                                const newTotal = selectedServices.reduce((sum, svc) => {
+                                  const p = svc.id === s.id ? newVal : (updatedPrices[svc.id] ?? String(svc.price));
+                                  return sum + (parseFloat(p) || 0);
+                                }, 0);
+                                setTotalInputValue(String(newTotal));
+                                form.setValue("total", newTotal);
+                                form.setValue("price", newTotal);
+                              }
+                            }}
+                            onBlur={(e) => {
+                              if (e.target.value === '' || isNaN(parseFloat(e.target.value))) {
+                                const updatedPrices = { ...priceInputs, [s.id]: String(s.price) };
+                                setPriceInputs(updatedPrices);
+                                if (!manualTotalOverride) {
+                                  const newTotal = selectedServices.reduce((sum, svc) => {
+                                    const p = updatedPrices[svc.id] ?? String(svc.price);
+                                    return sum + (parseFloat(p) || 0);
+                                  }, 0);
+                                  setTotalInputValue(String(newTotal));
+                                  form.setValue("total", newTotal);
+                                  form.setValue("price", newTotal);
+                                }
+                              }
                             }}
                             className="w-14 h-6 px-1 text-[11px] text-center font-bold rounded border border-primary/40 bg-white dark:bg-slate-800 focus:ring-1 focus:ring-primary focus:outline-none"
                             style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
