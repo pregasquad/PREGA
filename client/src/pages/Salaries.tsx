@@ -303,7 +303,7 @@ export default function Salaries() {
   });
 
   const unclearedDeductions = deductions.filter(d => !d.cleared);
-  const getRemainingAmount = (d: StaffDeduction) => d.amount - (d.paidBack || 0);
+  const getRemainingAmount = (d: StaffDeduction) => Math.max(0, d.amount - (d.paidBack || 0));
   const totalUnclearedByStaff = unclearedDeductions.reduce((acc, d) => {
     acc[d.staffName] = (acc[d.staffName] || 0) + getRemainingAmount(d);
     return acc;

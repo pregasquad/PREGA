@@ -797,7 +797,13 @@ export class DatabaseStorage implements IStorage {
 
   async clearStaffDeduction(id: number): Promise<void> {
     const s = schema();
-    await db().update(s.staffDeductions).set({ cleared: true, clearedAt: new Date() }).where(eq(s.staffDeductions.id, id));
+    const deductions = await db().select().from(s.staffDeductions).where(eq(s.staffDeductions.id, id));
+    const deduction = deductions[0];
+    const updates: any = { cleared: true, clearedAt: new Date() };
+    if (deduction) {
+      updates.paidBack = deduction.amount;
+    }
+    await db().update(s.staffDeductions).set(updates).where(eq(s.staffDeductions.id, id));
   }
 
   async getExpenseCategories(): Promise<ExpenseCategory[]> {

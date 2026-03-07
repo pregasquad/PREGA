@@ -1868,10 +1868,10 @@ export async function registerRoutes(
         }
         return d.date >= startDate && d.date <= endDate;
       });
-      const totalPeriodDeductions = periodDeductions.reduce((sum, d) => sum + (d.amount - (d.paidBack || 0)), 0);
+      const totalPeriodDeductions = periodDeductions.reduce((sum, d) => sum + Math.max(0, d.amount - (d.paidBack || 0)), 0);
 
       const pendingDeductions = staffDeductions.filter(d => !d.cleared);
-      const totalPendingDeductions = pendingDeductions.reduce((sum, d) => sum + (d.amount - (d.paidBack || 0)), 0);
+      const totalPendingDeductions = pendingDeductions.reduce((sum, d) => sum + Math.max(0, d.amount - (d.paidBack || 0)), 0);
 
       const lastPayment = await storage.getLastStaffPayment(staffMember.id);
 
@@ -1898,7 +1898,7 @@ export async function registerRoutes(
       }
 
       const netCommission = totalCommission - totalPeriodDeductions;
-      const periodPendingDeductions = periodDeductions.filter(d => !d.cleared).reduce((sum, d) => sum + (d.amount - (d.paidBack || 0)), 0);
+      const periodPendingDeductions = periodDeductions.filter(d => !d.cleared).reduce((sum, d) => sum + Math.max(0, d.amount - (d.paidBack || 0)), 0);
 
       res.json({
         totalRevenue,
@@ -2085,6 +2085,9 @@ export async function registerRoutes(
       const deduction = deductions.find(d => d.id === id);
       if (!deduction) {
         return res.status(404).json({ message: "Deduction not found" });
+      }
+      if (deduction.cleared) {
+        return res.status(400).json({ message: "Deduction is already cleared" });
       }
       const currentPaidBack = deduction.paidBack || 0;
       const newPaidBack = Math.min(currentPaidBack + amount, deduction.amount);

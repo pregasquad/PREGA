@@ -483,7 +483,7 @@ export default function StaffPortal() {
                     <div className="border-t pt-2 space-y-1.5">
                       <p className="text-xs font-medium text-muted-foreground">{t("staffPortal.allDeductions")}</p>
                       {earnings.deductionsList.map((ded, idx) => {
-                        const remaining = ded.amount - (ded.paidBack || 0);
+                        const remaining = Math.max(0, ded.amount - (ded.paidBack || 0));
                         return (
                           <div key={idx} className="flex items-center justify-between gap-2 py-1 text-sm" data-testid={`deduction-item-${idx}`}>
                             <div className="min-w-0 flex-1">
