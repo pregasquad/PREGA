@@ -2,14 +2,11 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
@@ -17,11 +14,11 @@ import {
   UserPlus, Users, Shield, Download, FileSpreadsheet, 
   Trash2, Edit, Calendar, User, Briefcase, Package, 
   CreditCard, Building2, Clock, Save, Camera, Loader2, RefreshCw,
-  MessageCircle, Send, Lock, LayoutGrid
+  MessageCircle, Send, Lock, LayoutGrid, Sparkles,
+  Search, Check, X, Zap
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { SHORTCUT_OPTIONS, DEFAULT_SHORTCUTS } from "@/lib/shortcuts";
 
 interface AdminRole {
@@ -59,10 +56,10 @@ interface MessageTemplate {
   updatedAt: string;
 }
 
-const ROLE_LABELS: Record<string, { label: string, color: string }> = {
-  owner: { label: "Owner", color: "bg-red-500" },
-  manager: { label: "Manager", color: "bg-pink-500" },
-  receptionist: { label: "Receptionist", color: "bg-green-500" }
+const ROLE_LABELS: Record<string, { gradient: string }> = {
+  owner: { gradient: "from-red-400 to-rose-600" },
+  manager: { gradient: "from-pink-400 to-fuchsia-600" },
+  receptionist: { gradient: "from-emerald-400 to-teal-600" }
 };
 
 const ALL_PERMISSIONS = [
@@ -111,10 +108,45 @@ const DAYS_OF_WEEK = [
   { value: 6, label: "saturday" }
 ];
 
+function GlassSection({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`glass-card rounded-2xl overflow-hidden ${className}`}>
+      <div className="relative z-10">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function GlassSectionHeader({ icon: Icon, title, description, action }: { 
+  icon: React.ElementType; 
+  title: string; 
+  description?: string;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="liquid-glass-header px-5 py-4 md:px-6 md:py-5">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-xl liquid-gradient flex items-center justify-center shrink-0 shadow-lg">
+            <Icon className="w-5 h-5 text-white" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="font-semibold text-base md:text-lg tracking-tight truncate">{title}</h3>
+            {description && (
+              <p className="text-xs md:text-sm text-muted-foreground mt-0.5 line-clamp-1">{description}</p>
+            )}
+          </div>
+        </div>
+        {action && <div className="shrink-0">{action}</div>}
+      </div>
+    </div>
+  );
+}
+
 export default function AdminSettings() {
   const { t } = useTranslation();
   const { toast } = useToast();
-  const isMobile = useIsMobile();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<AdminRole | null>(null);
   const [formData, setFormData] = useState({
@@ -154,7 +186,6 @@ export default function AdminSettings() {
     queryKey: ["/api/business-settings"],
   });
 
-  // Update business form when data loads
   useEffect(() => {
     if (businessSettings) {
       setBusinessForm(prev => ({
@@ -502,72 +533,89 @@ export default function AdminSettings() {
   ];
 
   return (
-    <div className="space-y-6 p-2 md:p-4 animate-fade-in">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-2xl md:text-3xl font-bold font-display flex items-center gap-2">
-            <Shield className="w-6 h-6 md:w-8 md:h-8" />
-            {t("admin.title")}
-          </h1>
-          <p className="text-muted-foreground">{t("admin.description")}</p>
+    <div className="space-y-5 p-3 md:p-6 animate-fade-in max-w-5xl mx-auto">
+      <div className="glass-elevated rounded-2xl px-5 py-5 md:px-7 md:py-6 glass-shine">
+        <div className="relative z-10 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl liquid-gradient flex items-center justify-center shadow-lg">
+              <Shield className="w-6 h-6 md:w-7 md:h-7 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl md:text-2xl font-bold tracking-tight" data-testid="text-admin-title">
+                {t("admin.title")}
+              </h1>
+              <p className="text-sm text-muted-foreground mt-0.5">{t("admin.description")}</p>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="glass-subtle rounded-xl h-10 w-10 hover:scale-105 transition-transform"
+            onClick={() => {
+              queryClient.invalidateQueries();
+              toast({ title: t("common.refreshed"), description: t("common.dataUpdated") });
+            }}
+            title={t("common.refresh")}
+            data-testid="button-refresh"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
         </div>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => {
-            queryClient.invalidateQueries();
-            toast({ title: t("common.refreshed"), description: t("common.dataUpdated") });
-          }}
-          title={t("common.refresh")}
-        >
-          <RefreshCw className="h-4 w-4" />
-        </Button>
       </div>
 
       <Tabs defaultValue="business" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 max-w-2xl">
-          <TabsTrigger value="business" className="gap-2">
-            <Building2 className="w-4 h-4" />
-            {t("admin.business")}
-          </TabsTrigger>
-          <TabsTrigger value="users" className="gap-2">
-            <Users className="w-4 h-4" />
-            {t("admin.users")}
-          </TabsTrigger>
-          <TabsTrigger value="broadcast" className="gap-2">
-            <MessageCircle className="w-4 h-4" />
-            {t("admin.broadcast")}
-          </TabsTrigger>
-          <TabsTrigger value="export" className="gap-2">
-            <Download className="w-4 h-4" />
-            {t("admin.export")}
-          </TabsTrigger>
-        </TabsList>
+        <div className="glass-card rounded-2xl p-1.5 mb-5">
+          <TabsList className="grid w-full grid-cols-4 bg-transparent h-auto p-0 gap-1">
+            {[
+              { value: "business", icon: Building2, label: t("admin.business") },
+              { value: "users", icon: Users, label: t("admin.users") },
+              { value: "broadcast", icon: MessageCircle, label: t("admin.broadcast") },
+              { value: "export", icon: Download, label: t("admin.export") },
+            ].map(tab => (
+              <TabsTrigger
+                key={tab.value}
+                value={tab.value}
+                className="rounded-xl py-2.5 md:py-3 px-2 gap-2 text-xs md:text-sm font-medium transition-all duration-300 data-[state=active]:liquid-gradient data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-primary/25 data-[state=inactive]:hover:bg-muted/60"
+                data-testid={`tab-${tab.value}`}
+              >
+                <tab.icon className="w-4 h-4" />
+                <span className="hidden sm:inline">{tab.label}</span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
 
-        <TabsContent value="business" className="space-y-4 mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building2 className="w-5 h-5" />
-                {t("admin.businessSettings")}
-              </CardTitle>
-              <CardDescription>{t("admin.businessSettingsDesc")}</CardDescription>
-            </CardHeader>
-            <CardContent>
+        {/* ==================== BUSINESS TAB ==================== */}
+        <TabsContent value="business" className="space-y-5 mt-0">
+          <GlassSection>
+            <GlassSectionHeader
+              icon={Building2}
+              title={t("admin.businessSettings")}
+              description={t("admin.businessSettingsDesc")}
+            />
+            <div className="p-5 md:p-6">
               {isLoadingBusiness ? (
-                <div className="loading-container py-8 min-h-[300px]"><SpinningLogo size="lg" /></div>
+                <div className="loading-container py-12 min-h-[300px]"><SpinningLogo size="lg" /></div>
               ) : (
                 <form onSubmit={handleBusinessSave} className="space-y-6">
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
-                      <Label>{t("admin.logo") || "Logo"}</Label>
+                      <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("admin.logo") || "Logo"}</Label>
                       <div className="flex items-center gap-4">
-                        {businessForm.logo && (
-                          <img src={businessForm.logo} alt="Logo" className="h-12 w-12 object-contain border rounded" />
+                        {businessForm.logo ? (
+                          <div className="w-14 h-14 rounded-xl overflow-hidden glass-subtle flex items-center justify-center">
+                            <img src={businessForm.logo} alt="Logo" className="h-full w-full object-contain" />
+                          </div>
+                        ) : (
+                          <div className="w-14 h-14 rounded-xl glass-subtle flex items-center justify-center">
+                            <Camera className="w-5 h-5 text-muted-foreground" />
+                          </div>
                         )}
                         <Button 
                           type="button" 
                           variant="outline"
+                          size="sm"
+                          className="glass-subtle rounded-xl border-0"
                           onClick={() => {
                             const input = document.createElement("input");
                             input.type = "file";
@@ -578,122 +626,139 @@ export default function AdminSettings() {
                             };
                             input.click();
                           }}
+                          data-testid="button-upload-logo"
                         >
-                          <Camera className="mr-2 h-4 w-4" />
+                          <Camera className="mr-2 h-3.5 w-3.5" />
                           {t("admin.uploadLogo") || "Upload Logo"}
                         </Button>
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label>{t("admin.businessName")}</Label>
+                      <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("admin.businessName")}</Label>
                       <Input
                         value={businessForm.businessName}
                         onChange={(e) => setBusinessForm(prev => ({ ...prev, businessName: e.target.value }))}
                         placeholder="PREGA SQUAD"
+                        className="glass-subtle rounded-xl border-0 h-11"
+                        data-testid="input-business-name"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>{t("common.email")}</Label>
+                      <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("common.email")}</Label>
                       <Input
                         type="email"
                         value={businessForm.email || ""}
                         onChange={(e) => setBusinessForm(prev => ({ ...prev, email: e.target.value }))}
                         placeholder="contact@example.com"
+                        className="glass-subtle rounded-xl border-0 h-11"
+                        data-testid="input-email"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>{t("common.phone")}</Label>
+                      <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("common.phone")}</Label>
                       <Input
                         value={businessForm.phone || ""}
                         onChange={(e) => setBusinessForm(prev => ({ ...prev, phone: e.target.value }))}
                         placeholder="+212 6XX XXX XXX"
+                        className="glass-subtle rounded-xl border-0 h-11"
+                        data-testid="input-phone"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label>{t("admin.address")}</Label>
+                    <div className="space-y-2 md:col-span-2">
+                      <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("admin.address")}</Label>
                       <Input
                         value={businessForm.address || ""}
                         onChange={(e) => setBusinessForm(prev => ({ ...prev, address: e.target.value }))}
                         placeholder={t("admin.addressPlaceholder")}
+                        className="glass-subtle rounded-xl border-0 h-11"
+                        data-testid="input-address"
                       />
                     </div>
                   </div>
 
-                  <div className="border-t pt-4">
-                    <h3 className="font-medium mb-4 flex items-center gap-2">
-                      <Clock className="w-4 h-4" />
+                  <div className="glass-subtle rounded-2xl p-5">
+                    <h3 className="font-semibold text-sm mb-4 flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-primary" />
                       {t("admin.workingHours")}
                     </h3>
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-2">
-                        <Label>{t("admin.openingTime")}</Label>
+                        <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("admin.openingTime")}</Label>
                         <Input
                           type="time"
                           value={businessForm.openingTime}
                           onChange={(e) => setBusinessForm(prev => ({ ...prev, openingTime: e.target.value }))}
+                          className="rounded-xl border-border/50 h-11"
+                          data-testid="input-opening-time"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>{t("admin.closingTime")}</Label>
+                        <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("admin.closingTime")}</Label>
                         <Input
                           type="time"
                           value={businessForm.closingTime}
                           onChange={(e) => setBusinessForm(prev => ({ ...prev, closingTime: e.target.value }))}
+                          className="rounded-xl border-border/50 h-11"
+                          data-testid="input-closing-time"
                         />
                       </div>
                     </div>
                     <div className="mt-4 space-y-2">
-                      <Label>{t("admin.workingDays")}</Label>
-                      <div className="flex flex-wrap gap-2">
-                        {DAYS_OF_WEEK.map(day => (
-                          <div
-                            key={day.value}
-                            className="flex items-center space-x-2"
-                          >
-                            <Checkbox
-                              id={`day-${day.value}`}
-                              checked={businessForm.workingDays?.includes(day.value) || false}
-                              onCheckedChange={() => toggleWorkingDay(day.value)}
-                            />
-                            <label
-                              htmlFor={`day-${day.value}`}
-                              className="text-sm cursor-pointer"
+                      <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("admin.workingDays")}</Label>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {DAYS_OF_WEEK.map(day => {
+                          const isActive = businessForm.workingDays?.includes(day.value) || false;
+                          return (
+                            <button
+                              key={day.value}
+                              type="button"
+                              onClick={() => toggleWorkingDay(day.value)}
+                              className={`px-3 py-2 rounded-xl text-xs font-medium transition-all duration-200 ${
+                                isActive 
+                                  ? 'liquid-gradient text-white shadow-md shadow-primary/20' 
+                                  : 'glass-subtle hover:bg-muted/80'
+                              }`}
+                              data-testid={`button-day-${day.value}`}
                             >
                               {t(`days.${day.label}`)}
-                            </label>
-                          </div>
-                        ))}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
 
-                  <div className="border-t pt-4">
-                    <h3 className="font-medium mb-2 flex items-center gap-2">
-                      <Lock className="w-4 h-4" />
+                  <div className="glass-subtle rounded-2xl p-5">
+                    <h3 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                      <Lock className="w-4 h-4 text-primary" />
                       {t("admin.autoLock")}
                     </h3>
-                    <p className="text-sm text-muted-foreground mb-3">{t("admin.autoLockDesc")}</p>
+                    <p className="text-xs text-muted-foreground mb-3">{t("admin.autoLockDesc")}</p>
                     <div className="flex items-center gap-3">
-                      <Checkbox
-                        checked={businessForm.autoLockEnabled}
-                        onCheckedChange={(checked) => setBusinessForm(prev => ({ ...prev, autoLockEnabled: !!checked }))}
-                        id="auto-lock-toggle"
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={businessForm.autoLockEnabled}
+                        onClick={() => setBusinessForm(prev => ({ ...prev, autoLockEnabled: !prev.autoLockEnabled }))}
+                        className={`relative w-11 h-6 rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${businessForm.autoLockEnabled ? 'liquid-gradient' : 'bg-muted'}`}
                         data-testid="switch-auto-lock"
-                      />
-                      <label htmlFor="auto-lock-toggle" className="text-sm cursor-pointer">{t("admin.autoLockEnabled")}</label>
+                      >
+                        <span className={`block absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-200 ${businessForm.autoLockEnabled ? 'translate-x-5' : ''}`} />
+                      </button>
+                      <span className="text-sm">{t("admin.autoLockEnabled")}</span>
                     </div>
                   </div>
 
-                  <div className="border-t pt-4">
-                    <h3 className="font-medium mb-2 flex items-center gap-2">
-                      <LayoutGrid className="w-4 h-4" />
+                  <div className="glass-subtle rounded-2xl p-5">
+                    <h3 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                      <LayoutGrid className="w-4 h-4 text-primary" />
                       {t("admin.planningShortcuts")}
                     </h3>
-                    <p className="text-sm text-muted-foreground mb-3">{t("admin.planningShortcutsDesc")}</p>
+                    <p className="text-xs text-muted-foreground mb-4">{t("admin.planningShortcutsDesc")}</p>
                     <div className="grid gap-3 md:grid-cols-2">
                       {[0, 1, 2, 3].map((slotIndex) => (
-                        <div key={slotIndex} className="space-y-1">
-                          <Label>{t("admin.shortcutSlot")} {slotIndex + 1}</Label>
+                        <div key={slotIndex} className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground">{t("admin.shortcutSlot")} {slotIndex + 1}</Label>
                           <Select
                             value={businessForm.planningShortcuts?.[slotIndex] || ""}
                             onValueChange={(val) => {
@@ -704,7 +769,7 @@ export default function AdminSettings() {
                               });
                             }}
                           >
-                            <SelectTrigger data-testid={`select-shortcut-${slotIndex}`}>
+                            <SelectTrigger className="rounded-xl border-border/50 h-10" data-testid={`select-shortcut-${slotIndex}`}>
                               <SelectValue placeholder={t("admin.selectShortcut")} />
                             </SelectTrigger>
                             <SelectContent>
@@ -723,169 +788,215 @@ export default function AdminSettings() {
                     </div>
                   </div>
 
-                  <div className="border-t pt-4">
-                    <h3 className="font-medium mb-4">{t("admin.currency")}</h3>
+                  <div className="glass-subtle rounded-2xl p-5">
+                    <h3 className="font-semibold text-sm mb-4 flex items-center gap-2">
+                      <CreditCard className="w-4 h-4 text-primary" />
+                      {t("admin.currency")}
+                    </h3>
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-2">
-                        <Label>{t("admin.currencyCode")}</Label>
+                        <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("admin.currencyCode")}</Label>
                         <Input
                           value={businessForm.currency}
                           onChange={(e) => setBusinessForm(prev => ({ ...prev, currency: e.target.value }))}
                           placeholder="MAD"
                           maxLength={5}
+                          className="rounded-xl border-border/50 h-11"
+                          data-testid="input-currency-code"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>{t("admin.currencySymbol")}</Label>
+                        <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("admin.currencySymbol")}</Label>
                         <Input
                           value={businessForm.currencySymbol}
                           onChange={(e) => setBusinessForm(prev => ({ ...prev, currencySymbol: e.target.value }))}
                           placeholder="DH"
                           maxLength={5}
+                          className="rounded-xl border-border/50 h-11"
+                          data-testid="input-currency-symbol"
                         />
                       </div>
                     </div>
                   </div>
 
-                  <Button type="submit" className="gap-2" disabled={businessMutation.isPending}>
-                    <Save className="w-4 h-4" />
+                  <Button 
+                    type="submit" 
+                    className="liquid-glass-button rounded-xl h-11 px-6 gap-2 w-full sm:w-auto" 
+                    disabled={businessMutation.isPending}
+                    data-testid="button-save-business"
+                  >
+                    {businessMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4" />
+                    )}
                     {t("common.save")}
                   </Button>
                 </form>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </GlassSection>
         </TabsContent>
 
-        <TabsContent value="users" className="space-y-4 mt-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>{t("admin.userManagement")}</CardTitle>
-                <CardDescription>{t("admin.userManagementDesc")}</CardDescription>
-              </div>
-              <Dialog open={isDialogOpen} onOpenChange={(open) => {
-                setIsDialogOpen(open);
-                if (!open) {
-                  setEditingRole(null);
-                  resetForm();
-                }
-              }}>
-                <DialogTrigger asChild>
-                  <Button className="gap-2">
-                    <UserPlus className="w-4 h-4" />
-                    {t("admin.addUser")}
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>
-                      {editingRole ? t("admin.editUser") : t("admin.addUser")}
-                    </DialogTitle>
-                  </DialogHeader>
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label>{t("common.name")}</Label>
-                        <Input
-                          value={formData.name}
-                          onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                          placeholder={t("admin.namePlaceholder")}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>{t("admin.role")}</Label>
-                        <Select
-                          value={formData.role}
-                          onValueChange={(value) => setFormData(prev => ({ ...prev, role: value }))}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="owner">{t("admin.owner")}</SelectItem>
-                            <SelectItem value="manager">{t("admin.manager")}</SelectItem>
-                            <SelectItem value="receptionist">{t("admin.receptionist")}</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>{t("admin.pin")} ({t("services.optional")})</Label>
-                      <Input
-                        type="password"
-                        value={formData.pin}
-                        onChange={(e) => setFormData(prev => ({ ...prev, pin: e.target.value }))}
-                        placeholder="****"
-                        maxLength={10}
-                      />
-                      <p className="text-xs text-muted-foreground">{t("admin.pinDesc")}</p>
-                    </div>
-                    
-                    <div className="space-y-3 border-t pt-4">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-base font-semibold">{t("admin.permissions")}</Label>
-                        <div className="flex gap-2">
-                          <Button type="button" variant="outline" size="sm" onClick={selectAllPermissions}>
-                            {t("admin.selectAll")}
-                          </Button>
-                          <Button type="button" variant="outline" size="sm" onClick={clearAllPermissions}>
-                            {t("admin.clearAll")}
-                          </Button>
+        {/* ==================== USERS TAB ==================== */}
+        <TabsContent value="users" className="space-y-5 mt-0">
+          <GlassSection>
+            <GlassSectionHeader
+              icon={Users}
+              title={t("admin.userManagement")}
+              description={t("admin.userManagementDesc")}
+              action={
+                <Dialog open={isDialogOpen} onOpenChange={(open) => {
+                  setIsDialogOpen(open);
+                  if (!open) {
+                    setEditingRole(null);
+                    resetForm();
+                  }
+                }}>
+                  <DialogTrigger asChild>
+                    <Button className="liquid-glass-button rounded-xl h-9 px-4 gap-2 text-sm" data-testid="button-add-user">
+                      <UserPlus className="w-4 h-4" />
+                      <span className="hidden sm:inline">{t("admin.addUser")}</span>
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto liquid-glass-modal rounded-2xl">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2 text-lg">
+                        <div className="w-8 h-8 rounded-lg liquid-gradient flex items-center justify-center">
+                          {editingRole ? <Edit className="w-4 h-4 text-white" /> : <UserPlus className="w-4 h-4 text-white" />}
+                        </div>
+                        {editingRole ? t("admin.editUser") : t("admin.addUser")}
+                      </DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("common.name")}</Label>
+                          <Input
+                            value={formData.name}
+                            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                            placeholder={t("admin.namePlaceholder")}
+                            required
+                            className="rounded-xl h-11"
+                            data-testid="input-user-name"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("admin.role")}</Label>
+                          <Select
+                            value={formData.role}
+                            onValueChange={(value) => setFormData(prev => ({ ...prev, role: value }))}
+                          >
+                            <SelectTrigger className="rounded-xl h-11" data-testid="select-user-role">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="owner">{t("admin.owner")}</SelectItem>
+                              <SelectItem value="manager">{t("admin.manager")}</SelectItem>
+                              <SelectItem value="receptionist">{t("admin.receptionist")}</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                       </div>
-                      <p className="text-sm text-muted-foreground">{t("admin.permissionsDesc")}</p>
-                      <div className="grid gap-2 md:grid-cols-2">
-                        {ALL_PERMISSIONS.map((perm) => (
-                          <label
-                            key={perm.key}
-                            htmlFor={`perm-${perm.key}`}
-                            className="flex items-center space-x-2 p-2 border rounded-lg hover:bg-muted/50 cursor-pointer"
-                          >
-                            <Checkbox
-                              id={`perm-${perm.key}`}
-                              checked={formData.permissions.includes(perm.key)}
-                              onCheckedChange={() => togglePermission(perm.key)}
-                            />
-                            <span className="text-sm flex-1">
-                              {t(perm.labelKey, perm.key.replace(/_/g, ' '))}
-                            </span>
-                          </label>
-                        ))}
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("admin.pin")} ({t("services.optional")})</Label>
+                        <Input
+                          type="password"
+                          value={formData.pin}
+                          onChange={(e) => setFormData(prev => ({ ...prev, pin: e.target.value }))}
+                          placeholder="****"
+                          maxLength={10}
+                          className="rounded-xl h-11"
+                          data-testid="input-user-pin"
+                        />
+                        <p className="text-xs text-muted-foreground">{t("admin.pinDesc")}</p>
                       </div>
-                    </div>
+                      
+                      <div className="glass-subtle rounded-2xl p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm font-semibold flex items-center gap-2">
+                            <Shield className="w-4 h-4 text-primary" />
+                            {t("admin.permissions")}
+                          </Label>
+                          <div className="flex gap-1.5">
+                            <Button type="button" variant="ghost" size="sm" className="h-7 text-xs rounded-lg" onClick={selectAllPermissions} data-testid="button-select-all-perms">
+                              {t("admin.selectAll")}
+                            </Button>
+                            <Button type="button" variant="ghost" size="sm" className="h-7 text-xs rounded-lg" onClick={clearAllPermissions} data-testid="button-clear-all-perms">
+                              {t("admin.clearAll")}
+                            </Button>
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{t("admin.permissionsDesc")}</p>
+                        <div className="grid gap-1.5 md:grid-cols-2">
+                          {ALL_PERMISSIONS.map((perm) => {
+                            const isChecked = formData.permissions.includes(perm.key);
+                            return (
+                              <label
+                                key={perm.key}
+                                htmlFor={`perm-${perm.key}`}
+                                className={`flex items-center gap-2.5 p-2.5 rounded-xl cursor-pointer transition-all duration-200 ${
+                                  isChecked 
+                                    ? 'bg-primary/10 border border-primary/20' 
+                                    : 'hover:bg-muted/50 border border-transparent'
+                                }`}
+                              >
+                                <Checkbox
+                                  id={`perm-${perm.key}`}
+                                  checked={isChecked}
+                                  onCheckedChange={() => togglePermission(perm.key)}
+                                  className="rounded-md"
+                                />
+                                <span className="text-sm flex-1">
+                                  {t(perm.labelKey, perm.key.replace(/_/g, ' '))}
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
 
-                    <Button type="submit" className="w-full" disabled={createMutation.isPending || updateMutation.isPending}>
-                      {editingRole ? t("common.save") : t("common.add")}
-                    </Button>
-                  </form>
-                </DialogContent>
-              </Dialog>
-            </CardHeader>
-            <CardContent>
+                      <Button type="submit" className="w-full liquid-glass-button rounded-xl h-11" disabled={createMutation.isPending || updateMutation.isPending} data-testid="button-submit-user">
+                        {(createMutation.isPending || updateMutation.isPending) ? (
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        ) : null}
+                        {editingRole ? t("common.save") : t("common.add")}
+                      </Button>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              }
+            />
+            <div className="p-5 md:p-6">
               {isLoading ? (
-                <div className="loading-container py-8 min-h-[400px]"><SpinningLogo size="lg" /></div>
+                <div className="loading-container py-12 min-h-[300px]"><SpinningLogo size="lg" /></div>
               ) : adminRoles.length === 0 ? (
-                <p className="text-center py-4 text-muted-foreground">{t("admin.noUsers")}</p>
-              ) : isMobile ? (
-                  <div className="space-y-3">
-                    {adminRoles.map((role) => (
-                      <div key={role.id} className="p-3 rounded-lg border">
-                        <div className="flex items-center gap-3">
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 rounded-2xl glass-subtle flex items-center justify-center mx-auto mb-4">
+                    <Users className="w-7 h-7 text-muted-foreground" />
+                  </div>
+                  <p className="text-muted-foreground">{t("admin.noUsers")}</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {adminRoles.map((role) => {
+                    const roleInfo = ROLE_LABELS[role.role] || { gradient: "from-gray-400 to-gray-600" };
+                    return (
+                      <div 
+                        key={role.id} 
+                        className="glass-subtle rounded-2xl p-4 transition-all duration-200 hover:shadow-md group"
+                        data-testid={`card-user-${role.id}`}
+                      >
+                        <div className="flex items-center gap-4">
                           <div className="relative shrink-0">
                             {role.photoUrl ? (
                               <img 
                                 src={role.photoUrl} 
                                 alt={role.name}
-                                className="w-10 h-10 rounded-full object-cover border-2 border-primary/20"
+                                className="w-12 h-12 md:w-14 md:h-14 rounded-xl object-cover ring-2 ring-white/50 shadow-md"
                               />
                             ) : (
-                              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold bg-gradient-to-br ${
-                                role.role === "owner" ? "from-red-400 to-red-600" :
-                                role.role === "manager" ? "from-pink-400 to-pink-600" :
-                                "from-green-400 to-green-600"
-                              }`}>
+                              <div className={`w-12 h-12 md:w-14 md:h-14 rounded-xl flex items-center justify-center text-white text-lg font-bold bg-gradient-to-br ${roleInfo.gradient} shadow-md`}>
                                 {role.name.charAt(0).toUpperCase()}
                               </div>
                             )}
@@ -903,215 +1014,140 @@ export default function AdminSettings() {
                                 }}
                                 disabled={uploadingPhotoId === role.id}
                               />
-                              <div className="w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                              <div className="w-6 h-6 rounded-lg bg-white dark:bg-card shadow-md flex items-center justify-center hover:scale-110 transition-transform">
                                 {uploadingPhotoId === role.id ? (
-                                  <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                                  <Loader2 className="w-3 h-3 animate-spin text-primary" />
                                 ) : (
-                                  <Camera className="w-2.5 h-2.5" />
+                                  <Camera className="w-3 h-3 text-muted-foreground" />
                                 )}
                               </div>
                             </label>
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-medium text-sm">{role.name}</span>
-                              <Badge className={`${ROLE_LABELS[role.role]?.color || "bg-gray-500"} text-white text-[10px]`}>
+                              <span className="font-semibold text-sm md:text-base">{role.name}</span>
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] md:text-xs font-semibold text-white bg-gradient-to-r ${roleInfo.gradient} shadow-sm`}>
                                 {t(`admin.${role.role}`)}
-                              </Badge>
+                              </span>
                             </div>
-                            <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                              <span>{role.permissions?.length || 0}/{ALL_PERMISSIONS.length} {t("admin.permissions")}</span>
-                              <span>·</span>
-                              <span>PIN: {role.pin ? "••••" : "-"}</span>
+                            <div className="flex items-center gap-3 mt-1.5">
+                              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                                <Shield className="w-3 h-3" />
+                                {role.permissions?.length || 0}/{ALL_PERMISSIONS.length}
+                              </span>
+                              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                                <Lock className="w-3 h-3" />
+                                {role.pin ? "••••" : "-"}
+                              </span>
                             </div>
                           </div>
-                          <div className="flex gap-1 shrink-0">
-                            <Button size="icon" variant="ghost" onClick={() => handleEdit(role)}>
+                          <div className="flex gap-1 shrink-0 opacity-60 group-hover:opacity-100 transition-opacity">
+                            <Button 
+                              size="icon" 
+                              variant="ghost" 
+                              className="h-9 w-9 rounded-xl hover:bg-primary/10"
+                              onClick={() => handleEdit(role)}
+                              data-testid={`button-edit-user-${role.id}`}
+                            >
                               <Edit className="w-4 h-4" />
                             </Button>
                             <Button 
                               size="icon" 
                               variant="ghost" 
-                              className="text-destructive"
+                              className="h-9 w-9 rounded-xl text-destructive hover:text-destructive hover:bg-destructive/10"
                               onClick={() => {
                                 if (confirm(t("admin.deleteConfirm"))) {
                                   deleteMutation.mutate(role.id);
                                 }
                               }}
+                              data-testid={`button-delete-user-${role.id}`}
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>{t("admin.photo")}</TableHead>
-                        <TableHead>{t("common.name")}</TableHead>
-                        <TableHead>{t("admin.role")}</TableHead>
-                        <TableHead>{t("admin.permissions")}</TableHead>
-                        <TableHead>{t("admin.pin")}</TableHead>
-                        <TableHead className="text-right">{t("common.actions")}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {adminRoles.map((role) => (
-                        <TableRow key={role.id}>
-                          <TableCell>
-                            <div className="relative inline-block">
-                              {role.photoUrl ? (
-                                <img 
-                                  src={role.photoUrl} 
-                                  alt={role.name}
-                                  className="w-12 h-12 rounded-full object-cover border-2 border-primary/20"
-                                />
-                              ) : (
-                                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white text-lg font-bold bg-gradient-to-br ${
-                                  role.role === "owner" ? "from-red-400 to-red-600" :
-                                  role.role === "manager" ? "from-pink-400 to-pink-600" :
-                                  "from-green-400 to-green-600"
-                                }`}>
-                                  {role.name.charAt(0).toUpperCase()}
-                                </div>
-                              )}
-                              <label className="absolute -bottom-1 -right-1 cursor-pointer">
-                                <input 
-                                  type="file"
-                                  className="hidden"
-                                  accept="image/jpeg,image/png,image/webp"
-                                  onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file) {
-                                      handlePhotoUpload(role.id, file);
-                                      e.target.value = "";
-                                    }
-                                  }}
-                                  disabled={uploadingPhotoId === role.id}
-                                />
-                                <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/80 transition-colors">
-                                  {uploadingPhotoId === role.id ? (
-                                    <Loader2 className="w-3 h-3 animate-spin" />
-                                  ) : (
-                                    <Camera className="w-3 h-3" />
-                                  )}
-                                </div>
-                              </label>
-                            </div>
-                          </TableCell>
-                          <TableCell className="font-medium">{role.name}</TableCell>
-                          <TableCell>
-                            <Badge className={`${ROLE_LABELS[role.role]?.color || "bg-gray-500"} text-white`}>
-                              {t(`admin.${role.role}`)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="font-normal">
-                              {role.permissions?.length || 0} / {ALL_PERMISSIONS.length}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {role.pin ? "••••" : <span className="text-muted-foreground">-</span>}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button size="icon" variant="ghost" onClick={() => handleEdit(role)}>
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                              <Button 
-                                size="icon" 
-                                variant="ghost" 
-                                className="text-destructive hover:text-destructive"
-                                onClick={() => {
-                                  if (confirm(t("admin.deleteConfirm"))) {
-                                    deleteMutation.mutate(role.id);
-                                  }
-                                }}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )
-              }
-            </CardContent>
-          </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </GlassSection>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>{t("admin.rolePermissions")}</CardTitle>
-              <CardDescription>{t("admin.rolePermissionsDesc")}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="p-4 border rounded-lg space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Badge className="bg-red-500 text-white">{t("admin.owner")}</Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{t("admin.ownerDesc")}</p>
-                </div>
-                <div className="p-4 border rounded-lg space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Badge className="bg-pink-500 text-white">{t("admin.manager")}</Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{t("admin.managerDesc")}</p>
-                </div>
-                <div className="p-4 border rounded-lg space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Badge className="bg-green-500 text-white">{t("admin.receptionist")}</Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{t("admin.receptionistDesc")}</p>
-                </div>
+          <GlassSection>
+            <GlassSectionHeader
+              icon={Sparkles}
+              title={t("admin.rolePermissions")}
+              description={t("admin.rolePermissionsDesc")}
+            />
+            <div className="p-5 md:p-6">
+              <div className="grid gap-3 md:grid-cols-3">
+                {[
+                  { role: "owner", icon: Shield, desc: t("admin.ownerDesc") },
+                  { role: "manager", icon: Briefcase, desc: t("admin.managerDesc") },
+                  { role: "receptionist", icon: User, desc: t("admin.receptionistDesc") },
+                ].map(item => {
+                  const roleInfo = ROLE_LABELS[item.role];
+                  return (
+                    <div key={item.role} className="glass-subtle rounded-2xl p-4 space-y-3 hover:shadow-md transition-all duration-200">
+                      <div className="flex items-center gap-2.5">
+                        <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${roleInfo.gradient} flex items-center justify-center shadow-sm`}>
+                          <item.icon className="w-4 h-4 text-white" />
+                        </div>
+                        <span className={`text-xs font-bold uppercase tracking-wider bg-gradient-to-r ${roleInfo.gradient} bg-clip-text text-transparent`}>
+                          {t(`admin.${item.role}`)}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
+                    </div>
+                  );
+                })}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </GlassSection>
         </TabsContent>
 
-        <TabsContent value="broadcast" className="space-y-4 mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MessageCircle className="w-5 h-5" />
-                {t("admin.whatsappBroadcast")}
-              </CardTitle>
-              <CardDescription>{t("admin.broadcastDesc")}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleBroadcast} className="space-y-4">
-                {/* Client Selection */}
-                <div className="space-y-3">
+        {/* ==================== BROADCAST TAB ==================== */}
+        <TabsContent value="broadcast" className="space-y-5 mt-0">
+          <GlassSection>
+            <GlassSectionHeader
+              icon={MessageCircle}
+              title={t("admin.whatsappBroadcast")}
+              description={t("admin.broadcastDesc")}
+            />
+            <div className="p-5 md:p-6">
+              <form onSubmit={handleBroadcast} className="space-y-5">
+                <div className="glass-subtle rounded-2xl p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <Label className="flex items-center gap-2">
-                      <Users className="w-4 h-4" />
+                    <Label className="flex items-center gap-2 text-sm font-semibold">
+                      <Users className="w-4 h-4 text-primary" />
                       {t("admin.selectClients", { defaultValue: "Sélectionner les clients" })}
                     </Label>
-                    <div className="flex gap-2">
-                      <Button type="button" variant="outline" size="sm" onClick={selectAllClients}>
+                    <div className="flex gap-1.5">
+                      <Button type="button" variant="ghost" size="sm" className="h-7 text-xs rounded-lg" onClick={selectAllClients} data-testid="button-select-all-clients">
                         {t("common.selectAll", { defaultValue: "Tout sélectionner" })}
                       </Button>
-                      <Button type="button" variant="outline" size="sm" onClick={deselectAllClients}>
+                      <Button type="button" variant="ghost" size="sm" className="h-7 text-xs rounded-lg" onClick={deselectAllClients} data-testid="button-deselect-all-clients">
                         {t("common.deselectAll", { defaultValue: "Tout désélectionner" })}
                       </Button>
                     </div>
                   </div>
                   
-                  <Input
-                    placeholder={t("admin.searchClients", { defaultValue: "Rechercher par nom ou téléphone..." })}
-                    value={clientSearchQuery}
-                    onChange={(e) => setClientSearchQuery(e.target.value)}
-                    className="mb-2"
-                  />
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder={t("admin.searchClients", { defaultValue: "Rechercher par nom ou téléphone..." })}
+                      value={clientSearchQuery}
+                      onChange={(e) => setClientSearchQuery(e.target.value)}
+                      className="rounded-xl border-border/50 h-10 pl-9"
+                      data-testid="input-search-clients"
+                    />
+                  </div>
                   
-                  <div className="border rounded-lg max-h-[200px] overflow-y-auto">
+                  <div className="rounded-xl overflow-hidden border border-border/30 max-h-[200px] overflow-y-auto">
                     {filteredClientsForBroadcast.length === 0 ? (
-                      <div className="p-4 text-center text-muted-foreground text-sm">
+                      <div className="p-6 text-center text-muted-foreground text-sm">
+                        <Users className="w-8 h-8 mx-auto mb-2 opacity-30" />
                         {t("admin.noClientsFound", { defaultValue: "Aucun client trouvé" })}
                       </div>
                     ) : (
@@ -1120,15 +1156,22 @@ export default function AdminSettings() {
                         return (
                           <div 
                             key={client.id}
-                            className="flex items-center gap-3 p-3 border-b last:border-b-0 hover:bg-muted/50 cursor-pointer select-none"
+                            className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer select-none transition-colors duration-150 border-b border-border/20 last:border-b-0 ${
+                              isSelected ? 'bg-primary/8' : 'hover:bg-muted/40'
+                            }`}
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
                               toggleClientSelection(client.id);
                             }}
+                            data-testid={`client-select-${client.id}`}
                           >
-                            <div className={`w-4 h-4 rounded border flex items-center justify-center pointer-events-none ${isSelected ? 'bg-primary border-primary' : 'border-input'}`}>
-                              {isSelected && <span className="text-primary-foreground text-xs">✓</span>}
+                            <div className={`w-5 h-5 rounded-lg flex items-center justify-center shrink-0 transition-all duration-200 ${
+                              isSelected 
+                                ? 'liquid-gradient shadow-sm' 
+                                : 'border-2 border-muted-foreground/30'
+                            }`}>
+                              {isSelected && <Check className="w-3 h-3 text-white" />}
                             </div>
                             <div className="flex-1 min-w-0 pointer-events-none">
                               <p className="font-medium text-sm truncate">{client.name}</p>
@@ -1140,20 +1183,22 @@ export default function AdminSettings() {
                     )}
                   </div>
                   
-                  <p className="text-xs text-muted-foreground">
-                    {selectedClientIds.size > 0 
-                      ? `${selectedClientIds.size} ${t("admin.clientsSelected", { defaultValue: "client(s) sélectionné(s)" })}`
-                      : t("admin.allClientsWillReceive", { defaultValue: "Tous les clients recevront le message si aucun n'est sélectionné" })}
-                  </p>
+                  {selectedClientIds.size > 0 && (
+                    <div className="flex items-center gap-2">
+                      <div className="h-6 px-2.5 rounded-full liquid-gradient flex items-center gap-1.5 text-white text-xs font-medium shadow-sm">
+                        <Check className="w-3 h-3" />
+                        {selectedClientIds.size} {t("admin.clientsSelected", { defaultValue: "client(s) sélectionné(s)" })}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {/* Template Selection */}
                 {messageTemplates.length > 0 && (
                   <div className="space-y-2">
-                    <Label>{t("admin.messageTemplate", { defaultValue: "Template de message" })}</Label>
+                    <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("admin.messageTemplate", { defaultValue: "Template de message" })}</Label>
                     <div className="flex gap-2">
                       <Select value={selectedTemplateId} onValueChange={handleLoadTemplate}>
-                        <SelectTrigger className="flex-1">
+                        <SelectTrigger className="flex-1 rounded-xl h-10" data-testid="select-template">
                           <SelectValue placeholder={t("admin.selectTemplate", { defaultValue: "Choisir un template..." })} />
                         </SelectTrigger>
                         <SelectContent>
@@ -1167,10 +1212,12 @@ export default function AdminSettings() {
                       {selectedTemplateId && (
                         <Button 
                           type="button" 
-                          variant="destructive" 
+                          variant="ghost"
                           size="icon"
+                          className="h-10 w-10 rounded-xl text-destructive hover:bg-destructive/10"
                           onClick={() => deleteTemplateMutation.mutate(Number(selectedTemplateId))}
                           disabled={deleteTemplateMutation.isPending}
+                          data-testid="button-delete-template"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -1180,30 +1227,32 @@ export default function AdminSettings() {
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="broadcast-message">{t("admin.message")}</Label>
+                  <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("admin.message")}</Label>
                   <Textarea
                     id="broadcast-message"
                     placeholder={t("admin.broadcastPlaceholder")}
                     value={broadcastMessage}
                     onChange={(e) => setBroadcastMessage(e.target.value)}
                     rows={5}
-                    className="resize-none"
+                    className="resize-none rounded-xl glass-subtle border-0 focus:ring-2 focus:ring-primary/30"
+                    data-testid="input-broadcast-message"
                   />
                   <p className="text-xs text-muted-foreground">
                     {t("admin.useNameVariable")}
                   </p>
                   
-                  {/* Save as Template */}
                   {broadcastMessage.trim() && (
                     <div className="mt-2">
                       {!showSaveTemplate ? (
                         <Button 
                           type="button" 
-                          variant="outline" 
+                          variant="ghost" 
                           size="sm"
+                          className="rounded-xl h-8 text-xs"
                           onClick={() => setShowSaveTemplate(true)}
+                          data-testid="button-show-save-template"
                         >
-                          <Save className="w-4 h-4 mr-2" />
+                          <Save className="w-3.5 h-3.5 mr-1.5" />
                           {t("admin.saveAsTemplate", { defaultValue: "Sauvegarder comme template" })}
                         </Button>
                       ) : (
@@ -1212,30 +1261,35 @@ export default function AdminSettings() {
                             placeholder={t("admin.templateName", { defaultValue: "Nom du template" })}
                             value={newTemplateName}
                             onChange={(e) => setNewTemplateName(e.target.value)}
-                            className="flex-1"
+                            className="flex-1 rounded-xl h-9"
+                            data-testid="input-template-name"
                           />
                           <Button 
                             type="button" 
                             size="sm"
+                            className="rounded-xl h-9 liquid-glass-button"
                             onClick={handleSaveAsTemplate}
                             disabled={!newTemplateName.trim() || createTemplateMutation.isPending}
+                            data-testid="button-save-template"
                           >
                             {createTemplateMutation.isPending ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
                             ) : (
-                              <Save className="w-4 h-4" />
+                              <Save className="w-3.5 h-3.5" />
                             )}
                           </Button>
                           <Button 
                             type="button" 
                             variant="ghost" 
                             size="sm"
+                            className="rounded-xl h-9"
                             onClick={() => {
                               setShowSaveTemplate(false);
                               setNewTemplateName("");
                             }}
+                            data-testid="button-cancel-template"
                           >
-                            {t("common.cancel", { defaultValue: "Annuler" })}
+                            <X className="w-3.5 h-3.5" />
                           </Button>
                         </div>
                       )}
@@ -1244,26 +1298,50 @@ export default function AdminSettings() {
                 </div>
 
                 {broadcastResult && (
-                  <div className={`p-4 rounded-lg border ${broadcastResult.failed > 0 ? 'bg-yellow-500/10 border-yellow-500/20' : 'bg-green-500/10 border-green-500/20'}`}>
-                    <p className={`text-sm font-medium ${broadcastResult.failed > 0 ? 'text-yellow-600 dark:text-yellow-400' : 'text-green-600 dark:text-green-400'}`}>
-                      {t("admin.broadcastComplete")}
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {t("admin.sent")}: {broadcastResult.sent} | {t("admin.failed")}: {broadcastResult.failed} | {t("admin.total")}: {broadcastResult.total}
-                    </p>
+                  <div className={`rounded-2xl overflow-hidden ${broadcastResult.failed > 0 ? 'border border-amber-400/30' : 'border border-emerald-400/30'}`}>
+                    <div className={`px-4 py-3 flex items-center gap-3 ${
+                      broadcastResult.failed > 0 
+                        ? 'bg-gradient-to-r from-amber-500/10 to-orange-500/10' 
+                        : 'bg-gradient-to-r from-emerald-500/10 to-teal-500/10'
+                    }`}>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                        broadcastResult.failed > 0 ? 'bg-amber-500/20' : 'bg-emerald-500/20'
+                      }`}>
+                        {broadcastResult.failed > 0 ? (
+                          <Zap className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                        ) : (
+                          <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                        )}
+                      </div>
+                      <div>
+                        <p className={`text-sm font-semibold ${broadcastResult.failed > 0 ? 'text-amber-700 dark:text-amber-300' : 'text-emerald-700 dark:text-emerald-300'}`}>
+                          {t("admin.broadcastComplete")}
+                        </p>
+                        <div className="flex items-center gap-3 mt-0.5">
+                          <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">{t("admin.sent")}: {broadcastResult.sent}</span>
+                          {broadcastResult.failed > 0 && (
+                            <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">{t("admin.failed")}: {broadcastResult.failed}</span>
+                          )}
+                          <span className="text-xs text-muted-foreground">{t("admin.total")}: {broadcastResult.total}</span>
+                        </div>
+                      </div>
+                    </div>
                     
                     {broadcastResult.failedClients.length > 0 && (
-                      <div className="mt-3 space-y-2">
-                        <p className="text-sm font-medium text-destructive">
+                      <div className="p-4 space-y-3 bg-background/50">
+                        <p className="text-xs font-semibold text-destructive uppercase tracking-wider">
                           {t("admin.failedClients", { defaultValue: "Failed to send to:" })}
                         </p>
-                        <div className="border rounded-lg max-h-[150px] overflow-y-auto bg-background">
+                        <div className="rounded-xl overflow-hidden border border-border/30 max-h-[150px] overflow-y-auto">
                           {broadcastResult.failedClients.map(client => (
-                            <div key={client.id} className="flex items-center justify-between p-2 border-b last:border-b-0 text-sm" data-testid={`failed-client-${client.id}`}>
+                            <div key={client.id} className="flex items-center gap-3 px-3 py-2.5 border-b border-border/20 last:border-b-0" data-testid={`failed-client-${client.id}`}>
+                              <div className="w-7 h-7 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0">
+                                <X className="w-3.5 h-3.5 text-destructive" />
+                              </div>
                               <div className="min-w-0 flex-1">
-                                <span className="font-medium">{client.name}</span>
-                                <span className="text-muted-foreground ml-2">{client.phone}</span>
-                                <p className="text-xs text-destructive truncate">{client.error}</p>
+                                <span className="font-medium text-sm">{client.name}</span>
+                                <span className="text-muted-foreground text-xs ml-2">{client.phone}</span>
+                                <p className="text-xs text-destructive/80 truncate mt-0.5">{client.error}</p>
                               </div>
                             </div>
                           ))}
@@ -1274,13 +1352,13 @@ export default function AdminSettings() {
                           size="sm"
                           onClick={handleResendToFailed}
                           disabled={broadcastMutation.isPending}
-                          className="mt-2"
+                          className="rounded-xl h-9 gap-2"
                           data-testid="button-resend-failed"
                         >
                           {broadcastMutation.isPending ? (
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
                           ) : (
-                            <RefreshCw className="w-4 h-4 mr-2" />
+                            <RefreshCw className="w-3.5 h-3.5" />
                           )}
                           {t("admin.resendToFailed", { defaultValue: "Resend to failed" })} ({broadcastResult.failedClients.length})
                         </Button>
@@ -1292,16 +1370,17 @@ export default function AdminSettings() {
                 <Button 
                   type="submit" 
                   disabled={!broadcastMessage.trim() || broadcastMutation.isPending || selectedClientIds.size === 0}
-                  className="w-full sm:w-auto"
+                  className="w-full liquid-glass-button rounded-xl h-12 gap-2 text-sm font-semibold"
+                  data-testid="button-send-broadcast"
                 >
                   {broadcastMutation.isPending ? (
                     <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      <Loader2 className="w-4 h-4 animate-spin" />
                       {t("admin.sending")}...
                     </>
                   ) : (
                     <>
-                      <Send className="w-4 h-4 mr-2" />
+                      <Send className="w-4 h-4" />
                       {selectedClientIds.size > 0 
                         ? `${t("admin.sendTo", { defaultValue: "Envoyer à" })} ${selectedClientIds.size} ${t("admin.clients", { defaultValue: "client(s)" })}`
                         : t("admin.selectClientsFirst", "Select clients first")}
@@ -1309,44 +1388,55 @@ export default function AdminSettings() {
                   )}
                 </Button>
               </form>
-            </CardContent>
-          </Card>
+            </div>
+          </GlassSection>
         </TabsContent>
 
-        <TabsContent value="export" className="space-y-4 mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileSpreadsheet className="w-5 h-5" />
-                {t("admin.exportData")}
-              </CardTitle>
-              <CardDescription>{t("admin.exportDataDesc")}</CardDescription>
-            </CardHeader>
-            <CardContent>
+        {/* ==================== EXPORT TAB ==================== */}
+        <TabsContent value="export" className="space-y-5 mt-0">
+          <GlassSection>
+            <GlassSectionHeader
+              icon={FileSpreadsheet}
+              title={t("admin.exportData")}
+              description={t("admin.exportDataDesc")}
+            />
+            <div className="p-5 md:p-6">
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {exportOptions.map(({ key, icon: Icon, label }) => (
-                  <Button
+                  <button
                     key={key}
-                    variant="outline"
-                    className="h-auto py-4 flex flex-col items-center gap-2"
+                    className="glass-subtle rounded-2xl p-5 flex flex-col items-center gap-3 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 group cursor-pointer"
                     onClick={() => handleExport(key)}
+                    data-testid={`button-export-${key}`}
                   >
-                    <Icon className="w-6 h-6" />
-                    <span>{label}</span>
-                  </Button>
+                    <div className="w-12 h-12 rounded-xl liquid-gradient flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
+                      <Icon className="w-5 h-5 text-white" />
+                    </div>
+                    <span className="text-sm font-medium text-center">{label}</span>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground group-hover:text-primary transition-colors">
+                      <Download className="w-3 h-3" />
+                      CSV
+                    </div>
+                  </button>
                 ))}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </GlassSection>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>{t("admin.backupInfo")}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">{t("admin.backupInfoDesc")}</p>
-            </CardContent>
-          </Card>
+          <GlassSection>
+            <GlassSectionHeader
+              icon={Shield}
+              title={t("admin.backupInfo")}
+            />
+            <div className="p-5 md:p-6">
+              <div className="glass-subtle rounded-2xl p-5 flex items-start gap-4">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                  <Sparkles className="w-5 h-5 text-primary" />
+                </div>
+                <p className="text-sm text-muted-foreground leading-relaxed">{t("admin.backupInfoDesc")}</p>
+              </div>
+            </div>
+          </GlassSection>
         </TabsContent>
       </Tabs>
     </div>
