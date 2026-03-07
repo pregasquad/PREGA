@@ -15,7 +15,8 @@ import {
   Trash2, Edit, Calendar, User, Briefcase, Package, 
   CreditCard, Building2, Clock, Save, Camera, Loader2, RefreshCw,
   MessageCircle, Send, Lock, LayoutGrid, Sparkles,
-  Search, Check, X, Zap
+  Search, Check, X, Phone, AlertTriangle, CheckCircle2,
+  BookTemplate
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
@@ -1109,97 +1110,177 @@ export default function AdminSettings() {
 
         {/* ==================== BROADCAST TAB ==================== */}
         <TabsContent value="broadcast" className="space-y-5 mt-0">
-          <GlassSection>
-            <GlassSectionHeader
-              icon={MessageCircle}
-              title={t("admin.whatsappBroadcast")}
-              description={t("admin.broadcastDesc")}
-            />
-            <div className="p-5 md:p-6">
-              <form onSubmit={handleBroadcast} className="space-y-5">
-                <div className="glass-subtle rounded-2xl p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label className="flex items-center gap-2 text-sm font-semibold">
-                      <Users className="w-4 h-4 text-primary" />
-                      {t("admin.selectClients", { defaultValue: "Sélectionner les clients" })}
-                    </Label>
-                    <div className="flex gap-1.5">
-                      <Button type="button" variant="ghost" size="sm" className="h-7 text-xs rounded-lg" onClick={selectAllClients} data-testid="button-select-all-clients">
-                        {t("common.selectAll", { defaultValue: "Tout sélectionner" })}
-                      </Button>
-                      <Button type="button" variant="ghost" size="sm" className="h-7 text-xs rounded-lg" onClick={deselectAllClients} data-testid="button-deselect-all-clients">
-                        {t("common.deselectAll", { defaultValue: "Tout désélectionner" })}
-                      </Button>
-                    </div>
+          <form onSubmit={handleBroadcast} className="space-y-5">
+
+            {/* Stats overview bar */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="glass-subtle rounded-2xl p-3.5 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500/15 flex items-center justify-center shrink-0">
+                  <Phone className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-lg font-bold leading-tight" data-testid="text-clients-with-phone">{clientsWithPhone.length}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider truncate">{t("admin.withPhone", { defaultValue: "With Phone" })}</p>
+                </div>
+              </div>
+              <div className="glass-subtle rounded-2xl p-3.5 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+                  <Check className="w-4 h-4 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-lg font-bold leading-tight" data-testid="text-selected-count">{selectedClientIds.size}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider truncate">{t("admin.selected", { defaultValue: "Selected" })}</p>
+                </div>
+              </div>
+              <div className="glass-subtle rounded-2xl p-3.5 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-500/15 flex items-center justify-center shrink-0">
+                  <BookTemplate className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-lg font-bold leading-tight" data-testid="text-template-count">{messageTemplates.length}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider truncate">{t("admin.templates", { defaultValue: "Templates" })}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Section 1: Client Selection */}
+            <GlassSection>
+              <GlassSectionHeader
+                icon={Users}
+                title={t("admin.selectClients", { defaultValue: "Select Recipients" })}
+                description={`${clientsWithPhone.length} ${t("admin.clientsWithPhone", { defaultValue: "clients with phone numbers" })}`}
+                action={
+                  <div className="flex gap-1.5">
+                    <Button type="button" variant="ghost" size="sm" className="h-8 text-xs rounded-xl px-3" onClick={selectAllClients} data-testid="button-select-all-clients">
+                      {t("common.selectAll", { defaultValue: "Select all" })}
+                    </Button>
+                    <Button type="button" variant="ghost" size="sm" className="h-8 text-xs rounded-xl px-3" onClick={deselectAllClients} data-testid="button-deselect-all-clients">
+                      {t("common.deselectAll", { defaultValue: "Clear" })}
+                    </Button>
                   </div>
-                  
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      placeholder={t("admin.searchClients", { defaultValue: "Rechercher par nom ou téléphone..." })}
-                      value={clientSearchQuery}
-                      onChange={(e) => setClientSearchQuery(e.target.value)}
-                      className="rounded-xl border-border/50 h-10 pl-9"
-                      data-testid="input-search-clients"
-                    />
-                  </div>
-                  
-                  <div className="rounded-xl overflow-hidden border border-border/30 max-h-[200px] overflow-y-auto">
-                    {filteredClientsForBroadcast.length === 0 ? (
-                      <div className="p-6 text-center text-muted-foreground text-sm">
-                        <Users className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                        {t("admin.noClientsFound", { defaultValue: "Aucun client trouvé" })}
-                      </div>
-                    ) : (
-                      filteredClientsForBroadcast.map(client => {
-                        const isSelected = selectedClientIds.has(client.id);
-                        return (
-                          <div 
-                            key={client.id}
-                            className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer select-none transition-colors duration-150 border-b border-border/20 last:border-b-0 ${
-                              isSelected ? 'bg-primary/8' : 'hover:bg-muted/40'
-                            }`}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              toggleClientSelection(client.id);
-                            }}
-                            data-testid={`client-select-${client.id}`}
-                          >
-                            <div className={`w-5 h-5 rounded-lg flex items-center justify-center shrink-0 transition-all duration-200 ${
-                              isSelected 
-                                ? 'liquid-gradient shadow-sm' 
-                                : 'border-2 border-muted-foreground/30'
-                            }`}>
-                              {isSelected && <Check className="w-3 h-3 text-white" />}
-                            </div>
-                            <div className="flex-1 min-w-0 pointer-events-none">
-                              <p className="font-medium text-sm truncate">{client.name}</p>
-                              <p className="text-xs text-muted-foreground">{client.phone}</p>
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                  
-                  {selectedClientIds.size > 0 && (
-                    <div className="flex items-center gap-2">
-                      <div className="h-6 px-2.5 rounded-full liquid-gradient flex items-center gap-1.5 text-white text-xs font-medium shadow-sm">
-                        <Check className="w-3 h-3" />
-                        {selectedClientIds.size} {t("admin.clientsSelected", { defaultValue: "client(s) sélectionné(s)" })}
-                      </div>
-                    </div>
+                }
+              />
+              <div className="p-4 md:p-5 space-y-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                  <Input
+                    placeholder={t("admin.searchClients", { defaultValue: "Search by name or phone..." })}
+                    value={clientSearchQuery}
+                    onChange={(e) => setClientSearchQuery(e.target.value)}
+                    className="glass-subtle rounded-xl border-0 h-10 pl-10 pr-4"
+                    data-testid="input-search-clients"
+                  />
+                  {clientSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setClientSearchQuery("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label={t("common.clearSearch", { defaultValue: "Clear search" })}
+                      data-testid="button-clear-search"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
                   )}
                 </div>
 
+                <div className="rounded-xl overflow-hidden glass-subtle max-h-[280px] overflow-y-auto">
+                  {filteredClientsForBroadcast.length === 0 ? (
+                    <div className="p-8 text-center">
+                      <div className="w-12 h-12 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-3">
+                        <Users className="w-5 h-5 text-muted-foreground/50" />
+                      </div>
+                      <p className="text-sm text-muted-foreground">{t("admin.noClientsFound", { defaultValue: "No clients found" })}</p>
+                      {clientSearchQuery && (
+                        <p className="text-xs text-muted-foreground/70 mt-1">{t("admin.tryDifferentSearch", { defaultValue: "Try a different search term" })}</p>
+                      )}
+                    </div>
+                  ) : (
+                    filteredClientsForBroadcast.map((client, idx) => {
+                      const isSelected = selectedClientIds.has(client.id);
+                      const initials = client.name.charAt(0).toUpperCase();
+                      return (
+                        <div 
+                          key={client.id}
+                          role="checkbox"
+                          aria-checked={isSelected}
+                          tabIndex={0}
+                          className={`flex items-center gap-3 px-4 py-3 cursor-pointer select-none transition-all duration-150 outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
+                            idx !== filteredClientsForBroadcast.length - 1 ? 'border-b border-border/10' : ''
+                          } ${
+                            isSelected 
+                              ? 'bg-primary/5 dark:bg-primary/10' 
+                              : 'hover:bg-muted/30'
+                          }`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            toggleClientSelection(client.id);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === ' ' || e.key === 'Enter') {
+                              e.preventDefault();
+                              toggleClientSelection(client.id);
+                            }
+                          }}
+                          data-testid={`client-select-${client.id}`}
+                        >
+                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-sm font-bold transition-all duration-200 ${
+                            isSelected 
+                              ? 'liquid-gradient text-white shadow-md shadow-primary/20' 
+                              : 'bg-muted/60 text-muted-foreground'
+                          }`}>
+                            {isSelected ? <Check className="w-4 h-4" /> : initials}
+                          </div>
+                          <div className="flex-1 min-w-0 pointer-events-none">
+                            <p className="font-medium text-sm truncate">{client.name}</p>
+                            <p className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Phone className="w-3 h-3" />
+                              {client.phone}
+                            </p>
+                          </div>
+                          {isSelected && (
+                            <div className="w-5 h-5 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
+                              <Check className="w-3 h-3 text-primary" />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {selectedClientIds.size > 0 && (
+                  <div className="flex items-center justify-between">
+                    <div className="h-7 px-3 rounded-full liquid-gradient flex items-center gap-1.5 text-white text-xs font-semibold shadow-sm">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      {selectedClientIds.size} {t("admin.clientsSelected", { defaultValue: "selected" })}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {t("admin.readyToSend", { defaultValue: "Ready to receive broadcast" })}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </GlassSection>
+
+            {/* Section 2: Message Composer */}
+            <GlassSection>
+              <GlassSectionHeader
+                icon={Send}
+                title={t("admin.composeMessage", { defaultValue: "Compose Message" })}
+                description={t("admin.broadcastDesc")}
+              />
+              <div className="p-4 md:p-5 space-y-4">
                 {messageTemplates.length > 0 && (
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("admin.messageTemplate", { defaultValue: "Template de message" })}</Label>
+                  <div className="glass-subtle rounded-2xl p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <BookTemplate className="w-4 h-4 text-primary" />
+                      <Label className="text-sm font-semibold">{t("admin.messageTemplate", { defaultValue: "Message Templates" })}</Label>
+                    </div>
                     <div className="flex gap-2">
                       <Select value={selectedTemplateId} onValueChange={handleLoadTemplate}>
-                        <SelectTrigger className="flex-1 rounded-xl h-10" data-testid="select-template">
-                          <SelectValue placeholder={t("admin.selectTemplate", { defaultValue: "Choisir un template..." })} />
+                        <SelectTrigger className="flex-1 rounded-xl h-10 border-border/40" data-testid="select-template">
+                          <SelectValue placeholder={t("admin.selectTemplate", { defaultValue: "Choose a template..." })} />
                         </SelectTrigger>
                         <SelectContent>
                           {messageTemplates.map(template => (
@@ -1217,9 +1298,14 @@ export default function AdminSettings() {
                           className="h-10 w-10 rounded-xl text-destructive hover:bg-destructive/10"
                           onClick={() => deleteTemplateMutation.mutate(Number(selectedTemplateId))}
                           disabled={deleteTemplateMutation.isPending}
+                          aria-label={t("admin.deleteTemplate", { defaultValue: "Delete template" })}
                           data-testid="button-delete-template"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          {deleteTemplateMutation.isPending ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
                         </Button>
                       )}
                     </div>
@@ -1227,140 +1313,77 @@ export default function AdminSettings() {
                 )}
 
                 <div className="space-y-2">
-                  <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("admin.message")}</Label>
+                  <Label htmlFor="broadcast-message" className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("admin.message")}</Label>
                   <Textarea
                     id="broadcast-message"
                     placeholder={t("admin.broadcastPlaceholder")}
                     value={broadcastMessage}
                     onChange={(e) => setBroadcastMessage(e.target.value)}
-                    rows={5}
-                    className="resize-none rounded-xl glass-subtle border-0 focus:ring-2 focus:ring-primary/30"
+                    rows={6}
+                    className="resize-none rounded-xl glass-subtle border-0 focus:ring-2 focus:ring-primary/30 text-sm leading-relaxed"
                     data-testid="input-broadcast-message"
                   />
-                  <p className="text-xs text-muted-foreground">
-                    {t("admin.useNameVariable")}
-                  </p>
-                  
-                  {broadcastMessage.trim() && (
-                    <div className="mt-2">
-                      {!showSaveTemplate ? (
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-primary/10 text-primary font-mono text-[10px]">{"{name}"}</span>
+                      {t("admin.useNameVariable")}
+                    </p>
+                    {broadcastMessage.trim() && (
+                      <span className="text-xs text-muted-foreground">{broadcastMessage.length} {t("admin.chars", { defaultValue: "chars" })}</span>
+                    )}
+                  </div>
+                </div>
+
+                {broadcastMessage.trim() && (
+                  <div className="glass-subtle rounded-xl p-3">
+                    {!showSaveTemplate ? (
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="sm"
+                        className="rounded-xl h-8 text-xs w-full justify-center gap-1.5"
+                        onClick={() => setShowSaveTemplate(true)}
+                        data-testid="button-show-save-template"
+                      >
+                        <Save className="w-3.5 h-3.5" />
+                        {t("admin.saveAsTemplate", { defaultValue: "Save as template" })}
+                      </Button>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder={t("admin.templateName", { defaultValue: "Template name" })}
+                          value={newTemplateName}
+                          onChange={(e) => setNewTemplateName(e.target.value)}
+                          className="flex-1 rounded-xl h-9 text-sm"
+                          data-testid="input-template-name"
+                        />
+                        <Button 
+                          type="button" 
+                          size="sm"
+                          className="rounded-xl h-9 liquid-glass-button px-3"
+                          onClick={handleSaveAsTemplate}
+                          disabled={!newTemplateName.trim() || createTemplateMutation.isPending}
+                          data-testid="button-save-template"
+                        >
+                          {createTemplateMutation.isPending ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Save className="w-3.5 h-3.5" />
+                          )}
+                        </Button>
                         <Button 
                           type="button" 
                           variant="ghost" 
-                          size="sm"
-                          className="rounded-xl h-8 text-xs"
-                          onClick={() => setShowSaveTemplate(true)}
-                          data-testid="button-show-save-template"
+                          size="icon"
+                          className="rounded-xl h-9 w-9"
+                          onClick={() => {
+                            setShowSaveTemplate(false);
+                            setNewTemplateName("");
+                          }}
+                          aria-label={t("common.cancel", { defaultValue: "Cancel" })}
+                          data-testid="button-cancel-template"
                         >
-                          <Save className="w-3.5 h-3.5 mr-1.5" />
-                          {t("admin.saveAsTemplate", { defaultValue: "Sauvegarder comme template" })}
-                        </Button>
-                      ) : (
-                        <div className="flex gap-2">
-                          <Input
-                            placeholder={t("admin.templateName", { defaultValue: "Nom du template" })}
-                            value={newTemplateName}
-                            onChange={(e) => setNewTemplateName(e.target.value)}
-                            className="flex-1 rounded-xl h-9"
-                            data-testid="input-template-name"
-                          />
-                          <Button 
-                            type="button" 
-                            size="sm"
-                            className="rounded-xl h-9 liquid-glass-button"
-                            onClick={handleSaveAsTemplate}
-                            disabled={!newTemplateName.trim() || createTemplateMutation.isPending}
-                            data-testid="button-save-template"
-                          >
-                            {createTemplateMutation.isPending ? (
-                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            ) : (
-                              <Save className="w-3.5 h-3.5" />
-                            )}
-                          </Button>
-                          <Button 
-                            type="button" 
-                            variant="ghost" 
-                            size="sm"
-                            className="rounded-xl h-9"
-                            onClick={() => {
-                              setShowSaveTemplate(false);
-                              setNewTemplateName("");
-                            }}
-                            data-testid="button-cancel-template"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {broadcastResult && (
-                  <div className={`rounded-2xl overflow-hidden ${broadcastResult.failed > 0 ? 'border border-amber-400/30' : 'border border-emerald-400/30'}`}>
-                    <div className={`px-4 py-3 flex items-center gap-3 ${
-                      broadcastResult.failed > 0 
-                        ? 'bg-gradient-to-r from-amber-500/10 to-orange-500/10' 
-                        : 'bg-gradient-to-r from-emerald-500/10 to-teal-500/10'
-                    }`}>
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                        broadcastResult.failed > 0 ? 'bg-amber-500/20' : 'bg-emerald-500/20'
-                      }`}>
-                        {broadcastResult.failed > 0 ? (
-                          <Zap className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                        ) : (
-                          <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                        )}
-                      </div>
-                      <div>
-                        <p className={`text-sm font-semibold ${broadcastResult.failed > 0 ? 'text-amber-700 dark:text-amber-300' : 'text-emerald-700 dark:text-emerald-300'}`}>
-                          {t("admin.broadcastComplete")}
-                        </p>
-                        <div className="flex items-center gap-3 mt-0.5">
-                          <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">{t("admin.sent")}: {broadcastResult.sent}</span>
-                          {broadcastResult.failed > 0 && (
-                            <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">{t("admin.failed")}: {broadcastResult.failed}</span>
-                          )}
-                          <span className="text-xs text-muted-foreground">{t("admin.total")}: {broadcastResult.total}</span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {broadcastResult.failedClients.length > 0 && (
-                      <div className="p-4 space-y-3 bg-background/50">
-                        <p className="text-xs font-semibold text-destructive uppercase tracking-wider">
-                          {t("admin.failedClients", { defaultValue: "Failed to send to:" })}
-                        </p>
-                        <div className="rounded-xl overflow-hidden border border-border/30 max-h-[150px] overflow-y-auto">
-                          {broadcastResult.failedClients.map(client => (
-                            <div key={client.id} className="flex items-center gap-3 px-3 py-2.5 border-b border-border/20 last:border-b-0" data-testid={`failed-client-${client.id}`}>
-                              <div className="w-7 h-7 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0">
-                                <X className="w-3.5 h-3.5 text-destructive" />
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <span className="font-medium text-sm">{client.name}</span>
-                                <span className="text-muted-foreground text-xs ml-2">{client.phone}</span>
-                                <p className="text-xs text-destructive/80 truncate mt-0.5">{client.error}</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={handleResendToFailed}
-                          disabled={broadcastMutation.isPending}
-                          className="rounded-xl h-9 gap-2"
-                          data-testid="button-resend-failed"
-                        >
-                          {broadcastMutation.isPending ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          ) : (
-                            <RefreshCw className="w-3.5 h-3.5" />
-                          )}
-                          {t("admin.resendToFailed", { defaultValue: "Resend to failed" })} ({broadcastResult.failedClients.length})
+                          <X className="w-3.5 h-3.5" />
                         </Button>
                       </div>
                     )}
@@ -1370,26 +1393,135 @@ export default function AdminSettings() {
                 <Button 
                   type="submit" 
                   disabled={!broadcastMessage.trim() || broadcastMutation.isPending || selectedClientIds.size === 0}
-                  className="w-full liquid-glass-button rounded-xl h-12 gap-2 text-sm font-semibold"
+                  className="w-full liquid-glass-button rounded-xl h-12 gap-2.5 text-sm font-semibold"
                   data-testid="button-send-broadcast"
                 >
                   {broadcastMutation.isPending ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <Loader2 className="w-4.5 h-4.5 animate-spin" />
                       {t("admin.sending")}...
                     </>
                   ) : (
                     <>
-                      <Send className="w-4 h-4" />
+                      <Send className="w-4.5 h-4.5" />
                       {selectedClientIds.size > 0 
-                        ? `${t("admin.sendTo", { defaultValue: "Envoyer à" })} ${selectedClientIds.size} ${t("admin.clients", { defaultValue: "client(s)" })}`
+                        ? `${t("admin.sendTo", { defaultValue: "Send to" })} ${selectedClientIds.size} ${t("admin.clients", { defaultValue: "client(s)" })}`
                         : t("admin.selectClientsFirst", "Select clients first")}
                     </>
                   )}
                 </Button>
-              </form>
-            </div>
-          </GlassSection>
+              </div>
+            </GlassSection>
+
+            {/* Section 3: Results Panel */}
+            {broadcastResult && (
+              <GlassSection className={broadcastResult.failed > 0 ? 'ring-1 ring-amber-400/30' : 'ring-1 ring-emerald-400/30'}>
+                <div className={`px-5 py-4 md:px-6 md:py-5 ${
+                  broadcastResult.failed > 0 
+                    ? 'bg-gradient-to-r from-amber-500/8 via-orange-500/5 to-transparent' 
+                    : 'bg-gradient-to-r from-emerald-500/8 via-teal-500/5 to-transparent'
+                }`}>
+                  <div className="flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
+                      broadcastResult.failed > 0 
+                        ? 'bg-gradient-to-br from-amber-400 to-orange-500 shadow-lg shadow-amber-500/20' 
+                        : 'bg-gradient-to-br from-emerald-400 to-teal-500 shadow-lg shadow-emerald-500/20'
+                    }`}>
+                      {broadcastResult.failed > 0 ? (
+                        <AlertTriangle className="w-5 h-5 text-white" />
+                      ) : (
+                        <CheckCircle2 className="w-5 h-5 text-white" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-base">
+                        {t("admin.broadcastComplete")}
+                      </h3>
+                      <div className="flex items-center gap-4 mt-1">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                          <span className="text-xs font-medium">{broadcastResult.sent} {t("admin.sent")}</span>
+                        </div>
+                        {broadcastResult.failed > 0 && (
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-2 h-2 rounded-full bg-amber-500" />
+                            <span className="text-xs font-medium">{broadcastResult.failed} {t("admin.failed")}</span>
+                          </div>
+                        )}
+                        <span className="text-xs text-muted-foreground">{t("admin.total")}: {broadcastResult.total}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Progress bar */}
+                  <div className="mt-4 h-2 rounded-full bg-muted/50 overflow-hidden">
+                    <div className="h-full flex">
+                      <div 
+                        className="bg-gradient-to-r from-emerald-400 to-emerald-500 rounded-full transition-all duration-500"
+                        style={{ width: `${broadcastResult.total > 0 ? (broadcastResult.sent / broadcastResult.total) * 100 : 0}%` }}
+                      />
+                      {broadcastResult.failed > 0 && (
+                        <div 
+                          className="bg-gradient-to-r from-amber-400 to-amber-500 rounded-full transition-all duration-500 ml-0.5"
+                          style={{ width: `${(broadcastResult.failed / broadcastResult.total) * 100}%` }}
+                        />
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                {broadcastResult.failedClients.length > 0 && (
+                  <div className="px-5 pb-5 md:px-6 md:pb-6 pt-2 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-semibold text-destructive uppercase tracking-wider flex items-center gap-1.5">
+                        <AlertTriangle className="w-3.5 h-3.5" />
+                        {t("admin.failedClients", { defaultValue: "Failed to send" })}
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleResendToFailed}
+                        disabled={broadcastMutation.isPending}
+                        className="rounded-xl h-8 gap-1.5 text-xs border-amber-400/30 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10"
+                        data-testid="button-resend-failed"
+                      >
+                        {broadcastMutation.isPending ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <RefreshCw className="w-3.5 h-3.5" />
+                        )}
+                        {t("admin.resendToFailed", { defaultValue: "Retry" })} ({broadcastResult.failedClients.length})
+                      </Button>
+                    </div>
+                    <div className="rounded-xl overflow-hidden glass-subtle max-h-[180px] overflow-y-auto">
+                      {broadcastResult.failedClients.map((client, idx) => (
+                        <div 
+                          key={client.id} 
+                          className={`flex items-center gap-3 px-4 py-3 ${idx !== broadcastResult.failedClients.length - 1 ? 'border-b border-border/10' : ''}`}
+                          data-testid={`failed-client-${client.id}`}
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0">
+                            <X className="w-4 h-4 text-destructive" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm">{client.name}</span>
+                              <span className="text-muted-foreground text-xs flex items-center gap-1">
+                                <Phone className="w-3 h-3" />
+                                {client.phone}
+                              </span>
+                            </div>
+                            <p className="text-xs text-destructive/70 truncate mt-0.5">{client.error}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </GlassSection>
+            )}
+          </form>
         </TabsContent>
 
         {/* ==================== EXPORT TAB ==================== */}
