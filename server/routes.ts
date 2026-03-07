@@ -1868,10 +1868,10 @@ export async function registerRoutes(
         }
         return d.date >= startDate && d.date <= endDate;
       });
-      const totalPeriodDeductions = periodDeductions.reduce((sum, d) => sum + d.amount, 0);
+      const totalPeriodDeductions = periodDeductions.reduce((sum, d) => sum + (d.amount - (d.paidBack || 0)), 0);
 
       const pendingDeductions = staffDeductions.filter(d => !d.cleared);
-      const totalPendingDeductions = pendingDeductions.reduce((sum, d) => sum + d.amount, 0);
+      const totalPendingDeductions = pendingDeductions.reduce((sum, d) => sum + (d.amount - (d.paidBack || 0)), 0);
 
       const lastPayment = await storage.getLastStaffPayment(staffMember.id);
 
@@ -1898,7 +1898,7 @@ export async function registerRoutes(
       }
 
       const netCommission = totalCommission - totalPeriodDeductions;
-      const periodPendingDeductions = periodDeductions.filter(d => !d.cleared).reduce((sum, d) => sum + d.amount, 0);
+      const periodPendingDeductions = periodDeductions.filter(d => !d.cleared).reduce((sum, d) => sum + (d.amount - (d.paidBack || 0)), 0);
 
       res.json({
         totalRevenue,
@@ -1912,6 +1912,7 @@ export async function registerRoutes(
           type: d.type,
           description: d.description,
           amount: d.amount,
+          paidBack: d.paidBack || 0,
           date: d.date,
           cleared: d.cleared || false,
         })),
@@ -2073,6 +2074,30 @@ export async function registerRoutes(
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ message: "Failed to clear deduction" });
+    }
+  });
+
+  app.patch("/api/staff-deductions/:id/pay-back", isPinAuthenticated, requirePermission("manage_salaries"), async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const { amount } = z.object({ amount: z.number().min(0.01, "Amount must be positive") }).parse(req.body);
+      const deductions = await storage.getStaffDeductions();
+      const deduction = deductions.find(d => d.id === id);
+      if (!deduction) {
+        return res.status(404).json({ message: "Deduction not found" });
+      }
+      const currentPaidBack = deduction.paidBack || 0;
+      const newPaidBack = Math.min(currentPaidBack + amount, deduction.amount);
+      const fullyPaid = newPaidBack >= deduction.amount;
+      if (fullyPaid) {
+        await storage.updateStaffDeduction(id, { paidBack: deduction.amount } as any);
+        await storage.clearStaffDeduction(id);
+      } else {
+        await storage.updateStaffDeduction(id, { paidBack: newPaidBack } as any);
+      }
+      res.json({ success: true, paidBack: fullyPaid ? deduction.amount : newPaidBack, cleared: fullyPaid });
+    } catch (err: any) {
+      res.status(400).json({ message: err.message || "Failed to record repayment" });
     }
   });
 

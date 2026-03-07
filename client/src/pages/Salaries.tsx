@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { DollarSign, Users, CalendarIcon, TrendingUp, Building2, RefreshCw, Plus, Trash2, Receipt, UserMinus, ChevronDown, CheckCircle, Pencil, Wallet, Briefcase, BarChart3 } from "lucide-react";
+import { DollarSign, Users, CalendarIcon, TrendingUp, Building2, RefreshCw, Plus, Trash2, Receipt, UserMinus, ChevronDown, CheckCircle, Pencil, Wallet, Briefcase, BarChart3, ArrowDownLeft } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
@@ -70,6 +70,8 @@ export default function Salaries() {
   const [unclearedOpen, setUnclearedOpen] = useState(false);
   const [editingCharge, setEditingCharge] = useState<Charge | null>(null);
   const [editingDeduction, setEditingDeduction] = useState<StaffDeduction | null>(null);
+  const [payBackDeduction, setPayBackDeduction] = useState<StaffDeduction | null>(null);
+  const [payBackInputAmount, setPayBackInputAmount] = useState<string>("");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [newCharge, setNewCharge] = useState({ type: "rent", name: "", amount: 0, date: format(workDayToday, "yyyy-MM-dd") });
   const [newDeduction, setNewDeduction] = useState<{ staffName: string; type: "advance" | "loan" | "penalty" | "other"; description: string; amount: number; date: string }>({ staffName: "", type: "advance", description: "", amount: 0, date: format(workDayToday, "yyyy-MM-dd") });
@@ -265,6 +267,19 @@ export default function Salaries() {
     },
   });
 
+  const payBackMutation = useMutation({
+    mutationFn: async ({ id, amount }: { id: number; amount: number }) => {
+      const res = await apiRequest("PATCH", `/api/staff-deductions/${id}/pay-back`, { amount });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff-deductions"] });
+      setPayBackDeduction(null);
+      setPayBackInputAmount("");
+      toast({ title: t("salaries.payBackRecorded") });
+    },
+  });
+
   const createPaymentMutation = useMutation({
     mutationFn: async (payment: { staffId: number; staffName: string; amount: number }) => {
       const res = await apiRequest("POST", "/api/staff-payments", payment);
@@ -288,11 +303,12 @@ export default function Salaries() {
   });
 
   const unclearedDeductions = deductions.filter(d => !d.cleared);
+  const getRemainingAmount = (d: StaffDeduction) => d.amount - (d.paidBack || 0);
   const totalUnclearedByStaff = unclearedDeductions.reduce((acc, d) => {
-    acc[d.staffName] = (acc[d.staffName] || 0) + d.amount;
+    acc[d.staffName] = (acc[d.staffName] || 0) + getRemainingAmount(d);
     return acc;
   }, {} as Record<string, number>);
-  const totalUncleared = unclearedDeductions.reduce((sum, d) => sum + d.amount, 0);
+  const totalUncleared = unclearedDeductions.reduce((sum, d) => sum + getRemainingAmount(d), 0);
 
   const getDateRange = () => {
     switch (period) {
@@ -433,7 +449,7 @@ export default function Salaries() {
   const paidBackDeductions = filteredDeductions.filter(d => d.cleared);
   const pendingDeductions = filteredDeductions.filter(d => !d.cleared);
   const totalPaidBack = paidBackDeductions.reduce((sum, d) => sum + d.amount, 0);
-  const totalPending = pendingDeductions.reduce((sum, d) => sum + d.amount, 0);
+  const totalPending = pendingDeductions.reduce((sum, d) => sum + getRemainingAmount(d), 0);
   const totalExpenses = filteredCharges.reduce((sum, c) => sum + c.amount, 0);
   const netProfit = salonPortion - totalExpenses;
   const netStaffPayable = staff.reduce((total, s) => {
@@ -441,7 +457,7 @@ export default function Salaries() {
     const staffCommission = earning ? earning.totalCommission : 0;
     const staffDeductionAmount = pendingDeductions
       .filter(d => d.staffId === s.id || (!d.staffId && d.staffName === s.name))
-      .reduce((sum, d) => sum + d.amount, 0);
+      .reduce((sum, d) => sum + getRemainingAmount(d), 0);
     return total + Math.max(0, staffCommission - staffDeductionAmount);
   }, 0);
 
@@ -492,7 +508,7 @@ export default function Salaries() {
 
     const pendingStaffDeductions = deductions
       .filter(d => !d.cleared && (d.staffId === s.id || (!d.staffId && d.staffName === s.name)))
-      .reduce((sum, d) => sum + d.amount, 0);
+      .reduce((sum, d) => sum + getRemainingAmount(d), 0);
 
     const walletBalance = earningsSincePayment - pendingStaffDeductions;
 
@@ -547,34 +563,51 @@ export default function Salaries() {
             <CollapsibleContent>
               <CardContent className="px-3 pb-3 pt-0 space-y-2">
                 <p className="text-xs text-orange-600/70 dark:text-orange-400/70 mb-2">{t("salaries.unclearedDeductionsDesc")}</p>
-                {unclearedDeductions.map((d) => (
-                  <div key={d.id} className="p-3 rounded-lg glass-subtle flex items-center justify-between gap-2" data-testid={`uncleared-item-${d.id}`}>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-medium">{d.staffName}</span>
-                        <span className="liquid-glass-chip text-xs">{getDeductionTypeLabel(d.type)}</span>
+                {unclearedDeductions.map((d) => {
+                  const remaining = getRemainingAmount(d);
+                  return (
+                    <div key={d.id} className="p-3 rounded-lg glass-subtle flex items-center justify-between gap-2" data-testid={`uncleared-item-${d.id}`}>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-medium">{d.staffName}</span>
+                          <span className="liquid-glass-chip text-xs">{getDeductionTypeLabel(d.type)}</span>
+                        </div>
+                        {d.description && (
+                          <div className="text-xs text-muted-foreground truncate mt-0.5">{d.description}</div>
+                        )}
+                        <div className="flex items-center gap-2 text-sm mt-1">
+                          <span className="text-orange-600 font-semibold tabular-nums">{formatCurrency(remaining)} DH</span>
+                          {(d.paidBack || 0) > 0 && (
+                            <span className="text-[10px] text-muted-foreground">({t("salaries.of")} {formatCurrency(d.amount)})</span>
+                          )}
+                          <span className="text-muted-foreground text-xs">{format(parseISO(d.date), "d/M/yy")}</span>
+                        </div>
                       </div>
-                      {d.description && (
-                        <div className="text-xs text-muted-foreground truncate mt-0.5">{d.description}</div>
-                      )}
-                      <div className="flex items-center gap-2 text-sm mt-1">
-                        <span className="text-orange-600 font-semibold tabular-nums">{formatCurrency(d.amount)} DH</span>
-                        <span className="text-muted-foreground text-xs">{format(parseISO(d.date), "d/M/yy")}</span>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => { setPayBackDeduction(d); setPayBackInputAmount(String(remaining)); }}
+                          data-testid={`button-payback-uncleared-${d.id}`}
+                        >
+                          <ArrowDownLeft className="h-3 w-3 me-1" />
+                          {t("salaries.payBack")}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="shrink-0"
+                          disabled={clearDeductionMutation.isPending}
+                          onClick={() => clearDeductionMutation.mutate(d.id)}
+                          data-testid={`button-clear-uncleared-${d.id}`}
+                        >
+                          <CheckCircle className="h-3 w-3 me-1" />
+                          {t("salaries.markAsCleared")}
+                        </Button>
                       </div>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="shrink-0"
-                      disabled={clearDeductionMutation.isPending}
-                      onClick={() => clearDeductionMutation.mutate(d.id)}
-                      data-testid={`button-clear-uncleared-${d.id}`}
-                    >
-                      <CheckCircle className="h-3 w-3 me-1" />
-                      {t("salaries.markAsCleared")}
-                    </Button>
-                  </div>
-                ))}
+                  );
+                })}
               </CardContent>
             </CollapsibleContent>
           </Card>
@@ -764,7 +797,7 @@ export default function Salaries() {
                 const staffCommission = earning ? earning.totalCommission : 0;
                 const staffDeductionAmount = pendingDeductions
                   .filter(d => d.staffId === s.id || (!d.staffId && d.staffName === s.name))
-                  .reduce((sum, d) => sum + d.amount, 0);
+                  .reduce((sum, d) => sum + getRemainingAmount(d), 0);
                 const staffNet = staffCommission - staffDeductionAmount;
                 if (staffCommission === 0 && staffDeductionAmount === 0) return null;
                 return (
@@ -805,7 +838,7 @@ export default function Salaries() {
           const wallet = getStaffWalletData(s);
           const staffAllDeductions = filteredDeductions
             .filter(d => d.staffId === s.id || (!d.staffId && d.staffName === s.name));
-          const staffDeductionAmount = staffAllDeductions.reduce((sum, d) => sum + d.amount, 0);
+          const staffDeductionAmount = staffAllDeductions.reduce((sum, d) => sum + getRemainingAmount(d), 0);
 
           return (
             <Card key={s.id} className="glass-card" data-testid={`staff-card-${s.id}`}>
@@ -882,24 +915,32 @@ export default function Salaries() {
                         )}
                       </div>
                       <div className="space-y-1">
-                        {staffAllDeductions.map((d) => (
-                          <div key={d.id} className="flex items-center justify-between gap-2 py-1 border-t border-orange-200/30 dark:border-orange-800/20 first:border-0" data-testid={`text-staff-deduction-item-${d.id}`}>
-                            <div className="min-w-0 flex-1 flex items-center gap-1.5 flex-wrap">
-                              <span className="text-xs font-medium">{getDeductionTypeLabel(d.type)}</span>
-                              {d.description && (
-                                <span className="text-[10px] text-muted-foreground">- {d.description}</span>
-                              )}
-                              {d.cleared && (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400">
-                                  {t("salaries.paidBack")}
-                                </span>
-                              )}
+                        {staffAllDeductions.map((d) => {
+                          const remaining = getRemainingAmount(d);
+                          return (
+                            <div key={d.id} className="flex items-center justify-between gap-2 py-1 border-t border-orange-200/30 dark:border-orange-800/20 first:border-0" data-testid={`text-staff-deduction-item-${d.id}`}>
+                              <div className="min-w-0 flex-1 flex items-center gap-1.5 flex-wrap">
+                                <span className="text-xs font-medium">{getDeductionTypeLabel(d.type)}</span>
+                                {d.description && (
+                                  <span className="text-[10px] text-muted-foreground">- {d.description}</span>
+                                )}
+                                {d.cleared && (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400">
+                                    {t("salaries.paidBack")}
+                                  </span>
+                                )}
+                                {!d.cleared && (d.paidBack || 0) > 0 && (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400">
+                                    {formatCurrency(d.paidBack || 0)} {t("salaries.repaid")}
+                                  </span>
+                                )}
+                              </div>
+                              <span className={`text-xs font-medium shrink-0 tabular-nums ${d.cleared ? 'text-muted-foreground line-through' : 'text-red-600 dark:text-red-400'}`}>
+                                - {formatCurrency(d.cleared ? d.amount : remaining)}
+                              </span>
                             </div>
-                            <span className={`text-xs font-medium shrink-0 tabular-nums ${d.cleared ? 'text-muted-foreground line-through' : 'text-red-600 dark:text-red-400'}`}>
-                              - {formatCurrency(d.amount)}
-                            </span>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
@@ -1157,47 +1198,70 @@ export default function Salaries() {
           </CollapsibleTrigger>
           <CollapsibleContent>
             <CardContent className="px-3 pb-3 pt-0 space-y-2">
-              {filteredDeductions.map((deduction) => (
-                <div key={deduction.id} className="p-3 rounded-lg glass-subtle flex justify-between items-center" data-testid={`deduction-item-${deduction.id}`}>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-medium">{deduction.staffName}</span>
-                      <span className="liquid-glass-chip text-xs">{getDeductionTypeLabel(deduction.type)}</span>
-                      {deduction.cleared ? (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400">{t("salaries.paidBack")}</span>
-                      ) : (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400">{t("salaries.pending")}</span>
+              {filteredDeductions.map((deduction) => {
+                const remaining = getRemainingAmount(deduction);
+                return (
+                  <div key={deduction.id} className="p-3 rounded-lg glass-subtle flex justify-between items-center" data-testid={`deduction-item-${deduction.id}`}>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-medium">{deduction.staffName}</span>
+                        <span className="liquid-glass-chip text-xs">{getDeductionTypeLabel(deduction.type)}</span>
+                        {deduction.cleared ? (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400">{t("salaries.paidBack")}</span>
+                        ) : (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400">{t("salaries.pending")}</span>
+                        )}
+                        {!deduction.cleared && (deduction.paidBack || 0) > 0 && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400">
+                            {formatCurrency(deduction.paidBack || 0)} {t("salaries.repaid")}
+                          </span>
+                        )}
+                      </div>
+                      {deduction.description && (
+                        <div className="text-xs text-muted-foreground truncate mt-0.5">{deduction.description}</div>
                       )}
+                      <div className="flex items-center gap-2 text-sm mt-1">
+                        <span className={`font-semibold tabular-nums ${deduction.cleared ? 'text-muted-foreground line-through' : 'text-red-600 dark:text-red-400'}`}>
+                          {formatCurrency(deduction.cleared ? deduction.amount : remaining)} DH
+                        </span>
+                        {!deduction.cleared && (deduction.paidBack || 0) > 0 && (
+                          <span className="text-[10px] text-muted-foreground">({t("salaries.of")} {formatCurrency(deduction.amount)})</span>
+                        )}
+                        <span className="text-muted-foreground text-xs">{format(parseISO(deduction.date), "d/M/yy")}</span>
+                      </div>
                     </div>
-                    {deduction.description && (
-                      <div className="text-xs text-muted-foreground truncate mt-0.5">{deduction.description}</div>
-                    )}
-                    <div className="flex items-center gap-2 text-sm mt-1">
-                      <span className={`font-semibold tabular-nums ${deduction.cleared ? 'text-muted-foreground line-through' : 'text-red-600 dark:text-red-400'}`}>{formatCurrency(deduction.amount)} DH</span>
-                      <span className="text-muted-foreground text-xs">{format(parseISO(deduction.date), "d/M/yy")}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    {!deduction.cleared && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        disabled={clearDeductionMutation.isPending}
-                        onClick={() => clearDeductionMutation.mutate(deduction.id)}
-                        data-testid={`button-paidback-${deduction.id}`}
-                      >
-                        <CheckCircle className="h-4 w-4 text-green-600" />
+                    <div className="flex items-center gap-1 shrink-0">
+                      {!deduction.cleared && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => { setPayBackDeduction(deduction); setPayBackInputAmount(String(remaining)); }}
+                            data-testid={`button-partial-payback-${deduction.id}`}
+                          >
+                            <ArrowDownLeft className="h-4 w-4 text-blue-600" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            disabled={clearDeductionMutation.isPending}
+                            onClick={() => clearDeductionMutation.mutate(deduction.id)}
+                            data-testid={`button-paidback-${deduction.id}`}
+                          >
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                          </Button>
+                        </>
+                      )}
+                      <Button variant="ghost" size="icon" onClick={() => setEditingDeduction(deduction)} data-testid={`button-edit-deduction-${deduction.id}`}>
+                        <Pencil className="h-4 w-4 text-pink-600" />
                       </Button>
-                    )}
-                    <Button variant="ghost" size="icon" onClick={() => setEditingDeduction(deduction)} data-testid={`button-edit-deduction-${deduction.id}`}>
-                      <Pencil className="h-4 w-4 text-pink-600" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => deleteDeductionMutation.mutate(deduction.id)} data-testid={`button-delete-deduction-${deduction.id}`}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+                      <Button variant="ghost" size="icon" onClick={() => deleteDeductionMutation.mutate(deduction.id)} data-testid={`button-delete-deduction-${deduction.id}`}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
               {filteredDeductions.length === 0 && (
                 <p className="text-center text-muted-foreground py-4 text-sm">
                   {t("salaries.noDeductionsForPeriod")}
@@ -1342,6 +1406,75 @@ export default function Salaries() {
               </Button>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!payBackDeduction} onOpenChange={(open) => { if (!open) { setPayBackDeduction(null); setPayBackInputAmount(""); } }}>
+        <DialogContent className="liquid-glass-modal">
+          <DialogHeader>
+            <DialogTitle>{t("salaries.partialPayBack")}</DialogTitle>
+          </DialogHeader>
+          {payBackDeduction && (() => {
+            const remaining = getRemainingAmount(payBackDeduction);
+            return (
+              <div className="space-y-4">
+                <div className="p-3 rounded-lg glass-subtle">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-medium">{payBackDeduction.staffName}</span>
+                    <span className="liquid-glass-chip text-xs">{getDeductionTypeLabel(payBackDeduction.type)}</span>
+                  </div>
+                  {payBackDeduction.description && (
+                    <p className="text-xs text-muted-foreground">{payBackDeduction.description}</p>
+                  )}
+                  <div className="flex items-center gap-3 mt-2 text-sm">
+                    <span className="text-muted-foreground">{t("salaries.totalAmount")}: {formatCurrency(payBackDeduction.amount)} DH</span>
+                    {(payBackDeduction.paidBack || 0) > 0 && (
+                      <span className="text-blue-600">{t("salaries.alreadyRepaid")}: {formatCurrency(payBackDeduction.paidBack || 0)} DH</span>
+                    )}
+                  </div>
+                  <p className="text-sm font-semibold text-orange-600 mt-1">{t("salaries.remainingAmount")}: {formatCurrency(remaining)} DH</p>
+                </div>
+                <div>
+                  <Label>{t("salaries.payBackAmount")}</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max={remaining}
+                    value={payBackInputAmount}
+                    onChange={(e) => setPayBackInputAmount(e.target.value)}
+                    data-testid="input-payback-amount"
+                  />
+                  <div className="flex gap-2 mt-2">
+                    {[remaining * 0.25, remaining * 0.5, remaining].map((preset) => (
+                      <Button
+                        key={preset}
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 text-xs"
+                        onClick={() => setPayBackInputAmount(String(Math.round(preset * 100) / 100))}
+                        data-testid={`button-preset-${preset}`}
+                      >
+                        {formatCurrency(Math.round(preset * 100) / 100)}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+                <Button
+                  className="w-full"
+                  disabled={!payBackInputAmount || parseFloat(payBackInputAmount) <= 0 || parseFloat(payBackInputAmount) > remaining || payBackMutation.isPending}
+                  onClick={() => {
+                    if (payBackDeduction) {
+                      payBackMutation.mutate({ id: payBackDeduction.id, amount: parseFloat(payBackInputAmount) });
+                    }
+                  }}
+                  data-testid="button-confirm-payback"
+                >
+                  {payBackMutation.isPending ? t("common.loading") : t("salaries.confirmPayBack")}
+                </Button>
+              </div>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>

@@ -167,6 +167,7 @@ export const staffDeductions = mysqlTable("staff_deductions", {
   type: text("type").notNull(),
   description: text("description").notNull(),
   amount: double("amount").notNull(),
+  paidBack: double("paid_back").notNull().default(0),
   date: text("date").notNull(),
   cleared: boolean("cleared").notNull().default(false),
   clearedAt: timestamp("cleared_at"),

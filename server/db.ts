@@ -738,6 +738,34 @@ export async function ensureDeductionClearedColumns(): Promise<void> {
   }
 }
 
+export async function ensureDeductionPaidBackColumn(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      const [rows] = await connection.query(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_NAME = 'staff_deductions' AND COLUMN_NAME = 'paid_back'
+      `);
+      if ((rows as any[]).length === 0) {
+        await connection.query(`ALTER TABLE staff_deductions ADD COLUMN paid_back DOUBLE NOT NULL DEFAULT 0`);
+      }
+      connection.release();
+    } else {
+      await pool.query(`
+        DO $$ 
+        BEGIN 
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'staff_deductions' AND column_name = 'paid_back') THEN
+            ALTER TABLE staff_deductions ADD COLUMN paid_back DOUBLE PRECISION NOT NULL DEFAULT 0;
+          END IF;
+        END $$;
+      `);
+    }
+    console.log("Deduction paid_back column ready");
+  } catch (error) {
+    console.error("Failed to ensure deduction paid_back column:", error);
+  }
+}
+
 export async function ensureAutoLockColumn(): Promise<void> {
   try {
     if (dbDialect === 'mysql') {
