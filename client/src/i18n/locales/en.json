@@ -710,6 +710,8 @@
     "sent": "Sent",
     "failed": "Failed",
     "total": "Total",
+    "failedClients": "Failed to send to:",
+    "resendToFailed": "Resend to failed",
     "sending": "Sending",
     "sendToAll": "Send to all",
     "broadcastSent": "Broadcast sent",

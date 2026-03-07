@@ -134,7 +134,8 @@ export default function AdminSettings() {
     planningShortcuts: DEFAULT_SHORTCUTS
   });
   const [broadcastMessage, setBroadcastMessage] = useState("");
-  const [broadcastResult, setBroadcastResult] = useState<{sent: number, failed: number, total: number} | null>(null);
+  const [lastBroadcastMessage, setLastBroadcastMessage] = useState("");
+  const [broadcastResult, setBroadcastResult] = useState<{sent: number, failed: number, total: number, failedClients: {id: number, name: string, phone: string, error: string}[]} | null>(null);
   const [selectedClientIds, setSelectedClientIds] = useState<Set<number>>(new Set());
   const [clientSearchQuery, setClientSearchQuery] = useState("");
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
@@ -323,12 +324,11 @@ export default function AdminSettings() {
       return res.json();
     },
     onSuccess: (data) => {
-      setBroadcastResult({ sent: data.sent, failed: data.failed, total: data.total });
+      setBroadcastResult({ sent: data.sent, failed: data.failed, total: data.total, failedClients: data.failedClients || [] });
       toast({ 
         title: t("admin.broadcastSent"),
         description: `${data.sent}/${data.total} ${t("admin.messagesSent")}`
       });
-      setBroadcastMessage("");
       setSelectedClientIds(new Set());
     },
     onError: (err: any) => {
@@ -344,8 +344,21 @@ export default function AdminSettings() {
       return;
     }
     setBroadcastResult(null);
+    setLastBroadcastMessage(broadcastMessage);
     const clientIds = Array.from(selectedClientIds);
     broadcastMutation.mutate({ message: broadcastMessage, clientIds });
+  };
+
+  const handleResendToFailed = () => {
+    if (!broadcastResult || broadcastResult.failedClients.length === 0 || !lastBroadcastMessage) return;
+    const failedIds = broadcastResult.failedClients.map(c => c.id);
+    const previousResult = broadcastResult;
+    setBroadcastResult(null);
+    broadcastMutation.mutate({ message: lastBroadcastMessage, clientIds: failedIds }, {
+      onError: () => {
+        setBroadcastResult(previousResult);
+      }
+    });
   };
 
   const filteredClientsForBroadcast = clientsWithPhone.filter(c => 
@@ -1231,13 +1244,48 @@ export default function AdminSettings() {
                 </div>
 
                 {broadcastResult && (
-                  <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20">
-                    <p className="text-sm font-medium text-green-600 dark:text-green-400">
+                  <div className={`p-4 rounded-lg border ${broadcastResult.failed > 0 ? 'bg-yellow-500/10 border-yellow-500/20' : 'bg-green-500/10 border-green-500/20'}`}>
+                    <p className={`text-sm font-medium ${broadcastResult.failed > 0 ? 'text-yellow-600 dark:text-yellow-400' : 'text-green-600 dark:text-green-400'}`}>
                       {t("admin.broadcastComplete")}
                     </p>
                     <p className="text-sm text-muted-foreground mt-1">
                       {t("admin.sent")}: {broadcastResult.sent} | {t("admin.failed")}: {broadcastResult.failed} | {t("admin.total")}: {broadcastResult.total}
                     </p>
+                    
+                    {broadcastResult.failedClients.length > 0 && (
+                      <div className="mt-3 space-y-2">
+                        <p className="text-sm font-medium text-destructive">
+                          {t("admin.failedClients", { defaultValue: "Failed to send to:" })}
+                        </p>
+                        <div className="border rounded-lg max-h-[150px] overflow-y-auto bg-background">
+                          {broadcastResult.failedClients.map(client => (
+                            <div key={client.id} className="flex items-center justify-between p-2 border-b last:border-b-0 text-sm" data-testid={`failed-client-${client.id}`}>
+                              <div className="min-w-0 flex-1">
+                                <span className="font-medium">{client.name}</span>
+                                <span className="text-muted-foreground ml-2">{client.phone}</span>
+                                <p className="text-xs text-destructive truncate">{client.error}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleResendToFailed}
+                          disabled={broadcastMutation.isPending}
+                          className="mt-2"
+                          data-testid="button-resend-failed"
+                        >
+                          {broadcastMutation.isPending ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          ) : (
+                            <RefreshCw className="w-4 h-4 mr-2" />
+                          )}
+                          {t("admin.resendToFailed", { defaultValue: "Resend to failed" })} ({broadcastResult.failedClients.length})
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
 

@@ -675,6 +675,8 @@
     "sent": "تم الإرسال",
     "failed": "فشل",
     "total": "المجموع",
+    "failedClients": "فشل الإرسال إلى:",
+    "resendToFailed": "إعادة الإرسال للفاشلين",
     "sending": "جاري الإرسال",
     "sendToAll": "إرسال للجميع",
     "broadcastSent": "تم إرسال البث",

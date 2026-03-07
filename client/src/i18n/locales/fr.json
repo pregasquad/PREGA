@@ -710,6 +710,8 @@
     "sent": "Envoyés",
     "failed": "Échoués",
     "total": "Total",
+    "failedClients": "Échec d'envoi à :",
+    "resendToFailed": "Renvoyer aux échecs",
     "sending": "Envoi en cours",
     "sendToAll": "Envoyer à tous",
     "broadcastSent": "Diffusion envoyée",

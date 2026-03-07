@@ -2418,6 +2418,7 @@ export async function registerRoutes(
       let sent = 0;
       let failed = 0;
       const errors: string[] = [];
+      const failedClients: { id: number; name: string; phone: string; error: string }[] = [];
       
       for (const client of targetClients) {
         try {
@@ -2428,14 +2429,18 @@ export async function registerRoutes(
             sent++;
           } else {
             failed++;
-            errors.push(`${client.name}: ${result.error}`);
+            const errorMsg = result.error || "Unknown error";
+            errors.push(`${client.name}: ${errorMsg}`);
+            failedClients.push({ id: client.id, name: client.name, phone: client.phone!, error: errorMsg });
           }
           
           // Small delay to avoid rate limiting
           await new Promise(resolve => setTimeout(resolve, 500));
         } catch (err: any) {
           failed++;
-          errors.push(`${client.name}: ${err.message}`);
+          const errorMsg = err.message || "Unknown error";
+          errors.push(`${client.name}: ${errorMsg}`);
+          failedClients.push({ id: client.id, name: client.name, phone: client.phone!, error: errorMsg });
         }
       }
       
@@ -2444,7 +2449,8 @@ export async function registerRoutes(
         sent, 
         failed, 
         total: targetClients.length,
-        errors: errors.slice(0, 5) // Return first 5 errors only
+        errors: errors.slice(0, 5),
+        failedClients
       });
     } catch (err: any) {
       res.status(400).json({ success: false, error: err.message });
