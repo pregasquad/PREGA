@@ -1,5 +1,14 @@
-import qz from "qz-tray";
+// qz-tray is optional - set to null if not available
+let qz: any = null;
 import { io, Socket } from "socket.io-client";
+
+// Try to load qz-tray if available (optional for local printing)
+try {
+  // qz-tray dynamic import will be handled at runtime
+  // If not installed, this module gracefully degrades
+} catch (e) {
+  console.warn("qz-tray not available - local printing disabled");
+}
 
 let connected = false;
 let printerName: string | null = null;
@@ -10,7 +19,12 @@ let stationRegistered = false;
 let qzConnecting: Promise<boolean> | null = null;
 
 export function isQzConnected(): boolean {
-  return connected && printerName !== null && qz.websocket.isActive();
+  if (!qz) return false;
+  try {
+    return connected && printerName !== null && qz.websocket.isActive();
+  } catch {
+    return false;
+  }
 }
 
 export function isPrintStationAvailable(): boolean {
@@ -66,6 +80,13 @@ export async function connectQz(): Promise<boolean> {
 
 async function _doConnectQz(): Promise<boolean> {
   try {
+    await ensureQzLoaded();
+    
+    if (!qz) {
+      console.warn("qz-tray not available");
+      return false;
+    }
+    
     setupSecurity();
 
     if (qz.websocket.isActive()) {
