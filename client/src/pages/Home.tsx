@@ -111,7 +111,8 @@ function DayOpeningBriefing({ appointments, todayDate, businessName }: { appoint
   useEffect(() => {
     const key = `briefing_shown_${todayDate}`;
     const already = localStorage.getItem(key);
-    if (!already && appointments.length > 0) {
+    const unpaidCount = appointments.filter((a: any) => !a.paid).length;
+    if (!already && unpaidCount > 0) {
       // Slight delay so the page finishes loading first
       const t = setTimeout(() => {
         setOpen(true);
@@ -127,10 +128,10 @@ function DayOpeningBriefing({ appointments, todayDate, businessName }: { appoint
   };
 
   const sorted = [...appointments]
-    .filter((a: any) => a.startTime)
+    .filter((a: any) => a.startTime && !a.paid)
     .sort((a: any, b: any) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
 
-  const totalRevenue = appointments.reduce((s: number, a: any) => s + (a.total || 0), 0);
+  const totalRevenue = sorted.reduce((s: number, a: any) => s + (a.total || 0), 0);
   const firstAppt = sorted[0];
 
   return (
@@ -150,12 +151,12 @@ function DayOpeningBriefing({ appointments, todayDate, businessName }: { appoint
           {/* Quick stats */}
           <div className="grid grid-cols-3 gap-2 mt-4">
             <div className="bg-white/20 rounded-xl px-3 py-2 text-center">
-              <p className="text-xl font-bold">{appointments.length}</p>
-              <p className="text-[10px] font-medium opacity-80 uppercase">RDV</p>
+              <p className="text-xl font-bold">{sorted.length}</p>
+              <p className="text-[10px] font-medium opacity-80 uppercase">Impayés</p>
             </div>
             <div className="bg-white/20 rounded-xl px-3 py-2 text-center">
               <p className="text-xl font-bold">{totalRevenue}</p>
-              <p className="text-[10px] font-medium opacity-80 uppercase">DH prévus</p>
+              <p className="text-[10px] font-medium opacity-80 uppercase">DH restants</p>
             </div>
             <div className="bg-white/20 rounded-xl px-3 py-2 text-center">
               <p className="text-xl font-bold">{firstAppt ? firstAppt.startTime : "--"}</p>
