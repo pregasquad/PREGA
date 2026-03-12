@@ -1,9 +1,9 @@
 import { useAppointments, useStaff, useServices, useClients, useCategories, useBusinessSettings } from "@/hooks/use-salon-data";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Scissors, CalendarCheck, TrendingUp, Clock, Package, UserPlus, Pencil, Trash2, LogOut, AlertTriangle, Banknote, CreditCard, RefreshCw, ClipboardCheck, CheckCircle2, XCircle, CircleDot, ArrowUpRight, ArrowDownRight, Minus } from "lucide-react";
+import { Users, Scissors, CalendarCheck, TrendingUp, Clock, Package, UserPlus, Pencil, Trash2, LogOut, AlertTriangle, Banknote, CreditCard, RefreshCw, ClipboardCheck, CheckCircle2, XCircle, CircleDot, ArrowUpRight, ArrowDownRight, Minus, Bell, BellRing, ChevronDown, ChevronUp } from "lucide-react";
 import { format, startOfToday, subDays } from "date-fns";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -102,6 +102,137 @@ function EditStaffForm({ staff, categories, onSubmit, isPending, t }: {
         {isPending ? t("home.updating") : t("home.update")}
       </Button>
     </form>
+  );
+}
+
+function TodayScheduleReminder({ appointments }: { appointments: any[] }) {
+  const [now, setNow] = useState(new Date());
+  const [expanded, setExpanded] = useState(true);
+  const notifiedRef = useRef<Set<number>>(new Set());
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const timeToMinutes = (t: string) => {
+    const [h, m] = (t || "00:00").split(":").map(Number);
+    return h * 60 + m;
+  };
+
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+  const sorted = useMemo(() => {
+    return [...appointments]
+      .filter((a: any) => a.startTime)
+      .sort((a: any, b: any) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
+  }, [appointments]);
+
+  const getStatus = (appt: any) => {
+    const start = timeToMinutes(appt.startTime);
+    const end = start + (appt.duration || 30);
+    if (nowMinutes >= end) return "done";
+    if (nowMinutes >= start) return "inprogress";
+    return "upcoming";
+  };
+
+  const next = sorted.find((a: any) => getStatus(a) === "upcoming");
+  const nextMinutes = next ? timeToMinutes(next.startTime) - nowMinutes : null;
+
+  // Browser notification for appointment starting in 10 min
+  useEffect(() => {
+    if (!next || notifiedRef.current.has(next.id)) return;
+    if (nextMinutes !== null && nextMinutes <= 10 && nextMinutes > 0) {
+      notifiedRef.current.add(next.id);
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification("⏰ Prochain RDV dans " + nextMinutes + " min", {
+          body: `${next.client} — ${next.service} à ${next.startTime}`,
+          icon: "/icon-192.png",
+        });
+      }
+    }
+  }, [next, nextMinutes]);
+
+  if (sorted.length === 0) {
+    return (
+      <div className="rounded-2xl border border-dashed border-border/60 bg-muted/30 px-4 py-3 flex items-center gap-3 text-muted-foreground text-sm">
+        <CalendarCheck className="w-4 h-4 shrink-0" />
+        <span>Aucun rendez-vous aujourd'hui</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border border-border/60 bg-card shadow-sm overflow-hidden">
+      <button
+        className="w-full flex items-center justify-between gap-3 px-4 py-3"
+        onClick={() => setExpanded(e => !e)}
+      >
+        <div className="flex items-center gap-2.5">
+          {next ? (
+            <div className="relative">
+              <BellRing className="w-4 h-4 text-orange-500" />
+              <span className="absolute -top-1 -right-1 w-2 h-2 bg-orange-500 rounded-full animate-ping" />
+            </div>
+          ) : (
+            <Bell className="w-4 h-4 text-muted-foreground" />
+          )}
+          <div className="text-left">
+            <p className="text-sm font-semibold leading-tight">
+              Planning du jour
+              <span className="ms-2 text-xs font-normal text-muted-foreground">({sorted.length} RDV)</span>
+            </p>
+            {next && nextMinutes !== null && (
+              <p className="text-[11px] text-orange-500 font-medium mt-0.5">
+                Prochain: {next.startTime} — {next.client}
+                {nextMinutes <= 60
+                  ? ` (dans ${nextMinutes} min)`
+                  : ` (dans ${Math.floor(nextMinutes / 60)}h${nextMinutes % 60 > 0 ? String(nextMinutes % 60).padStart(2, "0") : ""})`}
+              </p>
+            )}
+            {!next && (
+              <p className="text-[11px] text-emerald-500 font-medium mt-0.5">Tous les RDV terminés ✓</p>
+            )}
+          </div>
+        </div>
+        {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" /> : <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />}
+      </button>
+
+      {expanded && (
+        <div className="border-t border-border/50 divide-y divide-border/40">
+          {sorted.map((appt: any) => {
+            const status = getStatus(appt);
+            return (
+              <div
+                key={appt.id}
+                className={`flex items-center gap-3 px-4 py-2.5 ${status === "inprogress" ? "bg-orange-50 dark:bg-orange-900/10" : status === "done" ? "opacity-50" : ""}`}
+              >
+                <div className={`w-1.5 h-10 rounded-full shrink-0 ${status === "done" ? "bg-emerald-400" : status === "inprogress" ? "bg-orange-400 animate-pulse" : "bg-blue-400"}`} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold tabular-nums">{appt.startTime}</span>
+                    <span className="text-xs text-muted-foreground">·</span>
+                    <span className="text-xs text-muted-foreground">{appt.duration} min</span>
+                    {status === "inprogress" && (
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-orange-500 bg-orange-100 dark:bg-orange-900/30 px-1.5 py-0.5 rounded-full">En cours</span>
+                    )}
+                    {status === "done" && (
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                    )}
+                  </div>
+                  <p className="text-xs font-medium truncate">{appt.client}</p>
+                  <p className="text-[11px] text-muted-foreground truncate">{appt.service} {appt.staff ? `· ${appt.staff}` : ""}</p>
+                </div>
+                <div className={`text-right shrink-0 ${appt.paid ? "text-emerald-600" : "text-amber-500"}`}>
+                  <p className="text-xs font-bold">{appt.total} DH</p>
+                  <p className="text-[10px]">{appt.paid ? "Payé" : "Impayé"}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -273,6 +404,8 @@ export default function Home() {
             </Button>
           </div>
         </div>
+
+        <TodayScheduleReminder appointments={appointments} />
 
         <div className="grid grid-cols-2 gap-3" data-testid="section-summary-cards">
           <div className="glass-card rounded-2xl p-4 flex flex-col justify-between min-h-[100px]" data-testid="card-revenue">
