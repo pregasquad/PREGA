@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertStaffSchema } from "@shared/schema";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -102,6 +102,102 @@ function EditStaffForm({ staff, categories, onSubmit, isPending, t }: {
         {isPending ? t("home.updating") : t("home.update")}
       </Button>
     </form>
+  );
+}
+
+function DayOpeningBriefing({ appointments, todayDate, businessName }: { appointments: any[]; todayDate: string; businessName?: string }) {
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    const key = `briefing_shown_${todayDate}`;
+    const already = localStorage.getItem(key);
+    if (!already && appointments.length > 0) {
+      // Slight delay so the page finishes loading first
+      const t = setTimeout(() => {
+        setOpen(true);
+        localStorage.setItem(key, "1");
+      }, 800);
+      return () => clearTimeout(t);
+    }
+  }, [todayDate, appointments.length]);
+
+  const timeToMinutes = (t: string) => {
+    const [h, m] = (t || "00:00").split(":").map(Number);
+    return h * 60 + m;
+  };
+
+  const sorted = [...appointments]
+    .filter((a: any) => a.startTime)
+    .sort((a: any, b: any) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
+
+  const totalRevenue = appointments.reduce((s: number, a: any) => s + (a.total || 0), 0);
+  const firstAppt = sorted[0];
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent className="max-w-sm rounded-2xl p-0 overflow-hidden gap-0">
+        {/* Header */}
+        <div className="bg-gradient-to-br from-orange-400 to-pink-500 px-5 pt-6 pb-5 text-white">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-2xl">☀️</span>
+            <span className="text-xs font-semibold uppercase tracking-widest opacity-80">Briefing du jour</span>
+          </div>
+          <h2 className="text-xl font-bold leading-tight">{businessName || "PREGA SQUAD"}</h2>
+          <p className="text-sm opacity-90 mt-0.5">
+            {new Date(todayDate + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
+          </p>
+
+          {/* Quick stats */}
+          <div className="grid grid-cols-3 gap-2 mt-4">
+            <div className="bg-white/20 rounded-xl px-3 py-2 text-center">
+              <p className="text-xl font-bold">{appointments.length}</p>
+              <p className="text-[10px] font-medium opacity-80 uppercase">RDV</p>
+            </div>
+            <div className="bg-white/20 rounded-xl px-3 py-2 text-center">
+              <p className="text-xl font-bold">{totalRevenue}</p>
+              <p className="text-[10px] font-medium opacity-80 uppercase">DH prévus</p>
+            </div>
+            <div className="bg-white/20 rounded-xl px-3 py-2 text-center">
+              <p className="text-xl font-bold">{firstAppt ? firstAppt.startTime : "--"}</p>
+              <p className="text-[10px] font-medium opacity-80 uppercase">Début</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Appointment list */}
+        <div className="px-4 py-3 max-h-64 overflow-y-auto divide-y divide-border/50">
+          {sorted.map((appt: any, i: number) => (
+            <div key={appt.id} className="flex items-center gap-3 py-2.5">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 ${
+                i === 0 ? "bg-orange-400" : "bg-pink-400"
+              }`}>
+                {i + 1}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm font-bold tabular-nums">{appt.startTime}</span>
+                  <span className="text-xs text-muted-foreground">·</span>
+                  <span className="text-xs text-muted-foreground">{appt.duration} min</span>
+                </div>
+                <p className="text-sm font-medium truncate leading-tight">{appt.client}</p>
+                <p className="text-xs text-muted-foreground truncate">{appt.service}{appt.staff ? ` · ${appt.staff}` : ""}</p>
+              </div>
+              <p className="text-sm font-bold shrink-0">{appt.total} DH</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div className="px-4 pb-4 pt-2 border-t border-border/50">
+          <Button
+            className="w-full rounded-xl bg-gradient-to-r from-orange-400 to-pink-500 text-white font-semibold hover:opacity-90"
+            onClick={() => setOpen(false)}
+          >
+            C'est parti ! 💪
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -405,6 +501,7 @@ export default function Home() {
           </div>
         </div>
 
+        <DayOpeningBriefing appointments={appointments} todayDate={todayDate} businessName={bSettings?.businessName} />
         <TodayScheduleReminder appointments={appointments} />
 
         <div className="grid grid-cols-2 gap-3" data-testid="section-summary-cards">
