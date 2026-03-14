@@ -249,12 +249,13 @@ export async function sendAppointmentReminder(
   const salon = salonName || 'PREGASQUAD';
   const message = `مرحباً ${clientName}! 💇‍♀️
 
-هذا تذكير بموعدك:
+⏳ تذكير: موعدك بعد 45 دقيقة!
+
 📅 التاريخ: ${appointmentDate}
 ⏰ الوقت: ${appointmentTime}
 💅 الخدمة: ${serviceName}
 
-نتطلع لرؤيتك في ${salon}!
+نتطلع لرؤيتك في ${salon}! 🌸
 للإلغاء أو التعديل، يرجى التواصل معنا.`;
 
   return sendWhatsAppMessage(clientPhone, message);

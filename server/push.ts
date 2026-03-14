@@ -211,7 +211,9 @@ export async function checkAndSendAppointmentReminders(): Promise<void> {
 
       const minutesUntil = aptTotalMinutes - currentMinutes;
 
-      if (minutesUntil > 0 && minutesUntil <= 120) {
+      // Fire when appointment is between 45 and 50 minutes away
+      // (scheduler runs every 5 min, so this window ensures exactly one delivery)
+      if (minutesUntil >= 45 && minutesUntil < 50) {
         sentReminderIds.add(apt.id);
         try {
           const clientName = apt.client?.split(' (')[0] || 'Client';
@@ -223,7 +225,7 @@ export async function checkAndSendAppointmentReminders(): Promise<void> {
             apt.startTime,
             serviceName
           );
-          console.log(`[Reminder] Sent WhatsApp reminder for appointment ${apt.id} (${clientName} at ${apt.startTime})`);
+          console.log(`[Reminder] Sent WhatsApp reminder for appointment ${apt.id} (${clientName} at ${apt.startTime}, ${minutesUntil} min away)`);
         } catch (err) {
           console.error(`[Reminder] Failed to send for appointment ${apt.id}:`, err);
         }
