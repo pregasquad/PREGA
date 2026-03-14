@@ -1,13 +1,22 @@
-// qz-tray is optional - set to null if not available
 let qz: any = null;
 import { io, Socket } from "socket.io-client";
 
-// Try to load qz-tray if available (optional for local printing)
-try {
-  // qz-tray dynamic import will be handled at runtime
-  // If not installed, this module gracefully degrades
-} catch (e) {
-  console.warn("qz-tray not available - local printing disabled");
+let _qzLoadPromise: Promise<void> | null = null;
+
+async function ensureQzLoaded(): Promise<void> {
+  if (qz) return;
+  if (_qzLoadPromise) return _qzLoadPromise;
+  _qzLoadPromise = (async () => {
+    try {
+      const mod = await import("qz-tray");
+      qz = mod.default ?? mod;
+      console.log("[qz] qz-tray loaded successfully");
+    } catch (e) {
+      console.warn("[qz] qz-tray not available:", e);
+      qz = null;
+    }
+  })();
+  return _qzLoadPromise;
 }
 
 let connected = false;

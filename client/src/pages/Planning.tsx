@@ -1487,6 +1487,32 @@ export default function Planning() {
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/appointments/all"] });
       toast({ title: t("planning.paymentConfirmed"), description: t("planning.paymentConfirmedDesc") });
+
+      // Print receipt and open cash drawer
+      try {
+        const serviceLabel = (() => {
+          if (app.servicesJson) {
+            const parsed = typeof app.servicesJson === "string" ? JSON.parse(app.servicesJson) : app.servicesJson;
+            if (Array.isArray(parsed) && parsed.length > 0) return parsed.map((s: any) => s.name).join(", ");
+          }
+          return app.service || "";
+        })();
+        await autoPrint({
+          businessName: salonSettings?.businessName || "PREGASQUAD SALON",
+          currency: salonSettings?.currencySymbol || "DH",
+          clientName: (app.client || "").replace(/\s*\([^)]*\)\s*$/, ""),
+          clientPhone: (app.client || "").match(/\(([^)]+)\)/)?.[1] || app.phone || "",
+          services: serviceLabel,
+          staffName: app.staff || "",
+          date: app.date ? new Date(app.date).toLocaleDateString("fr-FR") : format(date, "dd/MM/yyyy"),
+          time: app.startTime || "",
+          duration: app.duration || 0,
+          total: app.total ?? app.price ?? 0,
+          appointmentId: appId,
+        });
+      } catch (printErr) {
+        console.error("[print] Mark-paid print failed:", printErr);
+      }
     } catch (error) {
       console.error("Payment error:", error);
       toast({ title: t("common.error"), description: t("planning.paymentError"), variant: "destructive" });
