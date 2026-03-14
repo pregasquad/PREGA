@@ -1235,14 +1235,16 @@ export default function Planning() {
           } catch (e) {
             console.error("Failed to fetch loyalty points:", e);
           }
-          autoPrint({ 
-            ...printData, 
-            appointmentId: result?.id,
-            loyaltyPointsEarned: loyaltyPointsEarned > 0 ? loyaltyPointsEarned : undefined,
-            loyaltyPointsBalance: loyaltyPointsBalance > 0 ? loyaltyPointsBalance : undefined,
-          }).catch((err) => {
-            console.error("[print-relay] autoPrint failed:", err);
-          });
+          if (submitData.paid) {
+            autoPrint({ 
+              ...printData, 
+              appointmentId: result?.id,
+              loyaltyPointsEarned: loyaltyPointsEarned > 0 ? loyaltyPointsEarned : undefined,
+              loyaltyPointsBalance: loyaltyPointsBalance > 0 ? loyaltyPointsBalance : undefined,
+            }).catch((err) => {
+              console.error("[print-relay] autoPrint failed:", err);
+            });
+          }
           await performDeductions();
         },
       });
