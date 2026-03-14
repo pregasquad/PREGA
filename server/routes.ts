@@ -61,6 +61,60 @@ async function checkAndNotifyLowStock(productId: number) {
 
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 
+/**
+ * After an appointment is created, ensure the client record has a phone number.
+ * - If clientId is known: update that client's phone if it's missing.
+ * - If only a name is known: look up by name, update phone if missing, or
+ *   create a new client with that name + phone.
+ * Phone can come from a dedicated phone field OR be embedded in the client
+ * string as "Name (0612345678)".
+ */
+async function syncClientPhone(
+  clientId: number | null | undefined,
+  clientString: string | null | undefined,
+  directPhone: string | null | undefined
+): Promise<void> {
+  try {
+    // Resolve phone: prefer direct field, fall back to extracting from "Name (phone)"
+    const phone =
+      directPhone?.trim() ||
+      clientString?.match(/\(([^)]+)\)/)?.[1]?.trim() ||
+      null;
+
+    if (!phone) return; // No phone to save
+
+    const cleanName = clientString?.split(" (")[0]?.trim() || null;
+
+    // 1. Try by clientId first
+    if (clientId) {
+      const existing = await storage.getClient(clientId);
+      if (existing && !existing.phone) {
+        await storage.updateClient(clientId, { phone });
+        console.log(`[syncClientPhone] Updated phone for client #${clientId} (${existing.name})`);
+      }
+      return;
+    }
+
+    // 2. Try by name
+    if (cleanName) {
+      const existing = await storage.getClientByName(cleanName);
+      if (existing) {
+        if (!existing.phone) {
+          await storage.updateClient(existing.id, { phone });
+          console.log(`[syncClientPhone] Updated phone for client "${cleanName}"`);
+        }
+        return;
+      }
+
+      // 3. Client doesn't exist yet — create them
+      await storage.createClient({ name: cleanName, phone });
+      console.log(`[syncClientPhone] Created new client "${cleanName}" with phone ${phone}`);
+    }
+  } catch (err) {
+    console.error("[syncClientPhone] Error:", err);
+  }
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -657,6 +711,7 @@ export async function registerRoutes(
         console.log("[PUBLIC BOOKING] Creating single appointment:", JSON.stringify(appointmentData));
         const item = await storage.createAppointment(appointmentData);
         createdAppointments.push(item);
+        syncClientPhone(null, input.client, input.phone).catch(() => {});
         
       } else {
         // Multiple categories: split into separate appointments
@@ -743,6 +798,7 @@ export async function registerRoutes(
           console.log(`[PUBLIC BOOKING] Creating appointment for category "${category}":`, JSON.stringify(appointmentData));
           const item = await storage.createAppointment(appointmentData);
           createdAppointments.push(item);
+          syncClientPhone(null, input.client, input.phone).catch(() => {});
           
           // Move start time forward for next appointment
           currentStartMinutes += group.totalDuration;
@@ -1190,6 +1246,7 @@ export async function registerRoutes(
     try {
       const input = api.appointments.create.input.parse(req.body);
       const item = await storage.createAppointment(input);
+      syncClientPhone(input.clientId, input.client, input.phone).catch(() => {});
       
       // Emit real-time notification for new booking (only unpaid reservations)
       if (!item.paid) {
