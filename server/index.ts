@@ -129,6 +129,16 @@ const startServer = async () => {
     () => {
       log(`serving on port ${PORT} (${ENV} environment)`);
 
+      // Run immediately on startup (after 15s for DB to settle), then every 5 min
+      setTimeout(() => {
+        checkAndSendClosingReminder().catch(err =>
+          console.error('[Closing Reminder] Error:', err)
+        );
+        checkAndSendAppointmentReminders().catch(err =>
+          console.error('[Appointment Reminder] Error:', err)
+        );
+      }, 15 * 1000);
+
       setInterval(() => {
         checkAndSendClosingReminder().catch(err =>
           console.error('[Closing Reminder] Error:', err)

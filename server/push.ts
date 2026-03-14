@@ -200,7 +200,8 @@ export async function checkAndSendAppointmentReminders(): Promise<void> {
     for (const apt of allAppointments) {
       if (sentReminderIds.has(apt.id)) continue;
 
-      const phone = apt.phone;
+      // Try apt.phone first, fall back to phone embedded in client string "Name (0612345678)"
+      const phone = apt.phone || apt.client?.match(/\(([^)]+)\)/)?.[1] || null;
       if (!phone) continue;
 
       const [aptHour, aptMin] = apt.startTime.split(':').map(Number);
@@ -211,12 +212,13 @@ export async function checkAndSendAppointmentReminders(): Promise<void> {
 
       const minutesUntil = aptTotalMinutes - currentMinutes;
 
-      // Fire when appointment is between 45 and 50 minutes away
-      // (scheduler runs every 5 min, so this window ensures exactly one delivery)
-      if (minutesUntil >= 45 && minutesUntil < 50) {
+      // Fire when appointment is between 40 and 55 minutes away.
+      // Window is wider than the 5-min check interval to survive server restarts
+      // and scheduling jitter. sentReminderIds prevents duplicate sends.
+      if (minutesUntil >= 40 && minutesUntil < 55) {
         sentReminderIds.add(apt.id);
         try {
-          const clientName = apt.client?.split(' (')[0] || 'Client';
+          const clientName = apt.client?.split(' (')[0]?.trim() || 'Client';
           const serviceName = apt.service || 'RDV';
           await sendAppointmentReminder(
             phone,
@@ -228,6 +230,7 @@ export async function checkAndSendAppointmentReminders(): Promise<void> {
           console.log(`[Reminder] Sent WhatsApp reminder for appointment ${apt.id} (${clientName} at ${apt.startTime}, ${minutesUntil} min away)`);
         } catch (err) {
           console.error(`[Reminder] Failed to send for appointment ${apt.id}:`, err);
+          sentReminderIds.delete(apt.id); // allow retry on next cycle if send failed
         }
       }
     }
