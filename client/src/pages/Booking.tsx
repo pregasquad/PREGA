@@ -257,28 +257,67 @@ export default function Booking() {
     return filteredServices.filter(s => s.category === selectedCategory);
   }, [filteredServices, selectedCategory]);
 
+  const toMinutes = (time: string) => {
+    const [h, m] = time.split(":").map(Number);
+    return h * 60 + m;
+  };
+
+  // Computed totals always derived from state – never stale (fixes form.getValues display bug)
+  const displayTotal = selectedPackage
+    ? selectedPackage.discountedPrice
+    : selectedServices.reduce((sum, s) => sum + (s.price || 0), 0);
+  const displayDuration = selectedServices.reduce((sum, s) => sum + (s.duration || 0), 0);
+
+  // Slots visible to the client (only filters out past times today)
   const getAvailableSlots = useMemo(() => {
     if (!date) return [];
-    
-    const duration = serviceDuration || 30;
-    
     const now = new Date();
     const isToday = date.toDateString() === now.toDateString();
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
-    
     return TIME_SLOTS.filter(slot => {
-      const slotMinutes = parseInt(slot.split(":")[0]) * 60 + parseInt(slot.split(":")[1]);
-      
-      if (isToday && slotMinutes <= currentMinutes) {
-        return false;
-      }
-      
+      if (isToday && toMinutes(slot) <= currentMinutes) return false;
       return true;
     });
-  }, [date, serviceDuration]);
+  }, [date]);
+
+  // Which slots conflict with existing appointments for the selected staff
+  const busySlots = useMemo(() => {
+    const busy = new Set<string>();
+    if (!appointments.length) return busy;
+    const slotDuration = displayDuration || 30;
+    const staffFilter = selectedStaff && selectedStaff !== "" ? selectedStaff : null;
+
+    for (const slot of TIME_SLOTS) {
+      const slotStart = toMinutes(slot);
+      const slotEnd = slotStart + slotDuration;
+
+      for (const appt of appointments) {
+        // If a staff is selected, only check that staff's appointments
+        if (staffFilter && appt.staff !== staffFilter) continue;
+
+        const apptStart = toMinutes(appt.startTime);
+        const apptDur = appt.duration || 30;
+        const apptEnd = apptStart + apptDur;
+
+        // Overlap: slot starts before appt ends AND slot ends after appt starts
+        if (slotStart < apptEnd && slotEnd > apptStart) {
+          busy.add(slot);
+          break;
+        }
+      }
+    }
+    return busy;
+  }, [appointments, selectedStaff, displayDuration]);
 
   const onSubmit = async (data: BookingFormValues) => {
     if (!date || !selectedTime || selectedServices.length === 0) return;
+
+    // Block booking on a busy slot
+    if (busySlots.has(selectedTime)) {
+      alert(t("booking.slotBusy", { defaultValue: "Ce créneau est déjà réservé. Veuillez choisir un autre horaire." }));
+      return;
+    }
+
     setIsSubmitting(true);
     
     const clientName = data.phone ? `${data.client} (${data.phone})` : data.client;
@@ -394,13 +433,7 @@ export default function Booking() {
     form.setValue("total", 0);
   };
 
-  // Computed totals always derived from state – never stale (fixes form.getValues display bug)
-  const displayTotal = selectedPackage
-    ? selectedPackage.discountedPrice
-    : selectedServices.reduce((sum, s) => sum + (s.price || 0), 0);
-  const displayDuration = selectedServices.reduce((sum, s) => sum + (s.duration || 0), 0);
-
-  const canSubmit = selectedServices.length > 0 && date && selectedTime && form.watch("client");
+  const canSubmit = selectedServices.length > 0 && date && selectedTime && form.watch("client") && !busySlots.has(selectedTime);
 
   // Loading skeleton for faster perceived performance
   if (isLoading) {
@@ -987,25 +1020,47 @@ export default function Booking() {
                         {t("booking.selectAvailableTime")}
                       </FormLabel>
                       <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5 max-h-[180px] overflow-y-auto p-1 calendar-scroll">
-                        {getAvailableSlots.map(slot => (
-                          <Button
-                            key={slot}
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className={cn(
-                              "h-8 rounded-lg transition-all text-xs font-medium",
-                              "bg-background/50",
-                              selectedTime === slot 
-                                ? "bg-primary text-primary-foreground border-primary" 
-                                : "border-border/50 hover:border-primary/50 hover:bg-background/80"
-                            )}
-                            onClick={() => setSelectedTime(slot)}
-                          >
-                            {slot}
-                          </Button>
-                        ))}
+                        {getAvailableSlots.map(slot => {
+                          const isBusy = busySlots.has(slot);
+                          const isSelected = selectedTime === slot;
+                          return (
+                            <button
+                              key={slot}
+                              type="button"
+                              title={isBusy ? t("booking.slotBusyShort", { defaultValue: "Créneau occupé" }) : slot}
+                              className={cn(
+                                "h-auto min-h-[2rem] rounded-lg transition-all text-xs font-medium border flex flex-col items-center justify-center gap-0 px-1 py-1",
+                                isSelected && isBusy
+                                  ? "bg-red-500 text-white border-red-500"
+                                  : isSelected
+                                  ? "bg-primary text-primary-foreground border-primary"
+                                  : isBusy
+                                  ? "bg-red-50 dark:bg-red-950/30 text-red-500 border-red-300 dark:border-red-800 opacity-80 cursor-pointer"
+                                  : "bg-background/50 border-border/50 hover:border-primary/50 hover:bg-background/80"
+                              )}
+                              onClick={() => {
+                                setSelectedTime(slot);
+                                if (isBusy) {
+                                  // Show inline warning – submission will also block it
+                                }
+                              }}
+                            >
+                              <span>{slot}</span>
+                              {isBusy && (
+                                <span className="text-[9px] leading-none font-semibold uppercase tracking-tight opacity-90">
+                                  {t("booking.busy", { defaultValue: "Occupé" })}
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
                       </div>
+                      {selectedTime && busySlots.has(selectedTime) && (
+                        <div className="mt-2 flex items-center gap-2 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 px-3 py-2 text-sm text-red-600 dark:text-red-400">
+                          <span className="text-base">⚠️</span>
+                          <span>{t("booking.slotBusyWarning", { defaultValue: "Ce créneau est déjà réservé. Veuillez choisir un autre horaire disponible." })}</span>
+                        </div>
+                      )}
                       {getAvailableSlots.length === 0 && (
                         <div className="glass-subtle rounded-xl p-6 text-center space-y-4">
                           <p className="text-muted-foreground">
