@@ -123,6 +123,7 @@ export default function Booking() {
   const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
   const [bookingResult, setBookingResult] = useState<BookingResult | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [confirmedTotal, setConfirmedTotal] = useState<number>(0);
 
   useEffect(() => {
     i18n.changeLanguage("fr");
@@ -313,6 +314,7 @@ export default function Booking() {
       }
       
       const result: BookingResult = await res.json();
+      setConfirmedTotal(totalPrice);
       setBookingResult(result);
       setIsSuccess(true);
       setSelectedServices([]);
@@ -391,6 +393,12 @@ export default function Booking() {
     form.setValue("price", 0);
     form.setValue("total", 0);
   };
+
+  // Computed totals always derived from state – never stale (fixes form.getValues display bug)
+  const displayTotal = selectedPackage
+    ? selectedPackage.discountedPrice
+    : selectedServices.reduce((sum, s) => sum + (s.price || 0), 0);
+  const displayDuration = selectedServices.reduce((sum, s) => sum + (s.duration || 0), 0);
 
   const canSubmit = selectedServices.length > 0 && date && selectedTime && form.watch("client");
 
@@ -497,7 +505,7 @@ export default function Booking() {
                 </div>
                 <div className="flex justify-between items-center border-t border-border/50 pt-3 mt-3">
                   <span className="text-muted-foreground">{t("common.price")}</span>
-                  <span className="font-bold text-primary text-xl">{form.getValues("total")} {t("common.currency")}</span>
+                  <span className="font-bold text-primary text-xl">{confirmedTotal} {t("common.currency")}</span>
                 </div>
               </div>
             </div>
@@ -540,7 +548,7 @@ export default function Booking() {
               )}
               <div className="flex justify-between items-center border-t border-border/50 pt-3 mt-3">
                 <span className="text-muted-foreground">{t("common.price")}</span>
-                <span className="font-bold text-primary text-xl">{form.getValues("total")} {t("common.currency")}</span>
+                <span className="font-bold text-primary text-xl">{confirmedTotal} {t("common.currency")}</span>
               </div>
             </div>
           )}
@@ -928,7 +936,7 @@ export default function Booking() {
                                   )}
                                   <div className="flex justify-between text-sm">
                                     <span className="text-muted-foreground">{t("common.duration")}:</span>
-                                    <span className="font-medium">{form.getValues("duration")} {t("common.minutes")}</span>
+                                    <span className="font-medium">{displayDuration} {t("common.minutes")}</span>
                                   </div>
                                   <div className="flex justify-between text-sm mt-1">
                                     <span className="text-muted-foreground">{t("common.price")}:</span>
@@ -938,7 +946,7 @@ export default function Booking() {
                                           {selectedPackage.originalPrice} {t("common.currency")}
                                         </span>
                                       )}
-                                      <span className="text-primary font-bold text-lg">{form.getValues("total")} {t("common.currency")}</span>
+                                      <span className="text-primary font-bold text-lg">{displayTotal} {t("common.currency")}</span>
                                     </div>
                                   </div>
                                 </div>

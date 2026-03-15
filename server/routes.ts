@@ -682,9 +682,10 @@ export async function registerRoutes(
         const group = categoryGroups.get(category);
         
         // Use group values for duration (calculated from services) or fallback to input values
-        const effectiveDuration = group?.totalDuration || input.duration || 30;
-        const effectivePrice = group?.totalPrice || input.price || 0;
-        const effectiveTotal = input.total || effectivePrice;
+        // NOTE: Avoid || with numeric values – 0 is a valid price/duration
+        const effectiveDuration = group != null ? group.totalDuration : (input.duration ?? 30);
+        const effectivePrice = group != null ? group.totalPrice : (input.price ?? 0);
+        const effectiveTotal = (input.total != null) ? input.total : effectivePrice;
         
         // Find available staff for this category
         const assignedStaff = input.staff || await findAvailableStaffForCategory(
@@ -719,16 +720,21 @@ export async function registerRoutes(
         
         // Calculate total service prices before discount to determine discount ratio
         const totalServicePrice = Array.from(categoryGroups.values()).reduce((sum, g) => sum + g.totalPrice, 0);
-        const effectiveTotal = input.total || totalServicePrice;
+        const effectiveTotal = (input.total != null) ? input.total : totalServicePrice;
         // Guard against division by zero: if all services are free, no discount applies
         const hasDiscount = totalServicePrice > 0 && effectiveTotal < totalServicePrice;
         const discountRatio = (hasDiscount && totalServicePrice > 0) ? effectiveTotal / totalServicePrice : 1;
         console.log("[PUBLIC BOOKING] Discount ratio:", discountRatio, "(total:", effectiveTotal, "vs services:", totalServicePrice, ")");
+        // Track distributed amount so last category gets the remainder (avoids rounding gaps)
+        let distributedTotal = 0;
         
         let currentStartMinutes = timeToMinutes(input.startTime);
         const usedStaff: string[] = [];
         
-        for (const [category, group] of categoryGroups) {
+        const categoryGroupEntries = Array.from(categoryGroups.entries());
+        for (let gi = 0; gi < categoryGroupEntries.length; gi++) {
+          const [category, group] = categoryGroupEntries[gi];
+          const isLastGroup = gi === categoryGroupEntries.length - 1;
           const currentStartTime = minutesToTime(currentStartMinutes);
           
           // Find available staff for this category - priority order:
@@ -778,8 +784,14 @@ export async function registerRoutes(
           // Create service name from group
           const serviceNames = group.services.map(s => s.name).join(", ");
           
-          // Apply package discount proportionally to this group's price
-          const discountedPrice = Math.round(group.totalPrice * discountRatio * 100) / 100;
+          // Apply package discount proportionally; last group gets the remainder to avoid rounding gaps
+          let discountedPrice: number;
+          if (isLastGroup) {
+            discountedPrice = Math.round((effectiveTotal - distributedTotal) * 100) / 100;
+          } else {
+            discountedPrice = Math.round(group.totalPrice * discountRatio * 100) / 100;
+            distributedTotal += discountedPrice;
+          }
           
           const appointmentData: any = {
             client: input.client,
