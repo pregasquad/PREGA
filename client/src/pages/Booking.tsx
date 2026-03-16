@@ -282,34 +282,31 @@ export default function Booking() {
 
   // Which slots are busy for the SELECTED staff member only.
   // If no staff is selected we never block — the server auto-assigns an available person.
-  // A slot is busy only when the chosen staff has an overlapping appointment.
+  // Rule: a slot is busy if the selected staff already has an appointment RUNNING at that time.
+  // We intentionally do NOT use displayDuration here — multi-service durations should not
+  // block earlier slots since different staff may handle different service categories.
   const busySlots = useMemo(() => {
     const busy = new Set<string>();
-    const hasStaffSelected = selectedStaff && selectedStaff !== "";
-    // Only compute busy slots when a specific staff is chosen
-    if (!hasStaffSelected || !appointments.length) return busy;
-
-    const slotDuration = displayDuration || 30;
+    if (!selectedStaff || !appointments.length) return busy;
 
     for (const slot of TIME_SLOTS) {
       const slotStart = toMinutes(slot);
-      const slotEnd = slotStart + slotDuration;
 
       for (const appt of appointments) {
-        if (appt.staff !== selectedStaff) continue; // Only this staff member's appointments
+        if (appt.staff !== selectedStaff) continue;
 
         const apptStart = toMinutes(appt.startTime);
         const apptEnd = apptStart + (appt.duration || 30);
 
-        // Overlap: slot starts before appt ends AND slot ends after appt starts
-        if (slotStart < apptEnd && slotEnd > apptStart) {
+        // The slot is busy if the staff is mid-appointment at this exact start time
+        if (slotStart >= apptStart && slotStart < apptEnd) {
           busy.add(slot);
           break;
         }
       }
     }
     return busy;
-  }, [appointments, selectedStaff, displayDuration]);
+  }, [appointments, selectedStaff]);
 
   const onSubmit = async (data: BookingFormValues) => {
     if (!date || !selectedTime || selectedServices.length === 0) return;
