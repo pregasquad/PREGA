@@ -8,7 +8,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Search, User, Clock, Calendar, Check, UserPlus, Filter, RefreshCw } from "lucide-react";
+import { Search, User, Clock, Calendar, Check, UserPlus, Filter, RefreshCw, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
 import { format, parseISO, isToday, isYesterday, startOfToday, subDays } from "date-fns";
 import { ar, enUS, fr } from "date-fns/locale";
@@ -82,6 +93,28 @@ export default function BookingHistory() {
       toast({
         title: t("common.success"),
         description: t("bookingHistory.staffAssigned", { defaultValue: "Staff assigné avec succès" }),
+      });
+    },
+  });
+
+  const deleteAppointmentMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`/api/appointments/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments/all"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+      toast({
+        title: t("common.success"),
+        description: t("bookingHistory.appointmentDeleted", { defaultValue: "Rendez-vous supprimé" }),
+      });
+    },
+    onError: () => {
+      toast({
+        title: t("common.error"),
+        description: t("bookingHistory.deleteFailed", { defaultValue: "Échec de la suppression" }),
+        variant: "destructive",
       });
     },
   });
@@ -255,7 +288,7 @@ export default function BookingHistory() {
                       </div>
                       <span className="font-semibold text-sm text-primary">{appt.total} DH</span>
                     </div>
-                    <div className="mt-2">
+                    <div className="mt-2 flex gap-2">
                       <Select
                         value={appt.staff || "À assigner"}
                         onValueChange={(value) => {
@@ -263,7 +296,7 @@ export default function BookingHistory() {
                         }}
                       >
                         <SelectTrigger className={cn(
-                          "h-8 text-xs",
+                          "h-8 text-xs flex-1",
                           isUnassigned && "border-sky-500/50 text-sky-600"
                         )}>
                           <div className="flex items-center gap-2">
@@ -292,6 +325,31 @@ export default function BookingHistory() {
                           ))}
                         </SelectContent>
                       </Select>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>{t("bookingHistory.deleteConfirmTitle", { defaultValue: "Supprimer ce rendez-vous ?" })}</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              <strong>{appt.client}</strong> — {appt.service}<br />
+                              {formatDateLabel(appt.date)} à {appt.startTime}
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+                            <AlertDialogAction
+                              className="bg-destructive hover:bg-destructive/90"
+                              onClick={() => deleteAppointmentMutation.mutate(appt.id)}
+                            >
+                              {t("common.delete")}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </div>
                 );
@@ -309,6 +367,7 @@ export default function BookingHistory() {
                     <TableHead className="w-[100px]">{t("common.price")}</TableHead>
                     <TableHead className="w-[80px]">{t("bookingHistory.status")}</TableHead>
                     <TableHead className="w-[180px]">{t("bookingHistory.staff")}</TableHead>
+                    <TableHead className="w-[50px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -388,6 +447,33 @@ export default function BookingHistory() {
                               ))}
                             </SelectContent>
                           </Select>
+                        </TableCell>
+                        <TableCell>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10">
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>{t("bookingHistory.deleteConfirmTitle", { defaultValue: "Supprimer ce rendez-vous ?" })}</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  <strong>{appt.client}</strong> — {appt.service}<br />
+                                  {formatDateLabel(appt.date)} à {appt.startTime}
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+                                <AlertDialogAction
+                                  className="bg-destructive hover:bg-destructive/90"
+                                  onClick={() => deleteAppointmentMutation.mutate(appt.id)}
+                                >
+                                  {t("common.delete")}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </TableCell>
                       </TableRow>
                     );
