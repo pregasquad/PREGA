@@ -1946,10 +1946,11 @@ export async function registerRoutes(
 
       let walletBalance = 0;
       if (lastPayment) {
-        const allAppointments = await storage.getAppointmentsByDateRange(
-          lastPayment.paidAt ? new Date(lastPayment.paidAt).toISOString().split("T")[0] : "2000-01-01",
-          new Date().toISOString().split("T")[0]
-        );
+        // Use far-future end date so upcoming (pre-booked) appointments are included in wallet
+        const sinceDate = lastPayment.paidAt
+          ? new Date(lastPayment.paidAt).toISOString().split("T")[0]
+          : "2000-01-01";
+        const allAppointments = await storage.getAppointmentsByDateRange(sinceDate, "2099-12-31");
         const sincePayment = allAppointments.filter(
           a => (a.staffId === staffMember.id || (!a.staffId && a.staff === staffMember.name)) && a.paid === true
         );

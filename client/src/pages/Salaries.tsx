@@ -495,8 +495,10 @@ export default function Salaries() {
         const matchesStaff = apt.staffId === s.id || (!apt.staffId && apt.staff === s.name);
         if (!matchesStaff) return false;
         if (lastPaymentDate) {
-          const aptCreated = apt.createdAt ? new Date(apt.createdAt) : parseISO(apt.date);
-          return isAfter(aptCreated, lastPaymentDate);
+          // Use the appointment's SCHEDULED DATE (not createdAt) so that pre-booked
+          // future appointments are correctly included in the wallet after a payment.
+          const lastPaymentDateStr = lastPaymentDate.toISOString().split("T")[0];
+          return apt.date >= lastPaymentDateStr;
         }
         return true;
       })
