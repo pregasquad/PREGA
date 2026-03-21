@@ -683,10 +683,10 @@ export default function Booking() {
           <div className="flex items-center gap-3">
             <img src="/prega_logo.png" alt={businessName} className="w-12 h-12" />
             <div>
-              <h1 className="text-xl md:text-2xl font-display font-bold gradient-text leading-tight">
-                {t("booking.title")}
+              <h1 className="text-lg md:text-2xl font-display font-bold gradient-text leading-tight">
+                ✨ Réservez votre moment beauté dès aujourd'hui
               </h1>
-              <p className="text-xs text-muted-foreground hidden sm:block">{t("booking.subtitle")}</p>
+              <p className="text-xs text-muted-foreground">Prenez soin de vous avec nos services professionnels 💅💇‍♀️</p>
             </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
@@ -703,6 +703,35 @@ export default function Booking() {
               </Button>
             </a>
             <LanguageSwitcher />
+          </div>
+        </div>
+
+        {/* Reviews strip */}
+        <div className="glass-card p-3 md:p-4 overflow-hidden">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-yellow-400 text-base leading-none">⭐⭐⭐⭐⭐</span>
+              <span className="text-xs font-semibold text-foreground/80">+100 clientes satisfaites</span>
+            </div>
+            <span className="text-xs text-muted-foreground italic hidden sm:block">Avis vérifiés</span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            {[
+              { name: "Amal", stars: 5, text: "Service incroyable, très professionnel 😍" },
+              { name: "Ahlam", stars: 5, text: "Résultat magnifique, je recommande !" },
+              { name: "Malak", stars: 4, text: "Accueil chaleureux, travail soigné ✨" },
+              { name: "Hasna", stars: 5, text: "Exactement ce que je voulais, merci ! 💅" },
+            ].map((r) => (
+              <div key={r.name} className="rounded-xl bg-primary/5 border border-primary/10 p-2.5 flex flex-col gap-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-foreground/90">{r.name}</span>
+                  <span className="text-yellow-400 text-xs leading-none">
+                    {"★".repeat(r.stars)}{"☆".repeat(5 - r.stars)}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground leading-snug">"{r.text}"</p>
+              </div>
+            ))}
           </div>
         </div>
 
