@@ -334,8 +334,8 @@ export default function Salaries() {
     const inRange = (isAfter(aptDate, rangeStart) || isEqual(aptDate, rangeStart)) && 
                     (isBefore(aptDate, rangeEnd) || isEqual(aptDate, rangeEnd));
     const selectedStaffId = selectedStaff !== "all" ? parseInt(selectedStaff) : null;
-    const staffMatch = selectedStaff === "all" || (selectedStaffId && (apt.staffId === selectedStaffId || (!apt.staffId && apt.staff === staff.find(s => s.id === selectedStaffId)?.name)));
-    return inRange && staffMatch && apt.paid === true;
+    const staffMatch = selectedStaff === "all" || (selectedStaffId && (Number(apt.staffId) === selectedStaffId || (!apt.staffId && apt.staff === staff.find(s => s.id === selectedStaffId)?.name)));
+    return inRange && staffMatch && !!apt.paid;
   });
 
   const getServiceCommission = (serviceName: string, staffName?: string): number => {
@@ -485,36 +485,46 @@ export default function Salaries() {
 
   const getStaffWalletData = (s: Staff) => {
     const lastPayment = staffPayments
-      .filter(p => p.staffId === s.id)
+      .filter(p => Number(p.staffId) === s.id)
       .sort((a, b) => new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime())[0];
     const lastPaymentDate = lastPayment ? new Date(lastPayment.paidAt) : null;
 
-    const earningsSincePayment = appointments
-      .filter(apt => {
-        if (!apt.paid) return false;
-        const matchesStaff = apt.staffId === s.id || (!apt.staffId && apt.staff === s.name);
-        if (!matchesStaff) return false;
-        if (lastPaymentDate) {
-          // Use the appointment's SCHEDULED DATE (not createdAt) so that pre-booked
-          // future appointments are correctly included in the wallet after a payment.
-          const lastPaymentDateStr = lastPaymentDate.toISOString().split("T")[0];
-          return apt.date >= lastPaymentDateStr;
-        }
-        return true;
-      })
-      .reduce((sum, apt) => {
-        const serviceName = apt.service || "Unknown";
-        const commissionPercent = getServiceCommission(serviceName, s.name);
-        return sum + (apt.total * commissionPercent) / 100;
-      }, 0);
+    // Build the "since" date string using LOCAL date parts to avoid UTC-shift issues
+    // (e.g. a payment at 11 PM local time would appear as next day in UTC).
+    let sinceDate: string | null = null;
+    if (lastPaymentDate) {
+      const y = lastPaymentDate.getFullYear();
+      const m = String(lastPaymentDate.getMonth() + 1).padStart(2, "0");
+      const d = String(lastPaymentDate.getDate()).padStart(2, "0");
+      sinceDate = `${y}-${m}-${d}`;
+    }
+
+    const walletAppointments = appointments.filter(apt => {
+      // Accept both boolean true and integer 1 (MySQL may return either)
+      if (!apt.paid) return false;
+      // Use Number() coercion so string-typed IDs from MySQL also match
+      const matchesStaff = Number(apt.staffId) === s.id || (!apt.staffId && apt.staff === s.name);
+      if (!matchesStaff) return false;
+      if (sinceDate) {
+        // Include appointments whose SCHEDULED DATE is on or after last payment date
+        return apt.date >= sinceDate;
+      }
+      return true;
+    });
+
+    const earningsSincePayment = walletAppointments.reduce((sum, apt) => {
+      const serviceName = apt.service || "Unknown";
+      const commissionPercent = getServiceCommission(serviceName, s.name);
+      return sum + ((apt.total || 0) * commissionPercent) / 100;
+    }, 0);
 
     const pendingStaffDeductions = deductions
-      .filter(d => !d.cleared && (d.staffId === s.id || (!d.staffId && d.staffName === s.name)))
+      .filter(d => !d.cleared && (Number(d.staffId) === s.id || (!d.staffId && d.staffName === s.name)))
       .reduce((sum, d) => sum + getRemainingAmount(d), 0);
 
     const walletBalance = earningsSincePayment - pendingStaffDeductions;
 
-    return { lastPaymentDate, earningsSincePayment, walletBalance };
+    return { lastPaymentDate, sinceDate, earningsSincePayment, walletBalance, walletApptCount: walletAppointments.length };
   };
 
   return (
@@ -898,9 +908,14 @@ export default function Salaries() {
                       <p className="text-sm font-bold tabular-nums">{formatCurrency((earning?.totalCommission || 0) - staffDeductionAmount)}</p>
                     </div>
                     <div className="p-2.5 rounded-lg bg-primary/5 dark:bg-primary/10" data-testid={`text-staff-wallet-${s.id}`}>
-                      <p className="text-[10px] text-muted-foreground mb-1">{t("salaries.walletBalance").split(':')[0] || "Wallet"}</p>
+                      <p className="text-[10px] text-muted-foreground mb-0.5">{t("salaries.walletBalance").split(':')[0] || "Wallet"}</p>
                       <p className={`text-sm font-bold tabular-nums ${wallet.walletBalance < 0 ? 'text-red-600 dark:text-red-400' : wallet.walletBalance > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}>
                         {wallet.walletBalance < 0 ? `- ${formatCurrency(Math.abs(wallet.walletBalance))}` : formatCurrency(wallet.walletBalance)}
+                      </p>
+                      <p className="text-[9px] text-muted-foreground/70 mt-0.5 leading-tight">
+                        {wallet.sinceDate
+                          ? `${wallet.walletApptCount} rdv · depuis ${format(parseISO(wallet.sinceDate), "d/M/yy")}`
+                          : `${wallet.walletApptCount} rdv · tout`}
                       </p>
                     </div>
                   </div>

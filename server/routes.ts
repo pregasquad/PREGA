@@ -1890,7 +1890,7 @@ export async function registerRoutes(
 
       const appointments = await storage.getAppointmentsByDateRange(startDate, endDate);
       const paidAppointments = appointments.filter(
-        a => (a.staffId === staffMember.id || (!a.staffId && a.staff === staffMember.name)) && a.paid === true
+        a => (Number(a.staffId) === staffMember.id || (!a.staffId && a.staff === staffMember.name)) && !!a.paid
       );
 
       const allServices = await storage.getServices();
@@ -1913,8 +1913,8 @@ export async function registerRoutes(
           }
         }
 
-        const commission = (appt.total * commissionRate) / 100;
-        totalRevenue += appt.total;
+        const commission = ((appt.total || 0) * commissionRate) / 100;
+        totalRevenue += (appt.total || 0);
         totalCommission += commission;
 
         if (!serviceBreakdown[serviceName]) {
@@ -1946,13 +1946,19 @@ export async function registerRoutes(
 
       let walletBalance = 0;
       if (lastPayment) {
-        // Use far-future end date so upcoming (pre-booked) appointments are included in wallet
-        const sinceDate = lastPayment.paidAt
-          ? new Date(lastPayment.paidAt).toISOString().split("T")[0]
-          : "2000-01-01";
+        // Use far-future end date so upcoming (pre-booked) appointments are included in wallet.
+        // Build sinceDate from LOCAL date parts to avoid UTC midnight shift issues.
+        let sinceDate = "2000-01-01";
+        if (lastPayment.paidAt) {
+          const d = new Date(lastPayment.paidAt);
+          const y = d.getFullYear();
+          const mo = String(d.getMonth() + 1).padStart(2, "0");
+          const dy = String(d.getDate()).padStart(2, "0");
+          sinceDate = `${y}-${mo}-${dy}`;
+        }
         const allAppointments = await storage.getAppointmentsByDateRange(sinceDate, "2099-12-31");
         const sincePayment = allAppointments.filter(
-          a => (a.staffId === staffMember.id || (!a.staffId && a.staff === staffMember.name)) && a.paid === true
+          a => (Number(a.staffId) === staffMember.id || (!a.staffId && a.staff === staffMember.name)) && !!a.paid
         );
         for (const appt of sincePayment) {
           const serviceName = appt.service || "Unknown";
@@ -1960,7 +1966,7 @@ export async function registerRoutes(
           let cr = service?.commissionPercent ?? 50;
           const cc = staffCommissions.find(c => service && c.serviceId === service.id);
           if (cc) cr = cc.percentage;
-          walletBalance += (appt.total * cr) / 100;
+          walletBalance += ((appt.total || 0) * cr) / 100;
         }
         walletBalance -= totalPendingDeductions;
       } else {
