@@ -500,16 +500,11 @@ export default function Salaries() {
     }
 
     const walletAppointments = appointments.filter(apt => {
-      // Accept both boolean true and integer 1 (MySQL may return either)
-      if (!apt.paid) return false;
+      // Only count appointments where the client has NOT paid yet (outstanding balance)
+      if (!!apt.paid) return false;
       // Use Number() coercion so string-typed IDs from MySQL also match
       const matchesStaff = Number(apt.staffId) === s.id || (!apt.staffId && apt.staff === s.name);
-      if (!matchesStaff) return false;
-      if (sinceDate) {
-        // Include appointments whose SCHEDULED DATE is on or after last payment date
-        return apt.date >= sinceDate;
-      }
-      return true;
+      return matchesStaff;
     });
 
     const earningsSincePayment = walletAppointments.reduce((sum, apt) => {
@@ -913,9 +908,7 @@ export default function Salaries() {
                         {wallet.walletBalance < 0 ? `- ${formatCurrency(Math.abs(wallet.walletBalance))}` : formatCurrency(wallet.walletBalance)}
                       </p>
                       <p className="text-[9px] text-muted-foreground/70 mt-0.5 leading-tight">
-                        {wallet.sinceDate
-                          ? `${wallet.walletApptCount} rdv · depuis ${format(parseISO(wallet.sinceDate), "d/M/yy")}`
-                          : `${wallet.walletApptCount} rdv · tout`}
+                        {wallet.walletApptCount} rdv non payés
                       </p>
                     </div>
                   </div>
