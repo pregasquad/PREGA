@@ -504,23 +504,31 @@ export default function Salaries() {
     }
 
     const walletAppointments = appointments.filter(apt => {
-      // Accept both boolean true and integer 1 (MySQL may return either)
       if (!apt.paid) return false;
-      // Use Number() coercion so string-typed IDs from MySQL also match
       const matchesStaff = Number(apt.staffId) === s.id || (!apt.staffId && apt.staff === s.name);
       if (!matchesStaff) return false;
-      if (sinceDate) {
-        // Include appointments whose SCHEDULED DATE is on or after last payment date
-        return apt.date >= sinceDate;
-      }
+      if (sinceDate) return apt.date >= sinceDate;
       return true;
     });
 
-    const earningsSincePayment = walletAppointments.reduce((sum, apt) => {
+    let walletRevenue = 0;
+    let earningsSincePayment = 0;
+    const walletServices: Record<string, { count: number; revenue: number; commission: number }> = {};
+
+    walletAppointments.forEach(apt => {
       const serviceName = apt.service || "Unknown";
       const commissionPercent = getServiceCommission(serviceName, s.name);
-      return sum + ((apt.total || 0) * commissionPercent) / 100;
-    }, 0);
+      const total = apt.total || 0;
+      const commission = (total * commissionPercent) / 100;
+      walletRevenue += total;
+      earningsSincePayment += commission;
+      if (!walletServices[serviceName]) {
+        walletServices[serviceName] = { count: 0, revenue: 0, commission: 0 };
+      }
+      walletServices[serviceName].count += 1;
+      walletServices[serviceName].revenue += total;
+      walletServices[serviceName].commission += commission;
+    });
 
     const pendingStaffDeductions = deductions
       .filter(d => !d.cleared && (Number(d.staffId) === s.id || (!d.staffId && d.staffName === s.name)))
@@ -528,7 +536,12 @@ export default function Salaries() {
 
     const walletBalance = earningsSincePayment - pendingStaffDeductions;
 
-    return { lastPaymentDate, sinceDate, earningsSincePayment, walletBalance, walletApptCount: walletAppointments.length };
+    return {
+      lastPaymentDate, sinceDate, walletBalance,
+      walletRevenue, walletCommission: earningsSincePayment,
+      walletApptCount: walletAppointments.length,
+      walletServices,
+    };
   };
 
   return (
@@ -850,10 +863,10 @@ export default function Salaries() {
         </h2>
         
         {(selectedStaff === "all" ? staff : staff.filter(s => s.id === parseInt(selectedStaff))).map((s) => {
-          const earning = staffEarnings.find(e => e.name === s.name);
           const wallet = getStaffWalletData(s);
-          const staffAllDeductions = filteredDeductions
-            .filter(d => d.staffId === s.id || (!d.staffId && d.staffName === s.name));
+          // Use all pending deductions (not period-filtered) to match wallet balance calculation
+          const staffAllDeductions = deductions
+            .filter(d => !d.cleared && (Number(d.staffId) === s.id || (!d.staffId && d.staffName === s.name)));
           const staffDeductionAmount = staffAllDeductions.reduce((sum, d) => sum + getRemainingAmount(d), 0);
 
           return (
@@ -871,13 +884,11 @@ export default function Salaries() {
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-base" data-testid={`text-staff-name-${s.id}`}>{s.name}</h3>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
-                        <span data-testid={`text-staff-appointments-${s.id}`}>{earning?.appointmentsCount || 0} {t("salaries.appointmentsCount").toLowerCase()}</span>
-                        {wallet.lastPaymentDate && (
-                          <>
-                            <span>-</span>
-                            <span data-testid={`text-staff-last-paid-${s.id}`}>{t("salaries.lastPaid")}: {format(wallet.lastPaymentDate, "d/M/yy")}</span>
-                          </>
-                        )}
+                        <span data-testid={`text-staff-appointments-${s.id}`}>{wallet.walletApptCount} {t("salaries.appointmentsCount").toLowerCase()}</span>
+                        <span>-</span>
+                        <span data-testid={`text-staff-last-paid-${s.id}`}>
+                          {t("salaries.lastPaid")}: {wallet.lastPaymentDate ? format(wallet.lastPaymentDate, "d/M/yy") : "—"}
+                        </span>
                       </div>
                     </div>
                     {wallet.walletBalance > 0 && (
@@ -905,11 +916,11 @@ export default function Salaries() {
                   <div className="grid grid-cols-3 gap-2">
                     <div className="p-2.5 rounded-lg bg-muted/40 dark:bg-muted/20" data-testid={`text-staff-revenue-${s.id}`}>
                       <p className="text-[10px] text-muted-foreground mb-1">{t("salaries.totalRevenue")}</p>
-                      <p className="text-sm font-bold tabular-nums">{formatCurrency(earning?.totalRevenue || 0)}</p>
+                      <p className="text-sm font-bold tabular-nums">{formatCurrency(wallet.walletRevenue)}</p>
                     </div>
                     <div className="p-2.5 rounded-lg bg-green-50/80 dark:bg-green-950/20" data-testid={`text-staff-commission-${s.id}`}>
                       <p className="text-[10px] text-muted-foreground mb-1">{t("salaries.staffCommissions")}</p>
-                      <p className="text-sm font-bold tabular-nums">{formatCurrency((earning?.totalCommission || 0) - staffDeductionAmount)}</p>
+                      <p className="text-sm font-bold tabular-nums">{formatCurrency(wallet.walletCommission - staffDeductionAmount)}</p>
                     </div>
                     <div className="p-2.5 rounded-lg bg-primary/5 dark:bg-primary/10" data-testid={`text-staff-wallet-${s.id}`}>
                       <p className="text-[10px] text-muted-foreground mb-0.5">{t("salaries.walletBalance").split(':')[0] || "Wallet"}</p>
@@ -968,11 +979,11 @@ export default function Salaries() {
                 )}
 
                 {/* Service Breakdown */}
-                {earning && Object.keys(earning.services).length > 0 && (
+                {Object.keys(wallet.walletServices).length > 0 && (
                   <div className="px-4 pb-4">
                     <p className="text-[10px] text-muted-foreground mb-1.5 font-medium uppercase tracking-wider">{t("reports.serviceDetailsLabel")}</p>
                     <div className="space-y-0">
-                      {Object.entries(earning.services).map(([serviceName, data]) => (
+                      {Object.entries(wallet.walletServices).map(([serviceName, data]) => (
                         <div key={serviceName} className="flex items-center justify-between py-1.5 border-t border-border/20 first:border-0" data-testid={`text-service-${s.id}-${serviceName}`}>
                           <div className="flex items-center gap-2 flex-1 min-w-0 flex-wrap">
                             <span className="text-sm truncate">{serviceName}</span>
@@ -989,7 +1000,7 @@ export default function Salaries() {
                 )}
 
                 {/* Empty state */}
-                {(!earning || earning.appointmentsCount === 0) && (
+                {wallet.walletApptCount === 0 && Object.keys(wallet.walletServices).length === 0 && (
                   <div className="px-4 pb-4">
                     <p className="text-center text-xs text-muted-foreground py-2">{t("salaries.noDataForPeriod")}</p>
                   </div>
