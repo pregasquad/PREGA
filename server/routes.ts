@@ -1944,21 +1944,34 @@ export async function registerRoutes(
 
       const lastPayment = await storage.getLastStaffPayment(staffMember.id);
 
-      // Wallet = commission on all UNPAID (by client) appointments for this staff member
       let walletBalance = 0;
-      const allAppointments = await storage.getAppointmentsByDateRange("2000-01-01", "2099-12-31");
-      const unpaidAppointments = allAppointments.filter(
-        a => (Number(a.staffId) === staffMember.id || (!a.staffId && a.staff === staffMember.name)) && !a.paid
-      );
-      for (const appt of unpaidAppointments) {
-        const serviceName = appt.service || "Unknown";
-        const service = serviceMap.get(serviceName);
-        let cr = service?.commissionPercent ?? 50;
-        const cc = staffCommissions.find(c => service && c.serviceId === service.id);
-        if (cc) cr = cc.percentage;
-        walletBalance += ((appt.total || 0) * cr) / 100;
+      if (lastPayment) {
+        // Use far-future end date so upcoming (pre-booked) appointments are included in wallet.
+        // Build sinceDate from LOCAL date parts to avoid UTC midnight shift issues.
+        let sinceDate = "2000-01-01";
+        if (lastPayment.paidAt) {
+          const d = new Date(lastPayment.paidAt);
+          const y = d.getFullYear();
+          const mo = String(d.getMonth() + 1).padStart(2, "0");
+          const dy = String(d.getDate()).padStart(2, "0");
+          sinceDate = `${y}-${mo}-${dy}`;
+        }
+        const allAppointments = await storage.getAppointmentsByDateRange(sinceDate, "2099-12-31");
+        const sincePayment = allAppointments.filter(
+          a => (Number(a.staffId) === staffMember.id || (!a.staffId && a.staff === staffMember.name)) && !!a.paid
+        );
+        for (const appt of sincePayment) {
+          const serviceName = appt.service || "Unknown";
+          const service = serviceMap.get(serviceName);
+          let cr = service?.commissionPercent ?? 50;
+          const cc = staffCommissions.find(c => service && c.serviceId === service.id);
+          if (cc) cr = cc.percentage;
+          walletBalance += ((appt.total || 0) * cr) / 100;
+        }
+        walletBalance -= totalPendingDeductions;
+      } else {
+        walletBalance = totalCommission - totalPendingDeductions;
       }
-      walletBalance -= totalPendingDeductions;
 
       const netCommission = totalCommission - totalPeriodDeductions;
       const periodPendingDeductions = periodDeductions.filter(d => !d.cleared).reduce((sum, d) => sum + Math.max(0, d.amount - (d.paidBack || 0)), 0);
