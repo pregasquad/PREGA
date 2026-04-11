@@ -116,8 +116,9 @@ export default function Salaries() {
     };
   }, [queryClient]);
 
-  const [refreshKey, setRefreshKey] = useState(0);
   useEffect(() => {
+    // On page visit: mark queries stale so they background-refresh,
+    // but cached data stays visible immediately (no flash of zeros).
     const onPageShow = () => {
       queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
       queryClient.invalidateQueries({ queryKey: ["/api/services"] });
@@ -127,7 +128,6 @@ export default function Salaries() {
       queryClient.invalidateQueries({ queryKey: ["/api/staff-commissions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/staff-payments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/business-settings"] });
-      setRefreshKey(k => k + 1);
     };
     onPageShow();
     window.addEventListener("focus", onPageShow);
@@ -140,57 +140,42 @@ export default function Salaries() {
   }, [queryClient]);
 
   const { data: staff = [] } = useQuery<Staff[]>({
-    queryKey: ["/api/staff", refreshKey],
+    queryKey: ["/api/staff"],
     queryFn: async () => { const res = await fetch("/api/staff"); if (!res.ok) return []; return res.json(); },
-    staleTime: 0,
-    refetchOnMount: "always",
   });
 
   const { data: services = [] } = useQuery<Service[]>({
-    queryKey: ["/api/services", refreshKey],
+    queryKey: ["/api/services"],
     queryFn: async () => { const res = await fetch("/api/services"); if (!res.ok) return []; return res.json(); },
-    staleTime: 0,
-    refetchOnMount: "always",
   });
 
   const { data: appointments = [], refetch: refetchAppointments } = useQuery<Appointment[]>({
-    queryKey: ["/api/appointments/all", refreshKey],
+    queryKey: ["/api/appointments/all"],
     queryFn: async () => {
       const res = await fetch("/api/appointments/all");
       if (!res.ok) return [];
       return res.json();
     },
-    staleTime: 0,
-    refetchOnMount: "always",
-    refetchOnWindowFocus: false,
   });
 
   const { data: charges = [] } = useQuery<Charge[]>({
-    queryKey: ["/api/charges", refreshKey],
+    queryKey: ["/api/charges"],
     queryFn: async () => { const res = await fetch("/api/charges"); if (!res.ok) return []; return res.json(); },
-    staleTime: 0,
-    refetchOnMount: "always",
   });
 
   const { data: deductions = [] } = useQuery<StaffDeduction[]>({
-    queryKey: ["/api/staff-deductions", refreshKey],
+    queryKey: ["/api/staff-deductions"],
     queryFn: async () => { const res = await fetch("/api/staff-deductions"); if (!res.ok) return []; return res.json(); },
-    staleTime: 0,
-    refetchOnMount: "always",
   });
 
   const { data: staffCommissions = [] } = useQuery<{ id: number; staffId: number; serviceId: number; percentage: number }[]>({
-    queryKey: ["/api/staff-commissions", refreshKey],
+    queryKey: ["/api/staff-commissions"],
     queryFn: async () => { const res = await fetch("/api/staff-commissions"); if (!res.ok) return []; return res.json(); },
-    staleTime: 0,
-    refetchOnMount: "always",
   });
 
   const { data: staffPayments = [] } = useQuery<StaffPayment[]>({
-    queryKey: ["/api/staff-payments", refreshKey],
+    queryKey: ["/api/staff-payments"],
     queryFn: async () => { const res = await fetch("/api/staff-payments"); if (!res.ok) return []; return res.json(); },
-    staleTime: 0,
-    refetchOnMount: "always",
   });
 
   const createChargeMutation = useMutation({
