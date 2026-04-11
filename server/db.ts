@@ -66,7 +66,13 @@ export async function initializeDatabase(): Promise<boolean> {
           rejectUnauthorized: false,
         },
       });
-      
+
+      // Prevent unhandled 'error' events from background pool connections crashing the process
+      pool.on("error", (err: Error) => {
+        console.warn("MySQL pool background error (handled):", err.message);
+        setOfflineMode(true);
+      });
+
       db = drizzle(pool, { schema, mode: "default" });
       console.log("Using MySQL/TiDB database");
     } else {
