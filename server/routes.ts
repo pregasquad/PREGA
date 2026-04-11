@@ -1883,19 +1883,45 @@ export async function registerRoutes(
       if (!staffMember) {
         return res.status(404).json({ message: "Invalid portal link" });
       }
-      const { startDate, endDate } = req.query as { startDate?: string; endDate?: string };
-      if (!startDate || !endDate) {
-        return res.status(400).json({ message: "startDate and endDate are required" });
+      const { startDate, endDate, walletMode } = req.query as { startDate?: string; endDate?: string; walletMode?: string };
+
+      // Resolve today's date using local parts to avoid UTC shift
+      const todayD = new Date();
+      const todayStr = `${todayD.getFullYear()}-${String(todayD.getMonth() + 1).padStart(2, "0")}-${String(todayD.getDate()).padStart(2, "0")}`;
+
+      // In walletMode the period is always lastPaidAt → today, determined server-side
+      const lastPayment = await storage.getLastStaffPayment(staffMember.id);
+
+      // Build the wallet sinceDate (local date parts, not UTC)
+      let walletSinceDate = "2000-01-01";
+      if (lastPayment?.paidAt) {
+        const d = new Date(lastPayment.paidAt);
+        walletSinceDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
       }
 
-      const appointments = await storage.getAppointmentsByDateRange(startDate, endDate);
-      const paidAppointments = appointments.filter(
-        a => (Number(a.staffId) === staffMember.id || (!a.staffId && a.staff === staffMember.name)) && !!a.paid
-      );
+      // Effective period for stats
+      const effectiveStart = walletMode === "true" ? walletSinceDate : (startDate || "2000-01-01");
+      const effectiveEnd   = walletMode === "true" ? todayStr         : (endDate   || todayStr);
+
+      if (!walletMode && (!startDate || !endDate)) {
+        return res.status(400).json({ message: "startDate and endDate are required" });
+      }
 
       const allServices = await storage.getServices();
       const serviceMap = new Map(allServices.map(s => [s.name, s]));
       const staffCommissions = await storage.getStaffCommissionsByStaff(staffMember.id);
+
+      // Fetch appointments for the effective period AND future (pre-booked) ones for wallet
+      const [periodAppointments, futureAppointments] = await Promise.all([
+        storage.getAppointmentsByDateRange(effectiveStart, effectiveEnd),
+        // For wallet we also need appointments beyond today (pre-booked)
+        storage.getAppointmentsByDateRange(effectiveStart, "2099-12-31"),
+      ]);
+
+      const isStaffAppt = (a: any) =>
+        (Number(a.staffId) === staffMember.id || (!a.staffId && a.staff === staffMember.name));
+
+      const paidAppointments = periodAppointments.filter(a => isStaffAppt(a) && !!a.paid);
 
       let totalRevenue = 0;
       let totalCommission = 0;
@@ -1921,7 +1947,7 @@ export async function registerRoutes(
           serviceBreakdown[serviceName] = { name: serviceName, count: 0, revenue: 0, commission: 0 };
         }
         serviceBreakdown[serviceName].count++;
-        serviceBreakdown[serviceName].revenue += appt.total;
+        serviceBreakdown[serviceName].revenue += (appt.total || 0);
         serviceBreakdown[serviceName].commission += commission;
       }
 
@@ -1933,33 +1959,19 @@ export async function registerRoutes(
       const periodDeductions = staffDeductions.filter(d => {
         if (d.cleared && d.clearedAt) {
           const clearedDate = new Date(d.clearedAt).toISOString().split("T")[0];
-          return clearedDate >= startDate && clearedDate <= endDate;
+          return clearedDate >= effectiveStart && clearedDate <= effectiveEnd;
         }
-        return d.date >= startDate && d.date <= endDate;
+        return d.date >= effectiveStart && d.date <= effectiveEnd;
       });
       const totalPeriodDeductions = periodDeductions.reduce((sum, d) => sum + Math.max(0, d.amount - (d.paidBack || 0)), 0);
 
       const pendingDeductions = staffDeductions.filter(d => !d.cleared);
       const totalPendingDeductions = pendingDeductions.reduce((sum, d) => sum + Math.max(0, d.amount - (d.paidBack || 0)), 0);
 
-      const lastPayment = await storage.getLastStaffPayment(staffMember.id);
-
+      // Wallet = commission on all paid appointments from walletSinceDate onward (including future pre-booked)
       let walletBalance = 0;
       if (lastPayment) {
-        // Use far-future end date so upcoming (pre-booked) appointments are included in wallet.
-        // Build sinceDate from LOCAL date parts to avoid UTC midnight shift issues.
-        let sinceDate = "2000-01-01";
-        if (lastPayment.paidAt) {
-          const d = new Date(lastPayment.paidAt);
-          const y = d.getFullYear();
-          const mo = String(d.getMonth() + 1).padStart(2, "0");
-          const dy = String(d.getDate()).padStart(2, "0");
-          sinceDate = `${y}-${mo}-${dy}`;
-        }
-        const allAppointments = await storage.getAppointmentsByDateRange(sinceDate, "2099-12-31");
-        const sincePayment = allAppointments.filter(
-          a => (Number(a.staffId) === staffMember.id || (!a.staffId && a.staff === staffMember.name)) && !!a.paid
-        );
+        const sincePayment = futureAppointments.filter(a => isStaffAppt(a) && !!a.paid);
         for (const appt of sincePayment) {
           const serviceName = appt.service || "Unknown";
           const service = serviceMap.get(serviceName);
@@ -1983,6 +1995,7 @@ export async function registerRoutes(
         pendingDeductions: periodPendingDeductions,
         netPayable: netCommission,
         walletBalance,
+        walletSinceDate,
         lastPaidAt: lastPayment?.paidAt || null,
         deductionsList: periodDeductions.map(d => ({
           type: d.type,

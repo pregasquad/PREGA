@@ -5,12 +5,11 @@ import { useParams } from "wouter";
 import { formatCurrency } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
-import { DollarSign, Calendar, TrendingUp, Wallet, AlertTriangle, ChevronDown, ChevronUp, Clock, Globe, Download, Share, X } from "lucide-react";
+import { DollarSign, Calendar, TrendingUp, Wallet, AlertTriangle, Clock, Globe, Download, Share, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { format, startOfMonth, endOfMonth, subMonths, getDaysInMonth, getDay, parseISO } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ar, enUS, fr } from "date-fns/locale";
 
 interface StaffInfo {
@@ -37,6 +36,7 @@ interface EarningsData {
   pendingDeductions: number;
   netPayable: number;
   walletBalance: number;
+  walletSinceDate: string;
   lastPaidAt: string | null;
   deductionsList: { type: string; description: string; amount: number; date: string; cleared?: boolean; paidBack?: number }[];
   services: { name: string; count: number; revenue: number; commission: number }[];
@@ -47,9 +47,6 @@ export default function StaffPortal() {
   const params = useParams<{ token: string }>();
   const token = params.token;
   const isRTL = i18n.language === "ar";
-
-  const [selectedMonth, setSelectedMonth] = useState(() => format(new Date(), "yyyy-MM"));
-  const [expandedDay, setExpandedDay] = useState<string | null>(null);
 
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
@@ -65,9 +62,7 @@ export default function StaffPortal() {
     setIsStandalone(standalone);
     if (!standalone) {
       const dismissed = localStorage.getItem("portal-install-dismissed");
-      if (!dismissed) {
-        setShowInstallBanner(true);
-      }
+      if (!dismissed) setShowInstallBanner(true);
     }
   }, []);
 
@@ -83,9 +78,7 @@ export default function StaffPortal() {
       document.head.appendChild(link);
     }
     return () => {
-      if (existingManifest) {
-        existingManifest.setAttribute("href", "/manifest.json");
-      }
+      if (existingManifest) existingManifest.setAttribute("href", "/manifest.json");
     };
   }, [token]);
 
@@ -97,15 +90,11 @@ export default function StaffPortal() {
     }
   };
 
-  const { startDate, endDate } = useMemo(() => {
-    const [year, month] = selectedMonth.split("-").map(Number);
-    const start = startOfMonth(new Date(year, month - 1));
-    const end = endOfMonth(start);
-    return {
-      startDate: format(start, "yyyy-MM-dd"),
-      endDate: format(end, "yyyy-MM-dd"),
-    };
-  }, [selectedMonth]);
+  // Today as local date string (no UTC shift)
+  const todayStr = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }, []);
 
   const { data: staffInfo, isLoading: loadingStaff, error: staffError } = useQuery<StaffInfo>({
     queryKey: ["/api/public/staff-portal", token],
@@ -118,34 +107,34 @@ export default function StaffPortal() {
     retry: false,
   });
 
-  const { data: appointments = [], isLoading: loadingAppointments } = useQuery<PortalAppointment[]>({
-    queryKey: ["/api/public/staff-portal", token, "appointments", startDate, endDate],
-    queryFn: async () => {
-      const res = await fetch(`/api/public/staff-portal/${token}/appointments?startDate=${startDate}&endDate=${endDate}`);
-      if (!res.ok) return [];
-      return res.json();
-    },
-    enabled: !!staffInfo,
-  });
-
+  // Earnings always fetched in walletMode — server computes lastPaidAt → today automatically
   const { data: earnings, isLoading: loadingEarnings } = useQuery<EarningsData>({
-    queryKey: ["/api/public/staff-portal", token, "earnings", startDate, endDate],
+    queryKey: ["/api/public/staff-portal", token, "earnings", "walletMode"],
     queryFn: async () => {
-      const res = await fetch(`/api/public/staff-portal/${token}/earnings?startDate=${startDate}&endDate=${endDate}`);
+      const res = await fetch(`/api/public/staff-portal/${token}/earnings?walletMode=true`);
       if (!res.ok) return null;
       return res.json();
     },
     enabled: !!staffInfo,
   });
 
-  const months = useMemo(() => Array.from({ length: 12 }, (_, i) => {
-    const date = subMonths(new Date(), i);
-    return {
-      value: format(date, "yyyy-MM"),
-      label: format(date, "MMMM yyyy", { locale: getDateLocale() }),
-    };
-  }), [i18n.language]);
+  // walletSinceDate comes from earnings response (server already computed it)
+  const walletSinceDate = earnings?.walletSinceDate ?? "2000-01-01";
 
+  // Appointments fetched for wallet period (walletSinceDate → today) once we know the start
+  const { data: appointments = [], isLoading: loadingAppointments } = useQuery<PortalAppointment[]>({
+    queryKey: ["/api/public/staff-portal", token, "appointments", walletSinceDate, todayStr],
+    queryFn: async () => {
+      const res = await fetch(
+        `/api/public/staff-portal/${token}/appointments?startDate=${walletSinceDate}&endDate=${todayStr}`
+      );
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!staffInfo && !!earnings,
+  });
+
+  // Group appointments by date, sorted descending
   const appointmentsByDay = useMemo(() => {
     const map: Record<string, PortalAppointment[]> = {};
     for (const appt of appointments) {
@@ -155,30 +144,10 @@ export default function StaffPortal() {
     return map;
   }, [appointments]);
 
-  const calendarDays = useMemo(() => {
-    const [year, month] = selectedMonth.split("-").map(Number);
-    const daysInMonth = getDaysInMonth(new Date(year, month - 1));
-    const firstDayOfWeek = getDay(new Date(year, month - 1, 1));
-    const days: { day: number; dateStr: string }[] = [];
-
-    for (let i = 0; i < firstDayOfWeek; i++) {
-      days.push({ day: 0, dateStr: "" });
-    }
-
-    for (let d = 1; d <= daysInMonth; d++) {
-      const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-      days.push({ day: d, dateStr });
-    }
-
-    return days;
-  }, [selectedMonth]);
-
-  const weekDays = useMemo(() => {
-    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    if (i18n.language === "ar") return ["أحد", "إثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة", "سبت"];
-    if (i18n.language === "fr") return ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
-    return days;
-  }, [i18n.language]);
+  const sortedDays = useMemo(
+    () => Object.keys(appointmentsByDay).sort((a, b) => b.localeCompare(a)),
+    [appointmentsByDay]
+  );
 
   if (loadingStaff) {
     return (
@@ -203,10 +172,11 @@ export default function StaffPortal() {
     );
   }
 
-  const isLoading = loadingAppointments || loadingEarnings;
+  const isLoading = loadingEarnings || loadingAppointments;
 
   return (
     <div className="min-h-screen bg-background" dir={isRTL ? "rtl" : "ltr"}>
+      {/* Header */}
       <div className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
           <div
@@ -242,6 +212,7 @@ export default function StaffPortal() {
         </div>
       </div>
 
+      {/* Install banner */}
       {showInstallBanner && !isStandalone && (
         <div className="max-w-2xl mx-auto px-4 pt-3">
           <Card className="border-primary/20 bg-primary/5">
@@ -286,18 +257,16 @@ export default function StaffPortal() {
       )}
 
       <div className="max-w-2xl mx-auto px-4 py-4 space-y-4">
-        <div className="flex items-center justify-between gap-2">
+        {/* Period label */}
+        <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold">{t("staffPortal.myPerformance")}</h2>
-          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-            <SelectTrigger className="w-40" data-testid="select-month">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {months.map((m) => (
-                <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {earnings && (
+            <span className="text-xs text-muted-foreground">
+              {format(parseISO(walletSinceDate), "d MMM", { locale: getDateLocale() })}
+              {" → "}
+              {format(parseISO(todayStr), "d MMM yyyy", { locale: getDateLocale() })}
+            </span>
+          )}
         </div>
 
         {isLoading ? (
@@ -306,6 +275,7 @@ export default function StaffPortal() {
           </div>
         ) : (
           <>
+            {/* Summary cards */}
             <div className="grid grid-cols-3 gap-3">
               <Card>
                 <CardContent className="p-3 text-center">
@@ -336,82 +306,59 @@ export default function StaffPortal() {
               </Card>
             </div>
 
+            {/* Appointment list grouped by date */}
             <Card>
               <CardHeader className="pb-2 px-3 pt-3">
                 <CardTitle className="text-sm">{t("staffPortal.appointments")}</CardTitle>
               </CardHeader>
               <CardContent className="px-3 pb-3">
-                <div className="grid grid-cols-7 gap-px mb-1">
-                  {weekDays.map((d) => (
-                    <div key={d} className="text-center text-xs text-muted-foreground font-medium py-1">{d}</div>
-                  ))}
-                </div>
-                <div className="grid grid-cols-7 gap-px">
-                  {calendarDays.map((cell, idx) => {
-                    if (cell.day === 0) return <div key={`empty-${idx}`} className="aspect-square" />;
-                    const dayAppts = appointmentsByDay[cell.dateStr] || [];
-                    const hasAppts = dayAppts.length > 0;
-                    const isExpanded = expandedDay === cell.dateStr;
-                    const isToday = cell.dateStr === format(new Date(), "yyyy-MM-dd");
-
-                    return (
-                      <div
-                        key={cell.dateStr}
-                        className={`aspect-square flex flex-col items-center justify-center rounded-md text-sm cursor-pointer transition-colors
-                          ${isToday ? "ring-1 ring-primary" : ""}
-                          ${isExpanded ? "bg-primary/10" : hasAppts ? "bg-muted/50" : ""}
-                        `}
-                        onClick={() => setExpandedDay(isExpanded ? null : cell.dateStr)}
-                        data-testid={`calendar-day-${cell.day}`}
-                      >
-                        <span className={`text-xs ${isToday ? "font-bold" : ""}`}>{cell.day}</span>
-                        {hasAppts && (
-                          <div
-                            className="w-1.5 h-1.5 rounded-full mt-0.5"
-                            style={{ backgroundColor: staffInfo.color }}
-                          />
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {expandedDay && appointmentsByDay[expandedDay] && (
-                  <div className="mt-3 space-y-2 border-t pt-3">
-                    <p className="text-xs font-medium text-muted-foreground">
-                      {format(parseISO(expandedDay), "EEEE, d MMMM", { locale: getDateLocale() })}
-                    </p>
-                    {appointmentsByDay[expandedDay].map((appt) => (
-                      <div key={appt.id} className="flex items-center justify-between gap-2 p-2 rounded-md bg-muted/30" data-testid={`appointment-item-${appt.id}`}>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-medium">{appt.time}</span>
-                            <span className="text-sm truncate">{appt.service}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <span>{appt.client}</span>
-                            <span>{appt.duration}min</span>
-                          </div>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <p className="text-sm font-semibold">{formatCurrency(appt.total)} DH</p>
-                          <Badge variant={appt.paid ? "default" : "secondary"} className="text-xs">
-                            {appt.paid ? t("staffPortal.paid") : t("staffPortal.unpaid")}
-                          </Badge>
+                {sortedDays.length === 0 ? (
+                  <p className="text-center text-sm text-muted-foreground py-4" data-testid="text-no-appointments">
+                    {t("staffPortal.noAppointments")}
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    {sortedDays.map((dateStr) => (
+                      <div key={dateStr}>
+                        <p className="text-xs font-semibold text-muted-foreground mb-1.5">
+                          {format(parseISO(dateStr), "EEEE, d MMMM yyyy", { locale: getDateLocale() })}
+                        </p>
+                        <div className="space-y-1.5">
+                          {appointmentsByDay[dateStr]
+                            .sort((a, b) => a.time.localeCompare(b.time))
+                            .map((appt) => (
+                              <div
+                                key={appt.id}
+                                className="flex items-center justify-between gap-2 p-2 rounded-md bg-muted/30"
+                                data-testid={`appointment-item-${appt.id}`}
+                              >
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-sm font-medium">{appt.time}</span>
+                                    <span className="text-sm truncate">{appt.service}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <span>{appt.client}</span>
+                                    <span>{appt.duration}min</span>
+                                  </div>
+                                </div>
+                                <div className="text-right shrink-0">
+                                  <p className="text-sm font-semibold">{formatCurrency(appt.total)} DH</p>
+                                  <Badge variant={appt.paid ? "default" : "secondary"} className="text-xs">
+                                    {appt.paid ? t("staffPortal.paid") : t("staffPortal.unpaid")}
+                                  </Badge>
+                                </div>
+                              </div>
+                            ))}
                         </div>
                       </div>
                     ))}
                   </div>
                 )}
-
-                {appointments.length === 0 && (
-                  <p className="text-center text-sm text-muted-foreground py-4" data-testid="text-no-appointments">
-                    {t("staffPortal.noAppointments")}
-                  </p>
-                )}
               </CardContent>
             </Card>
 
+            {/* Service breakdown */}
             {earnings && earnings.services.length > 0 && (
               <Card>
                 <CardHeader className="pb-2 px-3 pt-3">
@@ -438,6 +385,7 @@ export default function StaffPortal() {
               </Card>
             )}
 
+            {/* Wallet & deductions */}
             {earnings && (
               <Card>
                 <CardHeader className="pb-2 px-3 pt-3">
@@ -463,8 +411,10 @@ export default function StaffPortal() {
                   )}
                   <div className="flex justify-between items-center border-t pt-2">
                     <span className="text-sm font-medium">{t("staffPortal.walletBalance")}</span>
-                    <span className={`font-bold ${earnings.walletBalance < 0 ? 'text-red-600' : 'text-green-600'}`} data-testid="text-wallet-balance">
-                      {earnings.walletBalance < 0 ? `-${formatCurrency(Math.abs(earnings.walletBalance))}` : formatCurrency(earnings.walletBalance)} DH
+                    <span className={`font-bold ${earnings.walletBalance < 0 ? "text-red-600" : "text-green-600"}`} data-testid="text-wallet-balance">
+                      {earnings.walletBalance < 0
+                        ? `-${formatCurrency(Math.abs(earnings.walletBalance))}`
+                        : formatCurrency(earnings.walletBalance)} DH
                     </span>
                   </div>
                   <div className="flex justify-between items-center text-xs text-muted-foreground">
@@ -502,7 +452,7 @@ export default function StaffPortal() {
                                 </span>
                               )}
                             </div>
-                            <span className={`font-medium shrink-0 ${ded.cleared ? 'text-muted-foreground line-through' : 'text-red-600'}`}>
+                            <span className={`font-medium shrink-0 ${ded.cleared ? "text-muted-foreground line-through" : "text-red-600"}`}>
                               -{formatCurrency(ded.cleared ? ded.amount : remaining)} DH
                             </span>
                           </div>
