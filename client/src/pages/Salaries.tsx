@@ -382,7 +382,11 @@ export default function Salaries() {
     });
 
     filteredAppointments.forEach((apt) => {
-      const staffName = apt.staff || "Unknown";
+      // Resolve staff name: prefer staffId match (handles null/mismatched apt.staff), fall back to apt.staff string
+      const resolvedStaff = apt.staffId
+        ? staff.find(s => s.id === Number(apt.staffId))
+        : staff.find(s => s.name === apt.staff);
+      const staffName = resolvedStaff?.name || apt.staff || "Unknown";
       const serviceName = apt.service || "Unknown";
       
       if (!earnings[staffName]) {
@@ -396,9 +400,9 @@ export default function Salaries() {
       }
       
       const commissionPercent = getServiceCommission(serviceName, staffName);
-      const commission = (apt.total * commissionPercent) / 100;
+      const commission = ((apt.total || 0) * commissionPercent) / 100;
       
-      earnings[staffName].totalRevenue += apt.total;
+      earnings[staffName].totalRevenue += (apt.total || 0);
       earnings[staffName].totalCommission += commission;
       earnings[staffName].appointmentsCount += 1;
 
@@ -406,7 +410,7 @@ export default function Salaries() {
         earnings[staffName].services[serviceName] = { count: 0, revenue: 0, commission: 0 };
       }
       earnings[staffName].services[serviceName].count += 1;
-      earnings[staffName].services[serviceName].revenue += apt.total;
+      earnings[staffName].services[serviceName].revenue += (apt.total || 0);
       earnings[staffName].services[serviceName].commission += commission;
     });
 
