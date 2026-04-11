@@ -37,8 +37,6 @@ interface EarningsData {
   pendingDeductions: number;
   netPayable: number;
   walletBalance: number;
-  walletSinceDate: string | null;
-  walletAppointments: { id: number; date: string; time: string; service: string; total: number; commission: number }[];
   lastPaidAt: string | null;
   deductionsList: { type: string; description: string; amount: number; date: string; cleared?: boolean; paidBack?: number }[];
   services: { name: string; count: number; revenue: number; commission: number }[];
@@ -480,37 +478,6 @@ export default function StaffPortal() {
                         : t("staffPortal.never")}
                     </span>
                   </div>
-
-                  {earnings.walletAppointments && earnings.walletAppointments.length > 0 && (
-                    <div className="border-t pt-2 space-y-1">
-                      <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        {earnings.walletAppointments.length} rdv
-                        {earnings.walletSinceDate && (
-                          <span className="ms-1">
-                            · depuis {format(parseISO(earnings.walletSinceDate), "d/M/yy")}
-                          </span>
-                        )}
-                      </p>
-                      <div className="max-h-48 overflow-y-auto space-y-1 mt-1">
-                        {earnings.walletAppointments.map((appt) => (
-                          <div key={appt.id} className="flex items-center justify-between gap-2 py-1 px-2 rounded-md bg-muted/40 text-xs">
-                            <div className="min-w-0 flex-1">
-                              <span className="font-medium truncate block">{appt.service}</span>
-                              <span className="text-muted-foreground">
-                                {format(parseISO(appt.date), "d MMM", { locale: getDateLocale() })}
-                                {appt.time && ` · ${appt.time}`}
-                              </span>
-                            </div>
-                            <div className="shrink-0 text-end">
-                              <span className="text-green-600 font-semibold block">+{formatCurrency(appt.commission)} DH</span>
-                              <span className="text-muted-foreground">{formatCurrency(appt.total)} DH</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
 
                   {earnings.deductionsList.length > 0 && (
                     <div className="border-t pt-2 space-y-1.5">

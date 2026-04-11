@@ -1945,9 +1945,6 @@ export async function registerRoutes(
       const lastPayment = await storage.getLastStaffPayment(staffMember.id);
 
       let walletBalance = 0;
-      let walletSinceDate: string | null = null;
-      let walletAppointments: { id: number; date: string; time: string; service: string; total: number; commission: number }[] = [];
-
       if (lastPayment) {
         // Use far-future end date so upcoming (pre-booked) appointments are included in wallet.
         // Build sinceDate from LOCAL date parts to avoid UTC midnight shift issues.
@@ -1959,7 +1956,6 @@ export async function registerRoutes(
           const dy = String(d.getDate()).padStart(2, "0");
           sinceDate = `${y}-${mo}-${dy}`;
         }
-        walletSinceDate = sinceDate;
         const allAppointments = await storage.getAppointmentsByDateRange(sinceDate, "2099-12-31");
         const sincePayment = allAppointments.filter(
           a => (Number(a.staffId) === staffMember.id || (!a.staffId && a.staff === staffMember.name)) && !!a.paid
@@ -1970,39 +1966,11 @@ export async function registerRoutes(
           let cr = service?.commissionPercent ?? 50;
           const cc = staffCommissions.find(c => service && c.serviceId === service.id);
           if (cc) cr = cc.percentage;
-          const apptCommission = ((appt.total || 0) * cr) / 100;
-          walletBalance += apptCommission;
-          walletAppointments.push({
-            id: appt.id,
-            date: appt.date,
-            time: appt.time || "",
-            service: serviceName,
-            total: appt.total || 0,
-            commission: apptCommission,
-          });
+          walletBalance += ((appt.total || 0) * cr) / 100;
         }
-        // Sort by date desc
-        walletAppointments.sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time));
         walletBalance -= totalPendingDeductions;
       } else {
         walletBalance = totalCommission - totalPendingDeductions;
-        // No last payment: show all paid appointments in selected period as wallet appointments
-        for (const appt of paidAppointments) {
-          const serviceName = appt.service || "Unknown";
-          const service = serviceMap.get(serviceName);
-          let cr = service?.commissionPercent ?? 50;
-          const cc = staffCommissions.find(c => service && c.serviceId === service.id);
-          if (cc) cr = cc.percentage;
-          walletAppointments.push({
-            id: appt.id,
-            date: appt.date,
-            time: appt.time || "",
-            service: serviceName,
-            total: appt.total || 0,
-            commission: ((appt.total || 0) * cr) / 100,
-          });
-        }
-        walletAppointments.sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time));
       }
 
       const netCommission = totalCommission - totalPeriodDeductions;
@@ -2015,8 +1983,6 @@ export async function registerRoutes(
         pendingDeductions: periodPendingDeductions,
         netPayable: netCommission,
         walletBalance,
-        walletSinceDate,
-        walletAppointments,
         lastPaidAt: lastPayment?.paidAt || null,
         deductionsList: periodDeductions.map(d => ({
           type: d.type,

@@ -6,22 +6,6 @@ import { registerObjectStorageRoutes } from "./replit_integrations/object_storag
 import { initializeDatabase, warmupDatabase, ensurePushSubscriptionsTable, ensureAppointmentsAuditColumns, ensureForeignKeyConstraints, ensureAdminRolesPhotoColumn, ensureProductExpiryColumns, ensureServiceStartingPriceColumn, ensureDeductionClearedColumns, ensureDeductionPaidBackColumn, ensureStaffIdBackfillMySQL, ensureStaffPaymentsTable, ensureStaffPublicTokens, ensureAutoLockColumn, ensureChargeAttachmentColumns, ensurePlanningShortcutsColumn, ensureAppointmentDiscountColumns } from "./db";
 import { checkAndSendClosingReminder, checkAndSendAppointmentReminders } from "./push";
 
-// Prevent unhandled DB/pool promise rejections from crashing the server.
-// MySQL pool background connections can reject when credentials are wrong.
-process.on("unhandledRejection", (reason: any) => {
-  const msg = reason?.message || String(reason);
-  if (
-    msg.includes("ER_ACCESS_DENIED_ERROR") ||
-    msg.includes("ECONNREFUSED") ||
-    msg.includes("ETIMEDOUT") ||
-    msg.includes("ECONNRESET")
-  ) {
-    console.warn("[Pool] Suppressed unhandled DB rejection:", msg);
-  } else {
-    console.error("[Unhandled Rejection]", reason);
-  }
-});
-
 const app = express();
 const httpServer = createServer(app);
 
