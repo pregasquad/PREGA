@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Sparkles, Clock, Trophy, Gift } from "lucide-react";
 
-// ─── Wheel config ────────────────────────────────────────────────────────────
+// ─── Wheel segments ───────────────────────────────────────────────────────────
 const SEGMENTS = [
   { label: "Better\nLuck!", color: "#1e1b4b", border: "#312e81", textColor: "#6b7280", prize: null },
   { label: "20%\nOFF",      color: "#4c1d95", border: "#7c3aed", textColor: "#ede9fe", prize: "20%" },
@@ -17,42 +17,46 @@ const SEGMENTS = [
 const N   = SEGMENTS.length;
 const DEG = 360 / N;
 const CX = 200, CY = 200, R = 186, TEXT_R = 128;
-
-// ─── Cooldown ─────────────────────────────────────────────────────────────────
+const SPIN_MS     = 5000;
+const COOLDOWN_MS = 48 * 60 * 60 * 1000;
 const COOLDOWN_KEY = "tombola_last_spin";
 const DEVICE_KEY   = "tombola_device_id";
-const COOLDOWN_MS  = 48 * 60 * 60 * 1000;
-const SPIN_MS      = 5000; // animation duration
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 function getDeviceId() {
   let id = localStorage.getItem(DEVICE_KEY);
   if (!id) {
-    id = (crypto.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36));
+    id = crypto.randomUUID?.() ?? (Math.random().toString(36).slice(2) + Date.now().toString(36));
     localStorage.setItem(DEVICE_KEY, id);
   }
   return id;
 }
-function getLocalStatus() {
+
+// Reads 48h status synchronously — no async needed
+function localStatus(): { canSpin: boolean; nextSpinAt: Date | null } {
   const raw = localStorage.getItem(COOLDOWN_KEY);
-  if (!raw) return { canSpin: true, nextSpinAt: null as Date | null };
+  if (!raw) return { canSpin: true, nextSpinAt: null };
   const next = parseInt(raw, 10) + COOLDOWN_MS;
-  if (Date.now() >= next) return { canSpin: true, nextSpinAt: null as Date | null };
+  if (Date.now() >= next) return { canSpin: true, nextSpinAt: null };
   return { canSpin: false, nextSpinAt: new Date(next) };
 }
+
 function saveLocalSpin() {
   localStorage.setItem(COOLDOWN_KEY, String(Date.now()));
 }
-function clientPrize(): number {
+
+// Prize odds: 30% for 20% off, 2.5% each other prize, 60% better luck
+function pickPrize(): number {
   const r = Math.random();
-  if (r < 0.30)  return 1; // 30% → 20% discount
-  if (r < 0.325) return 3; // 2.5% → 40% discount
-  if (r < 0.35)  return 5; // 2.5% → 60% discount
-  if (r < 0.375) return 7; // 2.5% → 80% discount
-  if (r < 0.40)  return 9; // 2.5% → free service
-  return [0, 2, 4, 6, 8][Math.floor(Math.random() * 5)]; // 60% → better luck
+  if (r < 0.300) return 1;
+  if (r < 0.325) return 3;
+  if (r < 0.350) return 5;
+  if (r < 0.375) return 7;
+  if (r < 0.400) return 9;
+  return [0, 2, 4, 6, 8][Math.floor(Math.random() * 5)];
 }
 
-// ─── SVG helpers ─────────────────────────────────────────────────────────────
+// SVG path for a wheel slice
 function polar(r: number, deg: number) {
   const rad = (deg - 90) * (Math.PI / 180);
   return { x: CX + r * Math.cos(rad), y: CY + r * Math.sin(rad) };
@@ -63,13 +67,10 @@ function slicePath(i: number) {
   return `M ${CX},${CY} L ${s.x},${s.y} A ${R},${R} 0 0,1 ${e.x},${e.y} Z`;
 }
 
-// ─── Easing: fast start → very slow end ──────────────────────────────────────
-function easeOut(t: number) {
-  return 1 - Math.pow(1 - t, 4);
-}
+// Easing: very fast start → gradually stops
+function easeOut(t: number) { return 1 - Math.pow(1 - t, 4); }
 
-// ─── Countdown formatter ─────────────────────────────────────────────────────
-function fmtCountdown(ms: number) {
+function fmtMs(ms: number) {
   if (ms <= 0) return "00:00:00";
   const h = Math.floor(ms / 3600000);
   const m = Math.floor((ms % 3600000) / 60000);
@@ -77,82 +78,60 @@ function fmtCountdown(ms: number) {
   return [h, m, s].map((v) => String(v).padStart(2, "0")).join(":");
 }
 
+// Pre-compute all SVG paths once — never recalculate during renders
+const PATHS = SEGMENTS.map((_, i) => slicePath(i));
+const MIDS  = SEGMENTS.map((_, i) => polar(TEXT_R, i * DEG + DEG / 2));
+
 // ─────────────────────────────────────────────────────────────────────────────
 export default function Tombola() {
-  // UI state only — animation is fully JS-driven
+  // Read status synchronously on first render — no loading flicker
+  const init = localStatus();
+
   const [isSpinning,  setIsSpinning]  = useState(false);
-  const [canSpin,     setCanSpin]     = useState(true);
-  const [nextSpinAt,  setNextSpinAt]  = useState<Date | null>(null);
+  const [canSpin,     setCanSpin]     = useState(init.canSpin);
+  const [nextSpinAt,  setNextSpinAt]  = useState<Date | null>(init.nextSpinAt);
   const [resultPrize, setResultPrize] = useState<string | null | undefined>(undefined);
   const [showResult,  setShowResult]  = useState(false);
   const [countdown,   setCountdown]   = useState("");
-  const [checking,    setChecking]    = useState(true);
 
-  // Wheel DOM reference — animation writes directly to this element
-  const wheelEl       = useRef<HTMLDivElement>(null);
-  const curAngle      = useRef(0);   // tracks accumulated rotation
-  const rafId         = useRef(0);   // animation frame handle
+  const wheelEl  = useRef<HTMLDivElement>(null);
+  const curAngle = useRef(0);
+  const rafId    = useRef(0);
 
-  // ── On mount: check 48h status ──────────────────────────────────────────────
-  useEffect(() => {
-    const local = getLocalStatus();
-    setCanSpin(local.canSpin);
-    setNextSpinAt(local.nextSpinAt);
-    setChecking(false);
+  // Cleanup animation frame on unmount
+  useEffect(() => () => cancelAnimationFrame(rafId.current), []);
 
-    fetch(`/api/tombola/status?deviceId=${encodeURIComponent(getDeviceId())}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (!data.canSpin && data.nextSpinAt) {
-          const srv = new Date(data.nextSpinAt);
-          const { canSpin: lc, nextSpinAt: ln } = getLocalStatus();
-          if (!lc && ln && srv > ln) setNextSpinAt(srv);
-          else if (lc) { setCanSpin(false); setNextSpinAt(srv); }
-        }
-      })
-      .catch(() => {});
-
-    return () => cancelAnimationFrame(rafId.current);
-  }, []);
-
-  // ── Countdown ticker ────────────────────────────────────────────────────────
+  // Countdown ticker
   useEffect(() => {
     if (!nextSpinAt) { setCountdown(""); return; }
     const tick = () => {
       const diff = nextSpinAt.getTime() - Date.now();
       if (diff <= 0) { setCanSpin(true); setNextSpinAt(null); setCountdown(""); }
-      else setCountdown(fmtCountdown(diff));
+      else setCountdown(fmtMs(diff));
     };
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, [nextSpinAt]);
 
-  // ── Core animation — pure rAF loop, no CSS transitions ─────────────────────
+  // ── rAF animation loop ────────────────────────────────────────────────────
   function startSpin(segIdx: number) {
     const el = wheelEl.current;
     if (!el) return;
 
-    // Target: land pointer on centre of the chosen segment
-    const targetMod  = (360 - (segIdx * DEG + DEG / 2) + 360) % 360;
-    const currentMod = curAngle.current % 360;
-    const extra      = (targetMod - currentMod + 360) % 360;
-    // At least 5 full rotations
-    const endAngle   = curAngle.current + 5 * 360 + extra;
-
-    const startAngle = curAngle.current;
-    const startTime  = performance.now();
+    const targetMod = (360 - (segIdx * DEG + DEG / 2) + 360) % 360;
+    const extra     = (targetMod - curAngle.current % 360 + 360) % 360;
+    const endAngle  = curAngle.current + 5 * 360 + extra;
+    const startAng  = curAngle.current;
+    const t0        = performance.now();
 
     function frame(now: number) {
-      const t     = Math.min((now - startTime) / SPIN_MS, 1);
+      const t     = Math.min((now - t0) / SPIN_MS, 1);
       const eased = easeOut(t);
-      const angle = startAngle + (endAngle - startAngle) * eased;
-      el.style.transform = `rotateZ(${angle}deg)`;
-
+      el.style.transform = `rotateZ(${startAng + (endAngle - startAng) * eased}deg)`;
       if (t < 1) {
         rafId.current = requestAnimationFrame(frame);
       } else {
-        // Animation done
         curAngle.current = endAngle;
         saveLocalSpin();
         setResultPrize(SEGMENTS[segIdx].prize);
@@ -166,44 +145,32 @@ export default function Tombola() {
     rafId.current = requestAnimationFrame(frame);
   }
 
-  // ── Spin button handler ─────────────────────────────────────────────────────
+  // ── Spin handler — instant spin, API fires in background ─────────────────
   function handleSpin() {
     if (isSpinning || !canSpin) return;
-    const local = getLocalStatus();
-    if (!local.canSpin) {
+
+    // Re-check localStorage (in case another tab spun)
+    const status = localStatus();
+    if (!status.canSpin) {
       setCanSpin(false);
-      setNextSpinAt(local.nextSpinAt);
+      setNextSpinAt(status.nextSpinAt);
       return;
     }
 
+    const segIdx = pickPrize();
+
+    // Start spinning immediately — no waiting for network
     setIsSpinning(true);
     setShowResult(false);
+    startSpin(segIdx);
 
+    // Fire API in background to log the spin server-side (fire-and-forget)
+    const deviceId = getDeviceId();
     fetch("/api/tombola/spin", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ deviceId: getDeviceId() }),
-    })
-      .then((res) => {
-        if (res.status === 429) {
-          return res.json().then((d) => {
-            setCanSpin(false);
-            if (d.nextSpinAt) setNextSpinAt(new Date(d.nextSpinAt));
-            setIsSpinning(false);
-            throw new Error("limited");
-          });
-        }
-        if (!res.ok) throw new Error("err");
-        return res.json();
-      })
-      .then((data) => {
-        const idx = typeof data.segmentIndex === "number" ? data.segmentIndex : clientPrize();
-        startSpin(idx);
-      })
-      .catch((e) => {
-        if (e?.message === "limited") return;
-        startSpin(clientPrize()); // always spin even if server is down
-      });
+      body: JSON.stringify({ deviceId }),
+    }).catch(() => {}); // silently ignore any server error — spin already started
   }
 
   const prizeWon = resultPrize != null;
@@ -213,20 +180,20 @@ export default function Tombola() {
       className="min-h-screen flex flex-col items-center overflow-x-hidden pb-10"
       style={{ background: "linear-gradient(160deg,#0d0d1f 0%,#1a0533 40%,#200a20 70%,#0d0d1f 100%)" }}
     >
-      {/* glow blobs */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+      {/* Ambient glow */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden" aria-hidden>
         <div className="absolute rounded-full" style={{ width:600,height:600,top:-150,left:"50%",transform:"translateX(-50%)",background:"radial-gradient(circle,rgba(236,72,153,.15) 0%,transparent 70%)",filter:"blur(50px)" }} />
         <div className="absolute rounded-full" style={{ width:400,height:400,bottom:50,right:-80,background:"radial-gradient(circle,rgba(124,58,237,.12) 0%,transparent 70%)",filter:"blur(40px)" }} />
       </div>
 
-      {/* header */}
+      {/* Logo */}
       <div className="relative z-10 w-full max-w-md px-4 pt-6 pb-2 flex justify-center">
         <img src="/prega_logo.png" alt="PREGASQUAD" className="h-10 object-contain drop-shadow-lg" />
       </div>
 
-      {/* title */}
+      {/* Title */}
       <div className="relative z-10 flex flex-col items-center gap-1 px-4 pb-2">
-        <div className="flex items-center gap-2 mt-1">
+        <div className="flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-pink-400" />
           <h1 className="text-white font-black text-2xl" style={{ letterSpacing:"0.07em" }}>LUCKY WHEEL</h1>
           <Sparkles className="w-5 h-5 text-pink-400" />
@@ -234,20 +201,20 @@ export default function Tombola() {
         <p className="text-gray-500 text-xs text-center">Spin once every 48 hours · 80% chance to win!</p>
       </div>
 
-      {/* ── WHEEL ─────────────────────────────────────────────────────────── */}
-      <div className="relative z-10 flex items-center justify-center my-2" style={{ width:460,height:460 }}>
+      {/* ── Wheel ── */}
+      <div className="relative z-10 flex items-center justify-center my-2" style={{ width:460, height:460 }}>
 
-        {/* glow ring */}
+        {/* Glow ring */}
         <div className="absolute inset-0 rounded-full" style={{ background:"conic-gradient(from 0deg,rgba(236,72,153,.5),rgba(124,58,237,.35),rgba(236,72,153,.5))",filter:"blur(16px)" }} />
-        {/* dark backing */}
-        <div className="absolute rounded-full" style={{ inset:8,background:"#0d0d1f" }} />
+        {/* Dark backing */}
+        <div className="absolute rounded-full" style={{ inset:8, background:"#0d0d1f" }} />
 
-        {/* pointer */}
-        <div className="absolute z-30" style={{ top:4,left:"50%",transform:"translateX(-50%)" }}>
-          <div style={{ width:0,height:0,borderLeft:"16px solid transparent",borderRight:"16px solid transparent",borderTop:"34px solid #ec4899",filter:"drop-shadow(0 0 12px rgba(236,72,153,1))" }} />
+        {/* Pointer arrow */}
+        <div className="absolute z-30" style={{ top:4, left:"50%", transform:"translateX(-50%)" }}>
+          <div style={{ width:0, height:0, borderLeft:"16px solid transparent", borderRight:"16px solid transparent", borderTop:"34px solid #ec4899", filter:"drop-shadow(0 0 12px rgba(236,72,153,1))" }} />
         </div>
 
-        {/* THE WHEEL — animation via wheelEl ref */}
+        {/* Spinning wheel div — transform controlled exclusively by rAF */}
         <div
           ref={wheelEl}
           className="absolute rounded-full overflow-hidden"
@@ -255,7 +222,7 @@ export default function Tombola() {
             width:424, height:424,
             top:"50%", left:"50%",
             marginTop:-212, marginLeft:-212,
-            boxShadow:"0 0 0 6px rgba(255,255,255,.05), 0 0 60px rgba(236,72,153,.3), 0 20px 60px rgba(0,0,0,.8)",
+            boxShadow:"0 0 0 6px rgba(255,255,255,.05),0 0 60px rgba(236,72,153,.3),0 20px 60px rgba(0,0,0,.8)",
             willChange:"transform",
           }}
         >
@@ -265,7 +232,7 @@ export default function Tombola() {
                 <stop offset="0%" stopColor="#be185d" />
                 <stop offset="100%" stopColor="#1f1135" />
               </radialGradient>
-              {SEGMENTS.map((s,i) => (
+              {SEGMENTS.map((s, i) => (
                 <linearGradient key={i} id={`g${i}`} x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" stopColor={s.color} />
                   <stop offset="100%" stopColor={s.border} stopOpacity=".6" />
@@ -274,17 +241,19 @@ export default function Tombola() {
             </defs>
 
             {SEGMENTS.map((seg, i) => {
-              const mid = polar(TEXT_R, i * DEG + DEG / 2);
-              const ang = i * DEG + DEG / 2;
+              const mid  = MIDS[i];
+              const ang  = i * DEG + DEG / 2;
               const lines = seg.label.split("\n");
-              const win = seg.prize !== null;
+              const win  = seg.prize !== null;
               return (
                 <g key={i}>
-                  <path d={slicePath(i)} fill={`url(#g${i})`} stroke={seg.border} strokeWidth={win ? "2.5" : "1"} strokeOpacity={win ? ".9" : ".3"} />
+                  <path d={PATHS[i]} fill={`url(#g${i})`} stroke={seg.border}
+                    strokeWidth={win ? "2.5" : "1"} strokeOpacity={win ? ".9" : ".3"} />
                   <g transform={`rotate(${ang},${mid.x},${mid.y})`}>
                     {lines.map((ln, li) => (
                       <text key={li}
-                        x={mid.x} y={mid.y + (li - (lines.length - 1) / 2) * (win ? 16 : 11)}
+                        x={mid.x}
+                        y={mid.y + (li - (lines.length - 1) / 2) * (win ? 16 : 11)}
                         textAnchor="middle" dominantBaseline="middle"
                         fill={seg.textColor}
                         fontSize={win ? "17" : "9"}
@@ -297,38 +266,38 @@ export default function Tombola() {
               );
             })}
 
-            {/* hub */}
+            {/* Centre hub */}
             <circle cx={CX} cy={CY} r="36" fill="#0d0d1f" stroke="rgba(236,72,153,.4)" strokeWidth="4" />
             <circle cx={CX} cy={CY} r="28" fill="url(#cg)" />
-            <text x={CX} y={CY} textAnchor="middle" dominantBaseline="middle" fontSize="20" fill="#ec4899" fontWeight="900">✦</text>
+            <text x={CX} y={CY} textAnchor="middle" dominantBaseline="middle"
+              fontSize="20" fill="#ec4899" fontWeight="900">✦</text>
           </svg>
 
-          {/* shine */}
-          <div className="absolute inset-0 rounded-full pointer-events-none" style={{ background:"linear-gradient(135deg,rgba(255,255,255,.1) 0%,transparent 45%)" }} />
+          {/* Shine */}
+          <div className="absolute inset-0 rounded-full pointer-events-none"
+            style={{ background:"linear-gradient(135deg,rgba(255,255,255,.1) 0%,transparent 45%)" }} />
         </div>
       </div>
 
-      {/* ── CONTROLS ──────────────────────────────────────────────────────── */}
+      {/* ── Controls ── */}
       <div className="relative z-10 w-full max-w-sm px-4 mt-3 flex flex-col items-center gap-3">
 
-        {checking ? (
-          <div className="flex items-center gap-2 text-gray-500 py-4">
-            <div className="w-4 h-4 border-2 border-pink-500 border-t-transparent rounded-full animate-spin" />
-            <span className="text-sm">Checking…</span>
-          </div>
-        ) : canSpin ? (
+        {canSpin ? (
           <button
             onClick={handleSpin}
             disabled={isSpinning}
-            className="relative w-full py-5 rounded-2xl font-black text-xl text-white overflow-hidden active:scale-95 transition-transform duration-100 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="relative w-full py-5 rounded-2xl font-black text-xl text-white overflow-hidden active:scale-95 transition-transform duration-75 disabled:opacity-60 disabled:cursor-not-allowed"
             style={{
-              background: isSpinning ? "rgba(190,24,93,.35)" : "linear-gradient(135deg,#be185d 0%,#ec4899 50%,#a21caf 100%)",
+              background: isSpinning
+                ? "rgba(190,24,93,.35)"
+                : "linear-gradient(135deg,#be185d 0%,#ec4899 50%,#a21caf 100%)",
               boxShadow: isSpinning ? "none" : "0 0 40px rgba(236,72,153,.65),0 6px 24px rgba(0,0,0,.5)",
               border: "1px solid rgba(255,255,255,.18)",
               letterSpacing: "0.08em",
             }}
           >
-            <span className="absolute inset-x-0 top-0 h-px" style={{ background:"linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent)" }} />
+            <span className="absolute inset-x-0 top-0 h-px"
+              style={{ background:"linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent)" }} />
             {isSpinning ? (
               <span className="flex items-center justify-center gap-3">
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -343,7 +312,8 @@ export default function Tombola() {
             )}
           </button>
         ) : (
-          <div className="w-full rounded-2xl p-5 flex flex-col items-center gap-2" style={{ background:"rgba(255,255,255,.05)",backdropFilter:"blur(20px)",border:"1px solid rgba(255,255,255,.1)" }}>
+          <div className="w-full rounded-2xl p-5 flex flex-col items-center gap-2"
+            style={{ background:"rgba(255,255,255,.05)", backdropFilter:"blur(20px)", border:"1px solid rgba(255,255,255,.1)" }}>
             <Clock className="w-7 h-7 text-pink-400" />
             <p className="text-gray-300 text-sm font-semibold">Next spin available in</p>
             <p className="text-3xl font-mono font-black text-white tracking-[.15em]">{countdown || "—"}</p>
@@ -351,8 +321,9 @@ export default function Tombola() {
           </div>
         )}
 
-        {/* prizes */}
-        <div className="w-full rounded-2xl p-4" style={{ background:"rgba(255,255,255,.04)",backdropFilter:"blur(12px)",border:"1px solid rgba(255,255,255,.07)" }}>
+        {/* Prize grid */}
+        <div className="w-full rounded-2xl p-4"
+          style={{ background:"rgba(255,255,255,.04)", backdropFilter:"blur(12px)", border:"1px solid rgba(255,255,255,.07)" }}>
           <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-3 text-center">Possible Prizes</p>
           <div className="grid grid-cols-2 gap-2">
             {[
@@ -362,7 +333,9 @@ export default function Tombola() {
               { label:"80% Discount", color:"#3b82f6", emoji:"💙" },
               { label:"Free Service!", color:"#ec4899", emoji:"🎁", wide:true },
             ].map((p) => (
-              <div key={p.label} className={`flex items-center gap-2 rounded-xl px-3 py-2.5${(p as any).wide ? " col-span-2 justify-center" : ""}`} style={{ background:`${p.color}18`,border:`1px solid ${p.color}40` }}>
+              <div key={p.label}
+                className={`flex items-center gap-2 rounded-xl px-3 py-2.5${(p as any).wide ? " col-span-2 justify-center" : ""}`}
+                style={{ background:`${p.color}18`, border:`1px solid ${p.color}40` }}>
                 <span className="text-base">{p.emoji}</span>
                 <span className="text-xs font-bold" style={{ color:p.color }}>{p.label}</span>
               </div>
@@ -370,23 +343,36 @@ export default function Tombola() {
           </div>
         </div>
 
-        <p className="text-gray-600 text-xs text-center">Show your winning screen to our staff to claim your prize</p>
+        <p className="text-gray-600 text-xs text-center">
+          Show your winning screen to our staff to claim your prize
+        </p>
       </div>
 
-      {/* ── RESULT MODAL ──────────────────────────────────────────────────── */}
+      {/* ── Result modal ── */}
       {showResult && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6" style={{ background:"rgba(0,0,0,.85)",backdropFilter:"blur(14px)" }} onClick={() => setShowResult(false)}>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-6"
+          style={{ background:"rgba(0,0,0,.85)", backdropFilter:"blur(14px)" }}
+          onClick={() => setShowResult(false)}
+        >
           <div
             className="w-full max-w-xs rounded-3xl p-8 flex flex-col items-center gap-4 relative overflow-hidden"
             style={{
-              background: prizeWon ? "linear-gradient(160deg,rgba(190,24,93,.3) 0%,rgba(13,13,31,.97) 100%)" : "linear-gradient(160deg,rgba(30,27,75,.97) 0%,rgba(13,13,31,.97) 100%)",
+              background: prizeWon
+                ? "linear-gradient(160deg,rgba(190,24,93,.3) 0%,rgba(13,13,31,.97) 100%)"
+                : "linear-gradient(160deg,rgba(30,27,75,.97) 0%,rgba(13,13,31,.97) 100%)",
               border: prizeWon ? "1px solid rgba(236,72,153,.55)" : "1px solid rgba(255,255,255,.08)",
-              boxShadow: prizeWon ? "0 0 80px rgba(236,72,153,.45),0 20px 60px rgba(0,0,0,.8)" : "0 20px 60px rgba(0,0,0,.8)",
+              boxShadow: prizeWon
+                ? "0 0 80px rgba(236,72,153,.45),0 20px 60px rgba(0,0,0,.8)"
+                : "0 20px 60px rgba(0,0,0,.8)",
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="absolute inset-x-0 top-0 h-px" style={{ background:"linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent)" }} />
+            <div className="absolute inset-x-0 top-0 h-px"
+              style={{ background:"linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent)" }} />
+
             <div className="text-7xl">{prizeWon ? (resultPrize === "free" ? "🎁" : "🎉") : "😢"}</div>
+
             {prizeWon ? (
               <>
                 <div className="flex items-center gap-2">
@@ -394,19 +380,36 @@ export default function Tombola() {
                   <span className="text-yellow-300 font-black text-sm uppercase tracking-widest">You Won!</span>
                   <Trophy className="w-5 h-5 text-yellow-400" />
                 </div>
-                <p className="text-white font-black text-3xl text-center">{resultPrize === "free" ? "Free Service!" : `${resultPrize} Discount!`}</p>
-                <div className="w-full rounded-xl px-4 py-3 flex items-center gap-2 justify-center" style={{ background:"rgba(236,72,153,.15)",border:"1px solid rgba(236,72,153,.3)" }}>
+                <p className="text-white font-black text-3xl text-center">
+                  {resultPrize === "free" ? "Free Service!" : `${resultPrize} Discount!`}
+                </p>
+                <div className="w-full rounded-xl px-4 py-3 flex items-center gap-2 justify-center"
+                  style={{ background:"rgba(236,72,153,.15)", border:"1px solid rgba(236,72,153,.3)" }}>
                   <Gift className="w-4 h-4 text-pink-400" />
-                  <p className="text-pink-300 text-sm text-center font-medium">Show this screen to our staff to claim your prize</p>
+                  <p className="text-pink-300 text-sm text-center font-medium">
+                    Show this screen to our staff to claim your prize
+                  </p>
                 </div>
               </>
             ) : (
               <>
                 <p className="text-white font-black text-2xl text-center">Better Luck<br />Next Time!</p>
-                <p className="text-gray-400 text-sm text-center">You can spin again in 48 hours. Good luck!</p>
+                <p className="text-gray-400 text-sm text-center">
+                  You can spin again in 48 hours. Good luck!
+                </p>
               </>
             )}
-            <button onClick={() => setShowResult(false)} className="mt-2 w-full py-3.5 rounded-2xl font-black text-white text-sm" style={{ background:"linear-gradient(135deg,#be185d,#ec4899)",boxShadow:"0 4px 20px rgba(236,72,153,.45)",border:"1px solid rgba(255,255,255,.2)",letterSpacing:"0.06em" }}>
+
+            <button
+              onClick={() => setShowResult(false)}
+              className="mt-2 w-full py-3.5 rounded-2xl font-black text-white text-sm"
+              style={{
+                background:"linear-gradient(135deg,#be185d,#ec4899)",
+                boxShadow:"0 4px 20px rgba(236,72,153,.45)",
+                border:"1px solid rgba(255,255,255,.2)",
+                letterSpacing:"0.06em",
+              }}
+            >
               CLOSE
             </button>
           </div>
