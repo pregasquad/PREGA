@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Sparkles, Clock, Trophy, Gift, ChevronLeft } from "lucide-react";
-import { useLocation } from "wouter";
+import { Sparkles, Clock, Trophy, Gift } from "lucide-react";
 
 // ─── Wheel config ────────────────────────────────────────────────────────────
 const SEGMENTS = [
@@ -80,8 +79,6 @@ function fmtCountdown(ms: number) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function Tombola() {
-  const [, setLocation] = useLocation();
-
   // UI state only — animation is fully JS-driven
   const [isSpinning,  setIsSpinning]  = useState(false);
   const [canSpin,     setCanSpin]     = useState(true);
@@ -223,13 +220,8 @@ export default function Tombola() {
       </div>
 
       {/* header */}
-      <div className="relative z-10 w-full max-w-md px-4 pt-6 pb-2 flex items-center gap-3">
-        <button onClick={() => setLocation("/")} className="flex items-center justify-center w-9 h-9 rounded-full shrink-0" style={{ background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.12)" }}>
-          <ChevronLeft className="w-5 h-5 text-white" />
-        </button>
-        <div className="flex-1 flex justify-center pr-9">
-          <img src="/prega_logo.png" alt="PREGASQUAD" className="h-10 object-contain drop-shadow-lg" />
-        </div>
+      <div className="relative z-10 w-full max-w-md px-4 pt-6 pb-2 flex justify-center">
+        <img src="/prega_logo.png" alt="PREGASQUAD" className="h-10 object-contain drop-shadow-lg" />
       </div>
 
       {/* title */}
