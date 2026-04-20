@@ -188,14 +188,19 @@ export default function Tombola() {
             throw new Error("rate-limited");
           });
         }
+        if (!res.ok) {
+          // Server error (500, etc.) — fall back to client-side spin
+          throw new Error("server-error");
+        }
         return res.json();
       })
       .then((data) => {
-        doSpin(data.segmentIndex);
+        const idx = typeof data.segmentIndex === "number" ? data.segmentIndex : clientSidePrize();
+        doSpin(idx);
       })
       .catch((err) => {
         if (err?.message === "rate-limited") return;
-        // Server unavailable — spin client-side with same odds
+        // Network failure or server error — spin client-side with same odds
         doSpin(clientSidePrize());
       });
   }, [isSpinning, canSpin, doSpin]);

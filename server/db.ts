@@ -896,27 +896,47 @@ export async function ensureTombolaSpinsTable(): Promise<void> {
       await connection.query(`
         CREATE TABLE IF NOT EXISTS tombola_spins (
           id INT AUTO_INCREMENT PRIMARY KEY,
-          device_id VARCHAR(255) NOT NULL,
-          result VARCHAR(100) NOT NULL,
-          segment_index INT NOT NULL,
+          device_id VARCHAR(255) NOT NULL DEFAULT '',
+          result VARCHAR(100) NOT NULL DEFAULT '',
+          segment_index INT NOT NULL DEFAULT 0,
           spun_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
           INDEX idx_tombola_device (device_id)
         )
       `);
+      // Migrate existing table: add any missing columns
+      const migrations = [
+        `ALTER TABLE tombola_spins ADD COLUMN device_id VARCHAR(255) NOT NULL DEFAULT ''`,
+        `ALTER TABLE tombola_spins ADD COLUMN result VARCHAR(100) NOT NULL DEFAULT ''`,
+        `ALTER TABLE tombola_spins ADD COLUMN segment_index INT NOT NULL DEFAULT 0`,
+        `ALTER TABLE tombola_spins ADD COLUMN spun_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL`,
+        `ALTER TABLE tombola_spins ADD INDEX idx_tombola_device (device_id)`,
+      ];
+      for (const sql of migrations) {
+        try { await connection.query(sql); } catch (_) { /* column/index already exists */ }
+      }
       connection.release();
     } else {
       await pool.query(`
         CREATE TABLE IF NOT EXISTS tombola_spins (
           id SERIAL PRIMARY KEY,
-          device_id VARCHAR(255) NOT NULL,
-          result VARCHAR(100) NOT NULL,
-          segment_index INT NOT NULL,
+          device_id VARCHAR(255) NOT NULL DEFAULT '',
+          result VARCHAR(100) NOT NULL DEFAULT '',
+          segment_index INT NOT NULL DEFAULT 0,
           spun_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
         )
       `);
-      await pool.query(`
-        CREATE INDEX IF NOT EXISTS idx_tombola_device ON tombola_spins(device_id)
-      `);
+      const pgMigrations = [
+        `ALTER TABLE tombola_spins ADD COLUMN IF NOT EXISTS device_id VARCHAR(255) NOT NULL DEFAULT ''`,
+        `ALTER TABLE tombola_spins ADD COLUMN IF NOT EXISTS result VARCHAR(100) NOT NULL DEFAULT ''`,
+        `ALTER TABLE tombola_spins ADD COLUMN IF NOT EXISTS segment_index INT NOT NULL DEFAULT 0`,
+        `ALTER TABLE tombola_spins ADD COLUMN IF NOT EXISTS spun_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL`,
+      ];
+      for (const sql of pgMigrations) {
+        try { await pool.query(sql); } catch (_) { /* already exists */ }
+      }
+      try {
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_tombola_device ON tombola_spins(device_id)`);
+      } catch (_) {}
     }
     console.log("Tombola spins table ready");
   } catch (error) {
