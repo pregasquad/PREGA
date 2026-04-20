@@ -294,7 +294,6 @@ export default function Tombola() {
             width: 424,
             height: 424,
             borderRadius: "50%",
-            transform: "rotateZ(0deg)",
             boxShadow: "0 0 0 7px rgba(255,255,255,0.05), 0 0 60px rgba(236,72,153,0.25), 0 24px 70px rgba(0,0,0,0.8)",
             willChange: "transform",
           }}
