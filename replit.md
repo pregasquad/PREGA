@@ -61,4 +61,6 @@ Beauty Salon Appointment Management System built with React + Express + PostgreS
 - 2026-02-09: Added MySQL/TiDB staff_id backfill migration (ensureStaffIdBackfillMySQL) - adds staff_id columns if missing, backfills from staff name matching, creates indexes
 - 2026-02-09: Migrated appointments/staff_deductions to use staffId (ID-based relationships) instead of name-only matching; cascade rename logic covers both linked and legacy records
 - 2026-02-09: Import migration completed - database provisioned, schema pushed, workflow configured
+- 2026-04-20: Added Tombola Lucky Wheel feature - spin wheel with 10 segments (-20%, 40/60/80 SAR off, Free Service, Better Next Time); 1% win chance / 99% Better Next Time; device-based 48h cooldown tracked in tombola_spins table (both MySQL and PostgreSQL); sidebar nav item "Lucky Wheel" (🌟) accessible to all users; glassmorphism/dark purple theme matching app style; includes PREGASQUAD logo + countdown timer + result overlay
+- 2026-04-20: Performance fix - removed refreshKey from Salaries.tsx query keys (was forcing full refetch on every page visit showing 0s for 5s); now uses invalidateQueries for background refresh while keeping cached data visible
 - 2026-02-08: Initial Replit setup, database created, schema pushed

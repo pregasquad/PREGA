@@ -34,6 +34,7 @@ const Packages = lazy(() => import("@/pages/Packages"));
 const BookingHistory = lazy(() => import("@/pages/BookingHistory"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 const StaffPortal = lazy(() => import("@/pages/StaffPortal"));
+const Tombola = lazy(() => import("@/pages/Tombola"));
 
 // Loading fallback component with smooth fade - prevents flash
 function PageLoader() {
@@ -183,6 +184,10 @@ function Router() {
 
       <Route path="/booking-history">
         <PageRoute component={BookingHistory} permission="view_booking_history" lazy />
+      </Route>
+
+      <Route path="/tombola">
+        <PageRoute component={Tombola} lazy />
       </Route>
 
       <Route path="/booking" component={Booking} />

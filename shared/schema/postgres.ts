@@ -619,3 +619,12 @@ export const insertStaffPaymentSchema = createInsertSchema(staffPayments).omit({
 });
 export type StaffPayment = typeof staffPayments.$inferSelect;
 export type InsertStaffPayment = z.infer<typeof insertStaffPaymentSchema>;
+
+export const tombolaSpins = pgTable("tombola_spins", {
+  id: serial("id").primaryKey(),
+  deviceId: varchar("device_id", { length: 255 }).notNull(),
+  result: varchar("result", { length: 100 }).notNull(),
+  segmentIndex: integer("segment_index").notNull(),
+  spunAt: timestamp("spun_at").defaultNow().notNull(),
+});
+export type TombolaSpin = typeof tombolaSpins.$inferSelect;

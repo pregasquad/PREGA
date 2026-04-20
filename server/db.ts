@@ -888,3 +888,38 @@ export async function ensurePlanningShortcutsColumn(): Promise<void> {
     console.error("Failed to ensure planning_shortcuts column:", error);
   }
 }
+
+export async function ensureTombolaSpinsTable(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS tombola_spins (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          device_id VARCHAR(255) NOT NULL,
+          result VARCHAR(100) NOT NULL,
+          segment_index INT NOT NULL,
+          spun_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+          INDEX idx_tombola_device (device_id)
+        )
+      `);
+      connection.release();
+    } else {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS tombola_spins (
+          id SERIAL PRIMARY KEY,
+          device_id VARCHAR(255) NOT NULL,
+          result VARCHAR(100) NOT NULL,
+          segment_index INT NOT NULL,
+          spun_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+        )
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS idx_tombola_device ON tombola_spins(device_id)
+      `);
+    }
+    console.log("Tombola spins table ready");
+  } catch (error) {
+    console.error("Failed to ensure tombola_spins table:", error);
+  }
+}

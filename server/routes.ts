@@ -6,7 +6,7 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import { setupAuth, registerAuthRoutes, isPinAuthenticated, requirePermission, checkRateLimit, recordFailedAttempt, clearAttempts } from "./replit_integrations/auth";
 import { vapidPublicKey, sendPushNotification, checkAndNotifyExpiringProducts, checkAndNotifyLowStock as broadcastLowStockNotifications, sendClosingReminderNow } from "./push";
-import { db, schema, isDatabaseOffline, checkDatabaseConnection } from "./db";
+import { db, schema, pool, dbDialect, isDatabaseOffline, checkDatabaseConnection } from "./db";
 import { eq } from "drizzle-orm";
 import { insertAdminRoleSchema, ROLE_PERMISSIONS } from "@shared/schema";
 import bcrypt from "bcryptjs";
@@ -3619,6 +3619,123 @@ export async function registerRoutes(
       await storage.deleteMessageTemplate(Number(req.params.id));
       res.status(204).send();
     } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // ─── Tombola Spin Wheel ──────────────────────────────────────────────────────
+  const TOMBOLA_SEGMENTS = [
+    { label: 'Better Next Time', prize: null },  // 0
+    { label: '-20%',             prize: '-20%' }, // 1
+    { label: 'Better Next Time', prize: null },  // 2
+    { label: '40',               prize: '40' },  // 3
+    { label: 'Better Next Time', prize: null },  // 4
+    { label: '60',               prize: '60' },  // 5
+    { label: 'Better Next Time', prize: null },  // 6
+    { label: '80',               prize: '80' },  // 7
+    { label: 'Better Next Time', prize: null },  // 8
+    { label: 'Free Service',     prize: 'free' },// 9
+  ];
+  const TOMBOLA_HOURS = 48;
+
+  function spinResult(): { result: string; segmentIndex: number } {
+    const rand = Math.random();
+    if (rand < 0.002) return { result: '-20%', segmentIndex: 1 };
+    if (rand < 0.004) return { result: '40', segmentIndex: 3 };
+    if (rand < 0.006) return { result: '60', segmentIndex: 5 };
+    if (rand < 0.008) return { result: '80', segmentIndex: 7 };
+    if (rand < 0.010) return { result: 'Free Service', segmentIndex: 9 };
+    const betterSegments = [0, 2, 4, 6, 8];
+    const segmentIndex = betterSegments[Math.floor(Math.random() * betterSegments.length)];
+    return { result: 'Better Next Time', segmentIndex };
+  }
+
+  app.get("/api/tombola/status", async (req, res) => {
+    try {
+      const deviceId = req.query.deviceId as string;
+      if (!deviceId) return res.json({ canSpin: true, nextSpinAt: null });
+
+      const cutoff = new Date(Date.now() - TOMBOLA_HOURS * 60 * 60 * 1000);
+      let lastSpin: any = null;
+
+      if (dbDialect === 'mysql') {
+        const conn = await pool().getConnection();
+        const [rows] = await conn.query(
+          `SELECT spun_at FROM tombola_spins WHERE device_id = ? AND spun_at > ? ORDER BY spun_at DESC LIMIT 1`,
+          [deviceId, cutoff]
+        );
+        conn.release();
+        lastSpin = (rows as any[])[0] || null;
+      } else {
+        const { rows } = await pool().query(
+          `SELECT spun_at FROM tombola_spins WHERE device_id = $1 AND spun_at > $2 ORDER BY spun_at DESC LIMIT 1`,
+          [deviceId, cutoff]
+        );
+        lastSpin = rows[0] || null;
+      }
+
+      if (lastSpin) {
+        const spunAt = new Date(lastSpin.spun_at);
+        const nextSpinAt = new Date(spunAt.getTime() + TOMBOLA_HOURS * 60 * 60 * 1000);
+        return res.json({ canSpin: false, nextSpinAt: nextSpinAt.toISOString(), spunAt: spunAt.toISOString() });
+      }
+      res.json({ canSpin: true, nextSpinAt: null });
+    } catch (err: any) {
+      res.json({ canSpin: true, nextSpinAt: null });
+    }
+  });
+
+  app.post("/api/tombola/spin", async (req, res) => {
+    try {
+      const { deviceId } = req.body;
+      if (!deviceId || typeof deviceId !== 'string' || deviceId.length > 255) {
+        return res.status(400).json({ message: 'Invalid device ID' });
+      }
+
+      const cutoff = new Date(Date.now() - TOMBOLA_HOURS * 60 * 60 * 1000);
+      let lastSpin: any = null;
+
+      if (dbDialect === 'mysql') {
+        const conn = await pool().getConnection();
+        const [rows] = await conn.query(
+          `SELECT spun_at FROM tombola_spins WHERE device_id = ? AND spun_at > ? ORDER BY spun_at DESC LIMIT 1`,
+          [deviceId, cutoff]
+        );
+        lastSpin = (rows as any[])[0] || null;
+        conn.release();
+      } else {
+        const { rows } = await pool().query(
+          `SELECT spun_at FROM tombola_spins WHERE device_id = $1 AND spun_at > $2 ORDER BY spun_at DESC LIMIT 1`,
+          [deviceId, cutoff]
+        );
+        lastSpin = rows[0] || null;
+      }
+
+      if (lastSpin) {
+        const nextSpinAt = new Date(new Date(lastSpin.spun_at).getTime() + TOMBOLA_HOURS * 60 * 60 * 1000);
+        return res.status(429).json({ message: 'Already spun', nextSpinAt: nextSpinAt.toISOString() });
+      }
+
+      const { result, segmentIndex } = spinResult();
+
+      if (dbDialect === 'mysql') {
+        const conn = await pool().getConnection();
+        await conn.query(
+          `INSERT INTO tombola_spins (device_id, result, segment_index, spun_at) VALUES (?, ?, ?, NOW())`,
+          [deviceId, result, segmentIndex]
+        );
+        conn.release();
+      } else {
+        await pool().query(
+          `INSERT INTO tombola_spins (device_id, result, segment_index, spun_at) VALUES ($1, $2, $3, NOW())`,
+          [deviceId, result, segmentIndex]
+        );
+      }
+
+      const nextSpinAt = new Date(Date.now() + TOMBOLA_HOURS * 60 * 60 * 1000);
+      res.json({ result, segmentIndex, nextSpinAt: nextSpinAt.toISOString() });
+    } catch (err: any) {
+      console.error('Tombola spin error:', err);
       res.status(500).json({ message: err.message });
     }
   });
