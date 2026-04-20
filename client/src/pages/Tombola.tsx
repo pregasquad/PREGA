@@ -258,7 +258,7 @@ export default function Tombola() {
           <Sparkles className="w-5 h-5 text-pink-400" />
         </div>
         <p className="text-gray-500 text-xs text-center">
-          Spin once every 48 hours · 1% chance to win!
+          Spin once every 48 hours · 80% chance to win!
         </p>
       </div>
 
