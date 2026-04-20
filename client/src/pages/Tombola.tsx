@@ -45,12 +45,12 @@ function saveLocalSpin() {
 }
 function clientPrize(): number {
   const r = Math.random();
-  if (r < 0.002) return 1;
-  if (r < 0.004) return 3;
-  if (r < 0.006) return 5;
-  if (r < 0.008) return 7;
-  if (r < 0.010) return 9;
-  return [0, 2, 4, 6, 8][Math.floor(Math.random() * 5)];
+  if (r < 0.30)  return 1; // 30% → 20% discount
+  if (r < 0.325) return 3; // 2.5% → 40% discount
+  if (r < 0.35)  return 5; // 2.5% → 60% discount
+  if (r < 0.375) return 7; // 2.5% → 80% discount
+  if (r < 0.40)  return 9; // 2.5% → free service
+  return [0, 2, 4, 6, 8][Math.floor(Math.random() * 5)]; // 60% → better luck
 }
 
 // ─── SVG helpers ─────────────────────────────────────────────────────────────

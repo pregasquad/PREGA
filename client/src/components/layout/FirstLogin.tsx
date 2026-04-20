@@ -103,7 +103,7 @@ export function FirstLogin({ children }: FirstLoginProps) {
     return false;
   });
 
-  const isPublicRoute = location === "/booking" || location === "/my-bookings" || location.startsWith("/staff-portal/");
+  const isPublicRoute = location === "/booking" || location === "/my-bookings" || location.startsWith("/staff-portal/") || location === "/tombola";
   const [selectedUser, setSelectedUser] = useState<AdminRole | null>(null);
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");

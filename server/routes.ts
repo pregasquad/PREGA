@@ -3640,11 +3640,14 @@ export async function registerRoutes(
 
   function spinResult(): { result: string; segmentIndex: number } {
     const rand = Math.random();
-    if (rand < 0.002) return { result: '20%', segmentIndex: 1 };
-    if (rand < 0.004) return { result: '40%', segmentIndex: 3 };
-    if (rand < 0.006) return { result: '60%', segmentIndex: 5 };
-    if (rand < 0.008) return { result: '80%', segmentIndex: 7 };
-    if (rand < 0.010) return { result: 'Free Service', segmentIndex: 9 };
+    // 30% chance for 20% discount
+    if (rand < 0.30)  return { result: '20%', segmentIndex: 1 };
+    // 2.5% each for other prizes (total 10%)
+    if (rand < 0.325) return { result: '40%', segmentIndex: 3 };
+    if (rand < 0.35)  return { result: '60%', segmentIndex: 5 };
+    if (rand < 0.375) return { result: '80%', segmentIndex: 7 };
+    if (rand < 0.40)  return { result: 'Free Service', segmentIndex: 9 };
+    // 60% better luck next time
     const betterSegments = [0, 2, 4, 6, 8];
     const segmentIndex = betterSegments[Math.floor(Math.random() * betterSegments.length)];
     return { result: 'Better Next Time', segmentIndex };
