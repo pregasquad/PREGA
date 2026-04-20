@@ -3626,13 +3626,13 @@ export async function registerRoutes(
   // ─── Tombola Spin Wheel ──────────────────────────────────────────────────────
   const TOMBOLA_SEGMENTS = [
     { label: 'Better Next Time', prize: null },  // 0
-    { label: '-20%',             prize: '-20%' }, // 1
+    { label: '20%',              prize: '20%' },  // 1
     { label: 'Better Next Time', prize: null },  // 2
-    { label: '40',               prize: '40' },  // 3
+    { label: '40%',              prize: '40%' },  // 3
     { label: 'Better Next Time', prize: null },  // 4
-    { label: '60',               prize: '60' },  // 5
+    { label: '60%',              prize: '60%' },  // 5
     { label: 'Better Next Time', prize: null },  // 6
-    { label: '80',               prize: '80' },  // 7
+    { label: '80%',              prize: '80%' },  // 7
     { label: 'Better Next Time', prize: null },  // 8
     { label: 'Free Service',     prize: 'free' },// 9
   ];
@@ -3640,10 +3640,10 @@ export async function registerRoutes(
 
   function spinResult(): { result: string; segmentIndex: number } {
     const rand = Math.random();
-    if (rand < 0.002) return { result: '-20%', segmentIndex: 1 };
-    if (rand < 0.004) return { result: '40', segmentIndex: 3 };
-    if (rand < 0.006) return { result: '60', segmentIndex: 5 };
-    if (rand < 0.008) return { result: '80', segmentIndex: 7 };
+    if (rand < 0.002) return { result: '20%', segmentIndex: 1 };
+    if (rand < 0.004) return { result: '40%', segmentIndex: 3 };
+    if (rand < 0.006) return { result: '60%', segmentIndex: 5 };
+    if (rand < 0.008) return { result: '80%', segmentIndex: 7 };
     if (rand < 0.010) return { result: 'Free Service', segmentIndex: 9 };
     const betterSegments = [0, 2, 4, 6, 8];
     const segmentIndex = betterSegments[Math.floor(Math.random() * betterSegments.length)];

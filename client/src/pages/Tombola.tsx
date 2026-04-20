@@ -6,13 +6,13 @@ import { Sparkles, Clock, Trophy, RefreshCw } from "lucide-react";
 
 const SEGMENTS = [
   { label: "Better\nNext Time", color: "#1a2035",   border: "#2d3748", textColor: "#6b7280", prize: null      }, // 0
-  { label: "-20%",             color: "#4c1d95",   border: "#7c3aed", textColor: "#ede9fe", prize: "-20%"    }, // 1
+  { label: "20%",              color: "#4c1d95",   border: "#7c3aed", textColor: "#ede9fe", prize: "20%"     }, // 1
   { label: "Better\nNext Time", color: "#111827",   border: "#1f2937", textColor: "#6b7280", prize: null      }, // 2
-  { label: "40",               color: "#78350f",   border: "#d97706", textColor: "#fef3c7", prize: "40"      }, // 3
+  { label: "40%",              color: "#78350f",   border: "#d97706", textColor: "#fef3c7", prize: "40%"     }, // 3
   { label: "Better\nNext Time", color: "#1a2035",   border: "#2d3748", textColor: "#6b7280", prize: null      }, // 4
-  { label: "60",               color: "#064e3b",   border: "#059669", textColor: "#d1fae5", prize: "60"      }, // 5
+  { label: "60%",              color: "#064e3b",   border: "#059669", textColor: "#d1fae5", prize: "60%"     }, // 5
   { label: "Better\nNext Time", color: "#111827",   border: "#1f2937", textColor: "#6b7280", prize: null      }, // 6
-  { label: "80",               color: "#1e3a8a",   border: "#2563eb", textColor: "#dbeafe", prize: "80"      }, // 7
+  { label: "80%",              color: "#1e3a8a",   border: "#2563eb", textColor: "#dbeafe", prize: "80%"     }, // 7
   { label: "Better\nNext Time", color: "#1a2035",   border: "#2d3748", textColor: "#6b7280", prize: null      }, // 8
   { label: "Free\nService",    color: "#831843",   border: "#db2777", textColor: "#fce7f3", prize: "free"    }, // 9
 ];
@@ -52,8 +52,7 @@ function formatCountdown(ms: number) {
 function prizeLabel(prize: string | null): string {
   if (!prize) return "";
   if (prize === "free") return "Free Service!";
-  if (prize === "-20%") return "20% Discount!";
-  return `${prize} SAR Off!`;
+  return `${prize} Discount!`;
 }
 
 function prizeEmoji(prize: string | null): string {
@@ -335,10 +334,10 @@ export default function Tombola() {
             <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest mb-3 text-center">Possible Prizes</p>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { label: "-20% Discount", color: "#7c3aed", emoji: "🎉" },
-                { label: "40 SAR Off",    color: "#d97706", emoji: "💛" },
-                { label: "60 SAR Off",    color: "#059669", emoji: "💚" },
-                { label: "80 SAR Off",    color: "#2563eb", emoji: "💙" },
+                { label: "20% Discount",  color: "#7c3aed", emoji: "🎉" },
+                { label: "40% Discount",  color: "#d97706", emoji: "💛" },
+                { label: "60% Discount",  color: "#059669", emoji: "💚" },
+                { label: "80% Discount",  color: "#2563eb", emoji: "💙" },
                 { label: "Free Service",  color: "#db2777", emoji: "🎁", wide: true },
               ].map((p) => (
                 <div key={p.label}
