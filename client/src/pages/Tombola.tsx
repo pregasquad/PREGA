@@ -14,11 +14,11 @@ const SEGMENTS = [
   { label: "Better\nLuck!", color: "#1e1b4b", border: "#312e81", textColor: "#6b7280", prize: null },
   { label: "FREE\nService", color: "#831843", border: "#ec4899", textColor: "#fce7f3", prize: "free" },
 ];
-const N   = SEGMENTS.length;
-const DEG = 360 / N;
+const N      = SEGMENTS.length;
+const DEG    = 360 / N;
 const CX = 200, CY = 200, R = 186, TEXT_R = 128;
-const SPIN_MS     = 5000;
-const COOLDOWN_MS = 48 * 60 * 60 * 1000;
+const SPIN_MS      = 5000;
+const COOLDOWN_MS  = 48 * 60 * 60 * 1000;
 const COOLDOWN_KEY = "tombola_last_spin";
 const DEVICE_KEY   = "tombola_device_id";
 
@@ -26,26 +26,31 @@ const DEVICE_KEY   = "tombola_device_id";
 function getDeviceId() {
   let id = localStorage.getItem(DEVICE_KEY);
   if (!id) {
-    id = crypto.randomUUID?.() ?? (Math.random().toString(36).slice(2) + Date.now().toString(36));
+    id = (typeof crypto !== "undefined" && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : Math.random().toString(36).slice(2) + Date.now().toString(36);
     localStorage.setItem(DEVICE_KEY, id);
   }
   return id;
 }
 
-// Reads 48h status synchronously — no async needed
 function localStatus(): { canSpin: boolean; nextSpinAt: Date | null } {
-  const raw = localStorage.getItem(COOLDOWN_KEY);
-  if (!raw) return { canSpin: true, nextSpinAt: null };
-  const next = parseInt(raw, 10) + COOLDOWN_MS;
-  if (Date.now() >= next) return { canSpin: true, nextSpinAt: null };
-  return { canSpin: false, nextSpinAt: new Date(next) };
+  try {
+    const raw = localStorage.getItem(COOLDOWN_KEY);
+    if (!raw) return { canSpin: true, nextSpinAt: null };
+    const next = parseInt(raw, 10) + COOLDOWN_MS;
+    if (Date.now() >= next) return { canSpin: true, nextSpinAt: null };
+    return { canSpin: false, nextSpinAt: new Date(next) };
+  } catch {
+    return { canSpin: true, nextSpinAt: null };
+  }
 }
 
 function saveLocalSpin() {
-  localStorage.setItem(COOLDOWN_KEY, String(Date.now()));
+  try { localStorage.setItem(COOLDOWN_KEY, String(Date.now())); } catch {}
 }
 
-// Prize odds: 30% for 20% off, 2.5% each other prize, 60% better luck
+// Prize odds: 30% for 20% off · 2.5% each for 40/60/80/free · 60% better luck
 function pickPrize(): number {
   const r = Math.random();
   if (r < 0.300) return 1;
@@ -56,7 +61,6 @@ function pickPrize(): number {
   return [0, 2, 4, 6, 8][Math.floor(Math.random() * 5)];
 }
 
-// SVG path for a wheel slice
 function polar(r: number, deg: number) {
   const rad = (deg - 90) * (Math.PI / 180);
   return { x: CX + r * Math.cos(rad), y: CY + r * Math.sin(rad) };
@@ -66,10 +70,7 @@ function slicePath(i: number) {
   const e = polar(R, (i + 1) * DEG);
   return `M ${CX},${CY} L ${s.x},${s.y} A ${R},${R} 0 0,1 ${e.x},${e.y} Z`;
 }
-
-// Easing: very fast start → gradually stops
 function easeOut(t: number) { return 1 - Math.pow(1 - t, 4); }
-
 function fmtMs(ms: number) {
   if (ms <= 0) return "00:00:00";
   const h = Math.floor(ms / 3600000);
@@ -78,14 +79,20 @@ function fmtMs(ms: number) {
   return [h, m, s].map((v) => String(v).padStart(2, "0")).join(":");
 }
 
-// Pre-compute all SVG paths once — never recalculate during renders
+// Pre-compute once — never recalc during render or animation
 const PATHS = SEGMENTS.map((_, i) => slicePath(i));
 const MIDS  = SEGMENTS.map((_, i) => polar(TEXT_R, i * DEG + DEG / 2));
 
+// Apply transform cross-browser (Instagram IAB needs -webkit- prefix)
+function setRotation(el: HTMLDivElement, deg: number) {
+  const val = `rotateZ(${deg}deg)`;
+  (el.style as any).webkitTransform = val;
+  el.style.transform = val;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 export default function Tombola() {
-  // Read status synchronously on first render — no loading flicker
-  const init = localStatus();
+  const init = localStatus(); // sync — no loading needed
 
   const [isSpinning,  setIsSpinning]  = useState(false);
   const [canSpin,     setCanSpin]     = useState(init.canSpin);
@@ -98,10 +105,8 @@ export default function Tombola() {
   const curAngle = useRef(0);
   const rafId    = useRef(0);
 
-  // Cleanup animation frame on unmount
   useEffect(() => () => cancelAnimationFrame(rafId.current), []);
 
-  // Countdown ticker
   useEffect(() => {
     if (!nextSpinAt) { setCountdown(""); return; }
     const tick = () => {
@@ -114,7 +119,6 @@ export default function Tombola() {
     return () => clearInterval(id);
   }, [nextSpinAt]);
 
-  // ── rAF animation loop ────────────────────────────────────────────────────
   function startSpin(segIdx: number) {
     const el = wheelEl.current;
     if (!el) return;
@@ -127,8 +131,8 @@ export default function Tombola() {
 
     function frame(now: number) {
       const t     = Math.min((now - t0) / SPIN_MS, 1);
-      const eased = easeOut(t);
-      el.style.transform = `rotateZ(${startAng + (endAngle - startAng) * eased}deg)`;
+      const angle = startAng + (endAngle - startAng) * easeOut(t);
+      setRotation(el, angle);  // sets both -webkit-transform and transform
       if (t < 1) {
         rafId.current = requestAnimationFrame(frame);
       } else {
@@ -145,32 +149,23 @@ export default function Tombola() {
     rafId.current = requestAnimationFrame(frame);
   }
 
-  // ── Spin handler — instant spin, API fires in background ─────────────────
   function handleSpin() {
     if (isSpinning || !canSpin) return;
-
-    // Re-check localStorage (in case another tab spun)
     const status = localStatus();
     if (!status.canSpin) {
       setCanSpin(false);
       setNextSpinAt(status.nextSpinAt);
       return;
     }
-
     const segIdx = pickPrize();
-
-    // Start spinning immediately — no waiting for network
     setIsSpinning(true);
     setShowResult(false);
-    startSpin(segIdx);
-
-    // Fire API in background to log the spin server-side (fire-and-forget)
-    const deviceId = getDeviceId();
+    startSpin(segIdx); // instant — no network wait
     fetch("/api/tombola/spin", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ deviceId }),
-    }).catch(() => {}); // silently ignore any server error — spin already started
+      body: JSON.stringify({ deviceId: getDeviceId() }),
+    }).catch(() => {});
   }
 
   const prizeWon = resultPrize != null;
@@ -180,53 +175,76 @@ export default function Tombola() {
       className="min-h-screen flex flex-col items-center overflow-x-hidden pb-10"
       style={{ background: "linear-gradient(160deg,#0d0d1f 0%,#1a0533 40%,#200a20 70%,#0d0d1f 100%)" }}
     >
-      {/* Ambient glow */}
+      {/*
+        ─── AMBIENT GLOW ───────────────────────────────────────────────────────
+        Instagram IAB chokes on filter:blur(). Replaced with simple opacity
+        radial-gradient circles — zero GPU cost, same visual effect.
+      */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden" aria-hidden>
-        <div className="absolute rounded-full" style={{ width:600,height:600,top:-150,left:"50%",transform:"translateX(-50%)",background:"radial-gradient(circle,rgba(236,72,153,.15) 0%,transparent 70%)",filter:"blur(50px)" }} />
-        <div className="absolute rounded-full" style={{ width:400,height:400,bottom:50,right:-80,background:"radial-gradient(circle,rgba(124,58,237,.12) 0%,transparent 70%)",filter:"blur(40px)" }} />
+        <div className="absolute rounded-full" style={{
+          width: 600, height: 600, top: -150, left: "50%",
+          transform: "translateX(-50%)",
+          background: "radial-gradient(circle,rgba(236,72,153,.22) 0%,rgba(236,72,153,0) 70%)",
+        }} />
+        <div className="absolute rounded-full" style={{
+          width: 400, height: 400, bottom: 50, right: -80,
+          background: "radial-gradient(circle,rgba(124,58,237,.18) 0%,rgba(124,58,237,0) 70%)",
+        }} />
       </div>
 
       {/* Logo */}
       <div className="relative z-10 w-full max-w-md px-4 pt-6 pb-2 flex justify-center">
-        <img src="/prega_logo.png" alt="PREGASQUAD" className="h-10 object-contain drop-shadow-lg" />
+        <img src="/prega_logo.png" alt="PREGASQUAD" className="h-10 object-contain" />
       </div>
 
       {/* Title */}
       <div className="relative z-10 flex flex-col items-center gap-1 px-4 pb-2">
         <div className="flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-pink-400" />
-          <h1 className="text-white font-black text-2xl" style={{ letterSpacing:"0.07em" }}>LUCKY WHEEL</h1>
+          <h1 className="text-white font-black text-2xl" style={{ letterSpacing: "0.07em" }}>LUCKY WHEEL</h1>
           <Sparkles className="w-5 h-5 text-pink-400" />
         </div>
         <p className="text-gray-500 text-xs text-center">Spin once every 48 hours · 80% chance to win!</p>
       </div>
 
       {/* ── Wheel ── */}
-      <div className="relative z-10 flex items-center justify-center my-2" style={{ width:460, height:460 }}>
+      <div className="relative z-10 flex items-center justify-center my-2" style={{ width: 460, height: 460 }}>
 
-        {/* Glow ring */}
-        <div className="absolute inset-0 rounded-full" style={{ background:"conic-gradient(from 0deg,rgba(236,72,153,.5),rgba(124,58,237,.35),rgba(236,72,153,.5))",filter:"blur(16px)" }} />
+        {/*
+          Glow ring: replaced conic-gradient+blur (Instagram killer) with a
+          solid border rendered directly in SVG — zero extra compositing layer.
+        */}
+        <div className="absolute inset-0 rounded-full" style={{
+          border: "6px solid rgba(236,72,153,.45)",
+          boxShadow: "0 0 32px rgba(236,72,153,.4), inset 0 0 32px rgba(124,58,237,.2)",
+        }} />
         {/* Dark backing */}
-        <div className="absolute rounded-full" style={{ inset:8, background:"#0d0d1f" }} />
+        <div className="absolute rounded-full" style={{ inset: 8, background: "#0d0d1f" }} />
 
-        {/* Pointer arrow */}
-        <div className="absolute z-30" style={{ top:4, left:"50%", transform:"translateX(-50%)" }}>
-          <div style={{ width:0, height:0, borderLeft:"16px solid transparent", borderRight:"16px solid transparent", borderTop:"34px solid #ec4899", filter:"drop-shadow(0 0 12px rgba(236,72,153,1))" }} />
+        {/* Pointer — box-shadow instead of drop-shadow filter */}
+        <div className="absolute z-30" style={{ top: 4, left: "50%", transform: "translateX(-50%)" }}>
+          <div style={{
+            width: 0, height: 0,
+            borderLeft: "16px solid transparent",
+            borderRight: "16px solid transparent",
+            borderTop: "34px solid #ec4899",
+          }} />
         </div>
 
-        {/* Spinning wheel div — transform controlled exclusively by rAF */}
+        {/* Wheel — transform via rAF only, never via React state */}
         <div
           ref={wheelEl}
           className="absolute rounded-full overflow-hidden"
           style={{
-            width:424, height:424,
-            top:"50%", left:"50%",
-            marginTop:-212, marginLeft:-212,
-            boxShadow:"0 0 0 6px rgba(255,255,255,.05),0 0 60px rgba(236,72,153,.3),0 20px 60px rgba(0,0,0,.8)",
-            willChange:"transform",
+            width: 424, height: 424,
+            top: "50%", left: "50%",
+            marginTop: -212, marginLeft: -212,
+            boxShadow: "0 0 0 4px rgba(255,255,255,.06), 0 20px 50px rgba(0,0,0,.8)",
+            willChange: "transform",
+            transform: "rotateZ(0deg)",
           }}
         >
-          <svg viewBox="0 0 400 400" width="424" height="424" style={{ display:"block" }}>
+          <svg viewBox="0 0 400 400" width="424" height="424" style={{ display: "block" }}>
             <defs>
               <radialGradient id="cg" cx="40%" cy="35%">
                 <stop offset="0%" stopColor="#be185d" />
@@ -241,10 +259,10 @@ export default function Tombola() {
             </defs>
 
             {SEGMENTS.map((seg, i) => {
-              const mid  = MIDS[i];
-              const ang  = i * DEG + DEG / 2;
+              const mid   = MIDS[i];
+              const ang   = i * DEG + DEG / 2;
               const lines = seg.label.split("\n");
-              const win  = seg.prize !== null;
+              const win   = seg.prize !== null;
               return (
                 <g key={i}>
                   <path d={PATHS[i]} fill={`url(#g${i})`} stroke={seg.border}
@@ -266,16 +284,16 @@ export default function Tombola() {
               );
             })}
 
-            {/* Centre hub */}
             <circle cx={CX} cy={CY} r="36" fill="#0d0d1f" stroke="rgba(236,72,153,.4)" strokeWidth="4" />
             <circle cx={CX} cy={CY} r="28" fill="url(#cg)" />
             <text x={CX} y={CY} textAnchor="middle" dominantBaseline="middle"
               fontSize="20" fill="#ec4899" fontWeight="900">✦</text>
           </svg>
 
-          {/* Shine */}
-          <div className="absolute inset-0 rounded-full pointer-events-none"
-            style={{ background:"linear-gradient(135deg,rgba(255,255,255,.1) 0%,transparent 45%)" }} />
+          {/* Shine overlay — opacity only, no blur */}
+          <div className="absolute inset-0 rounded-full pointer-events-none" style={{
+            background: "linear-gradient(135deg,rgba(255,255,255,.09) 0%,transparent 45%)",
+          }} />
         </div>
       </div>
 
@@ -286,18 +304,19 @@ export default function Tombola() {
           <button
             onClick={handleSpin}
             disabled={isSpinning}
-            className="relative w-full py-5 rounded-2xl font-black text-xl text-white overflow-hidden active:scale-95 transition-transform duration-75 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="relative w-full py-5 rounded-2xl font-black text-xl text-white overflow-hidden active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
             style={{
               background: isSpinning
-                ? "rgba(190,24,93,.35)"
+                ? "rgba(190,24,93,.4)"
                 : "linear-gradient(135deg,#be185d 0%,#ec4899 50%,#a21caf 100%)",
-              boxShadow: isSpinning ? "none" : "0 0 40px rgba(236,72,153,.65),0 6px 24px rgba(0,0,0,.5)",
+              boxShadow: isSpinning ? "none" : "0 0 36px rgba(236,72,153,.6), 0 6px 20px rgba(0,0,0,.5)",
               border: "1px solid rgba(255,255,255,.18)",
               letterSpacing: "0.08em",
+              transition: "transform 75ms",
             }}
           >
             <span className="absolute inset-x-0 top-0 h-px"
-              style={{ background:"linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent)" }} />
+              style={{ background: "linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent)" }} />
             {isSpinning ? (
               <span className="flex items-center justify-center gap-3">
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -312,8 +331,15 @@ export default function Tombola() {
             )}
           </button>
         ) : (
-          <div className="w-full rounded-2xl p-5 flex flex-col items-center gap-2"
-            style={{ background:"rgba(255,255,255,.05)", backdropFilter:"blur(20px)", border:"1px solid rgba(255,255,255,.1)" }}>
+          /*
+            Cooldown card: backdrop-filter removed — Instagram IAB makes it
+            invisible. Replaced with a solid semi-transparent background.
+          */
+          <div className="w-full rounded-2xl p-5 flex flex-col items-center gap-2" style={{
+            background: "rgba(30,15,50,.95)",
+            border: "1px solid rgba(236,72,153,.25)",
+            boxShadow: "0 4px 24px rgba(0,0,0,.5)",
+          }}>
             <Clock className="w-7 h-7 text-pink-400" />
             <p className="text-gray-300 text-sm font-semibold">Next spin available in</p>
             <p className="text-3xl font-mono font-black text-white tracking-[.15em]">{countdown || "—"}</p>
@@ -322,22 +348,24 @@ export default function Tombola() {
         )}
 
         {/* Prize grid */}
-        <div className="w-full rounded-2xl p-4"
-          style={{ background:"rgba(255,255,255,.04)", backdropFilter:"blur(12px)", border:"1px solid rgba(255,255,255,.07)" }}>
+        <div className="w-full rounded-2xl p-4" style={{
+          background: "rgba(20,10,40,.9)",
+          border: "1px solid rgba(255,255,255,.07)",
+        }}>
           <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-3 text-center">Possible Prizes</p>
           <div className="grid grid-cols-2 gap-2">
             {[
-              { label:"20% Discount", color:"#7c3aed", emoji:"🎉" },
-              { label:"40% Discount", color:"#d97706", emoji:"💛" },
-              { label:"60% Discount", color:"#10b981", emoji:"💚" },
-              { label:"80% Discount", color:"#3b82f6", emoji:"💙" },
-              { label:"Free Service!", color:"#ec4899", emoji:"🎁", wide:true },
+              { label: "20% Discount", color: "#7c3aed", emoji: "🎉" },
+              { label: "40% Discount", color: "#d97706", emoji: "💛" },
+              { label: "60% Discount", color: "#10b981", emoji: "💚" },
+              { label: "80% Discount", color: "#3b82f6", emoji: "💙" },
+              { label: "Free Service!", color: "#ec4899", emoji: "🎁", wide: true },
             ].map((p) => (
               <div key={p.label}
                 className={`flex items-center gap-2 rounded-xl px-3 py-2.5${(p as any).wide ? " col-span-2 justify-center" : ""}`}
-                style={{ background:`${p.color}18`, border:`1px solid ${p.color}40` }}>
+                style={{ background: `${p.color}20`, border: `1px solid ${p.color}45` }}>
                 <span className="text-base">{p.emoji}</span>
-                <span className="text-xs font-bold" style={{ color:p.color }}>{p.label}</span>
+                <span className="text-xs font-bold" style={{ color: p.color }}>{p.label}</span>
               </div>
             ))}
           </div>
@@ -350,26 +378,30 @@ export default function Tombola() {
 
       {/* ── Result modal ── */}
       {showResult && (
+        /*
+          Modal backdrop: backdrop-filter removed — Instagram IAB makes the
+          modal invisible. Using solid rgba background instead.
+        */
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-6"
-          style={{ background:"rgba(0,0,0,.85)", backdropFilter:"blur(14px)" }}
+          style={{ background: "rgba(0,0,0,.88)" }}
           onClick={() => setShowResult(false)}
         >
           <div
             className="w-full max-w-xs rounded-3xl p-8 flex flex-col items-center gap-4 relative overflow-hidden"
             style={{
               background: prizeWon
-                ? "linear-gradient(160deg,rgba(190,24,93,.3) 0%,rgba(13,13,31,.97) 100%)"
-                : "linear-gradient(160deg,rgba(30,27,75,.97) 0%,rgba(13,13,31,.97) 100%)",
-              border: prizeWon ? "1px solid rgba(236,72,153,.55)" : "1px solid rgba(255,255,255,.08)",
+                ? "linear-gradient(160deg,#3b0a20 0%,#0d0d1f 100%)"
+                : "linear-gradient(160deg,#1a1740 0%,#0d0d1f 100%)",
+              border: prizeWon ? "1px solid rgba(236,72,153,.5)" : "1px solid rgba(255,255,255,.08)",
               boxShadow: prizeWon
-                ? "0 0 80px rgba(236,72,153,.45),0 20px 60px rgba(0,0,0,.8)"
+                ? "0 0 60px rgba(236,72,153,.4), 0 20px 60px rgba(0,0,0,.8)"
                 : "0 20px 60px rgba(0,0,0,.8)",
             }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="absolute inset-x-0 top-0 h-px"
-              style={{ background:"linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent)" }} />
+              style={{ background: "linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent)" }} />
 
             <div className="text-7xl">{prizeWon ? (resultPrize === "free" ? "🎁" : "🎉") : "😢"}</div>
 
@@ -384,7 +416,7 @@ export default function Tombola() {
                   {resultPrize === "free" ? "Free Service!" : `${resultPrize} Discount!`}
                 </p>
                 <div className="w-full rounded-xl px-4 py-3 flex items-center gap-2 justify-center"
-                  style={{ background:"rgba(236,72,153,.15)", border:"1px solid rgba(236,72,153,.3)" }}>
+                  style={{ background: "rgba(236,72,153,.18)", border: "1px solid rgba(236,72,153,.35)" }}>
                   <Gift className="w-4 h-4 text-pink-400" />
                   <p className="text-pink-300 text-sm text-center font-medium">
                     Show this screen to our staff to claim your prize
@@ -404,10 +436,10 @@ export default function Tombola() {
               onClick={() => setShowResult(false)}
               className="mt-2 w-full py-3.5 rounded-2xl font-black text-white text-sm"
               style={{
-                background:"linear-gradient(135deg,#be185d,#ec4899)",
-                boxShadow:"0 4px 20px rgba(236,72,153,.45)",
-                border:"1px solid rgba(255,255,255,.2)",
-                letterSpacing:"0.06em",
+                background: "linear-gradient(135deg,#be185d,#ec4899)",
+                boxShadow: "0 4px 18px rgba(236,72,153,.4)",
+                border: "1px solid rgba(255,255,255,.18)",
+                letterSpacing: "0.06em",
               }}
             >
               CLOSE
