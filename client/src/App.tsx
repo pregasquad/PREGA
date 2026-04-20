@@ -187,7 +187,9 @@ function Router() {
       </Route>
 
       <Route path="/tombola">
-        <PageRoute component={Tombola} lazy />
+        <Suspense fallback={<PageLoader />}>
+          <Tombola />
+        </Suspense>
       </Route>
 
       <Route path="/booking" component={Booking} />
