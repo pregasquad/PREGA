@@ -3,16 +3,18 @@ import { Sparkles, Clock, Trophy, Gift } from "lucide-react";
 
 // ─── Wheel segments ───────────────────────────────────────────────────────────
 const SEGMENTS = [
-  { label: "Better\nLuck!", color: "#1e1b4b", border: "#312e81", textColor: "#6b7280", prize: null },
-  { label: "20%\nOFF",      color: "#4c1d95", border: "#7c3aed", textColor: "#ede9fe", prize: "20%" },
-  { label: "Better\nLuck!", color: "#1a1a2e", border: "#2d2d5e", textColor: "#6b7280", prize: null },
-  { label: "40%\nOFF",      color: "#78350f", border: "#d97706", textColor: "#fef3c7", prize: "40%" },
-  { label: "Better\nLuck!", color: "#1e1b4b", border: "#312e81", textColor: "#6b7280", prize: null },
-  { label: "60%\nOFF",      color: "#064e3b", border: "#10b981", textColor: "#d1fae5", prize: "60%" },
-  { label: "Better\nLuck!", color: "#1a1a2e", border: "#2d2d5e", textColor: "#6b7280", prize: null },
-  { label: "80%\nOFF",      color: "#1e3a8a", border: "#3b82f6", textColor: "#dbeafe", prize: "80%" },
-  { label: "Better\nLuck!", color: "#1e1b4b", border: "#312e81", textColor: "#6b7280", prize: null },
-  { label: "FREE\nService", color: "#831843", border: "#ec4899", textColor: "#fce7f3", prize: "free" },
+  { label: "10%\nOFF",      color: "#155e75", border: "#06b6d4", textColor: "#cffafe", prize: "10%"  }, // 0
+  { label: "Better\nLuck!", color: "#1e1b4b", border: "#312e81", textColor: "#6b7280", prize: null   }, // 1
+  { label: "20%\nOFF",      color: "#4c1d95", border: "#7c3aed", textColor: "#ede9fe", prize: "20%"  }, // 2
+  { label: "Better\nLuck!", color: "#1a1a2e", border: "#2d2d5e", textColor: "#6b7280", prize: null   }, // 3
+  { label: "40%\nOFF",      color: "#78350f", border: "#d97706", textColor: "#fef3c7", prize: "40%"  }, // 4
+  { label: "Better\nLuck!", color: "#1e1b4b", border: "#312e81", textColor: "#6b7280", prize: null   }, // 5
+  { label: "60%\nOFF",      color: "#064e3b", border: "#10b981", textColor: "#d1fae5", prize: "60%"  }, // 6
+  { label: "Better\nLuck!", color: "#1a1a2e", border: "#2d2d5e", textColor: "#6b7280", prize: null   }, // 7
+  { label: "80%\nOFF",      color: "#1e3a8a", border: "#3b82f6", textColor: "#dbeafe", prize: "80%"  }, // 8
+  { label: "Better\nLuck!", color: "#1e1b4b", border: "#312e81", textColor: "#6b7280", prize: null   }, // 9
+  { label: "FREE\nService", color: "#831843", border: "#ec4899", textColor: "#fce7f3", prize: "free" }, // 10
+  { label: "Better\nLuck!", color: "#1a1a2e", border: "#2d2d5e", textColor: "#6b7280", prize: null   }, // 11
 ];
 const N      = SEGMENTS.length;
 const DEG    = 360 / N;
@@ -50,15 +52,17 @@ function saveLocalSpin() {
   try { localStorage.setItem(COOLDOWN_KEY, String(Date.now())); } catch {}
 }
 
-// Prize odds: 30% for 20% off · 2.5% each for 40/60/80/free · 60% better luck
+// Prize odds: 50% → 10% off · 6% each for 20/40/60/80/free · 20% better luck
 function pickPrize(): number {
   const r = Math.random();
-  if (r < 0.300) return 1;
-  if (r < 0.325) return 3;
-  if (r < 0.350) return 5;
-  if (r < 0.375) return 7;
-  if (r < 0.400) return 9;
-  return [0, 2, 4, 6, 8][Math.floor(Math.random() * 5)];
+  if (r < 0.50) return 0;  // 10%
+  if (r < 0.56) return 2;  // 20%
+  if (r < 0.62) return 4;  // 40%
+  if (r < 0.68) return 6;  // 60%
+  if (r < 0.74) return 8;  // 80%
+  if (r < 0.80) return 10; // free
+  // 20% better luck — pick a random "Better Luck" segment
+  return [1, 3, 5, 7, 9, 11][Math.floor(Math.random() * 6)];
 }
 
 function polar(r: number, deg: number) {
@@ -274,7 +278,7 @@ export default function Tombola() {
                         y={mid.y + (li - (lines.length - 1) / 2) * (win ? 16 : 11)}
                         textAnchor="middle" dominantBaseline="middle"
                         fill={seg.textColor}
-                        fontSize={win ? "17" : "9"}
+                        fontSize={win ? "16" : "9"}
                         fontWeight={win ? "900" : "500"}
                         fontFamily="system-ui,-apple-system,sans-serif"
                       >{ln}</text>
@@ -355,6 +359,7 @@ export default function Tombola() {
           <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-3 text-center">Possible Prizes</p>
           <div className="grid grid-cols-2 gap-2">
             {[
+              { label: "10% Discount", color: "#06b6d4", emoji: "✨" },
               { label: "20% Discount", color: "#7c3aed", emoji: "🎉" },
               { label: "40% Discount", color: "#d97706", emoji: "💛" },
               { label: "60% Discount", color: "#10b981", emoji: "💚" },

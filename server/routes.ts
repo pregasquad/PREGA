@@ -3625,30 +3625,31 @@ export async function registerRoutes(
 
   // ─── Tombola Spin Wheel ──────────────────────────────────────────────────────
   const TOMBOLA_SEGMENTS = [
-    { label: 'Better Next Time', prize: null },  // 0
-    { label: '20%',              prize: '20%' },  // 1
-    { label: 'Better Next Time', prize: null },  // 2
-    { label: '40%',              prize: '40%' },  // 3
-    { label: 'Better Next Time', prize: null },  // 4
-    { label: '60%',              prize: '60%' },  // 5
-    { label: 'Better Next Time', prize: null },  // 6
-    { label: '80%',              prize: '80%' },  // 7
-    { label: 'Better Next Time', prize: null },  // 8
-    { label: 'Free Service',     prize: 'free' },// 9
+    { label: '10%',              prize: '10%' },  // 0
+    { label: 'Better Next Time', prize: null },   // 1
+    { label: '20%',              prize: '20%' },  // 2
+    { label: 'Better Next Time', prize: null },   // 3
+    { label: '40%',              prize: '40%' },  // 4
+    { label: 'Better Next Time', prize: null },   // 5
+    { label: '60%',              prize: '60%' },  // 6
+    { label: 'Better Next Time', prize: null },   // 7
+    { label: '80%',              prize: '80%' },  // 8
+    { label: 'Better Next Time', prize: null },   // 9
+    { label: 'Free Service',     prize: 'free' }, // 10
+    { label: 'Better Next Time', prize: null },   // 11
   ];
   const TOMBOLA_HOURS = 48;
 
   function spinResult(): { result: string; segmentIndex: number } {
     const rand = Math.random();
-    // 30% chance for 20% discount
-    if (rand < 0.30)  return { result: '20%', segmentIndex: 1 };
-    // 2.5% each for other prizes (total 10%)
-    if (rand < 0.325) return { result: '40%', segmentIndex: 3 };
-    if (rand < 0.35)  return { result: '60%', segmentIndex: 5 };
-    if (rand < 0.375) return { result: '80%', segmentIndex: 7 };
-    if (rand < 0.40)  return { result: 'Free Service', segmentIndex: 9 };
-    // 60% better luck next time
-    const betterSegments = [0, 2, 4, 6, 8];
+    // 50% → 10%, 6% each for other prizes (total 30%), 20% better luck
+    if (rand < 0.50) return { result: '10%',          segmentIndex: 0 };
+    if (rand < 0.56) return { result: '20%',          segmentIndex: 2 };
+    if (rand < 0.62) return { result: '40%',          segmentIndex: 4 };
+    if (rand < 0.68) return { result: '60%',          segmentIndex: 6 };
+    if (rand < 0.74) return { result: '80%',          segmentIndex: 8 };
+    if (rand < 0.80) return { result: 'Free Service', segmentIndex: 10 };
+    const betterSegments = [1, 3, 5, 7, 9, 11];
     const segmentIndex = betterSegments[Math.floor(Math.random() * betterSegments.length)];
     return { result: 'Better Next Time', segmentIndex };
   }
