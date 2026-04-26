@@ -96,6 +96,13 @@ function setRotation(el: HTMLDivElement, deg: number) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function Tombola() {
+  // Allow ?reset URL parameter to clear the local cooldown for testing/admin
+  if (typeof window !== "undefined" && window.location.search.includes("reset")) {
+    try { localStorage.removeItem(COOLDOWN_KEY); } catch {}
+    // strip the query so a refresh doesn't keep resetting
+    try { window.history.replaceState({}, "", window.location.pathname); } catch {}
+  }
+
   const init = localStatus(); // sync — no loading needed
 
   const [isSpinning,  setIsSpinning]  = useState(false);
