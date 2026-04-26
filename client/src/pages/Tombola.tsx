@@ -420,6 +420,18 @@ export default function Tombola() {
                 <p className="text-white font-black text-3xl text-center">
                   {resultPrize === "free" ? "Free Service!" : `${resultPrize} Discount!`}
                 </p>
+
+                <div className="w-full rounded-xl px-4 py-3 flex items-center justify-center gap-2"
+                  style={{
+                    background: "linear-gradient(135deg,rgba(234,179,8,.2),rgba(236,72,153,.2))",
+                    border: "1px solid rgba(234,179,8,.5)",
+                  }}>
+                  <span className="text-xl">📸</span>
+                  <p className="text-yellow-200 text-base text-center font-black uppercase tracking-wider">
+                    Dir Screenshot
+                  </p>
+                </div>
+
                 <div className="w-full rounded-xl px-4 py-3 flex items-center gap-2 justify-center"
                   style={{ background: "rgba(236,72,153,.18)", border: "1px solid rgba(236,72,153,.35)" }}>
                   <Gift className="w-4 h-4 text-pink-400" />
