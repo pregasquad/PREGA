@@ -3642,10 +3642,10 @@ export async function registerRoutes(
 
   function spinResult(): { result: string; segmentIndex: number } {
     const rand = Math.random();
-    // 50% → 10% off · 15% → 60% off · 5% → 40% off
-    // 30% → better luck · 0% → 20% / 80% / Free Service
+    // 50% → 10% off · 15% → 20% off · 5% → 40% off
+    // 30% → better luck · 0% → 60% / 80% / Free Service
     if (rand < 0.50) return { result: '10%', segmentIndex: 0 };
-    if (rand < 0.65) return { result: '60%', segmentIndex: 6 };
+    if (rand < 0.65) return { result: '20%', segmentIndex: 2 };
     if (rand < 0.70) return { result: '40%', segmentIndex: 4 };
     const betterSegments = [1, 3, 5, 7, 9, 11];
     const segmentIndex = betterSegments[Math.floor(Math.random() * betterSegments.length)];
