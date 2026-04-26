@@ -105,9 +105,11 @@ export default function Tombola() {
   const [showResult,  setShowResult]  = useState(false);
   const [countdown,   setCountdown]   = useState("");
 
-  const wheelEl  = useRef<HTMLDivElement>(null);
-  const curAngle = useRef(0);
-  const rafId    = useRef(0);
+  const wheelEl    = useRef<HTMLDivElement>(null);
+  const captureRef = useRef<HTMLDivElement>(null);
+  const curAngle   = useRef(0);
+  const rafId      = useRef(0);
+  const [savingShot, setSavingShot] = useState(false);
 
   useEffect(() => () => cancelAnimationFrame(rafId.current), []);
 
@@ -173,6 +175,50 @@ export default function Tombola() {
   }
 
   const prizeWon = resultPrize != null;
+
+  // ── Auto-screenshot the prize card ────────────────────────────────────────
+  // Uses html-to-image → tries Web Share API (best for Instagram IAB on iOS/Android)
+  // → falls back to download link. Silently no-ops on hard failure so the user
+  // can still take a manual screenshot.
+  async function saveScreenshot() {
+    if (!captureRef.current || savingShot) return;
+    setSavingShot(true);
+    try {
+      const { toBlob } = await import("html-to-image");
+      const blob = await toBlob(captureRef.current, {
+        pixelRatio: 2,
+        backgroundColor: "#1a0533",
+        cacheBust: true,
+      });
+      if (!blob) throw new Error("no-blob");
+
+      const filename = `pregasquad-prize-${Date.now()}.png`;
+      const file = new File([blob], filename, { type: "image/png" });
+
+      // Best path: native share sheet (Save to Photos on iOS, Save image on Android)
+      const nav: any = navigator;
+      if (nav.canShare && nav.canShare({ files: [file] })) {
+        try {
+          await nav.share({ files: [file], title: "PREGASQUAD Lucky Wheel" });
+          return;
+        } catch {/* user cancelled — fall through to download */}
+      }
+
+      // Fallback: trigger download link
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch {
+      // silent — fallback message stays visible so user can manually screenshot
+    } finally {
+      setSavingShot(false);
+    }
+  }
 
   return (
     <div
@@ -393,65 +439,90 @@ export default function Tombola() {
           onClick={() => setShowResult(false)}
         >
           <div
-            className="w-full max-w-xs rounded-3xl p-8 flex flex-col items-center gap-4 relative overflow-hidden"
-            style={{
-              background: prizeWon
-                ? "linear-gradient(160deg,#3b0a20 0%,#0d0d1f 100%)"
-                : "linear-gradient(160deg,#1a1740 0%,#0d0d1f 100%)",
-              border: prizeWon ? "1px solid rgba(236,72,153,.5)" : "1px solid rgba(255,255,255,.08)",
-              boxShadow: prizeWon
-                ? "0 0 60px rgba(236,72,153,.4), 0 20px 60px rgba(0,0,0,.8)"
-                : "0 20px 60px rgba(0,0,0,.8)",
-            }}
+            className="w-full max-w-xs flex flex-col gap-3"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="absolute inset-x-0 top-0 h-px"
-              style={{ background: "linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent)" }} />
+            {/* Capturable card — only this gets screenshotted */}
+            <div
+              ref={captureRef}
+              className="w-full rounded-3xl p-8 flex flex-col items-center gap-4 relative overflow-hidden"
+              style={{
+                background: prizeWon
+                  ? "linear-gradient(160deg,#3b0a20 0%,#0d0d1f 100%)"
+                  : "linear-gradient(160deg,#1a1740 0%,#0d0d1f 100%)",
+                border: prizeWon ? "1px solid rgba(236,72,153,.5)" : "1px solid rgba(255,255,255,.08)",
+                boxShadow: prizeWon
+                  ? "0 0 60px rgba(236,72,153,.4), 0 20px 60px rgba(0,0,0,.8)"
+                  : "0 20px 60px rgba(0,0,0,.8)",
+              }}
+            >
+              <div className="absolute inset-x-0 top-0 h-px"
+                style={{ background: "linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent)" }} />
 
-            <div className="text-7xl">{prizeWon ? (resultPrize === "free" ? "🎁" : "🎉") : "😢"}</div>
+              <div className="text-7xl">{prizeWon ? (resultPrize === "free" ? "🎁" : "🎉") : "😢"}</div>
 
-            {prizeWon ? (
-              <>
-                <div className="flex items-center gap-2">
-                  <Trophy className="w-5 h-5 text-yellow-400" />
-                  <span className="text-yellow-300 font-black text-sm uppercase tracking-widest">You Won!</span>
-                  <Trophy className="w-5 h-5 text-yellow-400" />
-                </div>
-                <p className="text-white font-black text-3xl text-center">
-                  {resultPrize === "free" ? "Free Service!" : `${resultPrize} Discount!`}
-                </p>
-
-                <div className="w-full rounded-xl px-4 py-3 flex items-center justify-center gap-2"
-                  style={{
-                    background: "linear-gradient(135deg,rgba(234,179,8,.2),rgba(236,72,153,.2))",
-                    border: "1px solid rgba(234,179,8,.5)",
-                  }}>
-                  <span className="text-xl">📸</span>
-                  <p className="text-yellow-200 text-base text-center font-black uppercase tracking-wider">
-                    Dir Screenshot
+              {prizeWon ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <Trophy className="w-5 h-5 text-yellow-400" />
+                    <span className="text-yellow-300 font-black text-sm uppercase tracking-widest">You Won!</span>
+                    <Trophy className="w-5 h-5 text-yellow-400" />
+                  </div>
+                  <p className="text-white font-black text-3xl text-center">
+                    {resultPrize === "free" ? "Free Service!" : `${resultPrize} Discount!`}
                   </p>
-                </div>
-
-                <div className="w-full rounded-xl px-4 py-3 flex items-center gap-2 justify-center"
-                  style={{ background: "rgba(236,72,153,.18)", border: "1px solid rgba(236,72,153,.35)" }}>
-                  <Gift className="w-4 h-4 text-pink-400" />
-                  <p className="text-pink-300 text-sm text-center font-medium">
-                    Show this screen to our staff to claim your prize
+                  <div className="w-full rounded-xl px-4 py-3 flex items-center gap-2 justify-center"
+                    style={{ background: "rgba(236,72,153,.18)", border: "1px solid rgba(236,72,153,.35)" }}>
+                    <Gift className="w-4 h-4 text-pink-400" />
+                    <p className="text-pink-300 text-sm text-center font-medium">
+                      Show this screen to our staff to claim your prize
+                    </p>
+                  </div>
+                  <p className="text-gray-500 text-[10px] uppercase tracking-widest font-bold">
+                    PREGASQUAD Lucky Wheel · {new Date().toLocaleDateString()}
                   </p>
-                </div>
-              </>
-            ) : (
-              <>
-                <p className="text-white font-black text-2xl text-center">Better Luck<br />Next Time!</p>
-                <p className="text-gray-400 text-sm text-center">
-                  You can spin again in 48 hours. Good luck!
-                </p>
-              </>
+                </>
+              ) : (
+                <>
+                  <p className="text-white font-black text-2xl text-center">Better Luck<br />Next Time!</p>
+                  <p className="text-gray-400 text-sm text-center">
+                    You can spin again in 48 hours. Good luck!
+                  </p>
+                </>
+              )}
+            </div>
+
+            {/* Action buttons (NOT captured in screenshot) */}
+            {prizeWon && (
+              <button
+                onClick={saveScreenshot}
+                disabled={savingShot}
+                className="w-full py-3.5 rounded-2xl font-black text-base flex items-center justify-center gap-2 disabled:opacity-60"
+                style={{
+                  background: "linear-gradient(135deg,rgba(234,179,8,.95),rgba(236,72,153,.95))",
+                  color: "#1a0533",
+                  boxShadow: "0 4px 22px rgba(234,179,8,.45)",
+                  border: "1px solid rgba(255,255,255,.3)",
+                  letterSpacing: "0.06em",
+                }}
+              >
+                {savingShot ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    Saving…
+                  </>
+                ) : (
+                  <>
+                    <span className="text-lg">📸</span>
+                    DIRI SCREENSHOT
+                  </>
+                )}
+              </button>
             )}
 
             <button
               onClick={() => setShowResult(false)}
-              className="mt-2 w-full py-3.5 rounded-2xl font-black text-white text-sm"
+              className="w-full py-3.5 rounded-2xl font-black text-white text-sm"
               style={{
                 background: "linear-gradient(135deg,#be185d,#ec4899)",
                 boxShadow: "0 4px 18px rgba(236,72,153,.4)",
