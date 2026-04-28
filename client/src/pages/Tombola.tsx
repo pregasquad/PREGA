@@ -52,14 +52,11 @@ function saveLocalSpin() {
   try { localStorage.setItem(COOLDOWN_KEY, String(Date.now())); } catch {}
 }
 
-// Prize odds: 50% → 10% off · 15% → 20% off · 5% → 40% off
-//             30% → better luck · 0% → 60%/80%/free service
+// Prize odds: 80% → 10% off · 20% → better luck
 function pickPrize(): number {
   const r = Math.random();
-  if (r < 0.50) return 0;  // 50% → 10% off
-  if (r < 0.65) return 2;  // 15% → 20% off
-  if (r < 0.70) return 4;  //  5% → 40% off
-  // remaining 30% → better luck (pick a random "Better Luck" segment)
+  if (r < 0.80) return 0;  // 80% → 10% off
+  // remaining 20% → better luck (pick a random "Better Luck" segment)
   return [1, 3, 5, 7, 9, 11][Math.floor(Math.random() * 6)];
 }
 
