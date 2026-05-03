@@ -508,6 +508,8 @@ export default function Planning() {
   const isAutoLocked = useMemo(() => isDateAutoLocked(date), [date, currentTime, isDateAutoLocked]);
 
   const canEdit = canEditCardboard && !isAutoLocked;
+  // Marking an appointment as paid is a payment action — auto-lock should not block it
+  const canMarkPaid = canEditCardboard;
   
   // INITIAL AUTO-SCROLL: Scroll once when all data loads (staff + business settings ready)
   const initialScrollDoneRef = useRef(false);
@@ -1448,7 +1450,7 @@ export default function Planning() {
   const handleMarkAsPaid = async (e: React.MouseEvent | React.TouchEvent, app: any) => {
     e.stopPropagation();
     e.preventDefault();
-    if (!canEdit) return;
+    if (!canMarkPaid) return;
     
     const now = Date.now();
     if (now - markPaidRef.current < 1000) return;

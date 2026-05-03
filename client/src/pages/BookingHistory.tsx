@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Search, User, Clock, Calendar, Check, UserPlus, Filter, RefreshCw, Trash2 } from "lucide-react";
+import { Search, User, Clock, Calendar, Check, UserPlus, Filter, RefreshCw, Trash2, CreditCard } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -94,6 +94,36 @@ export default function BookingHistory() {
         title: t("common.success"),
         description: t("bookingHistory.staffAssigned", { defaultValue: "Staff assigné avec succès" }),
       });
+    },
+  });
+
+  const markPaidMutation = useMutation({
+    mutationFn: async (appt: Appointment) => {
+      const res = await fetch(`/api/appointments/${appt.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          paid: true,
+          date: appt.date,
+          startTime: appt.startTime,
+          duration: appt.duration,
+          service: appt.service,
+          staff: appt.staff,
+          client: appt.client,
+          total: appt.total,
+          price: appt.price,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to mark as paid");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments/all"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+      toast({ title: t("planning.paymentConfirmed") });
+    },
+    onError: () => {
+      toast({ title: t("common.error"), variant: "destructive" });
     },
   });
 
@@ -270,9 +300,23 @@ export default function BookingHistory() {
                         <User className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                         <span className="font-medium text-sm truncate">{appt.client}</span>
                       </div>
-                      <Badge variant={appt.paid ? "default" : "secondary"} className="text-[10px] shrink-0">
-                        {appt.paid ? t("common.paid") : t("common.unpaid")}
-                      </Badge>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {!appt.paid && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-6 px-2 text-[10px] gap-1 border-emerald-500/50 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                            disabled={markPaidMutation.isPending}
+                            onClick={() => markPaidMutation.mutate(appt)}
+                          >
+                            <CreditCard className="w-3 h-3" />
+                            {t("salaries.markAsPaid")}
+                          </Button>
+                        )}
+                        <Badge variant={appt.paid ? "default" : "secondary"} className="text-[10px] shrink-0">
+                          {appt.paid ? t("common.paid") : t("common.unpaid")}
+                        </Badge>
+                      </div>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1 truncate">{appt.service} · {appt.duration} min</p>
                     <div className="flex items-center justify-between mt-2 pt-2 border-t">
