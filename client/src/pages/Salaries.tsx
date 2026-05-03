@@ -86,7 +86,9 @@ export default function Salaries() {
   const { toast } = useToast();
   const { data: bSettings } = useBusinessSettings();
   const workDayToday = getWorkDayDate(bSettings?.openingTime, bSettings?.closingTime);
-  const isBusinessOpen = isWithinBusinessHours(bSettings?.openingTime, bSettings?.closingTime);
+  // Reactive business hours — recomputes every minute so the button state
+  // stays accurate as time passes without requiring a page reload.
+  const [isBusinessOpen, setIsBusinessOpen] = useState<boolean>(true);
   const [selectedDate, setSelectedDate] = useState<Date>(workDayToday);
   const [period, setPeriod] = useState<PeriodType>("day");
   const [customStartDate, setCustomStartDate] = useState<Date>(workDayToday);
@@ -121,6 +123,15 @@ export default function Salaries() {
       setCustomStartDate(wd);
       setCustomEndDate(wd);
     }
+  }, [bSettings?.openingTime, bSettings?.closingTime]);
+
+  // Keep business-open flag accurate in real time (rechecks every 30 s)
+  useEffect(() => {
+    const check = () =>
+      setIsBusinessOpen(isWithinBusinessHours(bSettings?.openingTime, bSettings?.closingTime));
+    check();
+    const id = setInterval(check, 30_000);
+    return () => clearInterval(id);
   }, [bSettings?.openingTime, bSettings?.closingTime]);
 
   useEffect(() => {
@@ -1023,6 +1034,48 @@ export default function Salaries() {
                     </div>
                   </div>
                 )}
+
+                {/* Payment History */}
+                {(() => {
+                  const staffHistory = staffPayments
+                    .filter(p => Number(p.staffId) === s.id)
+                    .sort((a, b) => new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime());
+                  if (staffHistory.length === 0) return null;
+                  return (
+                    <div className="px-4 pb-3">
+                      <div className="rounded-lg overflow-hidden border border-border/30">
+                        <div className="flex items-center gap-2 px-3 py-2 bg-muted/30">
+                          <Wallet className="h-3 w-3 text-primary" />
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                            Historique des paiements
+                          </span>
+                          <span className="ml-auto text-[10px] text-muted-foreground">{staffHistory.length}</span>
+                        </div>
+                        <div className="divide-y divide-border/20 max-h-40 overflow-y-auto">
+                          {staffHistory.map((p, idx) => {
+                            const payDate = new Date(p.paidAt);
+                            const bizDay = getBusinessDayDate(payDate, bSettings?.openingTime);
+                            return (
+                              <div key={p.id ?? idx} className="flex items-center justify-between px-3 py-1.5 text-xs">
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="font-medium tabular-nums">
+                                    {format(bizDay, "d/M/yy")}
+                                  </span>
+                                  <span className="text-[10px] text-muted-foreground tabular-nums">
+                                    {format(payDate, "HH:mm")}
+                                  </span>
+                                </div>
+                                <span className="font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
+                                  {formatCurrency(p.amount)}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Empty state */}
                 {wallet.walletApptCount === 0 && Object.keys(wallet.walletServices).length === 0 && (
