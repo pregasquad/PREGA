@@ -51,12 +51,42 @@ function getWorkDayDate(openingTime?: string, closingTime?: string): Date {
   return startOfToday();
 }
 
+// Check if current time is within business hours
+function isWithinBusinessHours(openingTime?: string, closingTime?: string): boolean {
+  if (!openingTime || !closingTime) return true;
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const [openH, openM] = openingTime.split(":").map(Number);
+  const [closeH, closeM] = closingTime.split(":").map(Number);
+  const openingMinutes = openH * 60 + openM;
+  const closingMinutes = closeH * 60 + closeM;
+  // Handle overnight businesses (e.g. open 20:00 – 02:00)
+  if (closingMinutes < openingMinutes) {
+    return currentMinutes >= openingMinutes || currentMinutes < closingMinutes;
+  }
+  return currentMinutes >= openingMinutes && currentMinutes < closingMinutes;
+}
+
+// Convert a payment timestamp to its business-day date
+// (if paid before opening time, it belongs to the previous business day)
+function getBusinessDayDate(date: Date, openingTime?: string): Date {
+  if (!openingTime) return startOfDay(date);
+  const [openH, openM] = openingTime.split(":").map(Number);
+  const openingMinutes = openH * 60 + openM;
+  const dateMinutes = date.getHours() * 60 + date.getMinutes();
+  if (dateMinutes < openingMinutes) {
+    return subDays(startOfDay(date), 1);
+  }
+  return startOfDay(date);
+}
+
 export default function Salaries() {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { data: bSettings } = useBusinessSettings();
   const workDayToday = getWorkDayDate(bSettings?.openingTime, bSettings?.closingTime);
+  const isBusinessOpen = isWithinBusinessHours(bSettings?.openingTime, bSettings?.closingTime);
   const [selectedDate, setSelectedDate] = useState<Date>(workDayToday);
   const [period, setPeriod] = useState<PeriodType>("day");
   const [customStartDate, setCustomStartDate] = useState<Date>(workDayToday);
@@ -478,13 +508,14 @@ export default function Salaries() {
       .sort((a, b) => new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime())[0];
     const lastPaymentDate = lastPayment ? new Date(lastPayment.paidAt) : null;
 
-    // Build the "since" date string using LOCAL date parts to avoid UTC-shift issues
-    // (e.g. a payment at 11 PM local time would appear as next day in UTC).
+    // Use the business-day date for sinceDate: if a payment was made before
+    // opening time, it belongs to the previous business day, not the calendar day.
     let sinceDate: string | null = null;
     if (lastPaymentDate) {
-      const y = lastPaymentDate.getFullYear();
-      const m = String(lastPaymentDate.getMonth() + 1).padStart(2, "0");
-      const d = String(lastPaymentDate.getDate()).padStart(2, "0");
+      const businessDay = getBusinessDayDate(lastPaymentDate, bSettings?.openingTime);
+      const y = businessDay.getFullYear();
+      const m = String(businessDay.getMonth() + 1).padStart(2, "0");
+      const d = String(businessDay.getDate()).padStart(2, "0");
       sinceDate = `${y}-${m}-${d}`;
     }
 
@@ -872,26 +903,35 @@ export default function Salaries() {
                         <span data-testid={`text-staff-appointments-${s.id}`}>{wallet.walletApptCount} {t("salaries.appointmentsCount").toLowerCase()}</span>
                         <span>-</span>
                         <span data-testid={`text-staff-last-paid-${s.id}`}>
-                          {t("salaries.lastPaid")}: {wallet.lastPaymentDate ? format(wallet.lastPaymentDate, "d/M/yy") : "—"}
+                          {t("salaries.lastPaid")}: {wallet.lastPaymentDate ? format(wallet.lastPaymentDate, "d/M/yy · HH:mm") : "—"}
                         </span>
                       </div>
                     </div>
                     {wallet.walletBalance > 0 && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="shrink-0"
-                        disabled={createPaymentMutation.isPending}
-                        onClick={() => createPaymentMutation.mutate({
-                          staffId: s.id,
-                          staffName: s.name,
-                          amount: Math.max(0, wallet.walletBalance),
-                        })}
-                        data-testid={`button-pay-staff-${s.id}`}
-                      >
-                        <CheckCircle className="h-3 w-3 me-1" />
-                        {t("salaries.markAsPaid")}
-                      </Button>
+                      <div className="shrink-0 flex flex-col items-end gap-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="shrink-0"
+                          disabled={createPaymentMutation.isPending || !isBusinessOpen}
+                          onClick={() => createPaymentMutation.mutate({
+                            staffId: s.id,
+                            staffName: s.name,
+                            amount: Math.max(0, wallet.walletBalance),
+                          })}
+                          data-testid={`button-pay-staff-${s.id}`}
+                        >
+                          <CheckCircle className="h-3 w-3 me-1" />
+                          {t("salaries.markAsPaid")}
+                        </Button>
+                        {!isBusinessOpen && (
+                          <span className="text-[9px] text-muted-foreground text-end leading-tight">
+                            {bSettings?.openingTime && bSettings?.closingTime
+                              ? `${bSettings.openingTime} – ${bSettings.closingTime}`
+                              : "Business closed"}
+                          </span>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
