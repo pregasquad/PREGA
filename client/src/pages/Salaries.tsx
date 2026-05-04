@@ -137,24 +137,20 @@ export default function Salaries() {
 
   useEffect(() => {
     const socket: Socket = io();
-
-    socket.on("booking:created", () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/appointments/all"] });
-      setLastUpdate(new Date());
-    });
-
-    socket.on("appointment:updated", () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/appointments/all"] });
-      setLastUpdate(new Date());
-    });
-
-    socket.on("appointment:paid", () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/appointments/all"] });
-      setLastUpdate(new Date());
-    });
-
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const invalidate = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+        setLastUpdate(new Date());
+      }, 1500);
+    };
+    socket.on("booking:created", invalidate);
+    socket.on("appointment:updated", invalidate);
+    socket.on("appointment:paid", invalidate);
     return () => {
       socket.disconnect();
+      if (debounceTimer) clearTimeout(debounceTimer);
     };
   }, [queryClient]);
 
@@ -168,10 +164,7 @@ export default function Salaries() {
       if (document.visibilityState === "hidden") {
         hiddenAt = Date.now();
       } else if (hiddenAt !== null && Date.now() - hiddenAt > STALE_MS) {
-        queryClient.invalidateQueries({ queryKey: ["/api/appointments/all"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/staff-payments"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/charges"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/staff-deductions"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
         hiddenAt = null;
       }
     };
@@ -179,52 +172,36 @@ export default function Salaries() {
     return () => document.removeEventListener("visibilitychange", onVisibility);
   }, [queryClient]);
 
-  const { data: staff = [] } = useQuery<Staff[]>({
-    queryKey: ["/api/staff"],
-    queryFn: async () => { const res = await fetch("/api/staff"); if (!res.ok) return []; return res.json(); },
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const { data: services = [] } = useQuery<Service[]>({
-    queryKey: ["/api/services"],
-    queryFn: async () => { const res = await fetch("/api/services"); if (!res.ok) return []; return res.json(); },
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const { data: appointments = [], refetch: refetchAppointments } = useQuery<Appointment[]>({
-    queryKey: ["/api/appointments/all"],
+  // Single query fetches all 7 data sources in parallel on the server.
+  // One HTTP round-trip → one response → one render. No cascading jumps.
+  const { data: salaryData, isLoading: salaryLoading } = useQuery<{
+    staff: Staff[];
+    services: Service[];
+    staffCommissions: { id: number; staffId: number; serviceId: number; percentage: number }[];
+    appointments: Appointment[];
+    charges: Charge[];
+    deductions: StaffDeduction[];
+    staffPayments: StaffPayment[];
+  }>({
+    queryKey: ["/api/salaries/compute"],
     queryFn: async () => {
-      const res = await fetch("/api/appointments/all");
-      if (!res.ok) return [];
+      const res = await fetch("/api/salaries/compute");
+      if (!res.ok) return { staff: [], services: [], staffCommissions: [], appointments: [], charges: [], deductions: [], staffPayments: [] };
       return res.json();
     },
     staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
     placeholderData: (prev) => prev,
   });
 
-  const { data: charges = [] } = useQuery<Charge[]>({
-    queryKey: ["/api/charges"],
-    queryFn: async () => { const res = await fetch("/api/charges"); if (!res.ok) return []; return res.json(); },
-    staleTime: 3 * 60 * 1000,
-  });
-
-  const { data: deductions = [] } = useQuery<StaffDeduction[]>({
-    queryKey: ["/api/staff-deductions"],
-    queryFn: async () => { const res = await fetch("/api/staff-deductions"); if (!res.ok) return []; return res.json(); },
-    staleTime: 3 * 60 * 1000,
-  });
-
-  const { data: staffCommissions = [] } = useQuery<{ id: number; staffId: number; serviceId: number; percentage: number }[]>({
-    queryKey: ["/api/staff-commissions"],
-    queryFn: async () => { const res = await fetch("/api/staff-commissions"); if (!res.ok) return []; return res.json(); },
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const { data: staffPayments = [] } = useQuery<StaffPayment[]>({
-    queryKey: ["/api/staff-payments"],
-    queryFn: async () => { const res = await fetch("/api/staff-payments"); if (!res.ok) return []; return res.json(); },
-    staleTime: 2 * 60 * 1000,
-  });
+  const staff = salaryData?.staff ?? [];
+  const services = salaryData?.services ?? [];
+  const staffCommissions = salaryData?.staffCommissions ?? [];
+  const appointments = salaryData?.appointments ?? [];
+  const charges = salaryData?.charges ?? [];
+  const deductions = salaryData?.deductions ?? [];
+  const staffPayments = salaryData?.staffPayments ?? [];
+  const refetchAppointments = () => queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
 
   const createChargeMutation = useMutation({
     mutationFn: async (charge: typeof newCharge) => {
@@ -232,7 +209,7 @@ export default function Salaries() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/charges"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
       setShowChargeDialog(false);
       setNewCharge({ type: "rent", name: "", amount: 0, date: format(getWorkDayDate(bSettings?.openingTime, bSettings?.closingTime), "yyyy-MM-dd") });
     },
@@ -243,7 +220,7 @@ export default function Salaries() {
       await apiRequest("DELETE", `/api/charges/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/charges"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
     },
   });
 
@@ -253,7 +230,7 @@ export default function Salaries() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/staff-deductions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
       setShowDeductionDialog(false);
       setNewDeduction({ staffName: "", type: "advance", description: "", amount: 0, date: format(getWorkDayDate(bSettings?.openingTime, bSettings?.closingTime), "yyyy-MM-dd") });
     },
@@ -264,7 +241,7 @@ export default function Salaries() {
       await apiRequest("DELETE", `/api/staff-deductions/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/staff-deductions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
     },
   });
 
@@ -273,7 +250,7 @@ export default function Salaries() {
       await apiRequest("PATCH", `/api/staff-deductions/${id}/clear`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/staff-deductions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
       toast({ title: t("salaries.cleared") });
     },
   });
@@ -283,7 +260,7 @@ export default function Salaries() {
       await apiRequest("PATCH", `/api/charges/${id}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/charges"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
       setEditingCharge(null);
       toast({ title: t("common.save") });
     },
@@ -294,7 +271,7 @@ export default function Salaries() {
       await apiRequest("PATCH", `/api/staff-deductions/${id}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/staff-deductions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
       setEditingDeduction(null);
       toast({ title: t("common.save") });
     },
@@ -306,7 +283,7 @@ export default function Salaries() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/staff-deductions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
       setPayBackDeduction(null);
       setPayBackInputAmount("");
       toast({ title: t("salaries.payBackRecorded") });
@@ -319,7 +296,7 @@ export default function Salaries() {
       return res.json();
     },
     onSuccess: async () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/staff-payments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
       toast({ title: t("salaries.paymentRecorded") });
       try {
         await connectQz();
@@ -588,15 +565,7 @@ export default function Salaries() {
           disabled={isRefreshing}
           onClick={async () => {
             setIsRefreshing(true);
-            await Promise.all([
-              queryClient.invalidateQueries({ queryKey: ["/api/appointments/all"] }),
-              queryClient.invalidateQueries({ queryKey: ["/api/staff"] }),
-              queryClient.invalidateQueries({ queryKey: ["/api/services"] }),
-              queryClient.invalidateQueries({ queryKey: ["/api/charges"] }),
-              queryClient.invalidateQueries({ queryKey: ["/api/staff-deductions"] }),
-              queryClient.invalidateQueries({ queryKey: ["/api/staff-commissions"] }),
-              queryClient.invalidateQueries({ queryKey: ["/api/staff-payments"] }),
-            ]);
+            await queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
             setLastUpdate(new Date());
             setIsRefreshing(false);
             toast({ title: t("common.refreshed"), description: t("common.dataUpdated") });

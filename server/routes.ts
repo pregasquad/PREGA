@@ -2193,6 +2193,27 @@ export async function registerRoutes(
     }
   });
 
+  // Single-shot salary data endpoint — fetches all 7 data sources in parallel
+  // on the server and returns them in one response so the client renders once,
+  // with no cascading updates from independent queries completing at different times.
+  app.get("/api/salaries/compute", isPinAuthenticated, async (_req, res) => {
+    try {
+      const [staff, services, staffCommissions, appointments, charges, deductions, staffPayments] =
+        await Promise.all([
+          storage.getStaff(),
+          storage.getServices(),
+          storage.getStaffCommissions(),
+          storage.getAppointments(),
+          storage.getCharges(),
+          storage.getStaffDeductions(),
+          storage.getStaffPayments(),
+        ]);
+      res.json({ staff, services, staffCommissions, appointments, charges, deductions, staffPayments });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to compute salary data" });
+    }
+  });
+
   // Staff Payments (Employee Wallet)
   app.get("/api/staff-payments", isPinAuthenticated, async (_req, res) => {
     try {
