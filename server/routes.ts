@@ -2461,6 +2461,27 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/whatsapp/connect-qr", isPinAuthenticated, async (_req, res) => {
+    try {
+      const { startQR } = await import("./baileys");
+      startQR().catch(() => {}); // non-blocking — QR arrives via polling
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post("/api/whatsapp/pairing-code", isPinAuthenticated, async (req, res) => {
+    try {
+      const { startPairingCode } = await import("./baileys");
+      const { phone } = z.object({ phone: z.string().min(8) }).parse(req.body);
+      const code = await startPairingCode(phone);
+      res.json({ success: true, code });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   app.post("/api/whatsapp/reconnect", isPinAuthenticated, async (_req, res) => {
     try {
       const { reconnect } = await import("./baileys");
