@@ -618,6 +618,21 @@ export const insertStaffPaymentSchema = createInsertSchema(staffPayments).omit({
 export type StaffPayment = typeof staffPayments.$inferSelect;
 export type InsertStaffPayment = z.infer<typeof insertStaffPaymentSchema>;
 
+export const salonPayments = mysqlTable("salon_payments", {
+  id: serial("id").primaryKey(),
+  amount: double("amount").notNull(),
+  note: text("note"),
+  collectedAt: timestamp("collected_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertSalonPaymentSchema = createInsertSchema(salonPayments).omit({ id: true, createdAt: true }).extend({
+  amount: z.number().min(0),
+  note: z.string().optional(),
+});
+export type SalonPayment = typeof salonPayments.$inferSelect;
+export type InsertSalonPayment = z.infer<typeof insertSalonPaymentSchema>;
+
 export const tombolaSpins = mysqlTable("tombola_spins", {
   id: serial("id").primaryKey(),
   deviceId: varchar("device_id", { length: 255 }).notNull(),

@@ -943,3 +943,34 @@ export async function ensureTombolaSpinsTable(): Promise<void> {
     console.error("Failed to ensure tombola_spins table:", error);
   }
 }
+
+export async function ensureSalonPaymentsTable(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS salon_payments (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          amount DOUBLE NOT NULL,
+          note TEXT,
+          collected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+        )
+      `);
+      connection.release();
+    } else {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS salon_payments (
+          id SERIAL PRIMARY KEY,
+          amount DOUBLE PRECISION NOT NULL,
+          note TEXT,
+          collected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+        )
+      `);
+    }
+    console.log("Salon payments table ready");
+  } catch (error) {
+    console.error("Failed to ensure salon_payments table:", error);
+  }
+}

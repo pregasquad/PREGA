@@ -23,7 +23,8 @@ import {
   type StaffTimeOff, type InsertStaffTimeOff,
   type StaffGoal, type InsertStaffGoal,
   type MessageTemplate, type InsertMessageTemplate,
-  type StaffPayment, type InsertStaffPayment
+  type StaffPayment, type InsertStaffPayment,
+  type SalonPayment, type InsertSalonPayment
 } from "@shared/schema";
 import { eq, desc, and, gte, lte, sql, isNull } from "drizzle-orm";
 import { authStorage, type IAuthStorage } from "./replit_integrations/auth/storage";
@@ -190,6 +191,10 @@ export interface IStorage extends IAuthStorage {
   getStaffPaymentsByStaff(staffId: number): Promise<StaffPayment[]>;
   getLastStaffPayment(staffId: number): Promise<StaffPayment | undefined>;
   createStaffPayment(payment: InsertStaffPayment): Promise<StaffPayment>;
+
+  getSalonPayments(): Promise<SalonPayment[]>;
+  getLastSalonPayment(): Promise<SalonPayment | undefined>;
+  createSalonPayment(payment: InsertSalonPayment): Promise<SalonPayment>;
 
   getStaffByToken(token: string): Promise<Staff | undefined>;
 }
@@ -1576,6 +1581,29 @@ export class DatabaseStorage implements IStorage {
     const s = schema();
     const [staffMember] = await db().select().from(s.staff).where(eq(s.staff.publicToken, token));
     return staffMember;
+  }
+
+  async getSalonPayments(): Promise<SalonPayment[]> {
+    const s = schema();
+    return await db().select().from(s.salonPayments).orderBy(desc(s.salonPayments.collectedAt));
+  }
+
+  async getLastSalonPayment(): Promise<SalonPayment | undefined> {
+    const s = schema();
+    const [payment] = await db().select().from(s.salonPayments).orderBy(desc(s.salonPayments.collectedAt)).limit(1);
+    return payment;
+  }
+
+  async createSalonPayment(payment: InsertSalonPayment): Promise<SalonPayment> {
+    const s = schema();
+    if (isMySQL()) {
+      const result = await db().insert(s.salonPayments).values(payment);
+      const insertId = (result as any)[0]?.insertId;
+      const [created] = await db().select().from(s.salonPayments).where(eq(s.salonPayments.id, insertId));
+      return created;
+    }
+    const [created] = await db().insert(s.salonPayments).values(payment).returning();
+    return created;
   }
 }
 

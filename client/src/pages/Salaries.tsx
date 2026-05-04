@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { DollarSign, Users, CalendarIcon, TrendingUp, Building2, RefreshCw, Plus, Trash2, Receipt, UserMinus, ChevronDown, CheckCircle, Pencil, Wallet, Briefcase, BarChart3, ArrowDownLeft } from "lucide-react";
+import { DollarSign, Users, CalendarIcon, TrendingUp, Building2, RefreshCw, Plus, Trash2, Receipt, UserMinus, ChevronDown, CheckCircle, Pencil, Wallet, Briefcase, BarChart3, ArrowDownLeft, Store } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
@@ -20,7 +20,7 @@ import { ar, enUS, fr } from "date-fns/locale";
 import { apiRequest } from "@/lib/queryClient";
 import { useBusinessSettings } from "@/hooks/use-salon-data";
 import { connectQz, openCashDrawer, isQzConnected, checkPrintStationAsync, remoteOpenDrawer } from "@/lib/qzPrint";
-import type { Staff, Service, Appointment, Charge, StaffDeduction, StaffPayment } from "@shared/schema";
+import type { Staff, Service, Appointment, Charge, StaffDeduction, StaffPayment, SalonPayment } from "@shared/schema";
 
 type PeriodType = "day" | "week" | "month" | "custom";
 
@@ -106,6 +106,7 @@ export default function Salaries() {
   const [payBackInputAmount, setPayBackInputAmount] = useState<string>("");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [openPaymentHistories, setOpenPaymentHistories] = useState<Record<number, boolean>>({});
+  const [salonHistoryOpen, setSalonHistoryOpen] = useState(false);
   const [newCharge, setNewCharge] = useState({ type: "rent", name: "", amount: 0, date: format(workDayToday, "yyyy-MM-dd") });
   const [newDeduction, setNewDeduction] = useState<{ staffName: string; type: "advance" | "loan" | "penalty" | "other"; description: string; amount: number; date: string }>({ staffName: "", type: "advance", description: "", amount: 0, date: format(workDayToday, "yyyy-MM-dd") });
 
@@ -182,11 +183,12 @@ export default function Salaries() {
     charges: Charge[];
     deductions: StaffDeduction[];
     staffPayments: StaffPayment[];
+    salonPayments: SalonPayment[];
   }>({
     queryKey: ["/api/salaries/compute"],
     queryFn: async () => {
       const res = await fetch("/api/salaries/compute");
-      if (!res.ok) return { staff: [], services: [], staffCommissions: [], appointments: [], charges: [], deductions: [], staffPayments: [] };
+      if (!res.ok) return { staff: [], services: [], staffCommissions: [], appointments: [], charges: [], deductions: [], staffPayments: [], salonPayments: [] };
       return res.json();
     },
     staleTime: 2 * 60 * 1000,
@@ -201,6 +203,7 @@ export default function Salaries() {
   const charges = salaryData?.charges ?? [];
   const deductions = salaryData?.deductions ?? [];
   const staffPayments = salaryData?.staffPayments ?? [];
+  const salonPayments = salaryData?.salonPayments ?? [];
   const refetchAppointments = () => queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
 
   const createChargeMutation = useMutation({
@@ -287,6 +290,23 @@ export default function Salaries() {
       setPayBackDeduction(null);
       setPayBackInputAmount("");
       toast({ title: t("salaries.payBackRecorded") });
+    },
+  });
+
+  const createSalonPaymentMutation = useMutation({
+    mutationFn: async (payment: { amount: number; note?: string }) => {
+      const res = await apiRequest("POST", "/api/salon-payments", payment);
+      return res.json();
+    },
+    onSuccess: async () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+      toast({ title: "Recette salon collectée" });
+      try {
+        await connectQz();
+        if (isQzConnected()) { await openCashDrawer(); return; }
+      } catch {}
+      const available = await checkPrintStationAsync();
+      if (available) { await remoteOpenDrawer(); }
     },
   });
 
@@ -495,6 +515,64 @@ export default function Salaries() {
       case "other": return t("salaries.other");
       default: return type;
     }
+  };
+
+  const getSalonWalletData = () => {
+    const lastPayment = salonPayments
+      .sort((a, b) => new Date(b.collectedAt).getTime() - new Date(a.collectedAt).getTime())[0];
+    const lastCollectedDate = lastPayment ? new Date(lastPayment.collectedAt) : null;
+
+    let sinceDate: string | null = null;
+    if (lastCollectedDate) {
+      const businessDay = getBusinessDayDate(lastCollectedDate, bSettings?.openingTime);
+      const y = businessDay.getFullYear();
+      const m = String(businessDay.getMonth() + 1).padStart(2, "0");
+      const d = String(businessDay.getDate()).padStart(2, "0");
+      sinceDate = `${y}-${m}-${d}`;
+    }
+
+    const walletAppointments = appointments.filter(apt => {
+      if (!apt.paid) return false;
+      if (sinceDate) return apt.date >= sinceDate;
+      return true;
+    });
+
+    let walletRevenue = 0;
+    let walletCommissions = 0;
+    let walletApptCount = walletAppointments.length;
+
+    walletAppointments.forEach(apt => {
+      const staffMember = apt.staffId
+        ? staff.find(s => s.id === Number(apt.staffId))
+        : staff.find(s => s.name === apt.staff);
+      const staffName = staffMember?.name || apt.staff || "Unknown";
+      const serviceName = apt.service || "Unknown";
+      const commissionPercent = getServiceCommission(serviceName, staffName);
+      const total = apt.total || 0;
+      const commission = (total * commissionPercent) / 100;
+      walletRevenue += total;
+      walletCommissions += commission;
+    });
+
+    const walletSalonPortion = walletRevenue - walletCommissions;
+
+    const walletExpenses = charges.filter(c => {
+      if (!sinceDate) return true;
+      return c.date >= sinceDate;
+    }).reduce((sum, c) => sum + c.amount, 0);
+
+    const walletBalance = walletSalonPortion - walletExpenses;
+
+    return {
+      lastCollectedDate,
+      sinceDate,
+      walletRevenue,
+      walletCommissions,
+      walletSalonPortion,
+      walletExpenses,
+      walletBalance,
+      walletApptCount,
+    };
   };
 
   const getStaffWalletData = (s: Staff) => {
@@ -1080,6 +1158,124 @@ export default function Salaries() {
           </Card>
         )}
       </div>
+
+      {/* Salon Earnings Wallet */}
+      {(() => {
+        const salonWallet = getSalonWalletData();
+        const sortedSalonPayments = [...salonPayments].sort((a, b) => new Date(b.collectedAt).getTime() - new Date(a.collectedAt).getTime());
+        return (
+          <Card className="glass-card border-primary/20" data-testid="card-salon-wallet">
+            <CardContent className="p-0">
+              <div className="p-4 pb-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                      <Store className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-base">Portefeuille Salon</h3>
+                      <div className="text-xs text-muted-foreground">
+                        {salonWallet.lastCollectedDate
+                          ? `Dernière collecte: ${format(salonWallet.lastCollectedDate, "d/M/yy · HH:mm")}`
+                          : "Aucune collecte enregistrée"}
+                      </div>
+                    </div>
+                  </div>
+                  {salonWallet.walletBalance > 0 && (
+                    <div className="shrink-0 flex flex-col items-end gap-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={createSalonPaymentMutation.isPending || !isBusinessOpen}
+                        onClick={() => createSalonPaymentMutation.mutate({ amount: salonWallet.walletBalance })}
+                        data-testid="button-collect-salon-wallet"
+                      >
+                        <CheckCircle className="h-3 w-3 me-1" />
+                        Collecter
+                      </Button>
+                      {!isBusinessOpen && (
+                        <span className="text-[9px] text-muted-foreground text-end leading-tight">
+                          {bSettings?.openingTime && bSettings?.closingTime
+                            ? `${bSettings.openingTime} – ${bSettings.closingTime}`
+                            : "Fermé"}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Wallet Stats */}
+              <div className="px-4 pb-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="p-2.5 rounded-lg bg-muted/40 dark:bg-muted/20 col-span-2">
+                    <div className="flex justify-between items-baseline">
+                      <p className="text-[10px] text-muted-foreground">Part salon (recettes – commissions)</p>
+                      <p className="text-sm font-bold tabular-nums">{formatCurrency(salonWallet.walletSalonPortion)} DH</p>
+                    </div>
+                    {salonWallet.walletExpenses > 0 && (
+                      <div className="flex justify-between items-baseline mt-1">
+                        <p className="text-[10px] text-muted-foreground">Charges déduites</p>
+                        <p className="text-sm font-bold tabular-nums text-red-500">- {formatCurrency(salonWallet.walletExpenses)} DH</p>
+                      </div>
+                    )}
+                    <div className="border-t border-border/40 mt-1.5 pt-1.5 flex justify-between items-baseline">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Solde disponible</p>
+                      <p className={`text-base font-bold tabular-nums ${salonWallet.walletBalance < 0 ? 'text-red-500' : salonWallet.walletBalance > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`} data-testid="text-salon-wallet-balance">
+                        {salonWallet.walletBalance < 0 ? `- ${formatCurrency(Math.abs(salonWallet.walletBalance))}` : formatCurrency(salonWallet.walletBalance)} DH
+                      </p>
+                    </div>
+                    <p className="text-[9px] text-muted-foreground/70 mt-0.5">
+                      {salonWallet.walletApptCount} rdv
+                      {salonWallet.sinceDate ? ` · depuis ${format(parseISO(salonWallet.sinceDate), "d/M/yy")}` : " · tout"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Salon Payment History */}
+              {sortedSalonPayments.length > 0 && (
+                <div className="px-4 pb-3">
+                  <div className="rounded-lg overflow-hidden border border-border/30">
+                    <button
+                      type="button"
+                      onClick={() => setSalonHistoryOpen(prev => !prev)}
+                      className="w-full flex items-center gap-2 px-3 py-2 bg-muted/30 hover:bg-muted/50 transition-colors"
+                      data-testid="button-toggle-salon-history"
+                    >
+                      <Wallet className="h-3 w-3 text-primary shrink-0" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                        Historique des collectes
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">{sortedSalonPayments.length}</span>
+                      <ChevronDown className={`h-3 w-3 text-muted-foreground ml-auto transition-transform duration-200 ${salonHistoryOpen ? "rotate-180" : ""}`} />
+                    </button>
+                    {salonHistoryOpen && (
+                      <div className="divide-y divide-border/20 max-h-40 overflow-y-auto">
+                        {sortedSalonPayments.map((p, idx) => {
+                          const collectDate = new Date(p.collectedAt);
+                          const bizDay = getBusinessDayDate(collectDate, bSettings?.openingTime);
+                          return (
+                            <div key={p.id ?? idx} className="flex items-center justify-between px-3 py-1.5 text-xs">
+                              <div className="flex flex-col gap-0.5">
+                                <span className="font-medium tabular-nums">{format(bizDay, "d/M/yy")}</span>
+                                <span className="text-[10px] text-muted-foreground tabular-nums">{format(collectDate, "HH:mm")}</span>
+                              </div>
+                              <span className="font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
+                                {formatCurrency(p.amount)} DH
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Expenses Section */}
       <Collapsible open={expensesOpen} onOpenChange={setExpensesOpen}>

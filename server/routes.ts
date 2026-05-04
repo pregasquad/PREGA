@@ -2192,12 +2192,12 @@ export async function registerRoutes(
     }
   });
 
-  // Single-shot salary data endpoint — fetches all 7 data sources in parallel
+  // Single-shot salary data endpoint — fetches all data sources in parallel
   // on the server and returns them in one response so the client renders once,
   // with no cascading updates from independent queries completing at different times.
   app.get("/api/salaries/compute", isPinAuthenticated, async (_req, res) => {
     try {
-      const [staff, services, staffCommissions, appointments, charges, deductions, staffPayments] =
+      const [staff, services, staffCommissions, appointments, charges, deductions, staffPayments, salonPayments] =
         await Promise.all([
           storage.getStaff(),
           storage.getServices(),
@@ -2206,10 +2206,35 @@ export async function registerRoutes(
           storage.getCharges(),
           storage.getStaffDeductions(),
           storage.getStaffPayments(),
+          storage.getSalonPayments(),
         ]);
-      res.json({ staff, services, staffCommissions, appointments, charges, deductions, staffPayments });
+      res.json({ staff, services, staffCommissions, appointments, charges, deductions, staffPayments, salonPayments });
     } catch (err) {
       res.status(500).json({ message: "Failed to compute salary data" });
+    }
+  });
+
+  // Salon Payments (Salon Earnings Wallet)
+  app.get("/api/salon-payments", isPinAuthenticated, async (_req, res) => {
+    try {
+      const items = await storage.getSalonPayments();
+      res.json(items);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch salon payments" });
+    }
+  });
+
+  app.post("/api/salon-payments", isPinAuthenticated, requirePermission("manage_salaries"), async (req, res) => {
+    try {
+      const { insertSalonPaymentSchema } = await import("@shared/schema");
+      const validated = insertSalonPaymentSchema.parse(req.body);
+      const payment = await storage.createSalonPayment(validated);
+      res.json(payment);
+    } catch (err: any) {
+      if (err?.name === "ZodError") {
+        return res.status(400).json({ message: "Invalid payment data", errors: err.errors });
+      }
+      res.status(500).json({ message: "Failed to create salon payment" });
     }
   });
 
