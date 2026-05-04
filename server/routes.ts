@@ -835,8 +835,7 @@ export async function registerRoutes(
       // Send WhatsApp confirmation for the overall booking (if phone provided)
       if (input.phone && createdAppointments.length > 0) {
         try {
-          const { sendBookingConfirmation } = await import("./wawp");
-          // Pass phone as-is - formatPhoneNumber in wawp.ts handles all international formats
+          const { sendBookingConfirmation } = await import("./baileys");
           const allServiceNames = createdAppointments.map(a => a.service).join(" + ");
           
           await sendBookingConfirmation(
@@ -2441,10 +2440,51 @@ export async function registerRoutes(
     }
   });
 
-  // WhatsApp Notifications (Wawp) - protected routes
+  // ── Baileys WhatsApp management routes ──────────────────────────────────
+  app.get("/api/whatsapp/qr", isPinAuthenticated, async (_req, res) => {
+    try {
+      const { getQRDataUrl, getStatus } = await import("./baileys");
+      const s = getStatus();
+      const qr = getQRDataUrl();
+      res.json({ status: s.status, connected: s.connected, phone: s.phone, qr });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/whatsapp/status", isPinAuthenticated, async (_req, res) => {
+    try {
+      const { getStatus } = await import("./baileys");
+      res.json(getStatus());
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/whatsapp/reconnect", isPinAuthenticated, async (_req, res) => {
+    try {
+      const { reconnect } = await import("./baileys");
+      await reconnect();
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post("/api/whatsapp/disconnect", isPinAuthenticated, requirePermission("admin_settings"), async (_req, res) => {
+    try {
+      const { disconnect } = await import("./baileys");
+      await disconnect();
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // WhatsApp Notifications (Baileys) - protected routes
   app.post("/api/notifications/send", isPinAuthenticated, async (req, res) => {
     try {
-      const { sendWhatsAppMessage } = await import("./wawp");
+      const { sendWhatsAppMessage } = await import("./baileys");
       const { phone, message } = z.object({
         phone: z.string(),
         message: z.string(),
@@ -2464,7 +2504,7 @@ export async function registerRoutes(
 
   app.post("/api/notifications/appointment-reminder", isPinAuthenticated, async (req, res) => {
     try {
-      const { sendAppointmentReminder } = await import("./wawp");
+      const { sendAppointmentReminder } = await import("./baileys");
       const { clientPhone, clientName, appointmentDate, appointmentTime, serviceName } = z.object({
         clientPhone: z.string(),
         clientName: z.string(),
@@ -2487,7 +2527,7 @@ export async function registerRoutes(
 
   app.post("/api/notifications/booking-confirmation", isPinAuthenticated, async (req, res) => {
     try {
-      const { sendBookingConfirmation } = await import("./wawp");
+      const { sendBookingConfirmation } = await import("./baileys");
       const { clientPhone, clientName, appointmentDate, appointmentTime, serviceName } = z.object({
         clientPhone: z.string(),
         clientName: z.string(),
@@ -2511,7 +2551,7 @@ export async function registerRoutes(
   // Send gift card notification via WhatsApp
   app.post("/api/notifications/gift-card", isPinAuthenticated, requirePermission("manage_business_settings"), async (req, res) => {
     try {
-      const { sendGiftCardNotification } = await import("./wawp");
+      const { sendGiftCardNotification } = await import("./baileys");
       const { recipientPhone, recipientName, giftCardCode, amount, senderName } = z.object({
         recipientPhone: z.string().min(1, "Phone is required"),
         recipientName: z.string().min(1, "Recipient name is required"),
@@ -2535,7 +2575,7 @@ export async function registerRoutes(
   // Bulk WhatsApp broadcast to selected clients (or all if none specified)
   app.post("/api/notifications/broadcast", isPinAuthenticated, requirePermission("admin_settings"), async (req, res) => {
     try {
-      const { sendWhatsAppMessage } = await import("./wawp");
+      const { sendWhatsAppMessage } = await import("./baileys");
       const { message, clientIds } = z.object({
         message: z.string().min(1, "Message is required"),
         clientIds: z.array(z.number()).optional(),
@@ -2595,10 +2635,10 @@ export async function registerRoutes(
     }
   });
 
-  // Check Wawp connection status
+  // Check Baileys connection status (legacy endpoint kept for compatibility)
   app.get("/api/notifications/status", isPinAuthenticated, async (_req, res) => {
     try {
-      const { getConnectionStatus } = await import("./wawp");
+      const { getConnectionStatus } = await import("./baileys");
       const status = await getConnectionStatus();
       res.json(status);
     } catch (err: any) {
@@ -3765,6 +3805,11 @@ export async function registerRoutes(
 
   // Seed data if empty
   await seedDatabase();
+
+  // Initialize Baileys WhatsApp (non-blocking)
+  import("./baileys").then(({ initBaileys }) => {
+    initBaileys().catch((err) => console.error("[Baileys] Startup error:", err));
+  }).catch((err) => console.error("[Baileys] Import error:", err));
 
   return httpServer;
 }

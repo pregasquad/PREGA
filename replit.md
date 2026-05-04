@@ -41,6 +41,16 @@ Beauty Salon Appointment Management System built with React + Express + PostgreS
 - **Cash drawer debounce**: 2s in-flight guard on local `openCashDrawer()` + 2s server-side rate limit on remote drawer commands; single drawer kick per receipt (pin 0 only)
 - **QZ Tray requirement**: Users must install free QZ Tray desktop app (qz.io) on their POS computer for fully automatic silent printing + cash drawer
 
+## WhatsApp Integration (Baileys)
+- **Provider**: `@whiskeysockets/baileys` — free, open-source, no paid API required
+- **Auth**: QR code scan (like WhatsApp Web), session persisted to `./baileys_auth/` folder on disk
+- **Server module**: `server/baileys.ts` — exports `initBaileys`, `sendWhatsAppMessage`, `sendBookingConfirmation`, `sendAppointmentReminder`, `sendGiftCardNotification`, `sendWaitlistNotification`, `getStatus`, `getQRDataUrl`, `disconnect`, `reconnect`
+- **Auto-start**: Baileys initializes non-blocking on server start; auto-reconnects on drop (except intentional logout)
+- **Routes**: `GET /api/whatsapp/qr`, `GET /api/whatsapp/status`, `POST /api/whatsapp/reconnect`, `POST /api/whatsapp/disconnect` (new); all `/api/notifications/*` routes updated to use Baileys
+- **Frontend page**: `client/src/pages/WhatsApp.tsx` — QR display, connection status, test send, broadcast
+- **Navigation**: `/whatsapp` route + sidebar item (admin_settings permission)
+- **Legacy providers**: `server/wawp.ts`, `server/whapi.ts`, `server/wsapi.ts`, `server/wozzapi.ts` kept as reference but no longer imported anywhere
+
 ## Recent Changes
 - 2026-02-11: Redesigned Dashboard (Home.tsx) with premium SaaS fintech layout - glassmorphism 2x2 summary cards (Revenue, Appointments, Paid, Unpaid), financial overview section with dominant net profit display, Stripe-style employee performance list with avatar/commission/appointment stats, closing day checklist card, low stock alerts; full RTL Arabic support; iPhone-optimized mobile layout
 - 2026-02-11: Added expense attachment upload feature - charges can now have file attachments (images/PDF, max 5MB); stored as base64 in `attachment` column (TEXT for Postgres, LONGTEXT for MySQL); preview modal with image display or PDF download; paperclip icon indicator on expense items with attachments
