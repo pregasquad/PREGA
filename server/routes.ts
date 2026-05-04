@@ -3853,7 +3853,8 @@ export async function registerRoutes(
   await seedDatabase();
 
   // Initialize Baileys WhatsApp (non-blocking)
-  import("./baileys").then(({ initBaileys }) => {
+  import("./baileys").then(({ initBaileys, setSocketIO }) => {
+    setSocketIO(io);
     initBaileys().catch((err) => console.error("[Baileys] Startup error:", err));
   }).catch((err) => console.error("[Baileys] Import error:", err));
 

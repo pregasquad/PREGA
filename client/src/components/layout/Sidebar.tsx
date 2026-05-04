@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import { useTranslation } from "react-i18next";
 import { useBusinessName } from "@/hooks/use-salon-data";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Home,
   CalendarDays, 
@@ -95,12 +96,14 @@ export function Sidebar() {
   const { isMobile, setOpenMobile } = useSidebar();
   const queryClient = useQueryClient();
   const { t, i18n } = useTranslation();
+  const { toast } = useToast();
   const isRtl = i18n.language === "ar";
   const [isAdminState, setIsAdminState] = useState(() => 
     typeof window !== 'undefined' && sessionStorage.getItem("admin_authenticated") === "true"
   );
   const isAdmin = isAdminState;
   const [newBookingFlash, setNewBookingFlash] = useState(false);
+  const [waDisconnected, setWaDisconnected] = useState(false);
   const [staffSectionOpen, setStaffSectionOpen] = useState(() => {
     const path = typeof window !== 'undefined' ? window.location.pathname : '';
     return path.startsWith('/staff');
@@ -209,10 +212,34 @@ export function Sidebar() {
       setTimeout(() => setNewBookingFlash(false), 3000);
     });
 
+    socket.on("whatsapp:disconnected", () => {
+      setWaDisconnected(true);
+      toast({
+        title: "WhatsApp déconnecté",
+        description: "La connexion WhatsApp a été perdue. Reconnectez votre téléphone.",
+        variant: "destructive",
+        duration: 8000,
+      });
+    });
+
+    socket.on("whatsapp:logged_out", () => {
+      setWaDisconnected(true);
+      toast({
+        title: "WhatsApp déconnecté",
+        description: "La session WhatsApp a expiré. Veuillez re-lier votre téléphone.",
+        variant: "destructive",
+        duration: 10000,
+      });
+    });
+
+    socket.on("whatsapp:connected", () => {
+      setWaDisconnected(false);
+    });
+
     return () => {
       socket.disconnect();
     };
-  }, [queryClient]);
+  }, [queryClient, toast]);
 
   const clearNotifications = () => {
     setNotifications([]);
@@ -459,6 +486,9 @@ export function Sidebar() {
               );
             }
             
+            const isWhatsApp = item.href === "/whatsapp";
+            const showWaBadge = isWhatsApp && waDisconnected;
+
             return (
               <SidebarMenuItem key={item.href}>
                 <SidebarMenuButton
@@ -480,7 +510,12 @@ export function Sidebar() {
                     </a>
                   ) : (
                     <Link href={item.href}>
-                      <item.icon className={cn("w-5 h-5", isActive ? "stroke-[2.5]" : "stroke-[2]")} />
+                      <span className="relative shrink-0">
+                        <item.icon className={cn("w-5 h-5", isActive ? "stroke-[2.5]" : "stroke-[2]")} />
+                        {showWaBadge && (
+                          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border border-background animate-pulse" />
+                        )}
+                      </span>
                       <span className="font-medium text-base">{label}</span>
                     </Link>
                   )}

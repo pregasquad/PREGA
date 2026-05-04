@@ -12,6 +12,11 @@ let currentPairingCode: string | null = null;
 let status: Status = "disconnected";
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let shouldReconnect = false;
+let socketIO: any = null;
+
+export function setSocketIO(io: any): void {
+  socketIO = io;
+}
 
 function log(msg: string) {
   console.log(`[Baileys] ${msg}`);
@@ -103,7 +108,9 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
       currentQRDataUrl = null;
       currentPairingCode = null;
       shouldReconnect = true;
-      log(`Connected as +${sock?.user?.id?.split(":")[0] ?? "?"}`);
+      const phone = sock?.user?.id?.split(":")[0] ?? "?";
+      log(`Connected as +${phone}`);
+      if (socketIO) socketIO.emit("whatsapp:connected", { phone });
     }
 
     if (connection === "close") {
@@ -119,9 +126,13 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
         shouldReconnect = false;
         try { fs.rmSync(AUTH_FOLDER, { recursive: true, force: true }); } catch {}
         log("Logged out — session cleared");
-      } else if (shouldReconnect) {
-        // Only reconnect if we had an established session, back off generously
-        scheduleReconnect(20000);
+        if (socketIO) socketIO.emit("whatsapp:logged_out", {});
+      } else {
+        if (socketIO) socketIO.emit("whatsapp:disconnected", { reason });
+        if (shouldReconnect) {
+          // Only reconnect if we had an established session, back off generously
+          scheduleReconnect(20000);
+        }
       }
     }
   });

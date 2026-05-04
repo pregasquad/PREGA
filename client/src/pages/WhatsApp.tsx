@@ -238,6 +238,19 @@ export default function WhatsApp() {
         </div>
       </div>
 
+      {/* ── DISCONNECTION ALERT (was connected, now dropped) ── */}
+      {!connected && status === "disconnected" && (
+        <div className="flex items-start gap-3 p-4 rounded-2xl bg-red-500/10 border border-red-500/30">
+          <WifiOff className="w-5 h-5 text-red-400 mt-0.5 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-red-400">WhatsApp déconnecté</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Liez à nouveau votre téléphone pour rétablir la connexion.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* ── CONNECTED STATE ─────────────────────────────────── */}
       {connected && (
         <div className="rounded-2xl border bg-card p-5 space-y-4">
