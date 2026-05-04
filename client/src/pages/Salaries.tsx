@@ -105,7 +105,7 @@ export default function Salaries() {
   const [payBackDeduction, setPayBackDeduction] = useState<StaffDeduction | null>(null);
   const [payBackInputAmount, setPayBackInputAmount] = useState<string>("");
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [openPaymentHistories, setOpenPaymentHistories] = useState<Set<number>>(new Set());
+  const [openPaymentHistories, setOpenPaymentHistories] = useState<Record<number, boolean>>({});
   const [newCharge, setNewCharge] = useState({ type: "rent", name: "", amount: 0, date: format(workDayToday, "yyyy-MM-dd") });
   const [newDeduction, setNewDeduction] = useState<{ staffName: string; type: "advance" | "loan" | "penalty" | "other"; description: string; amount: number; date: string }>({ staffName: "", type: "advance", description: "", amount: 0, date: format(workDayToday, "yyyy-MM-dd") });
 
@@ -1048,53 +1048,46 @@ export default function Salaries() {
                     .filter(p => Number(p.staffId) === s.id)
                     .sort((a, b) => new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime());
                   if (staffHistory.length === 0) return null;
-                  const isOpen = openPaymentHistories.has(s.id);
-                  const toggle = () => setOpenPaymentHistories(prev => {
-                    const next = new Set(prev);
-                    isOpen ? next.delete(s.id) : next.add(s.id);
-                    return next;
-                  });
+                  const isOpen = !!openPaymentHistories[s.id];
                   return (
                     <div className="px-4 pb-3">
-                      <Collapsible open={isOpen} onOpenChange={toggle}>
-                        <div className="rounded-lg overflow-hidden border border-border/30">
-                          <CollapsibleTrigger asChild>
-                            <button
-                              className="w-full flex items-center gap-2 px-3 py-2 bg-muted/30 hover:bg-muted/50 transition-colors"
-                            >
-                              <Wallet className="h-3 w-3 text-primary shrink-0" />
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                                Historique des paiements
-                              </span>
-                              <span className="text-[10px] text-muted-foreground">{staffHistory.length}</span>
-                              <ChevronDown className={`h-3 w-3 text-muted-foreground ml-auto transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
-                            </button>
-                          </CollapsibleTrigger>
-                          <CollapsibleContent>
-                            <div className="divide-y divide-border/20 max-h-40 overflow-y-auto">
-                              {staffHistory.map((p, idx) => {
-                                const payDate = new Date(p.paidAt);
-                                const bizDay = getBusinessDayDate(payDate, bSettings?.openingTime);
-                                return (
-                                  <div key={p.id ?? idx} className="flex items-center justify-between px-3 py-1.5 text-xs">
-                                    <div className="flex flex-col gap-0.5">
-                                      <span className="font-medium tabular-nums">
-                                        {format(bizDay, "d/M/yy")}
-                                      </span>
-                                      <span className="text-[10px] text-muted-foreground tabular-nums">
-                                        {format(payDate, "HH:mm")}
-                                      </span>
-                                    </div>
-                                    <span className="font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
-                                      {formatCurrency(p.amount)}
+                      <div className="rounded-lg overflow-hidden border border-border/30">
+                        <button
+                          type="button"
+                          onClick={() => setOpenPaymentHistories(prev => ({ ...prev, [s.id]: !prev[s.id] }))}
+                          className="w-full flex items-center gap-2 px-3 py-2 bg-muted/30 hover:bg-muted/50 transition-colors"
+                        >
+                          <Wallet className="h-3 w-3 text-primary shrink-0" />
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                            Historique des paiements
+                          </span>
+                          <span className="text-[10px] text-muted-foreground">{staffHistory.length}</span>
+                          <ChevronDown className={`h-3 w-3 text-muted-foreground ml-auto transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
+                        </button>
+                        {isOpen && (
+                          <div className="divide-y divide-border/20 max-h-40 overflow-y-auto">
+                            {staffHistory.map((p, idx) => {
+                              const payDate = new Date(p.paidAt);
+                              const bizDay = getBusinessDayDate(payDate, bSettings?.openingTime);
+                              return (
+                                <div key={p.id ?? idx} className="flex items-center justify-between px-3 py-1.5 text-xs">
+                                  <div className="flex flex-col gap-0.5">
+                                    <span className="font-medium tabular-nums">
+                                      {format(bizDay, "d/M/yy")}
+                                    </span>
+                                    <span className="text-[10px] text-muted-foreground tabular-nums">
+                                      {format(payDate, "HH:mm")}
                                     </span>
                                   </div>
-                                );
-                              })}
-                            </div>
-                          </CollapsibleContent>
-                        </div>
-                      </Collapsible>
+                                  <span className="font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
+                                    {formatCurrency(p.amount)}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   );
                 })()}
