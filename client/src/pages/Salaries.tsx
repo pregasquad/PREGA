@@ -158,37 +158,37 @@ export default function Salaries() {
     };
   }, [queryClient]);
 
+  // Socket handles real-time invalidation — no need to blow away cache on every focus.
+  // Only do a single quiet background refresh when the tab becomes visible after being
+  // hidden for more than 5 minutes (so data never goes stale while the app is idle).
   useEffect(() => {
-    // On page visit: mark queries stale so they background-refresh,
-    // but cached data stays visible immediately (no flash of zeros).
-    const onPageShow = () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/services"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/appointments/all"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/charges"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/staff-deductions"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/staff-commissions"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/staff-payments"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/business-settings"] });
+    let hiddenAt: number | null = null;
+    const STALE_MS = 5 * 60 * 1000;
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        hiddenAt = Date.now();
+      } else if (hiddenAt !== null && Date.now() - hiddenAt > STALE_MS) {
+        queryClient.invalidateQueries({ queryKey: ["/api/appointments/all"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/staff-payments"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/charges"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/staff-deductions"] });
+        hiddenAt = null;
+      }
     };
-    onPageShow();
-    window.addEventListener("focus", onPageShow);
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") onPageShow();
-    });
-    return () => {
-      window.removeEventListener("focus", onPageShow);
-    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
   }, [queryClient]);
 
   const { data: staff = [] } = useQuery<Staff[]>({
     queryKey: ["/api/staff"],
     queryFn: async () => { const res = await fetch("/api/staff"); if (!res.ok) return []; return res.json(); },
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: services = [] } = useQuery<Service[]>({
     queryKey: ["/api/services"],
     queryFn: async () => { const res = await fetch("/api/services"); if (!res.ok) return []; return res.json(); },
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: appointments = [], refetch: refetchAppointments } = useQuery<Appointment[]>({
@@ -198,26 +198,32 @@ export default function Salaries() {
       if (!res.ok) return [];
       return res.json();
     },
+    staleTime: 2 * 60 * 1000,
+    placeholderData: (prev) => prev,
   });
 
   const { data: charges = [] } = useQuery<Charge[]>({
     queryKey: ["/api/charges"],
     queryFn: async () => { const res = await fetch("/api/charges"); if (!res.ok) return []; return res.json(); },
+    staleTime: 3 * 60 * 1000,
   });
 
   const { data: deductions = [] } = useQuery<StaffDeduction[]>({
     queryKey: ["/api/staff-deductions"],
     queryFn: async () => { const res = await fetch("/api/staff-deductions"); if (!res.ok) return []; return res.json(); },
+    staleTime: 3 * 60 * 1000,
   });
 
   const { data: staffCommissions = [] } = useQuery<{ id: number; staffId: number; serviceId: number; percentage: number }[]>({
     queryKey: ["/api/staff-commissions"],
     queryFn: async () => { const res = await fetch("/api/staff-commissions"); if (!res.ok) return []; return res.json(); },
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: staffPayments = [] } = useQuery<StaffPayment[]>({
     queryKey: ["/api/staff-payments"],
     queryFn: async () => { const res = await fetch("/api/staff-payments"); if (!res.ok) return []; return res.json(); },
+    staleTime: 2 * 60 * 1000,
   });
 
   const createChargeMutation = useMutation({
