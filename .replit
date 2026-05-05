@@ -27,7 +27,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "node_modules/.bin/tsx server/index.ts"
+args = "npm run dev"
 waitForPort = 5000
 
 [[ports]]
