@@ -6,8 +6,10 @@ Beauty Salon Appointment Management System built with React + Express + PostgreS
 ## Tech Stack
 - **Frontend**: React 18, Vite, TailwindCSS, Radix UI, TanStack Query
 - **Backend**: Express.js, TypeScript, Socket.IO
-- **Database**: PostgreSQL (pg driver), Drizzle ORM
+- **Database**: MySQL/TiDB (mysql2 driver), Drizzle ORM (also supports PostgreSQL via DB_DIALECT env var)
+- **File Storage**: Supabase Storage (avatars/photos)
 - **Build**: Vite (frontend), esbuild (server), tsx (dev)
+- **PWA**: Workbox service worker, offline-first with IndexedDB sync
 
 ## Project Structure
 - `client/` - React frontend (entry: `client/index.html`, source: `client/src/`)
@@ -23,7 +25,13 @@ Beauty Salon Appointment Management System built with React + Express + PostgreS
 - `npm run db:push` - Push schema to database
 
 ## Environment
-- `DATABASE_URL` - PostgreSQL connection string (auto-configured by Replit)
+- `DB_DIALECT` - Database dialect: `mysql` (default/production) or `postgres`
+- `MYSQL_URL` - MySQL/TiDB connection string (used when DB_DIALECT=mysql)
+- `DATABASE_URL` - PostgreSQL connection string (used when DB_DIALECT=postgres)
+- `SUPABASE_URL` - Supabase project URL (for file/avatar storage)
+- `SUPABASE_ANON_KEY` - Supabase anonymous key
+- `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key (optional, for admin operations)
+- `SESSION_SECRET` - Express session secret (auto-generated if not set, set for production)
 - Port 5000 for the application
 
 ## Architecture Notes
