@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -88,11 +87,40 @@ function PairingCodeDisplay({ code }: { code: string }) {
   );
 }
 
+function PairingProgress({ seconds }: { seconds: number }) {
+  const total = 35;
+  const pct = Math.min(100, Math.round((seconds / total) * 100));
+  return (
+    <div className="space-y-2">
+      <div className="flex justify-between text-xs text-muted-foreground">
+        <span>Connecting to WhatsApp servers…</span>
+        <span>{Math.max(0, total - seconds)}s</span>
+      </div>
+      <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
+        <div
+          className="h-full rounded-full bg-purple-500 transition-all duration-500"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <p className="text-xs text-muted-foreground text-center">
+        {seconds < 6
+          ? "Setting up secure connection…"
+          : seconds < 15
+          ? "Requesting pairing code from WhatsApp…"
+          : "Almost there, waiting for WhatsApp response…"}
+      </p>
+    </div>
+  );
+}
+
 export default function WhatsApp() {
   const { toast } = useToast();
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [pairingPhone, setPairingPhone] = useState("");
   const [pairingCode, setPairingCode] = useState<string | null>(null);
+  const [isWaitingForCode, setIsWaitingForCode] = useState(false);
+  const [waitSeconds, setWaitSeconds] = useState(0);
   const [testPhone, setTestPhone] = useState("");
   const [testMessage, setTestMessage] = useState(
     "مرحباً! هذه رسالة اختبار من صالون PREGASQUAD 💅"
@@ -109,23 +137,37 @@ export default function WhatsApp() {
   const status = waData?.status ?? "disconnected";
   const connected = waData?.connected ?? false;
 
-  // Poll status when not connected
+  // Poll status — faster (2s) when pairing/connecting, slower (6s) otherwise
   useEffect(() => {
     if (pollRef.current) clearInterval(pollRef.current);
+    const interval = (status === "pairing" || status === "connecting" || isWaitingForCode) ? 2000 : 6000;
     if (status !== "open") {
-      pollRef.current = setInterval(() => {
-        refetch();
-      }, 6000);
+      pollRef.current = setInterval(() => { refetch(); }, interval);
     }
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-  }, [status, refetch]);
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, [status, refetch, isWaitingForCode]);
 
-  // Clear pairing code once connected
+  // Clear pairing code + countdown once connected
   useEffect(() => {
-    if (status === "open") setPairingCode(null);
+    if (status === "open") {
+      setPairingCode(null);
+      setIsWaitingForCode(false);
+      setWaitSeconds(0);
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    }
   }, [status]);
+
+  // Countdown timer while waiting for pairing code
+  useEffect(() => {
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    if (isWaitingForCode) {
+      setWaitSeconds(0);
+      countdownRef.current = setInterval(() => {
+        setWaitSeconds(s => s + 1);
+      }, 1000);
+    }
+    return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
+  }, [isWaitingForCode]);
 
   const connectQRMutation = useMutation({
     mutationFn: () =>
@@ -143,10 +185,16 @@ export default function WhatsApp() {
       apiRequest("POST", "/api/whatsapp/pairing-code", { phone: pairingPhone }).then((r) =>
         r.json()
       ),
+    onMutate: () => {
+      setIsWaitingForCode(true);
+      setPairingCode(null);
+    },
     onSuccess: (data) => {
+      setIsWaitingForCode(false);
+      if (countdownRef.current) clearInterval(countdownRef.current);
       if (data.success && data.code) {
         setPairingCode(data.code);
-        setTimeout(() => refetch(), 3000);
+        setTimeout(() => refetch(), 2000);
       } else {
         toast({
           title: "Failed to get pairing code",
@@ -155,8 +203,11 @@ export default function WhatsApp() {
         });
       }
     },
-    onError: (err: any) =>
-      toast({ title: "Error", description: err.message, variant: "destructive" }),
+    onError: (err: any) => {
+      setIsWaitingForCode(false);
+      if (countdownRef.current) clearInterval(countdownRef.current);
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
   });
 
   const disconnectMutation = useMutation({
@@ -164,6 +215,7 @@ export default function WhatsApp() {
       apiRequest("POST", "/api/whatsapp/disconnect").then((r) => r.json()),
     onSuccess: () => {
       setPairingCode(null);
+      setIsWaitingForCode(false);
       toast({ title: "Disconnected", description: "WhatsApp session ended." });
       setTimeout(() => refetch(), 800);
     },
@@ -238,8 +290,8 @@ export default function WhatsApp() {
         </div>
       </div>
 
-      {/* ── DISCONNECTION ALERT (was connected, now dropped) ── */}
-      {!connected && status === "disconnected" && (
+      {/* ── DISCONNECTION ALERT ── */}
+      {!connected && status === "disconnected" && !isWaitingForCode && (
         <div className="flex items-start gap-3 p-4 rounded-2xl bg-red-500/10 border border-red-500/30">
           <WifiOff className="w-5 h-5 text-red-400 mt-0.5 shrink-0" />
           <div className="flex-1 min-w-0">
@@ -251,7 +303,7 @@ export default function WhatsApp() {
         </div>
       )}
 
-      {/* ── CONNECTED STATE ─────────────────────────────────── */}
+      {/* ── CONNECTED STATE ── */}
       {connected && (
         <div className="rounded-2xl border bg-card p-5 space-y-4">
           <div className="flex items-center gap-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
@@ -279,7 +331,7 @@ export default function WhatsApp() {
         </div>
       )}
 
-      {/* ── CONNECTION CARD (not connected) ─────────────────── */}
+      {/* ── CONNECTION CARD (not connected) ── */}
       {!connected && (
         <div className="rounded-2xl border bg-card p-5 space-y-4">
           <div className="flex items-center gap-2">
@@ -305,7 +357,21 @@ export default function WhatsApp() {
                 Enter your WhatsApp number. We'll give you an 8-character code to enter inside the WhatsApp app.
               </p>
 
-              {!pairingCode ? (
+              {/* Waiting for code — show progress bar */}
+              {isWaitingForCode && !pairingCode && (
+                <div className="rounded-xl border border-purple-500/30 bg-purple-500/5 p-4 space-y-3">
+                  <div className="flex items-center gap-2 justify-center">
+                    <Loader2 className="w-4 h-4 text-purple-400 animate-spin" />
+                    <span className="text-sm text-purple-300 font-medium">Getting your pairing code…</span>
+                  </div>
+                  <PairingProgress seconds={waitSeconds} />
+                  <p className="text-xs text-center text-muted-foreground">
+                    This can take up to 35 seconds — please wait
+                  </p>
+                </div>
+              )}
+
+              {!pairingCode && !isWaitingForCode && (
                 <>
                   <div className="space-y-1.5">
                     <Label className="text-xs text-muted-foreground uppercase tracking-wider">
@@ -316,21 +382,22 @@ export default function WhatsApp() {
                       value={pairingPhone}
                       onChange={(e) => setPairingPhone(e.target.value)}
                       dir="ltr"
+                      data-testid="input-pairing-phone"
                     />
                   </div>
                   <Button
                     className="w-full bg-purple-600 hover:bg-purple-700 text-white"
                     onClick={() => pairingMutation.mutate()}
                     disabled={pairingMutation.isPending || pairingPhone.replace(/[^0-9]/g, "").length < 8}
+                    data-testid="button-get-pairing-code"
                   >
-                    {pairingMutation.isPending ? (
-                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Getting code…</>
-                    ) : (
-                      <><Hash className="w-4 h-4 mr-2" /> Get pairing code</>
-                    )}
+                    <Hash className="w-4 h-4 mr-2" />
+                    Get pairing code
                   </Button>
                 </>
-              ) : (
+              )}
+
+              {pairingCode && !isWaitingForCode && (
                 <div className="space-y-4">
                   <div className="rounded-xl border border-purple-500/30 bg-purple-500/5 p-4 space-y-3">
                     <p className="text-sm font-medium text-center text-purple-300">Your pairing code</p>
@@ -405,7 +472,7 @@ export default function WhatsApp() {
         </div>
       )}
 
-      {/* ── TEST MESSAGE ─────────────────────────────────────── */}
+      {/* ── TEST MESSAGE ── */}
       <div className="rounded-2xl border bg-card p-5 space-y-4">
         <div className="flex items-center gap-2">
           <Send className="w-5 h-5 text-muted-foreground" />
@@ -421,6 +488,7 @@ export default function WhatsApp() {
               value={testPhone}
               onChange={(e) => setTestPhone(e.target.value)}
               dir="ltr"
+              data-testid="input-test-phone"
             />
           </div>
           <div className="space-y-1.5">
@@ -443,6 +511,7 @@ export default function WhatsApp() {
               !testMessage.trim() ||
               sendTestMutation.isPending
             }
+            data-testid="button-send-test"
           >
             {sendTestMutation.isPending ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -454,7 +523,7 @@ export default function WhatsApp() {
         </div>
       </div>
 
-      {/* ── BROADCAST ────────────────────────────────────────── */}
+      {/* ── BROADCAST ── */}
       <div className="rounded-2xl border bg-card p-5 space-y-4">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">

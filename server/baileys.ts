@@ -35,10 +35,33 @@ function scheduleReconnect(delayMs = 15000) {
   }, delayMs);
 }
 
+async function fetchVersionWithFallback() {
+  const FALLBACK_VERSION: [number, number, number] = [2, 3000, 1023333143];
+  try {
+    const { fetchLatestBaileysVersion } = await import("@whiskeysockets/baileys");
+    const result = await Promise.race([
+      fetchLatestBaileysVersion(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("version fetch timeout")), 8000)
+      ),
+    ]);
+    return result;
+  } catch (err: any) {
+    log(`Using fallback WA version (${err.message})`);
+    return { version: FALLBACK_VERSION, isLatest: false };
+  }
+}
+
 async function connectSocket(pairingPhone?: string): Promise<void> {
   if (sock) {
     try { sock.end(); } catch {}
     sock = null;
+  }
+
+  // For pairing code flow: always start with a clean slate to avoid
+  // "already registered" state from a broken old session
+  if (pairingPhone) {
+    try { fs.rmSync(AUTH_FOLDER, { recursive: true, force: true }); } catch {}
   }
 
   if (!fs.existsSync(AUTH_FOLDER)) fs.mkdirSync(AUTH_FOLDER, { recursive: true });
@@ -46,14 +69,12 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
   const {
     useMultiFileAuthState,
     makeWASocket,
-    DisconnectReason,
-    fetchLatestBaileysVersion,
     makeCacheableSignalKeyStore,
   } = await import("@whiskeysockets/baileys");
   const pino = (await import("pino")).default;
 
   const { state, saveCreds } = await useMultiFileAuthState(AUTH_FOLDER);
-  const { version } = await fetchLatestBaileysVersion();
+  const { version } = await fetchVersionWithFallback();
 
   status = "connecting";
   currentQRDataUrl = null;
@@ -73,20 +94,25 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
 
   sock.ev.on("creds.update", saveCreds);
 
-  // Pairing code mode: request code immediately before QR is generated
-  if (pairingPhone && !state.creds.registered) {
+  // Pairing code mode: wait for socket to be ready, then request code
+  if (pairingPhone) {
     status = "pairing";
-    // Wait a tick for the socket to be ready
+    // Wait longer (6s) for the WA socket handshake to complete before requesting
     setTimeout(async () => {
       try {
-        const code = await sock.requestPairingCode(pairingPhone.replace(/[^0-9]/g, ""));
+        const cleanPhone = pairingPhone.replace(/[^0-9]/g, "");
+        log(`Requesting pairing code for ${cleanPhone}…`);
+        const code = await sock.requestPairingCode(cleanPhone);
         currentPairingCode = code;
-        log(`Pairing code: ${code}`);
+        log(`Pairing code ready: ${code}`);
+        if (socketIO) socketIO.emit("whatsapp:pairing_code", { code });
       } catch (err: any) {
         log(`Pairing code error: ${err.message}`);
         currentPairingCode = null;
+        status = "disconnected";
+        if (socketIO) socketIO.emit("whatsapp:pairing_error", { error: err.message });
       }
-    }, 3000);
+    }, 6000);
   }
 
   sock.ev.on("connection.update", async (update: any) => {
@@ -159,12 +185,16 @@ export async function startQR(): Promise<void> {
 export async function startPairingCode(phone: string): Promise<string> {
   shouldReconnect = false;
   await connectSocket(phone);
-  // Wait up to 12 seconds for the pairing code
-  for (let i = 0; i < 24; i++) {
+  // Wait up to 35 seconds for the pairing code (6s socket init + up to 29s for WA response)
+  for (let i = 0; i < 70; i++) {
     await new Promise(r => setTimeout(r, 500));
     if (currentPairingCode) return currentPairingCode;
+    // If something went wrong and status flipped back to disconnected, fail fast
+    if (status === "disconnected" && i > 14) {
+      throw new Error("Connection failed — please try again");
+    }
   }
-  throw new Error("Timed out waiting for pairing code — try again");
+  throw new Error("Timed out waiting for pairing code — please try again");
 }
 
 export function getQRDataUrl(): string | null { return currentQRDataUrl; }
