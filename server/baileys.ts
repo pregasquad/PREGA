@@ -106,16 +106,18 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
       keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" })),
     },
     logger: pinoLogger,
-    browser: Browsers.ubuntu("Chrome"),
+    browser: Browsers.macOS("Chrome"),
     printQRInTerminal: false,
     syncFullHistory: false,
     markOnlineOnConnect: false,
-    // 20s interval: frequent enough to prevent Replit's proxy from dropping
-    // idle WebSockets, but not so aggressive that a slow ping response (< 25s)
-    // causes Baileys to self-terminate during the pairing handshake.
+    // 20s keepalive to prevent Replit's proxy dropping idle WebSockets,
+    // but long enough not to interfere with the pairing handshake.
     keepAliveIntervalMs: 20_000,
-    // Give the initial handshake plenty of time on a cloud host.
-    connectTimeoutMs: 60_000,
+    // Generous timeouts for cloud/proxy environments like Replit.
+    connectTimeoutMs: 90_000,
+    // Disable the per-query timeout so requestPairingCode never times out
+    // internally while waiting for WhatsApp's response over a slow proxy.
+    defaultQueryTimeoutMs: undefined,
     // Required for auth flow to complete
     getMessage: async () => ({ conversation: "" }),
   });
@@ -153,30 +155,35 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
       }
     }
 
-    // Strategy 1: trigger when Baileys emits "connecting" (noise handshake done)
+    // Strategy 1: trigger when Baileys emits "connecting" (noise handshake done).
+    // Wait 1.5s after the event — on Replit the proxy needs extra time to
+    // complete the WS handshake before requestPairingCode is accepted.
     const onConnecting = (update: any) => {
       if (update.connection === "connecting" && !codeObtained) {
-        setTimeout(() => attemptPairingCode("connecting-event"), 300);
+        setTimeout(() => attemptPairingCode("connecting-event"), 1500);
       }
     };
     sock.ev.on("connection.update", onConnecting);
 
-    // Strategy 2: fixed-delay fallback triggers
-    [3000, 6000, 9000].forEach((ms) => {
+    // Strategy 2: fixed-delay fallback triggers.
+    // Delays are longer than before to give Replit's proxied WebSocket enough
+    // time to complete the WhatsApp handshake before we request the code.
+    [5000, 10000, 17000].forEach((ms) => {
       setTimeout(() => attemptPairingCode(`${ms / 1000}s-fallback`), ms);
     });
 
-    // Strategy 3: final verdict after 14s — if nothing worked, surface the error
+    // Strategy 3: final verdict after 30s — surface the error if nothing worked.
+    // Increased from 14s to accommodate slower cloud/proxy connections.
     setTimeout(() => {
       if (!codeObtained && pendingPairingPhone === targetPhone) {
-        const finalError = lastPairingError ?? "Timed out waiting for pairing code";
+        const finalError = lastPairingError ?? "Timed out waiting for pairing code — please try again";
         log(`Pairing failed after all attempts: ${finalError}`);
         lastPairingError = finalError;
         status = "disconnected";
         pendingPairingPhone = null;
         if (socketIO) socketIO.emit("whatsapp:pairing_error", { error: finalError });
       }
-    }, 14000);
+    }, 30000);
   }
 
   // ── Connection event handler ─────────────────────────────────────────────

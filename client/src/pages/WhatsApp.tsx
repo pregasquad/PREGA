@@ -91,7 +91,7 @@ function PairingCodeDisplay({ code }: { code: string }) {
 }
 
 function PairingProgress({ seconds }: { seconds: number }) {
-  const total = 40;
+  const total = 30;
   const pct = Math.min(95, Math.round((seconds / total) * 100));
   return (
     <div className="space-y-2">
@@ -108,9 +108,9 @@ function PairingProgress({ seconds }: { seconds: number }) {
       <p className="text-xs text-muted-foreground text-center">
         {seconds < 5
           ? "Starting secure connection…"
-          : seconds < 12
+          : seconds < 15
           ? "Requesting pairing code from WhatsApp…"
-          : "Waiting for WhatsApp response…"}
+          : "Almost there — waiting for WhatsApp response…"}
       </p>
     </div>
   );
