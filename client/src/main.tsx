@@ -5,6 +5,8 @@ import "./index.css";
 import "./i18n/config";
 import { initDatabaseStatusCheck } from "./lib/databaseStatus";
 import { syncPendingChanges, refreshAndCacheData, startAutoSync } from "./lib/syncService";
+import { queryClient } from "./lib/queryClient";
+import { seedQueryCache } from "./lib/cacheSeeder";
 
 initDatabaseStatusCheck();
 
@@ -54,4 +56,12 @@ const updateSW = registerSW({
   }
 });
 
-createRoot(document.getElementById("root")!).render(<App />);
+// Seed the query cache from IndexedDB before first render.
+// IndexedDB reads take ~5-20ms (local disk) vs 200-500ms for network,
+// so components see real cached data on their very first render.
+async function startApp() {
+  await seedQueryCache(queryClient);
+  createRoot(document.getElementById("root")!).render(<App />);
+}
+
+startApp();
