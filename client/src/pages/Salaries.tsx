@@ -522,14 +522,21 @@ export default function Salaries() {
       .sort((a, b) => new Date(b.collectedAt).getTime() - new Date(a.collectedAt).getTime())[0];
     const lastCollectedDate = lastPayment ? new Date(lastPayment.collectedAt) : null;
 
-    // Always filter by current calendar month
-    const now = new Date();
-    const monthStart = format(startOfMonth(now), "yyyy-MM-dd");
-    const monthEnd = format(endOfMonth(now), "yyyy-MM-dd");
+    // Filter appointments since the last collection (like staff wallet), not the whole month.
+    // This way the balance resets to 0 right after collecting.
+    let sinceDate: string | null = null;
+    if (lastCollectedDate) {
+      const businessDay = getBusinessDayDate(lastCollectedDate, bSettings?.openingTime);
+      const y = businessDay.getFullYear();
+      const m = String(businessDay.getMonth() + 1).padStart(2, "0");
+      const d = String(businessDay.getDate()).padStart(2, "0");
+      sinceDate = `${y}-${m}-${d}`;
+    }
 
     const walletAppointments = appointments.filter(apt => {
       if (!apt.paid) return false;
-      return apt.date >= monthStart && apt.date <= monthEnd;
+      if (sinceDate) return apt.date >= sinceDate;
+      return true;
     });
 
     let walletRevenue = 0;
@@ -552,14 +559,14 @@ export default function Salaries() {
     const walletSalonPortion = walletRevenue - walletCommissions;
 
     const walletExpenses = charges.filter(c =>
-      c.date >= monthStart && c.date <= monthEnd
+      sinceDate ? c.date >= sinceDate : true
     ).reduce((sum, c) => sum + c.amount, 0);
 
     const walletBalance = walletSalonPortion - walletExpenses;
 
     return {
       lastCollectedDate,
-      monthStart,
+      sinceDate,
       walletRevenue,
       walletCommissions,
       walletSalonPortion,
@@ -1229,7 +1236,9 @@ export default function Salaries() {
                       </p>
                     </div>
                     <p className="text-[9px] text-muted-foreground/70 mt-0.5">
-                      {salonWallet.walletApptCount} rdv · {format(parseISO(salonWallet.monthStart), "MMMM yyyy", { locale: fr })}
+                      {salonWallet.walletApptCount} rdv · {salonWallet.sinceDate
+                          ? `depuis ${format(parseISO(salonWallet.sinceDate), "d/M/yy")}`
+                          : "tout"}
                     </p>
                   </div>
                 </div>
