@@ -164,15 +164,22 @@ export default function WhatsApp() {
       setTimeout(() => refetch(), 500);
     });
     socket.on("whatsapp:disconnected", () => refetch());
+    socket.on("whatsapp:pairing_refreshing", ({ attempt }: { attempt: number }) => {
+      // Connection dropped but we're auto-retrying — show a loading state with a fresh code incoming
+      setPairingCode(null);
+      setIsWaitingForCode(true);
+      if (countdownRef.current) clearInterval(countdownRef.current);
+      setWaitSeconds(0);
+      countdownRef.current = setInterval(() => setWaitSeconds((s) => s + 1), 1000);
+    });
     socket.on("whatsapp:pairing_dropped", ({ reason }: { reason: string }) => {
-      // Connection dropped AFTER the code was shown but before WhatsApp confirmed.
-      // This is what causes "Couldn't link device" — reset so the user can retry.
+      // Exhausted all auto-retries — ask user to start over
       setPairingCode(null);
       setIsWaitingForCode(false);
       if (countdownRef.current) clearInterval(countdownRef.current);
       toast({
-        title: "Connection dropped — please try again",
-        description: "The WhatsApp link session was interrupted. Request a new code and enter it quickly.",
+        title: "Could not link device — please try again",
+        description: "WhatsApp couldn't complete the link. Enter your number and request a new code.",
         variant: "destructive",
         duration: 10000,
       });
