@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { io } from "socket.io-client";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -141,6 +142,30 @@ export default function WhatsApp() {
 
   const status = waData?.status ?? "disconnected";
   const connected = waData?.connected ?? false;
+
+  // ── Socket.IO: instant pairing code / error (no waiting for next poll) ──
+  useEffect(() => {
+    const socket = io();
+    socket.on("whatsapp:pairing_code", ({ code }: { code: string }) => {
+      setPairingCode(code);
+      setIsWaitingForCode(false);
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    });
+    socket.on("whatsapp:pairing_error", ({ error }: { error: string }) => {
+      if (shownErrorRef.current === error) return;
+      shownErrorRef.current = error;
+      setIsWaitingForCode(false);
+      if (countdownRef.current) clearInterval(countdownRef.current);
+      toast({ title: "Failed to get pairing code", description: error, variant: "destructive", duration: 8000 });
+    });
+    socket.on("whatsapp:connected", () => {
+      setPairingCode(null);
+      setIsWaitingForCode(false);
+      setTimeout(() => refetch(), 500);
+    });
+    socket.on("whatsapp:disconnected", () => refetch());
+    return () => { socket.disconnect(); };
+  }, []);
 
   // ── Pick up pairing code from poll response ──────────────────────────────
   useEffect(() => {

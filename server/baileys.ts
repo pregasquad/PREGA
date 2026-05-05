@@ -114,7 +114,11 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
   // ── Pairing code flow ───────────────────────────────────────────────────
   if (pairingPhone) {
     status = "pairing";
-    const cleanPhone = pairingPhone.replace(/[^0-9]/g, "");
+    let cleanPhone = pairingPhone.replace(/[^0-9]/g, "");
+    // Normalise to international format (handles Moroccan local numbers)
+    if (cleanPhone.startsWith("00")) cleanPhone = cleanPhone.slice(2);
+    if (cleanPhone.startsWith("0") && cleanPhone.length === 10) cleanPhone = "212" + cleanPhone.slice(1);
+    if (cleanPhone.length === 9) cleanPhone = "212" + cleanPhone;
     const targetPhone = pairingPhone; // capture for closure checks
     let codeObtained = false;
 
