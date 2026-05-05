@@ -570,14 +570,13 @@ export default function Salaries() {
   };
 
   const getStaffWalletData = (s: Staff) => {
-    const staffPaymentsSorted = staffPayments
+    const lastPayment = staffPayments
       .filter(p => Number(p.staffId) === s.id)
-      .sort((a, b) => new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime());
-    const lastPayment = staffPaymentsSorted[0];
+      .sort((a, b) => new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime())[0];
     const lastPaymentDate = lastPayment ? new Date(lastPayment.paidAt) : null;
 
-    // sinceDate is only used for the display label ("since dd/MM/yy"), not for
-    // balance calculation. Keep business-day logic for the label.
+    // Convert payment timestamp to a business-day date string for the filter.
+    // Payments made before opening time count as the previous business day.
     let sinceDate: string | null = null;
     if (lastPaymentDate) {
       const businessDay = getBusinessDayDate(lastPaymentDate, bSettings?.openingTime);
@@ -587,25 +586,27 @@ export default function Salaries() {
       sinceDate = `${y}-${m}-${d}`;
     }
 
-    // Wallet = total commissions ever earned − total already paid out − pending deductions.
-    // This avoids date-boundary bugs: the moment a "Mark as Paid" is recorded the
-    // paid-out total rises to match earned total, so the balance naturally becomes 0.
-    const allStaffAppointments = appointments.filter(apt => {
+    // Show only paid appointments from the last payment date onwards (inclusive).
+    // If no payment has ever been made, show all appointments.
+    const walletAppointments = appointments.filter(apt => {
       if (!apt.paid) return false;
-      return Number(apt.staffId) === s.id || (!apt.staffId && apt.staff === s.name);
+      const matchesStaff = Number(apt.staffId) === s.id || (!apt.staffId && apt.staff === s.name);
+      if (!matchesStaff) return false;
+      if (sinceDate) return apt.date >= sinceDate;
+      return true;
     });
 
     let walletRevenue = 0;
-    let totalEarned = 0;
+    let walletCommission = 0;
     const walletServices: Record<string, { count: number; revenue: number; commission: number }> = {};
 
-    allStaffAppointments.forEach(apt => {
+    walletAppointments.forEach(apt => {
       const serviceName = apt.service || "Unknown";
       const commissionPercent = getServiceCommission(serviceName, s.name);
       const total = apt.total || 0;
       const commission = (total * commissionPercent) / 100;
       walletRevenue += total;
-      totalEarned += commission;
+      walletCommission += commission;
       if (!walletServices[serviceName]) {
         walletServices[serviceName] = { count: 0, revenue: 0, commission: 0 };
       }
@@ -614,27 +615,17 @@ export default function Salaries() {
       walletServices[serviceName].commission += commission;
     });
 
-    // Total already paid out to this staff member
-    const totalPaidOut = staffPayments
-      .filter(p => Number(p.staffId) === s.id)
-      .reduce((sum, p) => sum + (p.amount || 0), 0);
-
     const pendingStaffDeductions = deductions
       .filter(d => !d.cleared && (Number(d.staffId) === s.id || (!d.staffId && d.staffName === s.name)))
       .reduce((sum, d) => sum + getRemainingAmount(d), 0);
 
-    const walletBalance = totalEarned - totalPaidOut - pendingStaffDeductions;
-
-    // For the appointment count display, show only unpaid-out appointments
-    // (i.e. those after the last payment date) so the counter feels relevant.
-    const walletApptCount = sinceDate
-      ? allStaffAppointments.filter(apt => apt.date >= sinceDate!).length
-      : allStaffAppointments.length;
+    // Balance = commission earned since last payment − pending deductions
+    const walletBalance = walletCommission - pendingStaffDeductions;
 
     return {
       lastPaymentDate, sinceDate, walletBalance,
-      walletRevenue, walletCommission: totalEarned - totalPaidOut,
-      walletApptCount,
+      walletRevenue, walletCommission,
+      walletApptCount: walletAppointments.length,
       walletServices,
     };
   };
