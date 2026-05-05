@@ -2393,7 +2393,7 @@ export default function Planning() {
                             </Button>
                           </FormControl>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[300px] p-0 rounded-2xl glass-card shadow-xl" align="start">
+                        <PopoverContent className="w-[300px] p-0 rounded-2xl glass-card shadow-xl" align="start" side="top" sideOffset={4}>
                           <Command>
                             <CommandInput placeholder={t("planning.searchClient")} />
                             <CommandList>
