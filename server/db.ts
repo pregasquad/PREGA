@@ -26,7 +26,7 @@ function getDatabaseUrl(): string | null {
     }
     return mysqlUrl;
   } else {
-    const pgUrl = process.env.DATABASE_URL;
+    const pgUrl = process.env.KOYEB_DATABASE_URL || process.env.DATABASE_URL;
     if (!pgUrl) {
       console.warn("DATABASE_URL not set - running in offline mode");
       return null;
@@ -73,7 +73,11 @@ export async function initializeDatabase(): Promise<boolean> {
       const { drizzle } = await import("drizzle-orm/node-postgres");
       const pg = await import("pg");
       
-      pool = new pg.default.Pool({ connectionString: databaseUrl });
+      const isKoyeb = !!process.env.KOYEB_DATABASE_URL;
+      pool = new pg.default.Pool({
+        connectionString: databaseUrl,
+        ssl: isKoyeb ? { rejectUnauthorized: false } : undefined,
+      });
       db = drizzle(pool, { schema });
       console.log("Using PostgreSQL database");
     }
