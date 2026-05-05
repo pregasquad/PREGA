@@ -2393,10 +2393,10 @@ export default function Planning() {
                             </Button>
                           </FormControl>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[300px] p-0 rounded-2xl glass-card shadow-xl" align="start" side="top" sideOffset={4}>
+                        <PopoverContent className="w-[300px] p-0 rounded-2xl glass-card shadow-xl" align="start" side="top" sideOffset={4} avoidCollisions={false}>
                           <Command>
                             <CommandInput placeholder={t("planning.searchClient")} />
-                            <CommandList>
+                            <CommandList className="h-[200px] max-h-[200px]">
                               <CommandEmpty>{t("planning.noClientFound")}</CommandEmpty>
                               <CommandGroup>
                                 {clients.map((client) => (
@@ -2742,7 +2742,7 @@ export default function Planning() {
                             align="center" 
                             side="top" 
                             sideOffset={4}
-                            onWheel={(e) => e.stopPropagation()}
+                            avoidCollisions={false}
                           >
                             <div className="p-2 border-b border-white/20 liquid-gradient-subtle rounded-t-xl">
                               <Input
@@ -2753,10 +2753,8 @@ export default function Planning() {
                               />
                             </div>
                             <div 
-                              className="max-h-[180px] overflow-y-auto p-1.5"
-                              style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
-                              onWheel={(e) => { e.stopPropagation(); e.currentTarget.scrollTop += e.deltaY; }}
-                              onTouchMove={(e) => e.stopPropagation()}
+                              className="h-[180px] overflow-y-auto p-1.5"
+                              style={{ overscrollBehavior: 'contain' }}
                             >
                               {Object.entries(groupedServices).map(([category, categoryServices]) => (
                                 <div key={category}>
@@ -2765,11 +2763,11 @@ export default function Planning() {
                                     <div
                                       key={s.id}
                                       className={cn(
-                                        "flex items-center justify-between gap-2 px-2 py-2 rounded-lg cursor-pointer text-xs mb-0.5 transition-all",
+                                        "flex items-center justify-between gap-2 px-2 py-2 rounded-lg cursor-pointer text-xs mb-0.5",
                                         "hover:bg-primary/5 dark:hover:bg-primary/10",
                                         selectedServices.some(sel => sel.name === s.name) && "bg-primary/10 dark:bg-primary/20"
                                       )}
-                                      onClick={() => { handleServiceChange(s.name); setServiceSearch(""); setServicePopoverOpen(false); }}
+                                      onClick={() => { handleServiceChange(s.name); setServicePopoverOpen(false); setTimeout(() => setServiceSearch(""), 200); }}
                                     >
                                       <span className="truncate">{s.name}</span>
                                       <div className="flex items-center gap-1.5 shrink-0">
