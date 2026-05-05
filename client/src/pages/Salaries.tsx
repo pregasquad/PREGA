@@ -1007,13 +1007,18 @@ export default function Salaries() {
                     </div>
                     <div className="p-2.5 rounded-lg bg-green-50/80 dark:bg-green-950/20" data-testid={`text-staff-commission-${s.id}`}>
                       <p className="text-[10px] text-muted-foreground mb-1">{t("salaries.staffCommissions")}</p>
-                      <p className="text-sm font-bold tabular-nums">{formatCurrency(wallet.walletCommission - staffDeductionAmount)}</p>
+                      <p className="text-sm font-bold tabular-nums">{formatCurrency(wallet.walletCommission)}</p>
                     </div>
                     <div className="p-2.5 rounded-lg bg-primary/5 dark:bg-primary/10" data-testid={`text-staff-wallet-${s.id}`}>
                       <p className="text-[10px] text-muted-foreground mb-0.5">{t("salaries.walletBalance").split(':')[0] || "Wallet"}</p>
                       <p className={`text-sm font-bold tabular-nums ${wallet.walletBalance < 0 ? 'text-red-600 dark:text-red-400' : wallet.walletBalance > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}>
                         {wallet.walletBalance < 0 ? `- ${formatCurrency(Math.abs(wallet.walletBalance))}` : formatCurrency(wallet.walletBalance)}
                       </p>
+                      {staffDeductionAmount > 0 && (
+                        <p className="text-[9px] text-red-500 dark:text-red-400 mt-0.5 leading-tight tabular-nums">
+                          - {formatCurrency(staffDeductionAmount)} {t("staffPortal.allDeductions")}
+                        </p>
+                      )}
                       <p className="text-[9px] text-muted-foreground/70 mt-0.5 leading-tight">
                         {wallet.sinceDate
                           ? `${wallet.walletApptCount} rdv · depuis ${format(parseISO(wallet.sinceDate), "d/M/yy")}`
