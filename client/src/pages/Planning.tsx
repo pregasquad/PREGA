@@ -1256,6 +1256,9 @@ export default function Planning() {
     setSelectedPackage(null);
     setAppliedLoyaltyPoints(null);
     setAppliedGiftCardBalance(null);
+    setManualTotalOverride(false);
+    setEditingAppointment(null);
+    setTotalInputValue("0");
     setIsDialogOpen(false);
   };
 
@@ -2268,12 +2271,22 @@ export default function Planning() {
 
       {/* Appointment Dialog - iOS Liquid Glass */}
       <Dialog open={isDialogOpen} onOpenChange={(open) => {
-        setIsDialogOpen(open);
         if (!open) {
-          setIsEditFavoritesOpen(false);
-          setSelectedServices([]);
-          setPriceInputs({});
-          setSelectedPackage(null);
+          setIsDialogOpen(false);
+          // Delay state reset so close animation finishes without content flash
+          setTimeout(() => {
+            setIsEditFavoritesOpen(false);
+            setSelectedServices([]);
+            setPriceInputs({});
+            setSelectedPackage(null);
+            setAppliedLoyaltyPoints(null);
+            setAppliedGiftCardBalance(null);
+            setManualTotalOverride(false);
+            setEditingAppointment(null);
+            setTotalInputValue("0");
+          }, 200);
+        } else {
+          setIsDialogOpen(true);
         }
       }}>
         <DialogContent 
@@ -2778,23 +2791,26 @@ export default function Planning() {
                 {/* Quick Favorites - compact */}
                 {!editingAppointment && (
                   <div className="flex items-center gap-1 flex-wrap">
-                    {favoriteServices.slice(0, 4).map((s: any) => (
-                      <Button
-                        key={s.id}
-                        type="button"
-                        variant={form.watch("service") === s.name ? "default" : "outline"}
-                        size="sm"
-                        className={cn(
-                          "h-7 text-[10px] px-2.5 rounded-full font-medium whitespace-nowrap",
-                          form.watch("service") === s.name 
-                            ? "liquid-gradient border-0 text-white shadow-sm" 
-                            : "border-0 bg-secondary/50"
-                        )}
-                        onClick={() => handleServiceChange(s.name)}
-                      >
-                        {s.name}
-                      </Button>
-                    ))}
+                    {favoriteServices.slice(0, 4).map((s: any) => {
+                      const isActive = selectedServices.some(sel => sel.name === s.name);
+                      return (
+                        <Button
+                          key={s.id}
+                          type="button"
+                          variant={isActive ? "default" : "outline"}
+                          size="sm"
+                          className={cn(
+                            "h-7 text-[10px] px-2.5 rounded-full font-medium whitespace-nowrap",
+                            isActive
+                              ? "liquid-gradient border-0 text-white shadow-sm"
+                              : "border-0 bg-secondary/50"
+                          )}
+                          onClick={() => handleServiceChange(s.name)}
+                        >
+                          {s.name}
+                        </Button>
+                      );
+                    })}
                     <Button type="button" variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={() => setIsEditFavoritesOpen(!isEditFavoritesOpen)}>
                       <Settings2 className="w-3 h-3" />
                     </Button>
@@ -2838,6 +2854,14 @@ export default function Planning() {
                       if (!canEdit) return;
                       if (confirm(t("planning.deleteConfirm"))) {
                         deleteMutation.mutate(editingAppointment.id);
+                        setSelectedServices([]);
+                        setPriceInputs({});
+                        setSelectedPackage(null);
+                        setAppliedLoyaltyPoints(null);
+                        setAppliedGiftCardBalance(null);
+                        setManualTotalOverride(false);
+                        setEditingAppointment(null);
+                        setTotalInputValue("0");
                         setIsDialogOpen(false);
                       }
                     }}
