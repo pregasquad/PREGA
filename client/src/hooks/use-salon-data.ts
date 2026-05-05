@@ -229,6 +229,7 @@ export function useCreateAppointment() {
         queryClient.invalidateQueries({ queryKey: [api.appointments.list.path, variables.date] });
       }
       queryClient.invalidateQueries({ queryKey: [api.appointments.list.path, undefined] });
+      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
     },
   });
 }
@@ -308,6 +309,7 @@ export function useUpdateAppointment() {
     onSettled: () => {
       if (navigator.onLine) {
         queryClient.invalidateQueries({ queryKey: [api.appointments.list.path] });
+        queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
       }
     },
   });
@@ -379,6 +381,7 @@ export function useDeleteAppointment() {
     onSettled: () => {
       if (navigator.onLine) {
         queryClient.invalidateQueries({ queryKey: [api.appointments.list.path] });
+        queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
       }
     },
   });

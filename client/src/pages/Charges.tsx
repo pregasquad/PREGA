@@ -89,6 +89,7 @@ export default function Charges() {
     },
     onSuccess: (savedData: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/charges"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
 
       autoPrintExpense({
         businessName: salonSettings?.businessName || "PREGASQUAD SALON",
@@ -112,6 +113,7 @@ export default function Charges() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/charges"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
       toast({ title: t("expenses.expenseDeleted") });
     },
   });

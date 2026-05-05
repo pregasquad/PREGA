@@ -64,6 +64,7 @@ export default function StaffCommissions() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/staff-commissions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
       refetchStaffCommissions();
       setHasChanges(false);
     },
@@ -76,6 +77,7 @@ export default function StaffCommissions() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/staff-commissions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
       refetchStaffCommissions();
       setSavedServices(prev => new Set(prev).add(variables.serviceId));
       setTimeout(() => {

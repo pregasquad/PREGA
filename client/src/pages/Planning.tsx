@@ -1491,6 +1491,7 @@ export default function Planning() {
       await apiRequest("PUT", `/api/appointments/${appId}`, updateData);
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/appointments/all"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
       toast({ title: t("planning.paymentConfirmed"), description: t("planning.paymentConfirmedDesc") });
 
       // Print receipt and open cash drawer
@@ -1582,6 +1583,7 @@ export default function Planning() {
       await apiRequest("PUT", `/api/appointments/${draggedAppointment.id}`, updateData);
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/appointments/all"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
       toast({ 
         title: t("planning.appointmentMoved"), 
         description: `${draggedAppointment.client} → ${staffName} @ ${newTime}` 
