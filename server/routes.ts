@@ -2808,11 +2808,24 @@ export async function registerRoutes(
   // === Database status endpoint ===
   app.get("/api/status/database", async (_req, res) => {
     const isOnline = await checkDatabaseConnection();
+    const { getSyncStatus } = await import("./sync-mysql");
     res.json({ 
       online: isOnline, 
       mode: isOnline ? "online" : "offline",
-      hasPendingSync: offlineStorage.hasPendingSync()
+      hasPendingSync: offlineStorage.hasPendingSync(),
+      sync: getSyncStatus(),
     });
+  });
+
+  // === Manual sync trigger (owner only) ===
+  app.post("/api/status/sync-now", async (_req, res) => {
+    try {
+      const { syncPostgresToMySQL, getSyncStatus } = await import("./sync-mysql");
+      await syncPostgresToMySQL();
+      res.json({ ok: true, status: getSyncStatus() });
+    } catch (err: any) {
+      res.status(500).json({ ok: false, error: err.message });
+    }
   });
 
   // === Admin Roles ===
