@@ -522,19 +522,14 @@ export default function Salaries() {
       .sort((a, b) => new Date(b.collectedAt).getTime() - new Date(a.collectedAt).getTime())[0];
     const lastCollectedDate = lastPayment ? new Date(lastPayment.collectedAt) : null;
 
-    let sinceDate: string | null = null;
-    if (lastCollectedDate) {
-      const businessDay = getBusinessDayDate(lastCollectedDate, bSettings?.openingTime);
-      const y = businessDay.getFullYear();
-      const m = String(businessDay.getMonth() + 1).padStart(2, "0");
-      const d = String(businessDay.getDate()).padStart(2, "0");
-      sinceDate = `${y}-${m}-${d}`;
-    }
+    // Always filter by current calendar month
+    const now = new Date();
+    const monthStart = format(startOfMonth(now), "yyyy-MM-dd");
+    const monthEnd = format(endOfMonth(now), "yyyy-MM-dd");
 
     const walletAppointments = appointments.filter(apt => {
       if (!apt.paid) return false;
-      if (sinceDate) return apt.date >= sinceDate;
-      return true;
+      return apt.date >= monthStart && apt.date <= monthEnd;
     });
 
     let walletRevenue = 0;
@@ -556,16 +551,15 @@ export default function Salaries() {
 
     const walletSalonPortion = walletRevenue - walletCommissions;
 
-    const walletExpenses = charges.filter(c => {
-      if (!sinceDate) return true;
-      return c.date >= sinceDate;
-    }).reduce((sum, c) => sum + c.amount, 0);
+    const walletExpenses = charges.filter(c =>
+      c.date >= monthStart && c.date <= monthEnd
+    ).reduce((sum, c) => sum + c.amount, 0);
 
     const walletBalance = walletSalonPortion - walletExpenses;
 
     return {
       lastCollectedDate,
-      sinceDate,
+      monthStart,
       walletRevenue,
       walletCommissions,
       walletSalonPortion,
@@ -1175,9 +1169,10 @@ export default function Salaries() {
                     <div>
                       <h3 className="font-semibold text-base">Portefeuille Salon</h3>
                       <div className="text-xs text-muted-foreground">
-                        {salonWallet.lastCollectedDate
-                          ? `Dernière collecte: ${format(salonWallet.lastCollectedDate, "d/M/yy · HH:mm")}`
-                          : "Aucune collecte enregistrée"}
+                        {format(new Date(), "MMMM yyyy", { locale: fr })}
+                        {salonWallet.lastCollectedDate && (
+                          <span className="ml-1 opacity-60">· collecte: {format(salonWallet.lastCollectedDate, "d/M")}</span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1226,8 +1221,7 @@ export default function Salaries() {
                       </p>
                     </div>
                     <p className="text-[9px] text-muted-foreground/70 mt-0.5">
-                      {salonWallet.walletApptCount} rdv
-                      {salonWallet.sinceDate ? ` · depuis ${format(parseISO(salonWallet.sinceDate), "d/M/yy")}` : " · tout"}
+                      {salonWallet.walletApptCount} rdv · {format(parseISO(salonWallet.monthStart), "MMMM yyyy", { locale: fr })}
                     </p>
                   </div>
                 </div>
