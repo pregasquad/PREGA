@@ -570,13 +570,14 @@ export default function Salaries() {
   };
 
   const getStaffWalletData = (s: Staff) => {
-    const lastPayment = staffPayments
+    const staffPaymentsSorted = staffPayments
       .filter(p => Number(p.staffId) === s.id)
-      .sort((a, b) => new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime())[0];
+      .sort((a, b) => new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime());
+    const lastPayment = staffPaymentsSorted[0];
     const lastPaymentDate = lastPayment ? new Date(lastPayment.paidAt) : null;
 
-    // Use the business-day date for sinceDate: if a payment was made before
-    // opening time, it belongs to the previous business day, not the calendar day.
+    // sinceDate is only used for the display label ("since dd/MM/yy"), not for
+    // balance calculation. Keep business-day logic for the label.
     let sinceDate: string | null = null;
     if (lastPaymentDate) {
       const businessDay = getBusinessDayDate(lastPaymentDate, bSettings?.openingTime);
@@ -586,25 +587,25 @@ export default function Salaries() {
       sinceDate = `${y}-${m}-${d}`;
     }
 
-    const walletAppointments = appointments.filter(apt => {
+    // Wallet = total commissions ever earned − total already paid out − pending deductions.
+    // This avoids date-boundary bugs: the moment a "Mark as Paid" is recorded the
+    // paid-out total rises to match earned total, so the balance naturally becomes 0.
+    const allStaffAppointments = appointments.filter(apt => {
       if (!apt.paid) return false;
-      const matchesStaff = Number(apt.staffId) === s.id || (!apt.staffId && apt.staff === s.name);
-      if (!matchesStaff) return false;
-      if (sinceDate) return apt.date > sinceDate;
-      return true;
+      return Number(apt.staffId) === s.id || (!apt.staffId && apt.staff === s.name);
     });
 
     let walletRevenue = 0;
-    let earningsSincePayment = 0;
+    let totalEarned = 0;
     const walletServices: Record<string, { count: number; revenue: number; commission: number }> = {};
 
-    walletAppointments.forEach(apt => {
+    allStaffAppointments.forEach(apt => {
       const serviceName = apt.service || "Unknown";
       const commissionPercent = getServiceCommission(serviceName, s.name);
       const total = apt.total || 0;
       const commission = (total * commissionPercent) / 100;
       walletRevenue += total;
-      earningsSincePayment += commission;
+      totalEarned += commission;
       if (!walletServices[serviceName]) {
         walletServices[serviceName] = { count: 0, revenue: 0, commission: 0 };
       }
@@ -613,16 +614,27 @@ export default function Salaries() {
       walletServices[serviceName].commission += commission;
     });
 
+    // Total already paid out to this staff member
+    const totalPaidOut = staffPayments
+      .filter(p => Number(p.staffId) === s.id)
+      .reduce((sum, p) => sum + (p.amount || 0), 0);
+
     const pendingStaffDeductions = deductions
       .filter(d => !d.cleared && (Number(d.staffId) === s.id || (!d.staffId && d.staffName === s.name)))
       .reduce((sum, d) => sum + getRemainingAmount(d), 0);
 
-    const walletBalance = earningsSincePayment - pendingStaffDeductions;
+    const walletBalance = totalEarned - totalPaidOut - pendingStaffDeductions;
+
+    // For the appointment count display, show only unpaid-out appointments
+    // (i.e. those after the last payment date) so the counter feels relevant.
+    const walletApptCount = sinceDate
+      ? allStaffAppointments.filter(apt => apt.date >= sinceDate!).length
+      : allStaffAppointments.length;
 
     return {
       lastPaymentDate, sinceDate, walletBalance,
-      walletRevenue, walletCommission: earningsSincePayment,
-      walletApptCount: walletAppointments.length,
+      walletRevenue, walletCommission: totalEarned - totalPaidOut,
+      walletApptCount,
       walletServices,
     };
   };
