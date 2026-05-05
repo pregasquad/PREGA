@@ -103,10 +103,16 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
       keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" })),
     },
     logger: pino({ level: "silent" }),
-    browser: Browsers.macOS("Chrome"),
+    // Ubuntu fingerprint is more reliable than macOS for pairing code auth
+    browser: Browsers.ubuntu("Chrome"),
     printQRInTerminal: false,
     syncFullHistory: false,
     markOnlineOnConnect: false,
+    // Keep-alive prevents Replit's proxy from dropping the WebSocket
+    // during the authentication handshake after the pairing code is entered
+    keepAliveIntervalMs: 8_000,
+    // Required by Baileys for the auth flow to complete successfully
+    getMessage: async () => ({ conversation: "" }),
   });
 
   sock.ev.on("creds.update", saveCreds);
