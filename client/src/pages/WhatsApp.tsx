@@ -31,6 +31,7 @@ interface WAStatus {
   phone?: string;
   qr?: string | null;
   pairingCode?: string | null;
+  pairingError?: string | null;
 }
 
 function StatusBadge({ status }: { status: WAStatus["status"] }) {
@@ -118,6 +119,8 @@ export default function WhatsApp() {
   const { toast } = useToast();
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Track the error we already showed so we don't re-fire on stale poll data
+  const shownErrorRef = useRef<string | null>(null);
 
   const [pairingPhone, setPairingPhone] = useState("");
   const [pairingCode, setPairingCode] = useState<string | null>(null);
@@ -148,14 +151,33 @@ export default function WhatsApp() {
     }
   }, [waData?.pairingCode, isWaitingForCode]);
 
+  // ── Pick up pairing error from poll response ──────────────────────────────
+  useEffect(() => {
+    if (
+      isWaitingForCode &&
+      waData?.pairingError &&
+      waData.pairingError !== shownErrorRef.current
+    ) {
+      shownErrorRef.current = waData.pairingError;
+      setIsWaitingForCode(false);
+      if (countdownRef.current) clearInterval(countdownRef.current);
+      toast({
+        title: "Failed to get pairing code",
+        description: waData.pairingError,
+        variant: "destructive",
+        duration: 8000,
+      });
+    }
+  }, [waData?.pairingError, isWaitingForCode]);
+
   // ── If status flips to disconnected while still waiting, show error ──────
   useEffect(() => {
-    if (isWaitingForCode && status === "disconnected" && waitSeconds > 12) {
+    if (isWaitingForCode && status === "disconnected" && waitSeconds > 15) {
       setIsWaitingForCode(false);
       if (countdownRef.current) clearInterval(countdownRef.current);
       toast({
         title: "Connection failed",
-        description: "Could not get a pairing code. Please try again.",
+        description: "Could not reach WhatsApp servers. Please try again.",
         variant: "destructive",
       });
     }
@@ -212,7 +234,8 @@ export default function WhatsApp() {
         r.json()
       ),
     onMutate: () => {
-      // Server returns immediately — show loading state, code arrives via polling
+      // Reset stale error tracking so a previous error doesn't fire immediately
+      shownErrorRef.current = null;
       setIsWaitingForCode(true);
       setPairingCode(null);
     },
@@ -292,6 +315,7 @@ export default function WhatsApp() {
   });
 
   function resetPairing() {
+    shownErrorRef.current = null;
     setPairingCode(null);
     setIsWaitingForCode(false);
     setWaitSeconds(0);

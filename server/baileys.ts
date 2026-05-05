@@ -9,9 +9,9 @@ type Status = "disconnected" | "connecting" | "qr" | "pairing" | "open";
 let sock: any = null;
 let currentQRDataUrl: string | null = null;
 let currentPairingCode: string | null = null;
+let lastPairingError: string | null = null;
 let status: Status = "disconnected";
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-let pairingTimer: ReturnType<typeof setTimeout> | null = null;
 let shouldReconnect = false;
 let socketIO: any = null;
 let pendingPairingPhone: string | null = null;
@@ -28,8 +28,9 @@ function hasExistingSession(): boolean {
   return fs.existsSync(CREDS_FILE);
 }
 
-function clearPairingTimer() {
-  if (pairingTimer) { clearTimeout(pairingTimer); pairingTimer = null; }
+function wipeAuth() {
+  try { fs.rmSync(AUTH_FOLDER, { recursive: true, force: true }); } catch {}
+  fs.mkdirSync(AUTH_FOLDER, { recursive: true });
 }
 
 function scheduleReconnect(delayMs = 20000) {
@@ -59,44 +60,39 @@ async function fetchVersionWithFallback() {
 }
 
 async function connectSocket(pairingPhone?: string): Promise<void> {
-  // Cancel any pending timers
   if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
-  clearPairingTimer();
 
-  // Tear down existing socket
   if (sock) {
     try { sock.end(); } catch {}
     sock = null;
   }
 
-  if (!fs.existsSync(AUTH_FOLDER)) fs.mkdirSync(AUTH_FOLDER, { recursive: true });
+  // Always start with a clean slate when pairing.
+  // Leftover partial credentials from a previous failed attempt will cause the
+  // socket to try logging in as an already-linked device, which fails silently.
+  if (pairingPhone) {
+    log("Pairing requested — clearing auth for fresh start");
+    wipeAuth();
+    pendingPairingPhone = pairingPhone;
+    lastPairingError = null;
+  } else {
+    if (!fs.existsSync(AUTH_FOLDER)) fs.mkdirSync(AUTH_FOLDER, { recursive: true });
+  }
 
   const {
     useMultiFileAuthState,
     makeWASocket,
     makeCacheableSignalKeyStore,
+    Browsers,
   } = await import("@whiskeysockets/baileys");
   const pino = (await import("pino")).default;
 
-  let { state, saveCreds } = await useMultiFileAuthState(AUTH_FOLDER);
-
-  // If pairing but old creds are already registered (leftover broken session),
-  // clear them so we can get a fresh pairing code
-  if (pairingPhone && state.creds.registered) {
-    log("Old registered session found — clearing for fresh pairing");
-    try { fs.rmSync(AUTH_FOLDER, { recursive: true, force: true }); } catch {}
-    fs.mkdirSync(AUTH_FOLDER, { recursive: true });
-    const fresh = await useMultiFileAuthState(AUTH_FOLDER);
-    state = fresh.state;
-    saveCreds = fresh.saveCreds;
-  }
-
+  const { state, saveCreds } = await useMultiFileAuthState(AUTH_FOLDER);
   const { version } = await fetchVersionWithFallback();
 
   status = "connecting";
   currentQRDataUrl = null;
   currentPairingCode = null;
-  if (pairingPhone) pendingPairingPhone = pairingPhone;
 
   sock = makeWASocket({
     version,
@@ -105,6 +101,7 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
       keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" })),
     },
     logger: pino({ level: "silent" }),
+    browser: Browsers.ubuntu("Chrome"),
     printQRInTerminal: false,
     syncFullHistory: false,
     markOnlineOnConnect: false,
@@ -112,27 +109,60 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
 
   sock.ev.on("creds.update", saveCreds);
 
-  // Pairing code mode: wait 5s for socket handshake, then request code
+  // ── Pairing code flow ───────────────────────────────────────────────────
   if (pairingPhone) {
     status = "pairing";
-    pairingTimer = setTimeout(async () => {
+    const cleanPhone = pairingPhone.replace(/[^0-9]/g, "");
+    const targetPhone = pairingPhone; // capture for closure checks
+    let codeObtained = false;
+
+    async function attemptPairingCode(trigger: string) {
+      if (codeObtained) return;
+      if (!sock || pendingPairingPhone !== targetPhone) return;
+
+      log(`[${trigger}] Requesting pairing code for ${cleanPhone}…`);
       try {
-        if (!sock) { log("Socket gone before pairing code request"); return; }
-        const cleanPhone = pairingPhone.replace(/[^0-9]/g, "");
-        log(`Requesting pairing code for ${cleanPhone}…`);
         const code = await sock.requestPairingCode(cleanPhone);
+        if (codeObtained) return; // race: another trigger already got it
+        codeObtained = true;
         currentPairingCode = code;
+        lastPairingError = null;
         log(`Pairing code ready: ${code}`);
         if (socketIO) socketIO.emit("whatsapp:pairing_code", { code });
       } catch (err: any) {
-        log(`Pairing code error: ${err.message}`);
-        currentPairingCode = null;
-        // Don't flip status to disconnected here — let connection.update handle it
-        if (socketIO) socketIO.emit("whatsapp:pairing_error", { error: err.message });
+        // Log but do NOT surface yet — a later trigger may still succeed
+        log(`[${trigger}] Pairing attempt failed: ${err.message}`);
+        lastPairingError = err.message; // track last known error for diagnostics
       }
-    }, 5000);
+    }
+
+    // Strategy 1: trigger when Baileys emits "connecting" (noise handshake done)
+    const onConnecting = (update: any) => {
+      if (update.connection === "connecting" && !codeObtained) {
+        setTimeout(() => attemptPairingCode("connecting-event"), 300);
+      }
+    };
+    sock.ev.on("connection.update", onConnecting);
+
+    // Strategy 2: fixed-delay fallback triggers
+    [3000, 6000, 9000].forEach((ms) => {
+      setTimeout(() => attemptPairingCode(`${ms / 1000}s-fallback`), ms);
+    });
+
+    // Strategy 3: final verdict after 14s — if nothing worked, surface the error
+    setTimeout(() => {
+      if (!codeObtained && pendingPairingPhone === targetPhone) {
+        const finalError = lastPairingError ?? "Timed out waiting for pairing code";
+        log(`Pairing failed after all attempts: ${finalError}`);
+        lastPairingError = finalError;
+        status = "disconnected";
+        pendingPairingPhone = null;
+        if (socketIO) socketIO.emit("whatsapp:pairing_error", { error: finalError });
+      }
+    }, 14000);
   }
 
+  // ── Connection event handler ─────────────────────────────────────────────
   sock.ev.on("connection.update", async (update: any) => {
     const { connection, lastDisconnect, qr } = update;
 
@@ -148,11 +178,11 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
     }
 
     if (connection === "open") {
-      clearPairingTimer();
       status = "open";
       currentQRDataUrl = null;
       currentPairingCode = null;
       pendingPairingPhone = null;
+      lastPairingError = null;
       shouldReconnect = true;
       const phone = sock?.user?.id?.split(":")[0] ?? "?";
       log(`Connected as +${phone}`);
@@ -160,7 +190,6 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
     }
 
     if (connection === "close") {
-      clearPairingTimer();
       const reason = (lastDisconnect?.error as any)?.output?.statusCode;
       const { DisconnectReason: DR } = await import("@whiskeysockets/baileys");
       const loggedOut = reason === DR.loggedOut;
@@ -172,7 +201,7 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
 
       if (loggedOut) {
         shouldReconnect = false;
-        try { fs.rmSync(AUTH_FOLDER, { recursive: true, force: true }); } catch {}
+        wipeAuth();
         log("Logged out — session cleared");
         if (socketIO) socketIO.emit("whatsapp:logged_out", {});
       } else {
@@ -211,18 +240,21 @@ export function startPairingCode(phone: string): void {
 
 export function getQRDataUrl(): string | null { return currentQRDataUrl; }
 export function getPairingCode(): string | null { return currentPairingCode; }
+export function getLastPairingError(): string | null { return lastPairingError; }
 
 export function getStatus(): {
   status: Status;
   connected: boolean;
   phone?: string;
   pairingCode?: string;
+  pairingError?: string;
 } {
   return {
     status,
     connected: status === "open",
     phone: sock?.user?.id?.split(":")[0] ?? undefined,
     pairingCode: currentPairingCode ?? undefined,
+    pairingError: lastPairingError ?? undefined,
   };
 }
 
@@ -268,18 +300,18 @@ export async function sendWhatsAppImage(
 
 export async function disconnect(): Promise<void> {
   shouldReconnect = false;
-  clearPairingTimer();
   if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
   if (sock) {
     try { await sock.logout(); } catch {}
     try { sock.end(); } catch {}
     sock = null;
   }
-  try { fs.rmSync(AUTH_FOLDER, { recursive: true, force: true }); } catch {}
+  wipeAuth();
   status = "disconnected";
   currentQRDataUrl = null;
   currentPairingCode = null;
   pendingPairingPhone = null;
+  lastPairingError = null;
   log("Disconnected and session cleared");
 }
 
