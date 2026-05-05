@@ -173,7 +173,6 @@ export default function WhatsApp() {
       countdownRef.current = setInterval(() => setWaitSeconds((s) => s + 1), 1000);
     });
     socket.on("whatsapp:pairing_dropped", ({ reason }: { reason: string }) => {
-      // Exhausted all auto-retries — ask user to start over
       setPairingCode(null);
       setIsWaitingForCode(false);
       if (countdownRef.current) clearInterval(countdownRef.current);
@@ -184,6 +183,21 @@ export default function WhatsApp() {
         duration: 10000,
       });
       refetch();
+    });
+    socket.on("whatsapp:logged_out", ({ reason }: { reason?: string }) => {
+      setPairingCode(null);
+      setIsWaitingForCode(false);
+      if (countdownRef.current) clearInterval(countdownRef.current);
+      const isDeviceRemoved = reason === "device_removed";
+      toast({
+        title: isDeviceRemoved ? "WhatsApp removed this device" : "WhatsApp logged out",
+        description: isDeviceRemoved
+          ? "WhatsApp disconnected this session (likely a duplicate connection). Please re-link your phone."
+          : "Your WhatsApp session ended. Please re-link your phone.",
+        variant: "destructive",
+        duration: 12000,
+      });
+      setTimeout(() => refetch(), 500);
     });
     return () => { socket.disconnect(); };
   }, []);

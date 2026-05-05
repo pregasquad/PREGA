@@ -69,6 +69,10 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
   if (sock) {
     try { sock.end(); } catch {}
     sock = null;
+    // Short grace period so the WS close frame reaches WhatsApp before we
+    // open a new connection with the same credentials.  Without this, WA can
+    // see two simultaneous sessions and kick both with "device_removed".
+    await new Promise((r) => setTimeout(r, 800));
   }
 
   // Always start with a clean slate when pairing.
@@ -228,12 +232,19 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
       pendingPairingPhone = null;
       currentPairingCode = null;
 
+      const isDeviceRemoved = errorMsg.toLowerCase().includes("conflict") || errorMsg.toLowerCase().includes("device_removed");
+
       if (loggedOut) {
         shouldReconnect = false;
         pairingRetryCount = 0;
         wipeAuth();
-        log("Logged out — session cleared");
-        if (socketIO) socketIO.emit("whatsapp:logged_out", {});
+        if (isDeviceRemoved) {
+          log("Device removed by WhatsApp — session cleared");
+          if (socketIO) socketIO.emit("whatsapp:logged_out", { reason: "device_removed" });
+        } else {
+          log("Logged out — session cleared");
+          if (socketIO) socketIO.emit("whatsapp:logged_out", { reason: "logged_out" });
+        }
       } else if (wasPairing && pairingRetryCount < MAX_PAIRING_RETRIES) {
         // Connection dropped while the user was entering the code.
         // Auto-retry: reconnect and get a fresh code — user stays on the same screen.
