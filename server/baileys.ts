@@ -96,22 +96,25 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
   currentQRDataUrl = null;
   currentPairingCode = null;
 
+  const pinoLogger = pino({ level: "warn" });
   sock = makeWASocket({
     version,
     auth: {
       creds: state.creds,
       keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" })),
     },
-    logger: pino({ level: "silent" }),
-    // Ubuntu fingerprint is more reliable than macOS for pairing code auth
+    logger: pinoLogger,
     browser: Browsers.ubuntu("Chrome"),
     printQRInTerminal: false,
     syncFullHistory: false,
     markOnlineOnConnect: false,
-    // Keep-alive prevents Replit's proxy from dropping the WebSocket
-    // during the authentication handshake after the pairing code is entered
-    keepAliveIntervalMs: 8_000,
-    // Required by Baileys for the auth flow to complete successfully
+    // 20s interval: frequent enough to prevent Replit's proxy from dropping
+    // idle WebSockets, but not so aggressive that a slow ping response (< 25s)
+    // causes Baileys to self-terminate during the pairing handshake.
+    keepAliveIntervalMs: 20_000,
+    // Give the initial handshake plenty of time on a cloud host.
+    connectTimeoutMs: 60_000,
+    // Required for auth flow to complete
     getMessage: async () => ({ conversation: "" }),
   });
 
@@ -203,10 +206,12 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
 
     if (connection === "close") {
       const reason = (lastDisconnect?.error as any)?.output?.statusCode;
+      const errorMsg = (lastDisconnect?.error as any)?.message ?? "";
       const { DisconnectReason: DR } = await import("@whiskeysockets/baileys");
       const loggedOut = reason === DR.loggedOut;
+      const wasPairing = !!pendingPairingPhone && currentPairingCode !== null;
 
-      log(`Connection closed. Code: ${reason}. LoggedOut: ${loggedOut}`);
+      log(`Connection closed. Code: ${reason}. WasPairing: ${wasPairing}. Error: ${errorMsg}`);
       status = "disconnected";
       sock = null;
       pendingPairingPhone = null;
@@ -216,6 +221,17 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
         wipeAuth();
         log("Logged out — session cleared");
         if (socketIO) socketIO.emit("whatsapp:logged_out", {});
+      } else if (wasPairing) {
+        // Connection dropped while the user was entering the code in WhatsApp.
+        // Notify the frontend so they know to request a new code.
+        currentPairingCode = null;
+        const detail = errorMsg || `code ${reason}`;
+        log(`Pairing session dropped: ${detail}`);
+        if (socketIO) {
+          socketIO.emit("whatsapp:pairing_dropped", {
+            reason: detail,
+          });
+        }
       } else {
         if (socketIO) socketIO.emit("whatsapp:disconnected", { reason });
         if (shouldReconnect) {
