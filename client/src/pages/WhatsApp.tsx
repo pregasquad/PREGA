@@ -30,6 +30,7 @@ interface WAStatus {
   connected: boolean;
   phone?: string;
   qr?: string | null;
+  pairingCode?: string | null;
 }
 
 function StatusBadge({ status }: { status: WAStatus["status"] }) {
@@ -88,26 +89,26 @@ function PairingCodeDisplay({ code }: { code: string }) {
 }
 
 function PairingProgress({ seconds }: { seconds: number }) {
-  const total = 35;
-  const pct = Math.min(100, Math.round((seconds / total) * 100));
+  const total = 40;
+  const pct = Math.min(95, Math.round((seconds / total) * 100));
   return (
     <div className="space-y-2">
       <div className="flex justify-between text-xs text-muted-foreground">
-        <span>Connecting to WhatsApp servers…</span>
-        <span>{Math.max(0, total - seconds)}s</span>
+        <span>Connecting to WhatsApp…</span>
+        <span>{seconds}s</span>
       </div>
       <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
         <div
-          className="h-full rounded-full bg-purple-500 transition-all duration-500"
+          className="h-full rounded-full bg-purple-500 transition-all duration-1000"
           style={{ width: `${pct}%` }}
         />
       </div>
       <p className="text-xs text-muted-foreground text-center">
-        {seconds < 6
-          ? "Setting up secure connection…"
-          : seconds < 15
+        {seconds < 5
+          ? "Starting secure connection…"
+          : seconds < 12
           ? "Requesting pairing code from WhatsApp…"
-          : "Almost there, waiting for WhatsApp response…"}
+          : "Waiting for WhatsApp response…"}
       </p>
     </div>
   );
@@ -117,6 +118,7 @@ export default function WhatsApp() {
   const { toast } = useToast();
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const [pairingPhone, setPairingPhone] = useState("");
   const [pairingCode, setPairingCode] = useState<string | null>(null);
   const [isWaitingForCode, setIsWaitingForCode] = useState(false);
@@ -137,17 +139,44 @@ export default function WhatsApp() {
   const status = waData?.status ?? "disconnected";
   const connected = waData?.connected ?? false;
 
-  // Poll status — faster (2s) when pairing/connecting, slower (6s) otherwise
+  // ── Pick up pairing code from poll response ──────────────────────────────
+  useEffect(() => {
+    if (isWaitingForCode && waData?.pairingCode) {
+      setPairingCode(waData.pairingCode);
+      setIsWaitingForCode(false);
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    }
+  }, [waData?.pairingCode, isWaitingForCode]);
+
+  // ── If status flips to disconnected while still waiting, show error ──────
+  useEffect(() => {
+    if (isWaitingForCode && status === "disconnected" && waitSeconds > 12) {
+      setIsWaitingForCode(false);
+      if (countdownRef.current) clearInterval(countdownRef.current);
+      toast({
+        title: "Connection failed",
+        description: "Could not get a pairing code. Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, [status, isWaitingForCode, waitSeconds]);
+
+  // ── Polling — faster while waiting ──────────────────────────────────────
   useEffect(() => {
     if (pollRef.current) clearInterval(pollRef.current);
-    const interval = (status === "pairing" || status === "connecting" || isWaitingForCode) ? 2000 : 6000;
-    if (status !== "open") {
-      pollRef.current = setInterval(() => { refetch(); }, interval);
+    const interval =
+      status === "pairing" || status === "connecting" || isWaitingForCode
+        ? 2000
+        : status === "open"
+        ? 0
+        : 6000;
+    if (interval > 0) {
+      pollRef.current = setInterval(() => refetch(), interval);
     }
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [status, refetch, isWaitingForCode]);
 
-  // Clear pairing code + countdown once connected
+  // ── Clear pairing state once connected ──────────────────────────────────
   useEffect(() => {
     if (status === "open") {
       setPairingCode(null);
@@ -157,25 +186,22 @@ export default function WhatsApp() {
     }
   }, [status]);
 
-  // Countdown timer while waiting for pairing code
+  // ── Countdown timer while waiting ────────────────────────────────────────
   useEffect(() => {
     if (countdownRef.current) clearInterval(countdownRef.current);
     if (isWaitingForCode) {
       setWaitSeconds(0);
-      countdownRef.current = setInterval(() => {
-        setWaitSeconds(s => s + 1);
-      }, 1000);
+      countdownRef.current = setInterval(() => setWaitSeconds((s) => s + 1), 1000);
     }
     return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
   }, [isWaitingForCode]);
 
+  // ── Mutations ─────────────────────────────────────────────────────────────
+
   const connectQRMutation = useMutation({
     mutationFn: () =>
       apiRequest("POST", "/api/whatsapp/connect-qr").then((r) => r.json()),
-    onSuccess: () => {
-      setPairingCode(null);
-      setTimeout(() => refetch(), 2000);
-    },
+    onSuccess: () => setTimeout(() => refetch(), 1500),
     onError: (err: any) =>
       toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
@@ -186,22 +212,21 @@ export default function WhatsApp() {
         r.json()
       ),
     onMutate: () => {
+      // Server returns immediately — show loading state, code arrives via polling
       setIsWaitingForCode(true);
       setPairingCode(null);
     },
     onSuccess: (data) => {
-      setIsWaitingForCode(false);
-      if (countdownRef.current) clearInterval(countdownRef.current);
-      if (data.success && data.code) {
-        setPairingCode(data.code);
-        setTimeout(() => refetch(), 2000);
-      } else {
+      if (!data.success) {
+        setIsWaitingForCode(false);
+        if (countdownRef.current) clearInterval(countdownRef.current);
         toast({
-          title: "Failed to get pairing code",
+          title: "Failed to start pairing",
           description: data.error || "Try again",
           variant: "destructive",
         });
       }
+      // If success, keep isWaitingForCode=true and wait for code via polling
     },
     onError: (err: any) => {
       setIsWaitingForCode(false);
@@ -266,6 +291,14 @@ export default function WhatsApp() {
       toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
+  function resetPairing() {
+    setPairingCode(null);
+    setIsWaitingForCode(false);
+    setWaitSeconds(0);
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    refetch();
+  }
+
   return (
     <div className="page-wrapper p-4 md:p-6 space-y-5 max-w-xl mx-auto">
       {/* Header */}
@@ -284,13 +317,14 @@ export default function WhatsApp() {
             size="icon"
             className="h-7 w-7"
             onClick={() => refetch()}
+            data-testid="button-refresh-status"
           >
             <RefreshCw className="w-3.5 h-3.5" />
           </Button>
         </div>
       </div>
 
-      {/* ── DISCONNECTION ALERT ── */}
+      {/* ── DISCONNECTED ALERT ── */}
       {!connected && status === "disconnected" && !isWaitingForCode && (
         <div className="flex items-start gap-3 p-4 rounded-2xl bg-red-500/10 border border-red-500/30">
           <WifiOff className="w-5 h-5 text-red-400 mt-0.5 shrink-0" />
@@ -320,6 +354,7 @@ export default function WhatsApp() {
             className="w-full border-destructive/40 text-destructive hover:bg-destructive/10"
             onClick={() => disconnectMutation.mutate()}
             disabled={disconnectMutation.isPending}
+            data-testid="button-disconnect"
           >
             {disconnectMutation.isPending ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -354,23 +389,34 @@ export default function WhatsApp() {
             {/* ── PAIRING CODE TAB ── */}
             <TabsContent value="phone" className="space-y-4 mt-4">
               <p className="text-sm text-muted-foreground">
-                Enter your WhatsApp number. We'll give you an 8-character code to enter inside the WhatsApp app.
+                Enter your WhatsApp number. We'll give you an 8-character code to enter in the WhatsApp app.
               </p>
 
-              {/* Waiting for code — show progress bar */}
+              {/* Waiting for code */}
               {isWaitingForCode && !pairingCode && (
                 <div className="rounded-xl border border-purple-500/30 bg-purple-500/5 p-4 space-y-3">
                   <div className="flex items-center gap-2 justify-center">
                     <Loader2 className="w-4 h-4 text-purple-400 animate-spin" />
-                    <span className="text-sm text-purple-300 font-medium">Getting your pairing code…</span>
+                    <span className="text-sm text-purple-300 font-medium">
+                      Getting your pairing code…
+                    </span>
                   </div>
                   <PairingProgress seconds={waitSeconds} />
                   <p className="text-xs text-center text-muted-foreground">
-                    This can take up to 35 seconds — please wait
+                    This usually takes 5–15 seconds
                   </p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full text-xs text-muted-foreground"
+                    onClick={resetPairing}
+                  >
+                    Cancel
+                  </Button>
                 </div>
               )}
 
+              {/* Input form — hidden while waiting or showing a code */}
               {!pairingCode && !isWaitingForCode && (
                 <>
                   <div className="space-y-1.5">
@@ -388,19 +434,28 @@ export default function WhatsApp() {
                   <Button
                     className="w-full bg-purple-600 hover:bg-purple-700 text-white"
                     onClick={() => pairingMutation.mutate()}
-                    disabled={pairingMutation.isPending || pairingPhone.replace(/[^0-9]/g, "").length < 8}
+                    disabled={
+                      pairingMutation.isPending ||
+                      pairingPhone.replace(/[^0-9]/g, "").length < 8
+                    }
                     data-testid="button-get-pairing-code"
                   >
-                    <Hash className="w-4 h-4 mr-2" />
-                    Get pairing code
+                    {pairingMutation.isPending ? (
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Starting…</>
+                    ) : (
+                      <><Hash className="w-4 h-4 mr-2" /> Get pairing code</>
+                    )}
                   </Button>
                 </>
               )}
 
+              {/* Pairing code display */}
               {pairingCode && !isWaitingForCode && (
                 <div className="space-y-4">
                   <div className="rounded-xl border border-purple-500/30 bg-purple-500/5 p-4 space-y-3">
-                    <p className="text-sm font-medium text-center text-purple-300">Your pairing code</p>
+                    <p className="text-sm font-medium text-center text-purple-300">
+                      Your pairing code
+                    </p>
                     <PairingCodeDisplay code={pairingCode} />
                     <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
                       <li>Open <strong>WhatsApp</strong> on your phone</li>
@@ -412,7 +467,7 @@ export default function WhatsApp() {
                   <Button
                     variant="outline"
                     className="w-full text-xs"
-                    onClick={() => { setPairingCode(null); refetch(); }}
+                    onClick={resetPairing}
                   >
                     Try again with a different number
                   </Button>
@@ -451,6 +506,7 @@ export default function WhatsApp() {
                     className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
                     onClick={() => connectQRMutation.mutate()}
                     disabled={connectQRMutation.isPending || status === "connecting"}
+                    data-testid="button-generate-qr"
                   >
                     {connectQRMutation.isPending || status === "connecting" ? (
                       <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating…</>
@@ -464,7 +520,8 @@ export default function WhatsApp() {
               <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
                 <AlertCircle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
                 <p className="text-xs text-amber-300">
-                  If WhatsApp shows "Can't link new devices", use the <strong>Phone number</strong> tab instead — it works even when QR scanning is blocked.
+                  If WhatsApp shows "Can't link new devices", use the{" "}
+                  <strong>Phone number</strong> tab instead — it works even when QR scanning is blocked.
                 </p>
               </div>
             </TabsContent>
@@ -538,8 +595,7 @@ export default function WhatsApp() {
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground uppercase tracking-wider">
               Message — use{" "}
-              <code className="bg-muted px-1 rounded text-[11px]">{"{name}"}</code> for client
-              name
+              <code className="bg-muted px-1 rounded text-[11px]">{"{name}"}</code> for client name
             </Label>
             <Textarea
               placeholder={"مرحباً {name}! نذكركم بعروضنا الجديدة… 💅"}

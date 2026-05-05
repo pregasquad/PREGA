@@ -11,8 +11,10 @@ let currentQRDataUrl: string | null = null;
 let currentPairingCode: string | null = null;
 let status: Status = "disconnected";
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+let pairingTimer: ReturnType<typeof setTimeout> | null = null;
 let shouldReconnect = false;
 let socketIO: any = null;
+let pendingPairingPhone: string | null = null;
 
 export function setSocketIO(io: any): void {
   socketIO = io;
@@ -26,11 +28,15 @@ function hasExistingSession(): boolean {
   return fs.existsSync(CREDS_FILE);
 }
 
-function scheduleReconnect(delayMs = 15000) {
+function clearPairingTimer() {
+  if (pairingTimer) { clearTimeout(pairingTimer); pairingTimer = null; }
+}
+
+function scheduleReconnect(delayMs = 20000) {
   if (reconnectTimer) clearTimeout(reconnectTimer);
   if (!shouldReconnect) return;
   reconnectTimer = setTimeout(() => {
-    log(`Reconnecting in ${delayMs / 1000}s…`);
+    log("Reconnecting…");
     connectSocket().catch((err) => log(`Reconnect failed: ${err.message}`));
   }, delayMs);
 }
@@ -42,7 +48,7 @@ async function fetchVersionWithFallback() {
     const result = await Promise.race([
       fetchLatestBaileysVersion(),
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("version fetch timeout")), 8000)
+        setTimeout(() => reject(new Error("timeout")), 8000)
       ),
     ]);
     return result;
@@ -53,15 +59,14 @@ async function fetchVersionWithFallback() {
 }
 
 async function connectSocket(pairingPhone?: string): Promise<void> {
+  // Cancel any pending timers
+  if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+  clearPairingTimer();
+
+  // Tear down existing socket
   if (sock) {
     try { sock.end(); } catch {}
     sock = null;
-  }
-
-  // For pairing code flow: always start with a clean slate to avoid
-  // "already registered" state from a broken old session
-  if (pairingPhone) {
-    try { fs.rmSync(AUTH_FOLDER, { recursive: true, force: true }); } catch {}
   }
 
   if (!fs.existsSync(AUTH_FOLDER)) fs.mkdirSync(AUTH_FOLDER, { recursive: true });
@@ -73,12 +78,25 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
   } = await import("@whiskeysockets/baileys");
   const pino = (await import("pino")).default;
 
-  const { state, saveCreds } = await useMultiFileAuthState(AUTH_FOLDER);
+  let { state, saveCreds } = await useMultiFileAuthState(AUTH_FOLDER);
+
+  // If pairing but old creds are already registered (leftover broken session),
+  // clear them so we can get a fresh pairing code
+  if (pairingPhone && state.creds.registered) {
+    log("Old registered session found — clearing for fresh pairing");
+    try { fs.rmSync(AUTH_FOLDER, { recursive: true, force: true }); } catch {}
+    fs.mkdirSync(AUTH_FOLDER, { recursive: true });
+    const fresh = await useMultiFileAuthState(AUTH_FOLDER);
+    state = fresh.state;
+    saveCreds = fresh.saveCreds;
+  }
+
   const { version } = await fetchVersionWithFallback();
 
   status = "connecting";
   currentQRDataUrl = null;
   currentPairingCode = null;
+  if (pairingPhone) pendingPairingPhone = pairingPhone;
 
   sock = makeWASocket({
     version,
@@ -94,12 +112,12 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
 
   sock.ev.on("creds.update", saveCreds);
 
-  // Pairing code mode: wait for socket to be ready, then request code
+  // Pairing code mode: wait 5s for socket handshake, then request code
   if (pairingPhone) {
     status = "pairing";
-    // Wait longer (6s) for the WA socket handshake to complete before requesting
-    setTimeout(async () => {
+    pairingTimer = setTimeout(async () => {
       try {
+        if (!sock) { log("Socket gone before pairing code request"); return; }
         const cleanPhone = pairingPhone.replace(/[^0-9]/g, "");
         log(`Requesting pairing code for ${cleanPhone}…`);
         const code = await sock.requestPairingCode(cleanPhone);
@@ -109,30 +127,32 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
       } catch (err: any) {
         log(`Pairing code error: ${err.message}`);
         currentPairingCode = null;
-        status = "disconnected";
+        // Don't flip status to disconnected here — let connection.update handle it
         if (socketIO) socketIO.emit("whatsapp:pairing_error", { error: err.message });
       }
-    }, 6000);
+    }, 5000);
   }
 
   sock.ev.on("connection.update", async (update: any) => {
     const { connection, lastDisconnect, qr } = update;
 
-    if (qr && !pairingPhone) {
+    if (qr && !pendingPairingPhone) {
       status = "qr";
       try {
         const QRCode = await import("qrcode");
         currentQRDataUrl = await QRCode.default.toDataURL(qr, { width: 280, margin: 2 });
-        log("QR code ready for scanning");
+        log("QR code ready");
       } catch (err: any) {
-        log(`QR generation error: ${err.message}`);
+        log(`QR error: ${err.message}`);
       }
     }
 
     if (connection === "open") {
+      clearPairingTimer();
       status = "open";
       currentQRDataUrl = null;
       currentPairingCode = null;
+      pendingPairingPhone = null;
       shouldReconnect = true;
       const phone = sock?.user?.id?.split(":")[0] ?? "?";
       log(`Connected as +${phone}`);
@@ -140,13 +160,15 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
     }
 
     if (connection === "close") {
+      clearPairingTimer();
       const reason = (lastDisconnect?.error as any)?.output?.statusCode;
       const { DisconnectReason: DR } = await import("@whiskeysockets/baileys");
       const loggedOut = reason === DR.loggedOut;
 
-      log(`Connection closed. Reason code: ${reason}. LoggedOut: ${loggedOut}`);
+      log(`Connection closed. Code: ${reason}. LoggedOut: ${loggedOut}`);
       status = "disconnected";
       sock = null;
+      pendingPairingPhone = null;
 
       if (loggedOut) {
         shouldReconnect = false;
@@ -156,7 +178,6 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
       } else {
         if (socketIO) socketIO.emit("whatsapp:disconnected", { reason });
         if (shouldReconnect) {
-          // Only reconnect if we had an established session, back off generously
           scheduleReconnect(20000);
         }
       }
@@ -171,40 +192,37 @@ export async function initBaileys(): Promise<void> {
     shouldReconnect = true;
     await connectSocket();
   } else {
-    log("No saved session — waiting for user to connect via QR or pairing code");
+    log("No saved session — waiting for user to connect");
   }
 }
 
-/** Start a new connection and show a QR code */
-export async function startQR(): Promise<void> {
+/** Start QR flow — non-blocking */
+export function startQR(): void {
   shouldReconnect = false;
-  await connectSocket();
+  pendingPairingPhone = null;
+  connectSocket().catch((err) => log(`startQR error: ${err.message}`));
 }
 
-/** Start a new connection and return a pairing code for the given phone number */
-export async function startPairingCode(phone: string): Promise<string> {
+/** Start pairing code flow — fully non-blocking. Code appears via getPairingCode() / polling. */
+export function startPairingCode(phone: string): void {
   shouldReconnect = false;
-  await connectSocket(phone);
-  // Wait up to 35 seconds for the pairing code (6s socket init + up to 29s for WA response)
-  for (let i = 0; i < 70; i++) {
-    await new Promise(r => setTimeout(r, 500));
-    if (currentPairingCode) return currentPairingCode;
-    // If something went wrong and status flipped back to disconnected, fail fast
-    if (status === "disconnected" && i > 14) {
-      throw new Error("Connection failed — please try again");
-    }
-  }
-  throw new Error("Timed out waiting for pairing code — please try again");
+  connectSocket(phone).catch((err) => log(`startPairingCode error: ${err.message}`));
 }
 
 export function getQRDataUrl(): string | null { return currentQRDataUrl; }
 export function getPairingCode(): string | null { return currentPairingCode; }
 
-export function getStatus(): { status: Status; connected: boolean; phone?: string } {
+export function getStatus(): {
+  status: Status;
+  connected: boolean;
+  phone?: string;
+  pairingCode?: string;
+} {
   return {
     status,
     connected: status === "open",
     phone: sock?.user?.id?.split(":")[0] ?? undefined,
+    pairingCode: currentPairingCode ?? undefined,
   };
 }
 
@@ -250,6 +268,7 @@ export async function sendWhatsAppImage(
 
 export async function disconnect(): Promise<void> {
   shouldReconnect = false;
+  clearPairingTimer();
   if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
   if (sock) {
     try { await sock.logout(); } catch {}
@@ -260,6 +279,7 @@ export async function disconnect(): Promise<void> {
   status = "disconnected";
   currentQRDataUrl = null;
   currentPairingCode = null;
+  pendingPairingPhone = null;
   log("Disconnected and session cleared");
 }
 

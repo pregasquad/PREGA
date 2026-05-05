@@ -2468,10 +2468,11 @@ export async function registerRoutes(
   // ── Baileys WhatsApp management routes ──────────────────────────────────
   app.get("/api/whatsapp/qr", isPinAuthenticated, async (_req, res) => {
     try {
-      const { getQRDataUrl, getStatus } = await import("./baileys");
+      const { getQRDataUrl, getStatus, getPairingCode } = await import("./baileys");
       const s = getStatus();
       const qr = getQRDataUrl();
-      res.json({ status: s.status, connected: s.connected, phone: s.phone, qr });
+      const pairingCode = getPairingCode();
+      res.json({ status: s.status, connected: s.connected, phone: s.phone, qr, pairingCode });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
@@ -2489,7 +2490,7 @@ export async function registerRoutes(
   app.post("/api/whatsapp/connect-qr", isPinAuthenticated, async (_req, res) => {
     try {
       const { startQR } = await import("./baileys");
-      startQR().catch(() => {}); // non-blocking — QR arrives via polling
+      startQR(); // non-blocking — QR arrives via polling /api/whatsapp/qr
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
@@ -2500,8 +2501,8 @@ export async function registerRoutes(
     try {
       const { startPairingCode } = await import("./baileys");
       const { phone } = z.object({ phone: z.string().min(8) }).parse(req.body);
-      const code = await startPairingCode(phone);
-      res.json({ success: true, code });
+      startPairingCode(phone); // non-blocking — code arrives via polling /api/whatsapp/qr
+      res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
