@@ -1,4 +1,4 @@
-import { db, schema, dbDialect } from "./db";
+import { db, schema, getDbDialect } from "./db";
 import {
   type Appointment, type InsertAppointment,
   type Service, type InsertService,
@@ -30,8 +30,9 @@ import { eq, desc, and, gte, lte, sql, isNull } from "drizzle-orm";
 import { authStorage, type IAuthStorage } from "./replit_integrations/auth/storage";
 
 // Helper to check if we're using MySQL (no .returning() support)
+// Uses getDbDialect() so it always reads the live value even after failover
 function isMySQL(): boolean {
-  return dbDialect === 'mysql';
+  return getDbDialect() === 'mysql';
 }
 
 export interface IStorage extends IAuthStorage {
