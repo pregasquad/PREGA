@@ -16,7 +16,8 @@ let shouldReconnect = false;
 let socketIO: any = null;
 let pendingPairingPhone: string | null = null;
 let pairingRetryCount = 0;
-const MAX_PAIRING_RETRIES = 5;
+const MAX_PAIRING_RETRIES = 2; // keep low — too many attempts triggers WhatsApp rate-limiting
+let isVerifyingLink = false;   // true while we reconnect to check if phone confirmed the code
 
 export function setSocketIO(io: any): void {
   socketIO = io;
@@ -114,15 +115,9 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
     printQRInTerminal: false,
     syncFullHistory: false,
     markOnlineOnConnect: false,
-    // 20s keepalive to prevent Replit's proxy dropping idle WebSockets,
-    // but long enough not to interfere with the pairing handshake.
-    keepAliveIntervalMs: 20_000,
-    // Generous timeouts for cloud/proxy environments like Replit.
+    keepAliveIntervalMs: 8_000,   // more frequent pings — Replit proxy drops idle WS fast
     connectTimeoutMs: 90_000,
-    // Disable the per-query timeout so requestPairingCode never times out
-    // internally while waiting for WhatsApp's response over a slow proxy.
     defaultQueryTimeoutMs: undefined,
-    // Required for auth flow to complete
     getMessage: async () => ({ conversation: "" }),
   });
 
@@ -219,22 +214,22 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
       const errorMsg = (lastDisconnect?.error as any)?.message ?? "";
       const { DisconnectReason: DR } = await import("@whiskeysockets/baileys");
       const loggedOut = reason === DR.loggedOut;
-      // Capture the phone before we clear it
+      // Capture state BEFORE clearing so we can make the right decision below.
       const droppedPairingPhone = pendingPairingPhone;
-      // Retry whenever a pairing was in progress — even if the code was never obtained.
-      // Previously this required currentPairingCode !== null, which meant a WS drop
-      // before the code arrived would silently skip all retries.
-      const wasPairing = !!droppedPairingPhone;
+      const hadCode = currentPairingCode !== null;
+      const wasVerifying = isVerifyingLink;
 
-      log(`Connection closed. Code: ${reason}. WasPairing: ${wasPairing}. HasCode: ${currentPairingCode !== null}. Retry: ${pairingRetryCount}/${MAX_PAIRING_RETRIES}. Error: ${errorMsg}`);
+      log(`Connection closed. Code: ${reason}. Pairing: ${!!droppedPairingPhone}. HadCode: ${hadCode}. Verifying: ${wasVerifying}. Retry: ${pairingRetryCount}/${MAX_PAIRING_RETRIES}. Error: "${errorMsg}"`);
       status = "disconnected";
       sock = null;
       pendingPairingPhone = null;
       currentPairingCode = null;
+      isVerifyingLink = false;
 
       const isDeviceRemoved = errorMsg.toLowerCase().includes("conflict") || errorMsg.toLowerCase().includes("device_removed");
 
-      if (loggedOut) {
+      if (loggedOut && !wasVerifying) {
+        // Genuine logout / device removal — wipe session
         shouldReconnect = false;
         pairingRetryCount = 0;
         wipeAuth();
@@ -245,22 +240,47 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
           log("Logged out — session cleared");
           if (socketIO) socketIO.emit("whatsapp:logged_out", { reason: "logged_out" });
         }
-      } else if (wasPairing && pairingRetryCount < MAX_PAIRING_RETRIES) {
-        // Connection dropped while the user was entering the code.
-        // Auto-retry: reconnect and get a fresh code — user stays on the same screen.
+      } else if (loggedOut && wasVerifying) {
+        // 401 during link-verification → phone didn't accept the code.
+        // Wipe partial creds and let user try a fresh code.
+        pairingRetryCount = 0;
+        wipeAuth();
+        log("Phone did not confirm the pairing code — session reset. User should request a new code.");
+        if (socketIO) socketIO.emit("whatsapp:pairing_dropped", { reason: "Phone did not accept the code. Please try again." });
+      } else if (droppedPairingPhone && hadCode) {
+        // ── Code was shown; WhatsApp closed the pairing WS (expected after IQ is sent) ──
+        // DO NOT wipe auth and do NOT auto-generate a new code — that causes rate-limiting.
+        // Wait quietly, then attempt ONE reconnect with the saved creds.
+        // If the phone confirmed → "open". If not yet → show the code again and wait.
+        pairingRetryCount = 0;
+        isVerifyingLink = true;
+        shouldReconnect = false;
+        log("Code was shown — WS dropped (expected). Keeping code visible. Will check if phone confirmed in 15s…");
+        // Do NOT emit anything — the frontend already has the code from the pairing_code event.
+        // It will keep showing it while isWaitingForCode stays false (code already displayed).
+        setTimeout(() => {
+          if (!isVerifyingLink) return; // user already clicked "try again"
+          log("Attempting silent reconnect to verify link acceptance…");
+          connectSocket().catch((err) => {
+            isVerifyingLink = false;
+            log(`Verify-reconnect failed: ${err.message}`);
+          });
+        }, 15_000);
+      } else if (droppedPairingPhone && !hadCode && pairingRetryCount < MAX_PAIRING_RETRIES) {
+        // No code obtained before drop → retry with delay (rate-limit protection)
         pairingRetryCount++;
-        log(`Pairing dropped (attempt ${pairingRetryCount}/${MAX_PAIRING_RETRIES}) — auto-retrying in 2s…`);
+        const delay = 5000 + pairingRetryCount * 4000; // 9s, 13s
+        log(`No code obtained — pairing retry ${pairingRetryCount}/${MAX_PAIRING_RETRIES} in ${delay / 1000}s…`);
         if (socketIO) socketIO.emit("whatsapp:pairing_refreshing", { attempt: pairingRetryCount });
         setTimeout(() => {
-          connectSocket(droppedPairingPhone!).catch((err) =>
+          connectSocket(droppedPairingPhone).catch((err) =>
             log(`Auto-retry pairing failed: ${err.message}`)
           );
-        }, 2000);
-      } else if (wasPairing) {
-        // Exhausted retries — tell the user to try again manually
+        }, delay);
+      } else if (droppedPairingPhone && !hadCode) {
         pairingRetryCount = 0;
-        log(`Pairing failed after ${MAX_PAIRING_RETRIES} attempts`);
-        if (socketIO) socketIO.emit("whatsapp:pairing_dropped", { reason: errorMsg || `code ${reason}` });
+        log("Pairing failed — could not obtain code after retries");
+        if (socketIO) socketIO.emit("whatsapp:pairing_dropped", { reason: "WhatsApp did not send a code. Wait a few minutes and try again, or use QR code." });
       } else {
         if (socketIO) socketIO.emit("whatsapp:disconnected", { reason });
         if (shouldReconnect) {
@@ -286,13 +306,15 @@ export async function initBaileys(): Promise<void> {
 export function startQR(): void {
   shouldReconnect = false;
   pendingPairingPhone = null;
+  isVerifyingLink = false;
   connectSocket().catch((err) => log(`startQR error: ${err.message}`));
 }
 
 /** Start pairing code flow — fully non-blocking. Code appears via getPairingCode() / polling. */
 export function startPairingCode(phone: string): void {
   shouldReconnect = false;
-  pairingRetryCount = 0; // fresh manual request resets the retry counter
+  pairingRetryCount = 0;
+  isVerifyingLink = false;
   connectSocket(phone).catch((err) => log(`startPairingCode error: ${err.message}`));
 }
 

@@ -165,12 +165,15 @@ export default function WhatsApp() {
     });
     socket.on("whatsapp:disconnected", () => refetch());
     socket.on("whatsapp:pairing_refreshing", ({ attempt }: { attempt: number }) => {
-      // Connection dropped but we're auto-retrying — show a loading state with a fresh code incoming
       setPairingCode(null);
       setIsWaitingForCode(true);
       if (countdownRef.current) clearInterval(countdownRef.current);
       setWaitSeconds(0);
       countdownRef.current = setInterval(() => setWaitSeconds((s) => s + 1), 1000);
+      if (attempt === 0) {
+        // attempt=0 means: code was shown, connection dropped, checking if phone accepted it
+        toast({ title: "Checking connection…", description: "Verifying if your phone accepted the code.", duration: 4000 });
+      }
     });
     socket.on("whatsapp:pairing_dropped", ({ reason }: { reason: string }) => {
       setPairingCode(null);
@@ -458,23 +461,27 @@ export default function WhatsApp() {
             <span className="font-semibold">Link your WhatsApp</span>
           </div>
 
-          <Tabs defaultValue="phone">
+          <Tabs defaultValue="qr">
             <TabsList className="w-full rounded-xl">
-              <TabsTrigger value="phone" className="flex-1 rounded-lg gap-2">
-                <Phone className="w-3.5 h-3.5" />
-                Phone number
-              </TabsTrigger>
               <TabsTrigger value="qr" className="flex-1 rounded-lg gap-2">
                 <QrCode className="w-3.5 h-3.5" />
                 QR code
+              </TabsTrigger>
+              <TabsTrigger value="phone" className="flex-1 rounded-lg gap-2">
+                <Phone className="w-3.5 h-3.5" />
+                Phone number
               </TabsTrigger>
             </TabsList>
 
             {/* ── PAIRING CODE TAB ── */}
             <TabsContent value="phone" className="space-y-4 mt-4">
               <p className="text-sm text-muted-foreground">
-                Enter your WhatsApp number. We'll give you an 8-character code to enter in the WhatsApp app.
+                Enter your WhatsApp number to receive an 8-character pairing code.
               </p>
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-400">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                <span>If you've tried multiple times without success, use the <strong>QR code</strong> tab instead — it's more reliable.</span>
+              </div>
 
               {/* Waiting for code */}
               {isWaitingForCode && !pairingCode && (
@@ -535,19 +542,31 @@ export default function WhatsApp() {
 
               {/* Pairing code display */}
               {pairingCode && !isWaitingForCode && (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <div className="rounded-xl border border-purple-500/30 bg-purple-500/5 p-4 space-y-3">
                     <p className="text-sm font-medium text-center text-purple-300">
                       Your pairing code
                     </p>
                     <PairingCodeDisplay code={pairingCode} />
-                    <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
-                      <li>Open <strong>WhatsApp</strong> on your phone</li>
-                      <li>Tap <strong>⋮ Menu</strong> → <strong>Linked Devices</strong></li>
-                      <li>Tap <strong>Link with phone number</strong></li>
-                      <li>Enter the code above</li>
-                    </ol>
+                    <div className="space-y-1.5 pt-1">
+                      <p className="text-xs font-medium text-muted-foreground">On your phone:</p>
+                      <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+                        <li>Open <strong>WhatsApp</strong></li>
+                        <li>Tap <strong>⋮ Menu</strong> → <strong>Linked Devices</strong></li>
+                        <li>Tap <strong>Link a Device</strong></li>
+                        <li>Tap <strong>"Link with phone number instead"</strong></li>
+                        <li>Enter the code above</li>
+                      </ol>
+                    </div>
                   </div>
+                  <Button
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm"
+                    onClick={() => { refetch(); }}
+                    data-testid="button-check-connected"
+                  >
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                    I entered the code — check connection
+                  </Button>
                   <Button
                     variant="outline"
                     className="w-full text-xs"
