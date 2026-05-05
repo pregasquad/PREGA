@@ -136,48 +136,45 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
     let codeObtained = false;
 
     async function attemptPairingCode(trigger: string) {
-      if (codeObtained) return;
-      if (!sock || pendingPairingPhone !== targetPhone) return;
+      if (codeObtained) { log(`[${trigger}] Skip — code already obtained`); return; }
+      if (!sock) { log(`[${trigger}] Skip — sock is null (connection dropped)`); return; }
+      if (pendingPairingPhone !== targetPhone) { log(`[${trigger}] Skip — phone mismatch (pending=${pendingPairingPhone} target=${targetPhone})`); return; }
 
-      log(`[${trigger}] Requesting pairing code for ${cleanPhone}…`);
+      log(`[${trigger}] Calling requestPairingCode for ${cleanPhone}…`);
       try {
         const code = await sock.requestPairingCode(cleanPhone);
-        if (codeObtained) return; // race: another trigger already got it
+        if (codeObtained) { log(`[${trigger}] Race: another trigger already got code`); return; }
         codeObtained = true;
         currentPairingCode = code;
         lastPairingError = null;
-        log(`Pairing code ready: ${code}`);
+        log(`[${trigger}] Pairing code obtained: ${code}`);
         if (socketIO) socketIO.emit("whatsapp:pairing_code", { code });
       } catch (err: any) {
-        // Log but do NOT surface yet — a later trigger may still succeed
-        log(`[${trigger}] Pairing attempt failed: ${err.message}`);
-        lastPairingError = err.message; // track last known error for diagnostics
+        log(`[${trigger}] requestPairingCode threw: ${err.message}`);
+        lastPairingError = err.message;
       }
     }
 
-    // Strategy 1: trigger when Baileys emits "connecting" (noise handshake done).
-    // Wait 1.5s after the event — on Replit the proxy needs extra time to
-    // complete the WS handshake before requestPairingCode is accepted.
+    // Strategy 1: trigger as soon as the noise handshake completes ("connecting").
+    // 500ms grace period — enough for the frame layer to be ready.
     const onConnecting = (update: any) => {
       if (update.connection === "connecting" && !codeObtained) {
-        setTimeout(() => attemptPairingCode("connecting-event"), 1500);
+        log(`Noise handshake done — requesting pairing code in 500ms for ${cleanPhone}`);
+        setTimeout(() => attemptPairingCode("connecting-event"), 500);
       }
     };
     sock.ev.on("connection.update", onConnecting);
 
-    // Strategy 2: fixed-delay fallback triggers.
-    // Delays are longer than before to give Replit's proxied WebSocket enough
-    // time to complete the WhatsApp handshake before we request the code.
-    [5000, 10000, 17000].forEach((ms) => {
+    // Strategy 2: fixed-delay fallbacks in case the "connecting" event fires late.
+    [4000, 9000, 16000].forEach((ms) => {
       setTimeout(() => attemptPairingCode(`${ms / 1000}s-fallback`), ms);
     });
 
-    // Strategy 3: final verdict after 30s — surface the error if nothing worked.
-    // Increased from 14s to accommodate slower cloud/proxy connections.
+    // Strategy 3: final verdict after 30s.
     setTimeout(() => {
       if (!codeObtained && pendingPairingPhone === targetPhone) {
         const finalError = lastPairingError ?? "Timed out waiting for pairing code — please try again";
-        log(`Pairing failed after all attempts: ${finalError}`);
+        log(`Pairing timed out. Last error: ${finalError}`);
         lastPairingError = finalError;
         status = "disconnected";
         pendingPairingPhone = null;
@@ -220,9 +217,12 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
       const loggedOut = reason === DR.loggedOut;
       // Capture the phone before we clear it
       const droppedPairingPhone = pendingPairingPhone;
-      const wasPairing = !!droppedPairingPhone && currentPairingCode !== null;
+      // Retry whenever a pairing was in progress — even if the code was never obtained.
+      // Previously this required currentPairingCode !== null, which meant a WS drop
+      // before the code arrived would silently skip all retries.
+      const wasPairing = !!droppedPairingPhone;
 
-      log(`Connection closed. Code: ${reason}. WasPairing: ${wasPairing}. Retry: ${pairingRetryCount}/${MAX_PAIRING_RETRIES}. Error: ${errorMsg}`);
+      log(`Connection closed. Code: ${reason}. WasPairing: ${wasPairing}. HasCode: ${currentPairingCode !== null}. Retry: ${pairingRetryCount}/${MAX_PAIRING_RETRIES}. Error: ${errorMsg}`);
       status = "disconnected";
       sock = null;
       pendingPairingPhone = null;
