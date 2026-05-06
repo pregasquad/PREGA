@@ -2529,6 +2529,16 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/whatsapp/clear-session", isPinAuthenticated, async (_req, res) => {
+    try {
+      const { clearSessionIfDisconnected } = await import("./baileys");
+      clearSessionIfDisconnected();
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   // WhatsApp Notifications (Baileys) - protected routes
   app.post("/api/notifications/send", isPinAuthenticated, async (req, res) => {
     try {

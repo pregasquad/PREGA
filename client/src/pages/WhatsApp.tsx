@@ -261,6 +261,15 @@ export default function WhatsApp() {
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [status, refetch, isWaitingForCode]);
 
+  // ── Auto-clear stale paired-device history when no phone is connected ────
+  const clearedSessionRef = useRef(false);
+  useEffect(() => {
+    if (!clearedSessionRef.current && waData && status === "disconnected") {
+      clearedSessionRef.current = true;
+      apiRequest("POST", "/api/whatsapp/clear-session").catch(() => {});
+    }
+  }, [waData, status]);
+
   // ── Clear pairing state once connected ──────────────────────────────────
   useEffect(() => {
     if (status === "open") {

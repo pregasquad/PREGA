@@ -378,11 +378,20 @@ export async function initBaileys(): Promise<void> {
   }
 }
 
-/** Start QR flow — non-blocking */
+/** Wipe saved session when no phone is paired (safe to call when disconnected) */
+export function clearSessionIfDisconnected(): void {
+  if (status === "open") return; // never wipe an active connection
+  log("Clearing old session (no paired phone)");
+  wipeAuth();
+}
+
+/** Start QR flow — non-blocking. Wipes stale auth so QR always starts fresh. */
 export function startQR(): void {
   shouldReconnect = false;
   pendingPairingPhone = null;
   isVerifyingLink = false;
+  log("QR flow requested — clearing auth for fresh start");
+  wipeAuth();
   connectSocket().catch((err) => log(`startQR error: ${err.message}`));
 }
 
