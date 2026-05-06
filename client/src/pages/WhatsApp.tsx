@@ -127,6 +127,8 @@ export default function WhatsApp() {
   const [pairingCode, setPairingCode] = useState<string | null>(null);
   const [isWaitingForCode, setIsWaitingForCode] = useState(false);
   const [waitSeconds, setWaitSeconds] = useState(0);
+  const [codeExpiresIn, setCodeExpiresIn] = useState<number | null>(null);
+  const codeExpiryRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [testPhone, setTestPhone] = useState("");
   const [testMessage, setTestMessage] = useState(
     "مرحباً! هذه رسالة اختبار من صالون PREGASQUAD 💅"
@@ -150,6 +152,20 @@ export default function WhatsApp() {
       setPairingCode(code);
       setIsWaitingForCode(false);
       if (countdownRef.current) clearInterval(countdownRef.current);
+      // Start 60-second expiry countdown
+      if (codeExpiryRef.current) clearInterval(codeExpiryRef.current);
+      setCodeExpiresIn(60);
+      codeExpiryRef.current = setInterval(() => {
+        setCodeExpiresIn((s) => {
+          if (s === null || s <= 1) {
+            if (codeExpiryRef.current) clearInterval(codeExpiryRef.current);
+            setPairingCode(null);
+            setCodeExpiresIn(null);
+            return null;
+          }
+          return s - 1;
+        });
+      }, 1000);
     });
     socket.on("whatsapp:pairing_error", ({ error }: { error: string }) => {
       if (shownErrorRef.current === error) return;
@@ -161,6 +177,8 @@ export default function WhatsApp() {
     socket.on("whatsapp:connected", () => {
       setPairingCode(null);
       setIsWaitingForCode(false);
+      setCodeExpiresIn(null);
+      if (codeExpiryRef.current) clearInterval(codeExpiryRef.current);
       setTimeout(() => refetch(), 500);
     });
     socket.on("whatsapp:disconnected", () => refetch());
@@ -391,7 +409,9 @@ export default function WhatsApp() {
     setPairingCode(null);
     setIsWaitingForCode(false);
     setWaitSeconds(0);
+    setCodeExpiresIn(null);
     if (countdownRef.current) clearInterval(countdownRef.current);
+    if (codeExpiryRef.current) clearInterval(codeExpiryRef.current);
     refetch();
   }
 
@@ -552,11 +572,21 @@ export default function WhatsApp() {
               {/* Pairing code display */}
               {pairingCode && !isWaitingForCode && (
                 <div className="space-y-3">
-                  <div className="rounded-xl border border-purple-500/30 bg-purple-500/5 p-4 space-y-3">
-                    <p className="text-sm font-medium text-center text-purple-300">
-                      Your pairing code
-                    </p>
+                  <div className={`rounded-xl border p-4 space-y-3 ${codeExpiresIn !== null && codeExpiresIn <= 15 ? "border-red-500/40 bg-red-500/5" : "border-purple-500/30 bg-purple-500/5"}`}>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-purple-300">Your pairing code</p>
+                      {codeExpiresIn !== null && (
+                        <span className={`text-xs font-mono font-bold px-2 py-0.5 rounded-full ${codeExpiresIn <= 15 ? "bg-red-500/20 text-red-400" : codeExpiresIn <= 30 ? "bg-amber-500/20 text-amber-400" : "bg-purple-500/20 text-purple-400"}`}>
+                          {codeExpiresIn}s
+                        </span>
+                      )}
+                    </div>
                     <PairingCodeDisplay code={pairingCode} />
+                    {codeExpiresIn !== null && codeExpiresIn <= 15 && (
+                      <p className="text-xs text-red-400 text-center font-medium animate-pulse">
+                        Code expiring — enter it now!
+                      </p>
+                    )}
                     <div className="space-y-1.5 pt-1">
                       <p className="text-xs font-medium text-muted-foreground">On your phone:</p>
                       <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">

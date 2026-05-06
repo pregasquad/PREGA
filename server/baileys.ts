@@ -331,9 +331,9 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
         pairingRetryCount = 0;
         isVerifyingLink = true;
         shouldReconnect = false;
-        log("Code was shown — WS dropped (expected). Keeping code visible. Will check if phone confirmed in 15s…");
+        log("Code was shown — WS dropped (expected). Reconnecting in 3s to stay ready for phone confirmation…");
         // Do NOT emit anything — the frontend already has the code from the pairing_code event.
-        // It will keep showing it while isWaitingForCode stays false (code already displayed).
+        // Reconnect quickly so WhatsApp can push the credentials as soon as user enters the code.
         setTimeout(() => {
           if (!isVerifyingLink) return; // user already clicked "try again"
           log("Attempting silent reconnect to verify link acceptance…");
@@ -341,7 +341,7 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
             isVerifyingLink = false;
             log(`Verify-reconnect failed: ${err.message}`);
           });
-        }, 15_000);
+        }, 3_000);
       } else if (droppedPairingPhone && !hadCode && pairingRetryCount < MAX_PAIRING_RETRIES) {
         // No code obtained before drop → retry with delay (rate-limit protection)
         pairingRetryCount++;
