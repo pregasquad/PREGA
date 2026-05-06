@@ -96,7 +96,8 @@ const TIME_SLOTS = [
   "14:00", "14:30", "15:00", "15:30", "16:00", "16:30",
   "17:00", "17:30", "18:00", "18:30", "19:00", "19:30",
   "20:00", "20:30", "21:00", "21:30", "22:00", "22:30",
-  "23:00", "23:30", "00:00"
+  "23:00", "23:30", "00:00", "00:30", "01:00", "01:30",
+  "02:00", "02:30", "03:00"
 ];
 
 const DEFAULT_SALON_LOCATION = {
@@ -257,9 +258,12 @@ export default function Booking() {
     return filteredServices.filter(s => s.category === selectedCategory);
   }, [filteredServices, selectedCategory]);
 
+  // Past-midnight slots (00:00–05:59) belong to the end of the work day, not the start.
+  // Treat them as hour+24 so they sort correctly after 23:59.
   const toMinutes = (time: string) => {
     const [h, m] = time.split(":").map(Number);
-    return h * 60 + m;
+    const base = h * 60 + m;
+    return h < 6 ? base + 24 * 60 : base;
   };
 
   // Computed totals always derived from state – never stale (fixes form.getValues display bug)
@@ -273,7 +277,9 @@ export default function Booking() {
     if (!date) return [];
     const now = new Date();
     const isToday = date.toDateString() === now.toDateString();
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const h = now.getHours();
+    // Treat current time the same way: past-midnight hours count as h+24
+    const currentMinutes = h < 6 ? (h * 60 + now.getMinutes()) + 24 * 60 : h * 60 + now.getMinutes();
     return TIME_SLOTS.filter(slot => {
       if (isToday && toMinutes(slot) <= currentMinutes) return false;
       return true;
