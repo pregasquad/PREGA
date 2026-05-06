@@ -377,8 +377,10 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
       const loggedOut    = reason === DR.loggedOut;       // 401
       const restartReq   = reason === DR.restartRequired; // 515
       const wasPairing   = !!pendingPairingPhone;
+      // Capture BEFORE clearing — code being set means we showed it to the user
+      const hadCode      = currentPairingCode !== null;
 
-      log(`Connection closed. Code: ${reason}. WasPairing: ${wasPairing}. Error: "${errorMsg}"`);
+      log(`Connection closed. Code: ${reason}. WasPairing: ${wasPairing}. HadCode: ${hadCode}. Error: "${errorMsg}"`);
       status = "disconnected";
       sock = null;
       pendingPairingPhone = null;
@@ -398,10 +400,19 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
           wipeAuth();
           log("Pairing rejected by WhatsApp (401) — please try again");
           if (socketIO) socketIO.emit("whatsapp:pairing_error", { error: "WhatsApp rejected the pairing. Please wait a moment and try again." });
+        } else if (hadCode) {
+          // Expected: socket drops after the pairing IQ is sent (normal WA behaviour).
+          // The user still has the code on screen — reconnect silently so WhatsApp
+          // can push the full credentials once the user enters the code on their phone.
+          // Do NOT wipe auth here; the partial creds on disk are still needed.
+          status = "connecting";
+          shouldReconnect = true;
+          log("Code sent — socket dropped (expected). Reconnecting in 2s to await user entering code…");
+          scheduleReconnect(2000);
         } else {
-          // Unexpected drop during pairing
+          // No code was obtained before the drop — nothing useful was saved, wipe cleanly.
           wipeAuth();
-          log(`Pairing failed — connection lost (code ${reason ?? "unknown"}): ${errorMsg}`);
+          log(`Pairing failed before code obtained (code ${reason ?? "unknown"}): ${errorMsg}`);
           if (socketIO) socketIO.emit("whatsapp:pairing_error", { error: "Connection lost during pairing — please try again." });
         }
       } else if (restartReq && shouldReconnect) {
