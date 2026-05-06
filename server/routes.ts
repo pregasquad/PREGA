@@ -3862,6 +3862,8 @@ export async function registerRoutes(
     // Register incoming message bot handler for booking confirmations
     setIncomingMessageHandler(async (rawPhone: string, text: string) => {
       try {
+        const reply = text.trim();
+
         // Normalize the phone for DB matching
         let normalized = rawPhone.replace(/[^0-9]/g, "");
         if (normalized.startsWith("00")) normalized = normalized.slice(2);
@@ -3879,33 +3881,40 @@ export async function registerRoutes(
           return ap === normalized;
         });
 
-        if (matched.length === 0) return;
-
         // Find the most recent appointment that is still pending or modify_requested
         const pending = matched
           .filter((a: any) => !a.bookingStatus || a.bookingStatus === "pending" || a.bookingStatus === "modify_requested")
           .sort((a: any, b: any) => b.id - a.id);
 
-        if (pending.length === 0) return;
+        const apt = pending.length > 0 ? pending[0] : null;
 
-        const apt = pending[0];
-        const reply = text.trim();
-
-        if (reply === "1") {
+        if (apt && reply === "1") {
           await storage.updateAppointment(apt.id, { bookingStatus: "confirmed" } as any);
           await sendBotConfirmed(rawPhone);
           console.log(`[Bot] Appointment ${apt.id} confirmed by client`);
-        } else if (reply === "2") {
+          return;
+        }
+
+        if (apt && reply === "2") {
           await storage.updateAppointment(apt.id, { bookingStatus: "cancelled" } as any);
           await sendBotCancelled(rawPhone);
           console.log(`[Bot] Appointment ${apt.id} cancelled by client`);
-        } else if (reply === "3") {
+          return;
+        }
+
+        if (apt && reply === "3") {
           await storage.updateAppointment(apt.id, { bookingStatus: "modify_requested" } as any);
           await sendBotModify(rawPhone);
           console.log(`[Bot] Appointment ${apt.id} modify requested by client`);
-        } else {
-          await sendBotError(rawPhone);
+          return;
         }
+
+        // For any other message (question, darija, etc.) → Gemini AI assistant
+        const { askGemini } = await import("./gemini");
+        const aiReply = await askGemini(reply);
+        const { sendWhatsAppMessage } = await import("./baileys");
+        await sendWhatsAppMessage(rawPhone, aiReply);
+        console.log(`[Bot] Gemini replied to ${rawPhone}: "${reply.slice(0, 40)}..."`);
       } catch (err: any) {
         console.error("[Bot] Error handling incoming message:", err.message);
       }
