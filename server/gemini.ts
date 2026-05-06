@@ -1,14 +1,15 @@
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 
-// Cascade from newest/fastest to older fallbacks
+// Only try one model per message — with a free tier of 5 RPM, trying 4 models
+// for a single message burns the entire minute budget on one failed conversation.
+// gemini-2.0-flash is the most reliable on free tier. gemini-2.5-flash as fallback.
 const MODEL_CASCADE = [
-  "gemini-2.5-flash",
-  "gemini-2.5-pro",
   "gemini-2.0-flash",
   "gemini-2.0-flash-lite",
+  "gemini-2.5-flash",
 ];
 
-// Cooldown after all models are quota-exhausted — avoids burning quota on hopeless retries
+// After any 429/503, wait this long before trying again (protects free tier quota)
 const QUOTA_COOLDOWN_MS = 60 * 1000; // 60 seconds
 let quotaExhaustedUntil = 0;
 
@@ -52,7 +53,7 @@ ${serviceLines}
 - اختمي دائمًا برسالة دافئة وإيموجي 💖 🌸 ✨`;
 }
 
-async function callGemini(model: string, userMessage: string, systemPrompt: string, apiKey: string): Promise<string | null> {
+async function callGemini(model: string, userMessage: string, systemPrompt: string, apiKey: string): Promise<{ reply: string | null; isQuotaError: boolean }> {
   const url = `${GEMINI_BASE}/${model}:generateContent?key=${apiKey}`;
   const response = await fetch(url, {
     method: "POST",
@@ -73,21 +74,21 @@ async function callGemini(model: string, userMessage: string, systemPrompt: stri
   if (!response.ok) {
     const status = response.status;
     if (status === 429 || status === 503) {
-      console.warn(`[Gemini] ${model} quota/overload (${status}) — trying next model`);
-      return null;
+      console.warn(`[Gemini] ${model} quota/overload (${status})`);
+      return { reply: null, isQuotaError: true };
     }
     if (status === 404) {
-      console.warn(`[Gemini] ${model} not found (404) — model may be deprecated, trying next`);
-      return null;
+      console.warn(`[Gemini] ${model} not found (404) — skipping`);
+      return { reply: null, isQuotaError: false };
     }
     const errBody = await response.text();
     console.error(`[Gemini] ${model} error ${status}: ${errBody.slice(0, 300)}`);
-    return null;
+    return { reply: null, isQuotaError: false };
   }
 
   const data = (await response.json()) as any;
   const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  return text ? text.trim() : null;
+  return { reply: text ? text.trim() : null, isQuotaError: false };
 }
 
 export async function askGemini(userMessage: string, ctx: SalonContext): Promise<string | null> {
@@ -97,7 +98,7 @@ export async function askGemini(userMessage: string, ctx: SalonContext): Promise
     return null;
   }
 
-  // If all models recently exhausted quota, skip until cooldown expires
+  // Skip entirely if still in cooldown — don't waste quota
   const now = Date.now();
   if (now < quotaExhaustedUntil) {
     const remainingSecs = Math.ceil((quotaExhaustedUntil - now) / 1000);
@@ -106,28 +107,27 @@ export async function askGemini(userMessage: string, ctx: SalonContext): Promise
   }
 
   const systemPrompt = buildSystemPrompt(ctx);
-  let allQuotaErrors = true;
 
   for (const model of MODEL_CASCADE) {
     try {
-      const reply = await callGemini(model, userMessage, systemPrompt, apiKey);
+      const { reply, isQuotaError } = await callGemini(model, userMessage, systemPrompt, apiKey);
       if (reply) {
         console.log(`[Gemini] ${model} replied successfully`);
-        allQuotaErrors = false;
         return reply;
       }
+      if (isQuotaError) {
+        // Stop trying more models — they share the same account quota.
+        // Wait 60s before next attempt to avoid burning the daily budget.
+        quotaExhaustedUntil = Date.now() + QUOTA_COOLDOWN_MS;
+        console.error(`[Gemini] Quota hit on ${model} — cooling down for ${QUOTA_COOLDOWN_MS / 1000}s, skipping remaining models`);
+        return null;
+      }
+      // Non-quota error (404, unexpected) — try next model
     } catch (err: any) {
       console.error(`[Gemini] ${model} threw: ${err.message}`);
-      allQuotaErrors = false; // network/unexpected error, not quota
     }
   }
 
-  if (allQuotaErrors) {
-    quotaExhaustedUntil = Date.now() + QUOTA_COOLDOWN_MS;
-    console.error(`[Gemini] All models quota-exhausted — cooling down for ${QUOTA_COOLDOWN_MS / 1000}s`);
-  } else {
-    console.error("[Gemini] All models exhausted — no AI reply");
-  }
-
+  console.error("[Gemini] All models exhausted — no AI reply");
   return null;
 }

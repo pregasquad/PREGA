@@ -159,3 +159,12 @@ startServer().catch((err) => {
   console.error("Failed to start server:", err);
   process.exit(1);
 });
+
+// Graceful shutdown — ensures port is released before process exits
+// so restarts don't hit EADDRINUSE
+process.on("SIGTERM", () => {
+  httpServer.close(() => process.exit(0));
+});
+process.on("SIGINT", () => {
+  httpServer.close(() => process.exit(0));
+});
