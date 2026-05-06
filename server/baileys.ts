@@ -286,7 +286,32 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
 
       const isDeviceRemoved = errorMsg.toLowerCase().includes("conflict") || errorMsg.toLowerCase().includes("device_removed");
 
-      if (loggedOut && !wasVerifying) {
+      if (loggedOut && droppedPairingPhone) {
+        // 401 during pairing (before or after code shown) — WhatsApp rejected the attempt.
+        // NOT a real logout — wipe bad partial creds then auto-retry a fresh code.
+        wipeAuth();
+        if (pairingRetryCount < MAX_PAIRING_RETRIES) {
+          pairingRetryCount++;
+          log(`WhatsApp rejected pairing (401) — auto-retry ${pairingRetryCount}/${MAX_PAIRING_RETRIES} in 3s…`);
+          if (socketIO) socketIO.emit("whatsapp:pairing_refreshing", { attempt: pairingRetryCount });
+          setTimeout(() => {
+            connectSocket(droppedPairingPhone).catch((err) =>
+              log(`Auto-retry after 401 failed: ${err.message}`)
+            );
+          }, 3000);
+        } else {
+          pairingRetryCount = 0;
+          log("WhatsApp kept rejecting pairing after retries — ask user to try again later");
+          if (socketIO) socketIO.emit("whatsapp:pairing_dropped", { reason: "WhatsApp rejected the link. Wait a minute then try again." });
+        }
+      } else if (loggedOut && wasVerifying) {
+        // 401 during link-verification → phone didn't accept the code.
+        // Wipe partial creds and let user try a fresh code.
+        pairingRetryCount = 0;
+        wipeAuth();
+        log("Phone did not confirm the pairing code — session reset. User should request a new code.");
+        if (socketIO) socketIO.emit("whatsapp:pairing_dropped", { reason: "Phone did not accept the code. Please try again." });
+      } else if (loggedOut && !wasVerifying) {
         // Genuine logout / device removal — wipe session
         shouldReconnect = false;
         pairingRetryCount = 0;
@@ -298,13 +323,6 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
           log("Logged out — session cleared");
           if (socketIO) socketIO.emit("whatsapp:logged_out", { reason: "logged_out" });
         }
-      } else if (loggedOut && wasVerifying) {
-        // 401 during link-verification → phone didn't accept the code.
-        // Wipe partial creds and let user try a fresh code.
-        pairingRetryCount = 0;
-        wipeAuth();
-        log("Phone did not confirm the pairing code — session reset. User should request a new code.");
-        if (socketIO) socketIO.emit("whatsapp:pairing_dropped", { reason: "Phone did not accept the code. Please try again." });
       } else if (droppedPairingPhone && hadCode) {
         // ── Code was shown; WhatsApp closed the pairing WS (expected after IQ is sent) ──
         // DO NOT wipe auth and do NOT auto-generate a new code — that causes rate-limiting.
