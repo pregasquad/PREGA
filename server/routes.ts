@@ -3949,6 +3949,10 @@ export async function registerRoutes(
         };
 
         const aiReply = await askGemini(reply, salonCtx);
+        if (!aiReply) {
+          console.warn(`[Bot] No AI reply for ${remoteJid} — staying silent (quota exhausted or no key)`);
+          return;
+        }
         // Send to remoteJid — formatJid will pass it through unchanged (it already has @)
         await sendWhatsAppMessage(remoteJid, aiReply);
         console.log(`[Bot] Gemini replied to ${remoteJid}: "${reply.slice(0, 40)}..."`);

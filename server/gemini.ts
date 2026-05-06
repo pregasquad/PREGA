@@ -1,5 +1,11 @@
-const GEMINI_API_URL =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
+
+const MODEL_CASCADE = [
+  "gemini-2.0-flash-lite",
+  "gemini-2.0-flash",
+  "gemini-1.5-flash-8b",
+  "gemini-1.5-flash",
+];
 
 export interface SalonContext {
   name: string;
@@ -41,47 +47,61 @@ ${serviceLines}
 - اختمي دائمًا برسالة دافئة وإيموجي 💖 🌸 ✨`;
 }
 
-export async function askGemini(userMessage: string, ctx: SalonContext): Promise<string> {
+async function callGemini(model: string, userMessage: string, systemPrompt: string, apiKey: string): Promise<string | null> {
+  const url = `${GEMINI_BASE}/${model}:generateContent?key=${apiKey}`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [
+        {
+          parts: [{ text: `${systemPrompt}\n\nرسالة العميل: ${userMessage}` }],
+        },
+      ],
+      generationConfig: {
+        maxOutputTokens: 400,
+        temperature: 0.7,
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const status = response.status;
+    if (status === 429 || status === 503) {
+      console.warn(`[Gemini] ${model} quota/overload (${status}) — trying next model`);
+      return null; // signal to try next model
+    }
+    const errBody = await response.text();
+    console.error(`[Gemini] ${model} error ${status}: ${errBody.slice(0, 300)}`);
+    return null;
+  }
+
+  const data = (await response.json()) as any;
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  return text ? text.trim() : null;
+}
+
+export async function askGemini(userMessage: string, ctx: SalonContext): Promise<string | null> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return "💖 مرحباً! لا تترددي في التواصل معنا للمزيد من المعلومات 🌸";
+    console.warn("[Gemini] No API key — skipping AI reply");
+    return null; // caller decides what to do (send nothing or fallback)
   }
 
   const systemPrompt = buildSystemPrompt(ctx);
 
-  try {
-    const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [{ text: `${systemPrompt}\n\nرسالة العميل: ${userMessage}` }],
-          },
-        ],
-        generationConfig: {
-          maxOutputTokens: 350,
-          temperature: 0.7,
-        },
-      }),
-    });
-
-    if (!response.ok) {
-      const errBody = await response.text();
-      console.error(`[Gemini] API error ${response.status}: ${errBody}`);
-      // Try fallback model if flash is deprecated/overloaded
-      if (response.status === 404 || response.status === 429 || response.status === 503) {
-        console.error(`[Gemini] Status ${response.status} — check API key quota or model availability`);
+  for (const model of MODEL_CASCADE) {
+    try {
+      const reply = await callGemini(model, userMessage, systemPrompt, apiKey);
+      if (reply) {
+        console.log(`[Gemini] ${model} replied successfully`);
+        return reply;
       }
-      return "💖 مرحباً! لا تترددي في التواصل معنا للمزيد من المعلومات 🌸";
+    } catch (err: any) {
+      console.error(`[Gemini] ${model} threw: ${err.message}`);
     }
-
-    const data = (await response.json()) as any;
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) return "💖 مرحباً! لا تترددي في التواصل معنا للمزيد من المعلومات 🌸";
-    return text.trim();
-  } catch (err: any) {
-    console.error(`[Gemini] Error: ${err.message}`);
-    return "💖 مرحباً! لا تترددي في التواصل معنا للمزيد من المعلومات 🌸";
   }
+
+  console.error("[Gemini] All models exhausted — no AI reply");
+  return null; // all models failed
 }
