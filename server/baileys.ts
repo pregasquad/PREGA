@@ -113,6 +113,9 @@ let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let shouldReconnect = false;
 let socketIO: any = null;
 let pendingPairingPhone: string | null = null;
+let isVerifyingLink = false;
+let verifyRetryCount = 0;
+let verifyReconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
 // Deduplication: track processed message IDs to avoid handling the same message twice
 // (Baileys can fire messages.upsert multiple times on reconnect/sync)
