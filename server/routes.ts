@@ -3865,6 +3865,12 @@ export async function registerRoutes(
   await seedDatabase();
 
   // Initialize Baileys WhatsApp (non-blocking)
+
+  // AI reply cache — avoids burning Gemini quota on repeated identical messages
+  // Key: "remoteJid:normalizedMessage" → cached reply + timestamp
+  const aiReplyCache = new Map<string, { reply: string; ts: number }>();
+  const AI_CACHE_TTL = 15 * 60 * 1000; // 15 minutes
+
   import("./baileys").then(({ initBaileys, setSocketIO, setIncomingMessageHandler, sendBotConfirmed, sendBotCancelled, sendBotModify, sendBotError }) => {
     setSocketIO(io);
     initBaileys().catch((err) => console.error("[Baileys] Startup error:", err));
@@ -3927,6 +3933,15 @@ export async function registerRoutes(
         const { askGemini } = await import("./gemini");
         const { sendWhatsAppMessage } = await import("./baileys");
 
+        // Check reply cache first — avoids burning API quota on repeated identical messages
+        const cacheKey = `${remoteJid}:${reply.toLowerCase().trim()}`;
+        const cached = aiReplyCache.get(cacheKey);
+        if (cached && Date.now() - cached.ts < AI_CACHE_TTL) {
+          await sendWhatsAppMessage(remoteJid, cached.reply);
+          console.log(`[Bot] Cache hit for ${remoteJid} — reusing reply without Gemini call`);
+          return;
+        }
+
         // Fetch real salon context (settings + services) to ground the AI
         const [bizSettings, allServices] = await Promise.all([
           storage.getBusinessSettings().catch(() => undefined),
@@ -3953,6 +3968,17 @@ export async function registerRoutes(
           console.warn(`[Bot] No AI reply for ${remoteJid} — staying silent (quota exhausted or no key)`);
           return;
         }
+
+        // Cache this reply so identical follow-up messages don't hit Gemini again
+        aiReplyCache.set(cacheKey, { reply: aiReply, ts: Date.now() });
+        // Keep cache from growing unbounded — prune entries older than TTL
+        if (aiReplyCache.size > 500) {
+          const now = Date.now();
+          for (const [k, v] of aiReplyCache) {
+            if (now - v.ts > AI_CACHE_TTL) aiReplyCache.delete(k);
+          }
+        }
+
         // Send to remoteJid — formatJid will pass it through unchanged (it already has @)
         await sendWhatsAppMessage(remoteJid, aiReply);
         console.log(`[Bot] Gemini replied to ${remoteJid}: "${reply.slice(0, 40)}..."`);

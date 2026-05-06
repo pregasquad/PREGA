@@ -1,11 +1,13 @@
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 
-// Cascade from newest/fastest to older fallbacks — all confirmed available in v1beta
+// Cascade from newest/fastest to older fallbacks
+// gemini-2.0-flash and gemini-2.0-flash-lite confirmed working (return 429 = valid key, just quota)
+// Preview model IDs expire frequently — use stable names first
 const MODEL_CASCADE = [
-  "gemini-2.5-flash-preview-04-17",
+  "gemini-2.5-flash",
+  "gemini-2.5-pro",
   "gemini-2.0-flash",
   "gemini-2.0-flash-lite",
-  "gemini-1.5-pro-002",
 ];
 
 export interface SalonContext {
