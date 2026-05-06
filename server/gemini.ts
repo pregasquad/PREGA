@@ -1,21 +1,53 @@
 const GEMINI_API_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
 
-const SYSTEM_PROMPT = `Tu es une assistante professionnelle du salon de beauté PREGASQUAD.
+export interface SalonContext {
+  name: string;
+  address?: string;
+  phone?: string;
+  openingTime?: string;
+  closingTime?: string;
+  currency?: string;
+  services: { name: string; price: number; duration: number; category: string }[];
+}
 
-Règles importantes :
+function buildSystemPrompt(ctx: SalonContext): string {
+  const days = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
+
+  const serviceLines = ctx.services.length > 0
+    ? ctx.services
+        .sort((a, b) => a.category.localeCompare(b.category))
+        .map(s => `  - ${s.name} (${s.category}) : ${s.price} ${ctx.currency || "DH"} — ${s.duration} min`)
+        .join("\n")
+    : "  (liste non disponible)";
+
+  return `Tu es une assistante professionnelle et chaleureuse du salon de beauté ${ctx.name}.
+
+=== INFORMATIONS DU SALON ===
+Nom : ${ctx.name}
+${ctx.address ? `Adresse : ${ctx.address}` : ""}
+${ctx.phone ? `Téléphone : ${ctx.phone}` : ""}
+${ctx.openingTime && ctx.closingTime ? `Horaires : ${ctx.openingTime} – ${ctx.closingTime}` : ""}
+
+=== NOS SERVICES ET TARIFS ===
+${serviceLines}
+
+=== RÈGLES ===
 - Réponds en français ou en darija marocaine selon la langue du client
-- Sois courte, chaleureuse et professionnelle
-- Tu peux aider avec : prix des services, disponibilités, conseils beauté, réservations, promotions
-- Si le client veut réserver, dis-lui de visiter le salon ou de contacter directement l'équipe
-- N'invente pas de prix ou de disponibilités précises — dis que l'équipe confirmera
+- Sois courte (3-5 lignes max), chaleureuse et professionnelle
+- Utilise les vrais prix et services listés ci-dessus pour répondre
+- Pour réserver, invite le client à utiliser notre page de réservation en ligne ou à nous appeler
+- Ne donne jamais de disponibilités en temps réel — dis que l'équipe confirmera
 - Termine toujours avec un emoji chaleureux 💖 🌸 ✨`;
+}
 
-export async function askGemini(userMessage: string): Promise<string> {
+export async function askGemini(userMessage: string, ctx: SalonContext): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return "💖 Marhba! N'hésitez pas à nous contacter pour plus d'informations 🌸";
   }
+
+  const systemPrompt = buildSystemPrompt(ctx);
 
   try {
     const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
@@ -24,22 +56,18 @@ export async function askGemini(userMessage: string): Promise<string> {
       body: JSON.stringify({
         contents: [
           {
-            parts: [
-              {
-                text: `${SYSTEM_PROMPT}\n\nClient: ${userMessage}`,
-              },
-            ],
+            parts: [{ text: `${systemPrompt}\n\nClient: ${userMessage}` }],
           },
         ],
         generationConfig: {
-          maxOutputTokens: 300,
+          maxOutputTokens: 350,
           temperature: 0.7,
         },
       }),
     });
 
     if (!response.ok) {
-      console.error(`[Gemini] API error: ${response.status}`);
+      console.error(`[Gemini] API error: ${response.status} ${await response.text()}`);
       return "💖 Marhba! N'hésitez pas à nous contacter pour plus d'informations 🌸";
     }
 

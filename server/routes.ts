@@ -3911,8 +3911,30 @@ export async function registerRoutes(
 
         // For any other message (question, darija, etc.) → Gemini AI assistant
         const { askGemini } = await import("./gemini");
-        const aiReply = await askGemini(reply);
         const { sendWhatsAppMessage } = await import("./baileys");
+
+        // Fetch real salon context (settings + services) to ground the AI
+        const [bizSettings, allServices] = await Promise.all([
+          storage.getBusinessSettings().catch(() => undefined),
+          storage.getServices().catch(() => []),
+        ]);
+
+        const salonCtx = {
+          name: bizSettings?.businessName || "PREGASQUAD",
+          address: bizSettings?.address || undefined,
+          phone: bizSettings?.phone || undefined,
+          openingTime: bizSettings?.openingTime || undefined,
+          closingTime: bizSettings?.closingTime || undefined,
+          currency: bizSettings?.currencySymbol || "DH",
+          services: (allServices || []).map((s: any) => ({
+            name: s.name,
+            price: s.price,
+            duration: s.duration,
+            category: s.category,
+          })),
+        };
+
+        const aiReply = await askGemini(reply, salonCtx);
         await sendWhatsAppMessage(rawPhone, aiReply);
         console.log(`[Bot] Gemini replied to ${rawPhone}: "${reply.slice(0, 40)}..."`);
       } catch (err: any) {
