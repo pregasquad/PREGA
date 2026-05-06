@@ -493,6 +493,14 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
         pairingRetryCount = 0;
         log("Pairing failed — could not obtain code after retries");
         if (socketIO) socketIO.emit("whatsapp:pairing_dropped", { reason: "WhatsApp did not send a code. Wait a few minutes and try again, or use QR code." });
+      } else if (reason === DR.restartRequired && shouldReconnect) {
+        // 515 = WhatsApp server requested a restart — completely normal, especially right
+        // after QR/pairing-code linking.  The session is still valid; just reconnect fast.
+        // Keep status as "connecting" so the frontend never flashes "Disconnected" and
+        // the user doesn't panic-click "Generate QR" which would wipe the linked session.
+        status = "connecting";
+        log("WhatsApp restart required (515) — reconnecting in 2s with saved session");
+        scheduleReconnect(2000);
       } else {
         if (socketIO) socketIO.emit("whatsapp:disconnected", { reason });
         if (shouldReconnect) {
