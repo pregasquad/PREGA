@@ -83,7 +83,8 @@ const PATHS = SEGMENTS.map((_, i) => slicePath(i));
 const MIDS  = SEGMENTS.map((_, i) => polar(TEXT_R, i * DEG + DEG / 2));
 
 // Apply transform cross-browser (Instagram IAB needs -webkit- prefix)
-function setRotation(el: HTMLDivElement, deg: number) {
+function setRotation(el: HTMLDivElement | null, deg: number) {
+  if (!el) return;
   const val = `rotateZ(${deg}deg)`;
   (el.style as any).webkitTransform = val;
   el.style.transform = val;
