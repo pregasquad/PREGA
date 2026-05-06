@@ -109,6 +109,15 @@ function isAuthEndpoint(url: string): boolean {
   return authEndpoints.some(endpoint => url.startsWith(endpoint));
 }
 
+function handleSessionExpired() {
+  sessionStorage.clear();
+  localStorage.removeItem("user_authenticated");
+  localStorage.removeItem("current_user");
+  localStorage.removeItem("current_user_role");
+  localStorage.removeItem("current_user_permissions");
+  window.location.href = "/";
+}
+
 export async function apiRequest(
   method: string,
   url: string,
@@ -154,6 +163,12 @@ export async function apiRequest(
       body: isFormData ? (data as FormData) : (data ? JSON.stringify(data) : undefined),
       credentials: "include",
     });
+
+    // Session expired — clear local auth and redirect to login
+    if (res.status === 401) {
+      handleSessionExpired();
+      throw new Error("401: Session expired. Please log in again.");
+    }
 
     if (res.status >= 500 || res.status === 0) {
       setDatabaseOffline(true);
