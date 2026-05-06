@@ -3,7 +3,7 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
-import { initializeDatabase, warmupDatabase, ensurePushSubscriptionsTable, ensureAppointmentsAuditColumns, ensureForeignKeyConstraints, ensureAdminRolesPhotoColumn, ensureProductExpiryColumns, ensureServiceStartingPriceColumn, ensureDeductionClearedColumns, ensureDeductionPaidBackColumn, ensureStaffIdBackfillMySQL, ensureStaffPaymentsTable, ensureStaffPublicTokens, ensureAutoLockColumn, ensureChargeAttachmentColumns, ensurePlanningShortcutsColumn, ensureAppointmentDiscountColumns, ensureTombolaSpinsTable, ensureSalonPaymentsTable, ensureBookingStatusColumn } from "./db";
+import { initializeDatabase, warmupDatabase, ensurePushSubscriptionsTable, ensureAppointmentsAuditColumns, ensureForeignKeyConstraints, ensureAdminRolesPhotoColumn, ensureProductExpiryColumns, ensureServiceStartingPriceColumn, ensureDeductionClearedColumns, ensureDeductionPaidBackColumn, ensureStaffIdBackfillMySQL, ensureStaffPaymentsTable, ensureStaffPublicTokens, ensureAutoLockColumn, ensureChargeAttachmentColumns, ensurePlanningShortcutsColumn, ensureAppointmentDiscountColumns, ensureTombolaSpinsTable, ensureSalonPaymentsTable, ensureBookingStatusColumn, ensureBaileysSessionTable } from "./db";
 import { checkAndSendClosingReminder, checkAndSendAppointmentReminders } from "./push";
 
 const app = express();
@@ -96,6 +96,7 @@ const startServer = async () => {
       await ensureTombolaSpinsTable();
       await ensureSalonPaymentsTable();
       await ensureBookingStatusColumn();
+      await ensureBaileysSessionTable();
       await ensureForeignKeyConstraints();
     }
   } else {

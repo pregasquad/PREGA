@@ -35,6 +35,8 @@ Beauty Salon Appointment Management System built with React + Express + PostgreS
 - Port 5000 for the application
 
 ## Architecture Notes
+- **Baileys session persistence**: WhatsApp auth is saved to `baileys_sessions` DB table after every `creds.update`; restored on server startup — session survives Koyeb/ephemeral FS restarts without re-linking
+- **Gemini AI cascade**: `server/gemini.ts` tries models in order: `gemini-2.0-flash-lite` → `gemini-2.0-flash` → `gemini-1.5-flash-8b` → `gemini-1.5-flash`; returns `null` (bot stays silent) if all fail
 - **Staff relationships**: appointments and staff_deductions use `staffId` (integer) for staff association, with `staff`/`staffName` kept as display names for backward compatibility
 - **Staff rename cascade**: `updateStaff` in storage.ts updates both staffId-linked records AND legacy NULL-staffId records matching old name
 - **Frontend filtering**: Uses dual pattern `app.staffId === s.id || (!app.staffId && app.staff === s.name)` for backward compatibility

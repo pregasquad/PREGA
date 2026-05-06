@@ -3,6 +3,104 @@ import fs from "fs";
 
 const AUTH_FOLDER = path.join(process.cwd(), "baileys_auth");
 const CREDS_FILE = path.join(AUTH_FOLDER, "creds.json");
+const SESSION_DB_ID = "default";
+
+// ── DB session persistence (survives Koyeb / ephemeral FS restarts) ─────────
+
+async function getDbPool(): Promise<any | null> {
+  try {
+    const { getPool } = await import("./db");
+    return getPool();
+  } catch {
+    return null;
+  }
+}
+
+async function saveAuthToDb(): Promise<void> {
+  try {
+    if (!fs.existsSync(AUTH_FOLDER)) return;
+    const files = fs.readdirSync(AUTH_FOLDER);
+    if (files.length === 0) return;
+
+    const snapshot: Record<string, string> = {};
+    for (const file of files) {
+      const filePath = path.join(AUTH_FOLDER, file);
+      try { snapshot[file] = fs.readFileSync(filePath, "utf8"); } catch {}
+    }
+
+    const pool = await getDbPool();
+    if (!pool) return;
+
+    const json = JSON.stringify(snapshot);
+    const { dbDialect } = await import("./db");
+    if (dbDialect === "mysql") {
+      const conn = await pool.getConnection();
+      await conn.query(
+        `INSERT INTO baileys_sessions (id, data) VALUES (?, ?) ON DUPLICATE KEY UPDATE data = VALUES(data), updated_at = CURRENT_TIMESTAMP`,
+        [SESSION_DB_ID, json]
+      );
+      conn.release();
+    } else {
+      await pool.query(
+        `INSERT INTO baileys_sessions (id, data) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET data = $2, updated_at = NOW()`,
+        [SESSION_DB_ID, json]
+      );
+    }
+    log("Session snapshot saved to DB");
+  } catch (err: any) {
+    log(`saveAuthToDb error: ${err.message}`);
+  }
+}
+
+async function loadAuthFromDb(): Promise<boolean> {
+  try {
+    const pool = await getDbPool();
+    if (!pool) return false;
+
+    const { dbDialect } = await import("./db");
+    let rows: any[];
+    if (dbDialect === "mysql") {
+      const conn = await pool.getConnection();
+      const [result] = await conn.query(`SELECT data FROM baileys_sessions WHERE id = ?`, [SESSION_DB_ID]);
+      conn.release();
+      rows = result as any[];
+    } else {
+      const result = await pool.query(`SELECT data FROM baileys_sessions WHERE id = $1`, [SESSION_DB_ID]);
+      rows = result.rows;
+    }
+
+    if (!rows || rows.length === 0) return false;
+
+    const snapshot: Record<string, string> = JSON.parse(rows[0].data);
+    if (!fs.existsSync(AUTH_FOLDER)) fs.mkdirSync(AUTH_FOLDER, { recursive: true });
+    for (const [file, content] of Object.entries(snapshot)) {
+      fs.writeFileSync(path.join(AUTH_FOLDER, file), content, "utf8");
+    }
+    log("Session restored from DB");
+    return true;
+  } catch (err: any) {
+    log(`loadAuthFromDb error: ${err.message}`);
+    return false;
+  }
+}
+
+async function clearAuthFromDb(): Promise<void> {
+  try {
+    const pool = await getDbPool();
+    if (!pool) return;
+    const { dbDialect } = await import("./db");
+    if (dbDialect === "mysql") {
+      const conn = await pool.getConnection();
+      await conn.query(`DELETE FROM baileys_sessions WHERE id = ?`, [SESSION_DB_ID]);
+      conn.release();
+    } else {
+      await pool.query(`DELETE FROM baileys_sessions WHERE id = $1`, [SESSION_DB_ID]);
+    }
+    log("Session cleared from DB");
+  } catch (err: any) {
+    log(`clearAuthFromDb error: ${err.message}`);
+  }
+}
 
 type Status = "disconnected" | "connecting" | "qr" | "pairing" | "open";
 
@@ -49,6 +147,7 @@ function hasExistingSession(): boolean {
 function wipeAuth() {
   try { fs.rmSync(AUTH_FOLDER, { recursive: true, force: true }); } catch {}
   fs.mkdirSync(AUTH_FOLDER, { recursive: true });
+  clearAuthFromDb().catch(() => {}); // also wipe from DB (non-blocking)
 }
 
 function scheduleReconnect(delayMs = 20000) {
@@ -136,7 +235,10 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
     getMessage: async () => ({ conversation: "" }),
   });
 
-  sock.ev.on("creds.update", saveCreds);
+  sock.ev.on("creds.update", async () => {
+    await saveCreds();
+    saveAuthToDb().catch(() => {}); // persist to DB so session survives restarts
+  });
 
   // ── Incoming message handler (bot replies) ──────────────────────────────
   sock.ev.on("messages.upsert", async ({ messages: msgs, type }: any) => {
@@ -367,8 +469,15 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
   });
 }
 
-/** Called at server start — only connects if a saved session exists */
+/** Called at server start — restores session from DB (survives ephemeral FS), then connects */
 export async function initBaileys(): Promise<void> {
+  // Try restoring session from DB first (Koyeb / ephemeral filesystem)
+  if (!hasExistingSession()) {
+    const restored = await loadAuthFromDb();
+    if (restored) {
+      log("Session restored from DB — connecting…");
+    }
+  }
   if (hasExistingSession()) {
     log("Existing session found — connecting…");
     shouldReconnect = true;

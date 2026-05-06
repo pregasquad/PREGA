@@ -967,6 +967,33 @@ export async function ensureBookingStatusColumn(): Promise<void> {
   }
 }
 
+export async function ensureBaileysSessionTable(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS baileys_sessions (
+          id VARCHAR(64) NOT NULL PRIMARY KEY,
+          data LONGTEXT NOT NULL,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL
+        )
+      `);
+      connection.release();
+    } else {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS baileys_sessions (
+          id VARCHAR(64) NOT NULL PRIMARY KEY,
+          data TEXT NOT NULL,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+        )
+      `);
+    }
+    console.log("Baileys sessions table ready");
+  } catch (error) {
+    console.error("Failed to ensure baileys_sessions table:", error);
+  }
+}
+
 export async function ensureSalonPaymentsTable(): Promise<void> {
   try {
     if (dbDialect === 'mysql') {
