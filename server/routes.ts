@@ -3868,9 +3868,41 @@ export async function registerRoutes(
   // Initialize Baileys WhatsApp (non-blocking)
 
   // AI reply cache — avoids burning Gemini quota on repeated identical messages
+  // Only used when there is no active conversation history for a JID.
   // Key: "remoteJid:normalizedMessage" → cached reply + timestamp
   const aiReplyCache = new Map<string, { reply: string; ts: number }>();
   const AI_CACHE_TTL = 15 * 60 * 1000; // 15 minutes
+
+  // Conversation history store — keeps the last N exchanges per JID for
+  // natural multi-turn context. Entries expire after 30 minutes of inactivity.
+  type ConvTurn = { role: "user" | "model"; text: string };
+  const convStore = new Map<string, { turns: ConvTurn[]; lastActivity: number }>();
+  const CONV_MAX_TURNS = 5;   // keep last 5 user+model pairs = 10 total entries
+  const CONV_TTL = 30 * 60 * 1000; // 30 minutes inactivity resets context
+
+  function getHistory(jid: string): ConvTurn[] {
+    const entry = convStore.get(jid);
+    if (!entry) return [];
+    if (Date.now() - entry.lastActivity > CONV_TTL) {
+      convStore.delete(jid);
+      return [];
+    }
+    return entry.turns;
+  }
+
+  function saveHistory(jid: string, turns: ConvTurn[]): void {
+    // Trim to the last CONV_MAX_TURNS exchanges (each exchange = 2 turns)
+    const maxEntries = CONV_MAX_TURNS * 2;
+    const trimmed = turns.length > maxEntries ? turns.slice(turns.length - maxEntries) : turns;
+    convStore.set(jid, { turns: trimmed, lastActivity: Date.now() });
+    // Prune expired conversations to keep memory bounded
+    if (convStore.size > 1000) {
+      const cutoff = Date.now() - CONV_TTL;
+      for (const [k, v] of convStore) {
+        if (v.lastActivity < cutoff) convStore.delete(k);
+      }
+    }
+  }
 
   // Anti-spam queue — one active processing slot + one pending slot per JID.
   // If a message arrives while one is being processed, it waits in the pending
@@ -3895,7 +3927,7 @@ export async function registerRoutes(
         }
       });
     } else {
-      // Already processing — park this as the pending message (newest wins)
+      // Already processing — park as pending (newest wins)
       console.log(`[Bot] Anti-spam: queuing message for ${remoteJid} (previous pending overwritten)`);
       jidQueue.set(remoteJid, { processing: true, pending: text });
     }
@@ -3937,11 +3969,11 @@ export async function registerRoutes(
           });
 
           // Find the most recent appointment that is still pending or modify_requested
-          const pending = matched
+          const pendingApts = matched
             .filter((a: any) => !a.bookingStatus || a.bookingStatus === "pending" || a.bookingStatus === "modify_requested")
             .sort((a: any, b: any) => b.id - a.id);
 
-          const apt = pending.length > 0 ? pending[0] : null;
+          const apt = pendingApts.length > 0 ? pendingApts[0] : null;
 
           // Reply always goes to remoteJid (preserves @lid for LID-based WhatsApp accounts)
           if (apt && reply === "1") {
@@ -3969,13 +4001,20 @@ export async function registerRoutes(
           const { askGemini, FALLBACK_REPLY } = await import("./gemini");
           const { sendWhatsAppMessage } = await import("./baileys");
 
-          // Check reply cache first — avoids burning API quota on repeated identical messages
-          const cacheKey = `${remoteJid}:${reply.toLowerCase().trim()}`;
-          const cached = aiReplyCache.get(cacheKey);
-          if (cached && Date.now() - cached.ts < AI_CACHE_TTL) {
-            await sendWhatsAppMessage(remoteJid, cached.reply);
-            console.log(`[Bot] Cache hit for ${remoteJid} — reusing reply without Gemini call`);
-            return;
+          // Load conversation history for this JID (empty [] on first contact or after 30 min idle)
+          const history = getHistory(remoteJid);
+          const hasHistory = history.length > 0;
+
+          // Use reply cache only when there's no active conversation context.
+          // With history, the same message can get a different reply based on prior turns.
+          if (!hasHistory) {
+            const cacheKey = `${remoteJid}:${reply.toLowerCase().trim()}`;
+            const cached = aiReplyCache.get(cacheKey);
+            if (cached && Date.now() - cached.ts < AI_CACHE_TTL) {
+              await sendWhatsAppMessage(remoteJid, cached.reply);
+              console.log(`[Bot] Cache hit for ${remoteJid} — skipping Gemini call`);
+              return;
+            }
           }
 
           // Fetch real salon context (settings + services) to ground the AI
@@ -3999,25 +4038,36 @@ export async function registerRoutes(
             })),
           };
 
-          // askGemini returns FALLBACK_REPLY on quota errors — never silent unless no API key
-          const aiReply = await askGemini(reply, salonCtx);
+          // askGemini returns FALLBACK_REPLY on quota errors — never silent unless no API key.
+          // It also returns the updated history to persist (only if the AI actually replied).
+          const { reply: aiReply, newHistory } = await askGemini(reply, salonCtx, history);
+
           if (!aiReply) {
             // No API key configured — intentionally silent
             console.warn(`[Bot] No Gemini API key — silent for ${remoteJid}`);
             return;
           }
 
-          // Cache this reply so identical follow-up messages don't hit Gemini again
-          aiReplyCache.set(cacheKey, { reply: aiReply, ts: Date.now() });
-          if (aiReplyCache.size > 500) {
-            const now = Date.now();
-            for (const [k, v] of aiReplyCache) {
-              if (now - v.ts > AI_CACHE_TTL) aiReplyCache.delete(k);
+          // Persist updated history only on genuine AI replies (not fallback messages).
+          // Fallback replies don't add context, so we leave the history untouched.
+          if (aiReply !== FALLBACK_REPLY) {
+            saveHistory(remoteJid, newHistory);
+            // Also cache for first-contact replies (no history) so duplicates skip Gemini
+            if (!hasHistory) {
+              const cacheKey = `${remoteJid}:${reply.toLowerCase().trim()}`;
+              aiReplyCache.set(cacheKey, { reply: aiReply, ts: Date.now() });
+              if (aiReplyCache.size > 500) {
+                const now = Date.now();
+                for (const [k, v] of aiReplyCache) {
+                  if (now - v.ts > AI_CACHE_TTL) aiReplyCache.delete(k);
+                }
+              }
             }
           }
 
           await sendWhatsAppMessage(remoteJid, aiReply);
-          console.log(`[Bot] Replied to ${remoteJid}: "${reply.slice(0, 40)}..."`);
+          const turnNum = Math.floor(newHistory.length / 2);
+          console.log(`[Bot] Replied to ${remoteJid} (turn ${turnNum}): "${reply.slice(0, 40)}..."`);
         } catch (err: any) {
           console.error("[Bot] Error handling incoming message:", err.message);
           // Never stay silent on unexpected errors — send fallback so client gets a response

@@ -10,7 +10,7 @@ const MODEL_CASCADE = [
 const QUOTA_COOLDOWN_MS = 60 * 1000; // 60 seconds
 let quotaExhaustedUntil = 0;
 
-// Delay between cascade retries on non-quota errors (ms, random jitter in [2000, 3000])
+// Delay between cascade retries on non-quota errors — random jitter in [2000, 3000] ms
 const retryDelay = () =>
   new Promise<void>((r) => setTimeout(r, 2000 + Math.floor(Math.random() * 1000)));
 
@@ -29,8 +29,13 @@ export interface SalonContext {
   services: { name: string; price: number; duration: number; category: string }[];
 }
 
+// A single turn in a multi-turn conversation (role = "user" | "model")
+export interface ConversationTurn {
+  role: "user" | "model";
+  text: string;
+}
+
 // Cache the system prompt per salon snapshot to avoid rebuilding it on every message.
-// Key: JSON hash of the context. Cleared when context changes.
 let cachedPromptKey = "";
 let cachedPrompt = "";
 
@@ -79,20 +84,34 @@ async function callGemini(
   model: string,
   userMessage: string,
   systemPrompt: string,
-  apiKey: string
+  apiKey: string,
+  history: ConversationTurn[]
 ): Promise<{ reply: string | null; isQuotaError: boolean }> {
   const url = `${GEMINI_BASE}/${model}:generateContent?key=${apiKey}`;
+
+  // Build multi-turn contents array from conversation history + current message
+  const contents: { role: string; parts: { text: string }[] }[] = [
+    // Previous turns
+    ...history.map((turn) => ({
+      role: turn.role,
+      parts: [{ text: turn.text }],
+    })),
+    // Current user message
+    { role: "user", parts: [{ text: userMessage }] },
+  ];
+
   let response: Response;
   try {
     response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [
-          {
-            parts: [{ text: `${systemPrompt}\n\nرسالة العميل: ${userMessage}` }],
-          },
-        ],
+        // systemInstruction keeps the prompt separate from the conversation turns,
+        // so it doesn't consume user/model turn slots and isn't repeated in history.
+        systemInstruction: {
+          parts: [{ text: systemPrompt }],
+        },
+        contents,
         generationConfig: {
           maxOutputTokens: 350,
           temperature: 0.7,
@@ -125,27 +144,32 @@ async function callGemini(
 }
 
 /**
- * Ask Gemini for a reply. Returns:
- * - A string reply on success
- * - FALLBACK_REPLY if quota is exhausted or all models fail (never silent on quota errors)
- * - null only if no API key is configured (intentionally silent)
+ * Ask Gemini for a reply, supporting multi-turn conversation history.
+ *
+ * Returns:
+ * - `reply`: the AI reply string, FALLBACK_REPLY on quota errors, or null if no API key
+ * - `newHistory`: updated conversation turns to persist (unchanged on fallback/error)
+ *
+ * Only successful AI replies are appended to history — fallback messages are not,
+ * so the conversation context stays coherent.
  */
 export async function askGemini(
   userMessage: string,
-  ctx: SalonContext
-): Promise<string | null> {
+  ctx: SalonContext,
+  history: ConversationTurn[] = []
+): Promise<{ reply: string | null; newHistory: ConversationTurn[] }> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     console.warn("[Gemini] No API key — skipping AI reply");
-    return null;
+    return { reply: null, newHistory: history };
   }
 
-  // Skip and return fallback if still in cooldown — don't waste quota
+  // Return fallback during cooldown — don't burn remaining quota
   const now = Date.now();
   if (now < quotaExhaustedUntil) {
     const remainingSecs = Math.ceil((quotaExhaustedUntil - now) / 1000);
     console.warn(`[Gemini] Quota cooldown active (${remainingSecs}s remaining) — using fallback reply`);
-    return FALLBACK_REPLY;
+    return { reply: FALLBACK_REPLY, newHistory: history };
   }
 
   const systemPrompt = buildSystemPrompt(ctx);
@@ -153,23 +177,28 @@ export async function askGemini(
   for (let i = 0; i < MODEL_CASCADE.length; i++) {
     const model = MODEL_CASCADE[i];
     try {
-      const { reply, isQuotaError } = await callGemini(model, userMessage, systemPrompt, apiKey);
+      const { reply, isQuotaError } = await callGemini(model, userMessage, systemPrompt, apiKey, history);
 
       if (reply) {
-        console.log(`[Gemini] ${model} replied successfully`);
-        return reply;
+        console.log(`[Gemini] ${model} replied (turn ${history.length / 2 + 1})`);
+        // Append user message + model reply to history
+        const newHistory: ConversationTurn[] = [
+          ...history,
+          { role: "user", text: userMessage },
+          { role: "model", text: reply },
+        ];
+        return { reply, newHistory };
       }
 
       if (isQuotaError) {
-        // All models share the same account quota — stop and cool down
         quotaExhaustedUntil = Date.now() + QUOTA_COOLDOWN_MS;
         console.error(
-          `[Gemini] Quota exhausted on ${model} — cooling down for ${QUOTA_COOLDOWN_MS / 1000}s, sending fallback reply`
+          `[Gemini] Quota exhausted on ${model} — cooling down ${QUOTA_COOLDOWN_MS / 1000}s, sending fallback`
         );
-        return FALLBACK_REPLY;
+        return { reply: FALLBACK_REPLY, newHistory: history };
       }
 
-      // Non-quota error (404, network, unexpected) — wait then try next model
+      // Non-quota failure — wait then try next model
       if (i < MODEL_CASCADE.length - 1) {
         console.warn(`[Gemini] ${model} failed — retrying next model in ~2-3s`);
         await retryDelay();
@@ -183,5 +212,5 @@ export async function askGemini(
   }
 
   console.error("[Gemini] All models exhausted — sending fallback reply");
-  return FALLBACK_REPLY;
+  return { reply: FALLBACK_REPLY, newHistory: history };
 }
