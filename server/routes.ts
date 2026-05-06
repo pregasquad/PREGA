@@ -3860,12 +3860,15 @@ export async function registerRoutes(
     initBaileys().catch((err) => console.error("[Baileys] Startup error:", err));
 
     // Register incoming message bot handler for booking confirmations
-    setIncomingMessageHandler(async (rawPhone: string, text: string) => {
+    // remoteJid = full WhatsApp JID (may be @s.whatsapp.net OR @lid for newer accounts)
+    // phone     = numeric digits extracted from JID — used ONLY for DB matching
+    // All replies go to remoteJid directly so LID-based accounts get the correct reply
+    setIncomingMessageHandler(async (remoteJid: string, phone: string, text: string) => {
       try {
         const reply = text.trim();
 
-        // Normalize the phone for DB matching
-        let normalized = rawPhone.replace(/[^0-9]/g, "");
+        // Normalize the phone for DB matching (digits only)
+        let normalized = phone.replace(/[^0-9]/g, "");
         if (normalized.startsWith("00")) normalized = normalized.slice(2);
         if (normalized.startsWith("0") && normalized.length === 10) normalized = "212" + normalized.slice(1);
         if (normalized.length === 9) normalized = "212" + normalized;
@@ -3888,24 +3891,25 @@ export async function registerRoutes(
 
         const apt = pending.length > 0 ? pending[0] : null;
 
+        // Reply always goes to remoteJid (preserves @lid for LID-based WhatsApp accounts)
         if (apt && reply === "1") {
           await storage.updateAppointment(apt.id, { bookingStatus: "confirmed" } as any);
-          await sendBotConfirmed(rawPhone);
-          console.log(`[Bot] Appointment ${apt.id} confirmed by client`);
+          await sendBotConfirmed(remoteJid);
+          console.log(`[Bot] Appointment ${apt.id} confirmed by client (${remoteJid})`);
           return;
         }
 
         if (apt && reply === "2") {
           await storage.updateAppointment(apt.id, { bookingStatus: "cancelled" } as any);
-          await sendBotCancelled(rawPhone);
-          console.log(`[Bot] Appointment ${apt.id} cancelled by client`);
+          await sendBotCancelled(remoteJid);
+          console.log(`[Bot] Appointment ${apt.id} cancelled by client (${remoteJid})`);
           return;
         }
 
         if (apt && reply === "3") {
           await storage.updateAppointment(apt.id, { bookingStatus: "modify_requested" } as any);
-          await sendBotModify(rawPhone);
-          console.log(`[Bot] Appointment ${apt.id} modify requested by client`);
+          await sendBotModify(remoteJid);
+          console.log(`[Bot] Appointment ${apt.id} modify requested by client (${remoteJid})`);
           return;
         }
 
@@ -3935,8 +3939,9 @@ export async function registerRoutes(
         };
 
         const aiReply = await askGemini(reply, salonCtx);
-        await sendWhatsAppMessage(rawPhone, aiReply);
-        console.log(`[Bot] Gemini replied to ${rawPhone}: "${reply.slice(0, 40)}..."`);
+        // Send to remoteJid — formatJid will pass it through unchanged (it already has @)
+        await sendWhatsAppMessage(remoteJid, aiReply);
+        console.log(`[Bot] Gemini replied to ${remoteJid}: "${reply.slice(0, 40)}..."`);
       } catch (err: any) {
         console.error("[Bot] Error handling incoming message:", err.message);
       }

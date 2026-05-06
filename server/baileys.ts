@@ -29,7 +29,9 @@ export function setSocketIO(io: any): void {
   socketIO = io;
 }
 
-type IncomingMessageHandler = (phone: string, message: string) => Promise<void>;
+// remoteJid = full JID (e.g. "212713446214@s.whatsapp.net" or "85715031466043@lid")
+// phone     = best-effort numeric phone extracted from JID (may not match for LID accounts)
+type IncomingMessageHandler = (remoteJid: string, phone: string, text: string) => Promise<void>;
 let incomingMessageHandler: IncomingMessageHandler | null = null;
 
 export function setIncomingMessageHandler(handler: IncomingMessageHandler): void {
@@ -155,7 +157,9 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
       }
       if (msgId) processedMessageIds.add(msgId);
 
-      const rawPhone = msg.key.remoteJid.replace("@s.whatsapp.net", "");
+      const remoteJid = msg.key.remoteJid;
+      // Best-effort numeric phone (works for @s.whatsapp.net; won't be a real phone for @lid)
+      const rawPhone = remoteJid.replace(/@(s\.whatsapp\.net|lid|c\.us)$/, "");
       const text = (
         msg.message?.conversation ||
         msg.message?.extendedTextMessage?.text ||
@@ -165,11 +169,11 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
 
       if (!rawPhone || !text) continue;
 
-      log(`Incoming message from ${rawPhone}: "${text.slice(0, 60)}"`);
+      log(`Incoming message from ${remoteJid}: "${text.slice(0, 60)}"`);
 
       if (incomingMessageHandler) {
         try {
-          await incomingMessageHandler(rawPhone, text);
+          await incomingMessageHandler(remoteJid, rawPhone, text);
         } catch (err: any) {
           log(`Incoming handler error: ${err.message}`);
         }
@@ -393,6 +397,8 @@ export function getStatus(): {
 }
 
 function formatJid(phone: string): string {
+  // If it's already a full JID (contains @), use it as-is — never reconstruct a LID
+  if (phone.includes("@")) return phone;
   let cleaned = phone.replace(/[^0-9]/g, "");
   if (cleaned.startsWith("00")) cleaned = cleaned.slice(2);
   if (cleaned.startsWith("0") && cleaned.length === 10) cleaned = "212" + cleaned.slice(1);
