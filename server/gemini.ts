@@ -67,7 +67,12 @@ export async function askGemini(userMessage: string, ctx: SalonContext): Promise
     });
 
     if (!response.ok) {
-      console.error(`[Gemini] API error: ${response.status} ${await response.text()}`);
+      const errBody = await response.text();
+      console.error(`[Gemini] API error ${response.status}: ${errBody}`);
+      // Try fallback model if flash is deprecated/overloaded
+      if (response.status === 404 || response.status === 429 || response.status === 503) {
+        console.error(`[Gemini] Status ${response.status} — check API key quota or model availability`);
+      }
       return "💖 مرحباً! لا تترددي في التواصل معنا للمزيد من المعلومات 🌸";
     }
 
