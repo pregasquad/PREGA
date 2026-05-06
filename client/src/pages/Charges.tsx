@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, TrendingDown, FolderPlus, RefreshCw, ChevronLeft, ChevronRight, Calendar, Paperclip, X, Image, FileText, Eye } from "lucide-react";
 import { autoPrintExpense } from "@/lib/printReceipt";
 import { useBusinessSettings } from "@/hooks/use-salon-data";
+import { refreshSalariesBackground } from "@/lib/salariesRefresher";
 
 const DEFAULT_CHARGE_TYPES_KEYS = [
   { id: 1, key: "expenses.product", value: "Produit" },
@@ -90,6 +91,7 @@ export default function Charges() {
     onSuccess: (savedData: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/charges"] });
       queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+      refreshSalariesBackground();
 
       autoPrintExpense({
         businessName: salonSettings?.businessName || "PREGASQUAD SALON",
@@ -114,6 +116,7 @@ export default function Charges() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/charges"] });
       queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+      refreshSalariesBackground();
       toast({ title: t("expenses.expenseDeleted") });
     },
   });

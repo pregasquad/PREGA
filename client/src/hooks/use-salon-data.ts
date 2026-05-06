@@ -3,6 +3,7 @@ import { api, buildUrl } from "@shared/routes";
 import { type InsertAppointment, type InsertService, type InsertCategory, type InsertClient, type InsertStaff, type InsertStaffSchedule, type InsertStaffBreak, type InsertStaffTimeOff } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { getFromOfflineStore, saveToOfflineStore, addItemToOfflineStore, addToSyncQueue, updateItemInOfflineStore, deleteItemFromOfflineStore } from "@/lib/offlineDb";
+import { refreshSalariesBackground } from "@/lib/salariesRefresher";
 
 type OfflineStoreName = 'appointments' | 'services' | 'categories' | 'staff' | 'clients' | 'charges' | 'products' | 'staffDeductions' | 'staffCommissions' | 'businessSettings';
 
@@ -230,6 +231,7 @@ export function useCreateAppointment() {
       }
       queryClient.invalidateQueries({ queryKey: [api.appointments.list.path, undefined] });
       queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+      refreshSalariesBackground(300);
     },
   });
 }
@@ -310,6 +312,7 @@ export function useUpdateAppointment() {
       if (navigator.onLine) {
         queryClient.invalidateQueries({ queryKey: [api.appointments.list.path] });
         queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+        refreshSalariesBackground(300);
       }
     },
   });
@@ -382,6 +385,7 @@ export function useDeleteAppointment() {
       if (navigator.onLine) {
         queryClient.invalidateQueries({ queryKey: [api.appointments.list.path] });
         queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+        refreshSalariesBackground(300);
       }
     },
   });

@@ -22,6 +22,7 @@ import { useBusinessSettings } from "@/hooks/use-salon-data";
 import { connectQz, openCashDrawer, isQzConnected, checkPrintStationAsync, remoteOpenDrawer } from "@/lib/qzPrint";
 import type { Staff, Service, Appointment, Charge, StaffDeduction, StaffPayment, SalonPayment } from "@shared/schema";
 import { saveSalariesCache } from "@/lib/offlineDb";
+import { refreshSalariesBackground } from "@/lib/salariesRefresher";
 
 type PeriodType = "day" | "week" | "month" | "custom";
 
@@ -194,7 +195,8 @@ export default function Salaries() {
       saveSalariesCache(data).catch(() => {});
       return data;
     },
-    staleTime: Infinity,
+    staleTime: 0,
+    refetchOnMount: true,
     refetchOnWindowFocus: false,
     placeholderData: (prev) => prev,
   });
@@ -215,7 +217,7 @@ export default function Salaries() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+      refreshSalariesBackground();
       setShowChargeDialog(false);
       setNewCharge({ type: "rent", name: "", amount: 0, date: format(getWorkDayDate(bSettings?.openingTime, bSettings?.closingTime), "yyyy-MM-dd") });
     },
@@ -226,7 +228,7 @@ export default function Salaries() {
       await apiRequest("DELETE", `/api/charges/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+      refreshSalariesBackground();
     },
   });
 
@@ -236,7 +238,7 @@ export default function Salaries() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+      refreshSalariesBackground();
       setShowDeductionDialog(false);
       setNewDeduction({ staffName: "", type: "advance", description: "", amount: 0, date: format(getWorkDayDate(bSettings?.openingTime, bSettings?.closingTime), "yyyy-MM-dd") });
     },
@@ -247,7 +249,7 @@ export default function Salaries() {
       await apiRequest("DELETE", `/api/staff-deductions/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+      refreshSalariesBackground();
     },
   });
 
@@ -256,7 +258,7 @@ export default function Salaries() {
       await apiRequest("PATCH", `/api/staff-deductions/${id}/clear`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+      refreshSalariesBackground();
       toast({ title: t("salaries.cleared") });
     },
   });
@@ -266,7 +268,7 @@ export default function Salaries() {
       await apiRequest("PATCH", `/api/charges/${id}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+      refreshSalariesBackground();
       setEditingCharge(null);
       toast({ title: t("common.save") });
     },
@@ -277,7 +279,7 @@ export default function Salaries() {
       await apiRequest("PATCH", `/api/staff-deductions/${id}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+      refreshSalariesBackground();
       setEditingDeduction(null);
       toast({ title: t("common.save") });
     },
@@ -289,7 +291,7 @@ export default function Salaries() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+      refreshSalariesBackground();
       setPayBackDeduction(null);
       setPayBackInputAmount("");
       toast({ title: t("salaries.payBackRecorded") });
@@ -302,7 +304,7 @@ export default function Salaries() {
       return res.json();
     },
     onSuccess: async () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+      refreshSalariesBackground();
       toast({ title: "Recette salon collectée" });
       try {
         await connectQz();
@@ -319,7 +321,7 @@ export default function Salaries() {
       return res.json();
     },
     onSuccess: async () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+      refreshSalariesBackground();
       toast({ title: t("salaries.paymentRecorded") });
       try {
         await connectQz();

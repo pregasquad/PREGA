@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useAppointments, useStaff, useServices, useCreateAppointment, useUpdateAppointment, useDeleteAppointment, useBusinessSettings } from "@/hooks/use-salon-data";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { refreshSalariesBackground } from "@/lib/salariesRefresher";
 import { useSearch, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -1492,6 +1493,7 @@ export default function Planning() {
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/appointments/all"] });
       queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+      refreshSalariesBackground();
       toast({ title: t("planning.paymentConfirmed"), description: t("planning.paymentConfirmedDesc") });
 
       // Print receipt and open cash drawer
