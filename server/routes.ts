@@ -2468,12 +2468,13 @@ export async function registerRoutes(
   // ── Baileys WhatsApp management routes ──────────────────────────────────
   app.get("/api/whatsapp/qr", isPinAuthenticated, async (_req, res) => {
     try {
-      const { getQRDataUrl, getStatus, getPairingCode, getLastPairingError } = await import("./baileys");
+      const { getQRDataUrl, getStatus, getPairingCode, getPairingCodeExpiresAt, getLastPairingError } = await import("./baileys");
       const s = getStatus();
       const qr = getQRDataUrl();
       const pairingCode = getPairingCode();
+      const pairingCodeExpiresAt = getPairingCodeExpiresAt();
       const pairingError = getLastPairingError();
-      res.json({ status: s.status, connected: s.connected, phone: s.phone, qr, pairingCode, pairingError });
+      res.json({ status: s.status, connected: s.connected, phone: s.phone, qr, pairingCode, pairingCodeExpiresAt, pairingError });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }

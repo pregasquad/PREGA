@@ -32,6 +32,7 @@ interface WAStatus {
   phone?: string;
   qr?: string | null;
   pairingCode?: string | null;
+  pairingCodeExpiresAt?: number | null;
   pairingError?: string | null;
 }
 
@@ -145,27 +146,45 @@ export default function WhatsApp() {
   const status = waData?.status ?? "disconnected";
   const connected = waData?.connected ?? false;
 
+  // ── Start expiry countdown from a known expiresAt timestamp ─────────────
+  const startExpiryCountdown = (expiresAt: number) => {
+    if (codeExpiryRef.current) clearInterval(codeExpiryRef.current);
+    const remaining = Math.max(0, Math.round((expiresAt - Date.now()) / 1000));
+    setCodeExpiresIn(remaining);
+    codeExpiryRef.current = setInterval(() => {
+      setCodeExpiresIn((s) => {
+        if (s === null || s <= 1) {
+          if (codeExpiryRef.current) clearInterval(codeExpiryRef.current);
+          setPairingCode(null);
+          setCodeExpiresIn(null);
+          return null;
+        }
+        return s - 1;
+      });
+    }, 1000);
+  };
+
   // ── Socket.IO: instant pairing code / error (no waiting for next poll) ──
   useEffect(() => {
     const socket = io();
-    socket.on("whatsapp:pairing_code", ({ code }: { code: string }) => {
+    socket.on("whatsapp:pairing_code", ({ code, expiresAt }: { code: string; expiresAt?: number }) => {
       setPairingCode(code);
       setIsWaitingForCode(false);
       if (countdownRef.current) clearInterval(countdownRef.current);
-      // Start 60-second expiry countdown
+      startExpiryCountdown(expiresAt ?? Date.now() + 90_000);
+    });
+    socket.on("whatsapp:pairing_code_expired", () => {
+      setPairingCode(null);
+      setIsWaitingForCode(false);
+      setCodeExpiresIn(null);
       if (codeExpiryRef.current) clearInterval(codeExpiryRef.current);
-      setCodeExpiresIn(60);
-      codeExpiryRef.current = setInterval(() => {
-        setCodeExpiresIn((s) => {
-          if (s === null || s <= 1) {
-            if (codeExpiryRef.current) clearInterval(codeExpiryRef.current);
-            setPairingCode(null);
-            setCodeExpiresIn(null);
-            return null;
-          }
-          return s - 1;
-        });
-      }, 1000);
+      toast({
+        title: "Code expired",
+        description: "The pairing code expired — please request a new one.",
+        variant: "destructive",
+        duration: 6000,
+      });
+      setTimeout(() => refetch(), 500);
     });
     socket.on("whatsapp:pairing_error", ({ error }: { error: string }) => {
       if (shownErrorRef.current === error) return;
@@ -206,6 +225,10 @@ export default function WhatsApp() {
       setPairingCode(waData.pairingCode);
       setIsWaitingForCode(false);
       if (countdownRef.current) clearInterval(countdownRef.current);
+      // Start countdown from server-provided expiresAt (if available)
+      if (waData.pairingCodeExpiresAt && waData.pairingCodeExpiresAt > Date.now()) {
+        startExpiryCountdown(waData.pairingCodeExpiresAt);
+      }
     }
   }, [waData?.pairingCode, isWaitingForCode]);
 

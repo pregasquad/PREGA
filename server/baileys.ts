@@ -107,6 +107,7 @@ type Status = "disconnected" | "connecting" | "qr" | "pairing" | "open";
 let sock: any = null;
 let currentQRDataUrl: string | null = null;
 let currentPairingCode: string | null = null;
+let currentPairingCodeExpiresAt: number | null = null;
 let lastPairingError: string | null = null;
 let status: Status = "disconnected";
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -116,6 +117,7 @@ let pendingPairingPhone: string | null = null;
 let isVerifyingLink = false;
 let verifyRetryCount = 0;
 let verifyReconnectTimer: ReturnType<typeof setTimeout> | null = null;
+let qrTimeoutCount = 0; // consecutive 408 QR-expired disconnects
 
 // Deduplication: track processed message IDs to avoid handling the same message twice
 // (Baileys can fire messages.upsert multiple times on reconnect/sync)
@@ -216,6 +218,7 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
   status = "connecting";
   currentQRDataUrl = null;
   currentPairingCode = null;
+  currentPairingCodeExpiresAt = null;
 
   const pinoLogger = pino({ level: "warn" });
   sock = makeWASocket({
@@ -294,6 +297,9 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
 
     let codeRequested = false;
 
+    const CODE_EXPIRY_MS = 90_000; // WhatsApp codes are valid ~60-90s
+    let codeExpiryTimer: ReturnType<typeof setTimeout> | null = null;
+
     const doRequestCode = async () => {
       if (codeRequested) return;
       if (!sock || pendingPairingPhone !== pairingPhone) return;
@@ -302,13 +308,30 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
       try {
         const code = await sock.requestPairingCode(cleanPhone);
         currentPairingCode = code;
+        currentPairingCodeExpiresAt = Date.now() + CODE_EXPIRY_MS;
         lastPairingError = null;
-        log(`Pairing code obtained: ${code}`);
-        if (socketIO) socketIO.emit("whatsapp:pairing_code", { code });
+        log(`Pairing code obtained: ${code} (expires in ${CODE_EXPIRY_MS / 1000}s)`);
+        if (socketIO) socketIO.emit("whatsapp:pairing_code", { code, expiresAt: currentPairingCodeExpiresAt });
+
+        // Auto-expire: clear code on server after expiry so polling reflects reality
+        if (codeExpiryTimer) clearTimeout(codeExpiryTimer);
+        codeExpiryTimer = setTimeout(() => {
+          if (currentPairingCode === code && pendingPairingPhone === pairingPhone) {
+            log(`Pairing code ${code} expired — resetting state`);
+            currentPairingCode = null;
+            currentPairingCodeExpiresAt = null;
+            lastPairingError = "Code expired — please request a new one";
+            status = "disconnected";
+            pendingPairingPhone = null;
+            wipeAuth();
+            if (socketIO) socketIO.emit("whatsapp:pairing_code_expired", {});
+          }
+        }, CODE_EXPIRY_MS);
       } catch (err: any) {
         log(`requestPairingCode failed: ${err.message}`);
         lastPairingError = err.message;
         currentPairingCode = null;
+        currentPairingCodeExpiresAt = null;
         status = "disconnected";
         pendingPairingPhone = null;
         wipeAuth();
@@ -335,6 +358,7 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
         const error = lastPairingError ?? "Timed out — please try again";
         log(`Pairing timed out: ${error}`);
         lastPairingError = error;
+        currentPairingCode = null;
         status = "disconnected";
         pendingPairingPhone = null;
         wipeAuth();
@@ -362,11 +386,13 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
       status = "open";
       currentQRDataUrl = null;
       currentPairingCode = null;
+      currentPairingCodeExpiresAt = null;
       pendingPairingPhone = null;
       lastPairingError = null;
       shouldReconnect = true;
       isVerifyingLink = false;
       verifyRetryCount = 0;
+      qrTimeoutCount = 0;
       if (verifyReconnectTimer) { clearTimeout(verifyReconnectTimer); verifyReconnectTimer = null; }
       const phone = sock?.user?.id?.split(":")[0] ?? "?";
       log(`Connected as +${phone}`);
@@ -388,6 +414,7 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
       sock = null;
       pendingPairingPhone = null;
       currentPairingCode = null;
+      currentPairingCodeExpiresAt = null;
 
       if (wasPairing) {
         // ── Drop during pairing ──────────────────────────────────────────
@@ -432,6 +459,22 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
         if (socketIO) socketIO.emit("whatsapp:logged_out", { reason: isDeviceRemoved ? "device_removed" : "logged_out" });
       } else {
         // ── Other disconnect ─────────────────────────────────────────────
+        // 408 = "QR refs attempts ended" (nobody scanned the QR in time).
+        // After 3 consecutive misses the stale session is dead — wipe and stop.
+        const QR_TIMEOUT = 408;
+        if (reason === QR_TIMEOUT) {
+          qrTimeoutCount++;
+          log(`QR timeout #${qrTimeoutCount} — ${qrTimeoutCount >= 3 ? "giving up, wiping stale session" : "retrying…"}`);
+          if (qrTimeoutCount >= 3) {
+            shouldReconnect = false;
+            wipeAuth();
+            status = "disconnected";
+            if (socketIO) socketIO.emit("whatsapp:logged_out", { reason: "session_expired" });
+            return;
+          }
+        } else {
+          qrTimeoutCount = 0; // reset on non-408 disconnects
+        }
         if (socketIO) socketIO.emit("whatsapp:disconnected", { reason });
         if (shouldReconnect) scheduleReconnect(20000);
       }
@@ -483,6 +526,7 @@ export function startPairingCode(phone: string): void {
 
 export function getQRDataUrl(): string | null { return currentQRDataUrl; }
 export function getPairingCode(): string | null { return currentPairingCode; }
+export function getPairingCodeExpiresAt(): number | null { return currentPairingCodeExpiresAt; }
 export function getLastPairingError(): string | null { return lastPairingError; }
 
 export function getStatus(): {
@@ -555,6 +599,7 @@ export async function disconnect(): Promise<void> {
   status = "disconnected";
   currentQRDataUrl = null;
   currentPairingCode = null;
+  currentPairingCodeExpiresAt = null;
   pendingPairingPhone = null;
   lastPairingError = null;
   log("Disconnected and session cleared");
