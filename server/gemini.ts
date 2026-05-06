@@ -1,10 +1,11 @@
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 
+// Cascade from newest/fastest to older fallbacks — all confirmed available in v1beta
 const MODEL_CASCADE = [
-  "gemini-2.0-flash-lite",
+  "gemini-2.5-flash-preview-04-17",
   "gemini-2.0-flash",
-  "gemini-1.5-flash-8b",
-  "gemini-1.5-flash",
+  "gemini-2.0-flash-lite",
+  "gemini-1.5-pro-002",
 ];
 
 export interface SalonContext {
@@ -69,7 +70,11 @@ async function callGemini(model: string, userMessage: string, systemPrompt: stri
     const status = response.status;
     if (status === 429 || status === 503) {
       console.warn(`[Gemini] ${model} quota/overload (${status}) — trying next model`);
-      return null; // signal to try next model
+      return null;
+    }
+    if (status === 404) {
+      console.warn(`[Gemini] ${model} not found (404) — model may be deprecated, trying next`);
+      return null;
     }
     const errBody = await response.text();
     console.error(`[Gemini] ${model} error ${status}: ${errBody.slice(0, 300)}`);
@@ -85,7 +90,7 @@ export async function askGemini(userMessage: string, ctx: SalonContext): Promise
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     console.warn("[Gemini] No API key — skipping AI reply");
-    return null; // caller decides what to do (send nothing or fallback)
+    return null;
   }
 
   const systemPrompt = buildSystemPrompt(ctx);
@@ -103,5 +108,5 @@ export async function askGemini(userMessage: string, ctx: SalonContext): Promise
   }
 
   console.error("[Gemini] All models exhausted — no AI reply");
-  return null; // all models failed
+  return null;
 }
