@@ -24,6 +24,7 @@ import {
   AlertCircle,
   Hash,
   Phone,
+  Trash2,
 } from "lucide-react";
 
 interface WAStatus {
@@ -361,6 +362,19 @@ export default function WhatsApp() {
       toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
+  const clearSessionMutation = useMutation({
+    mutationFn: () =>
+      apiRequest("POST", "/api/whatsapp/clear-session").then((r) => r.json()),
+    onSuccess: () => {
+      setPairingCode(null);
+      setIsWaitingForCode(false);
+      toast({ title: "Session cleared", description: "Old session deleted. You can now re-link your phone." });
+      setTimeout(() => refetch(), 500);
+    },
+    onError: (err: any) =>
+      toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
   const sendTestMutation = useMutation({
     mutationFn: () =>
       apiRequest("POST", "/api/notifications/send", {
@@ -450,6 +464,21 @@ export default function WhatsApp() {
               Liez à nouveau votre téléphone pour rétablir la connexion.
             </p>
           </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="shrink-0 h-8 gap-1.5 text-xs text-red-400 hover:bg-red-500/10 hover:text-red-300"
+            onClick={() => clearSessionMutation.mutate()}
+            disabled={clearSessionMutation.isPending}
+            data-testid="button-clear-session"
+          >
+            {clearSessionMutation.isPending ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Trash2 className="w-3.5 h-3.5" />
+            )}
+            Clear session
+          </Button>
         </div>
       )}
 
