@@ -1,14 +1,16 @@
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 
 // Cascade from newest/fastest to older fallbacks
-// gemini-2.0-flash and gemini-2.0-flash-lite confirmed working (return 429 = valid key, just quota)
-// Preview model IDs expire frequently — use stable names first
 const MODEL_CASCADE = [
   "gemini-2.5-flash",
   "gemini-2.5-pro",
   "gemini-2.0-flash",
   "gemini-2.0-flash-lite",
 ];
+
+// Cooldown after all models are quota-exhausted — avoids burning quota on hopeless retries
+const QUOTA_COOLDOWN_MS = 60 * 1000; // 60 seconds
+let quotaExhaustedUntil = 0;
 
 export interface SalonContext {
   name: string;
@@ -95,20 +97,37 @@ export async function askGemini(userMessage: string, ctx: SalonContext): Promise
     return null;
   }
 
+  // If all models recently exhausted quota, skip until cooldown expires
+  const now = Date.now();
+  if (now < quotaExhaustedUntil) {
+    const remainingSecs = Math.ceil((quotaExhaustedUntil - now) / 1000);
+    console.warn(`[Gemini] Quota cooldown active — skipping for ${remainingSecs}s more`);
+    return null;
+  }
+
   const systemPrompt = buildSystemPrompt(ctx);
+  let allQuotaErrors = true;
 
   for (const model of MODEL_CASCADE) {
     try {
       const reply = await callGemini(model, userMessage, systemPrompt, apiKey);
       if (reply) {
         console.log(`[Gemini] ${model} replied successfully`);
+        allQuotaErrors = false;
         return reply;
       }
     } catch (err: any) {
       console.error(`[Gemini] ${model} threw: ${err.message}`);
+      allQuotaErrors = false; // network/unexpected error, not quota
     }
   }
 
-  console.error("[Gemini] All models exhausted — no AI reply");
+  if (allQuotaErrors) {
+    quotaExhaustedUntil = Date.now() + QUOTA_COOLDOWN_MS;
+    console.error(`[Gemini] All models quota-exhausted — cooling down for ${QUOTA_COOLDOWN_MS / 1000}s`);
+  } else {
+    console.error("[Gemini] All models exhausted — no AI reply");
+  }
+
   return null;
 }
