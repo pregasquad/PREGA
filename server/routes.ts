@@ -3872,6 +3872,35 @@ export async function registerRoutes(
   const aiReplyCache = new Map<string, { reply: string; ts: number }>();
   const AI_CACHE_TTL = 15 * 60 * 1000; // 15 minutes
 
+  // Anti-spam queue — one active processing slot + one pending slot per JID.
+  // If a message arrives while one is being processed, it waits in the pending
+  // slot (overwriting any previous pending). This prevents Gemini from being
+  // hammered when a user sends multiple messages rapidly.
+  const jidQueue = new Map<string, { processing: boolean; pending: string | null }>();
+
+  function enqueueMessage(remoteJid: string, phone: string, text: string, processMsg: (t: string) => Promise<void>): void {
+    const slot = jidQueue.get(remoteJid);
+
+    if (!slot || !slot.processing) {
+      // No active task — start immediately
+      jidQueue.set(remoteJid, { processing: true, pending: null });
+      processMsg(text).finally(() => {
+        const s = jidQueue.get(remoteJid);
+        if (s?.pending !== null && s?.pending !== undefined) {
+          const next = s.pending;
+          jidQueue.set(remoteJid, { processing: true, pending: null });
+          processMsg(next).finally(() => jidQueue.delete(remoteJid));
+        } else {
+          jidQueue.delete(remoteJid);
+        }
+      });
+    } else {
+      // Already processing — park this as the pending message (newest wins)
+      console.log(`[Bot] Anti-spam: queuing message for ${remoteJid} (previous pending overwritten)`);
+      jidQueue.set(remoteJid, { processing: true, pending: text });
+    }
+  }
+
   import("./baileys").then(({ initBaileys, setSocketIO, setIncomingMessageHandler, sendBotConfirmed, sendBotCancelled, sendBotModify, sendBotError }) => {
     setSocketIO(io);
     initBaileys().catch((err) => console.error("[Baileys] Startup error:", err));
@@ -3881,111 +3910,126 @@ export async function registerRoutes(
     // phone     = numeric digits extracted from JID — used ONLY for DB matching
     // All replies go to remoteJid directly so LID-based accounts get the correct reply
     setIncomingMessageHandler(async (remoteJid: string, phone: string, text: string) => {
-      try {
-        const reply = text.trim();
+      // Ignore empty messages, group JIDs, status broadcasts — belt-and-suspenders guard
+      if (!text || !text.trim()) return;
+      if (remoteJid.endsWith("@g.us")) return;
+      if (remoteJid.includes("broadcast") || remoteJid === "status@broadcast") return;
 
-        // Normalize the phone for DB matching (digits only)
-        let normalized = phone.replace(/[^0-9]/g, "");
-        if (normalized.startsWith("00")) normalized = normalized.slice(2);
-        if (normalized.startsWith("0") && normalized.length === 10) normalized = "212" + normalized.slice(1);
-        if (normalized.length === 9) normalized = "212" + normalized;
+      enqueueMessage(remoteJid, phone, text, async (msgText) => {
+        try {
+          const reply = msgText.trim();
 
-        // Find all appointments that match this phone
-        const allApts = await storage.getAppointments();
-        const matched = allApts.filter((a: any) => {
-          if (!a.phone) return false;
-          let ap = a.phone.replace(/[^0-9]/g, "");
-          if (ap.startsWith("00")) ap = ap.slice(2);
-          if (ap.startsWith("0") && ap.length === 10) ap = "212" + ap.slice(1);
-          if (ap.length === 9) ap = "212" + ap;
-          return ap === normalized;
-        });
+          // Normalize the phone for DB matching (digits only)
+          let normalized = phone.replace(/[^0-9]/g, "");
+          if (normalized.startsWith("00")) normalized = normalized.slice(2);
+          if (normalized.startsWith("0") && normalized.length === 10) normalized = "212" + normalized.slice(1);
+          if (normalized.length === 9) normalized = "212" + normalized;
 
-        // Find the most recent appointment that is still pending or modify_requested
-        const pending = matched
-          .filter((a: any) => !a.bookingStatus || a.bookingStatus === "pending" || a.bookingStatus === "modify_requested")
-          .sort((a: any, b: any) => b.id - a.id);
+          // Find all appointments that match this phone
+          const allApts = await storage.getAppointments();
+          const matched = allApts.filter((a: any) => {
+            if (!a.phone) return false;
+            let ap = a.phone.replace(/[^0-9]/g, "");
+            if (ap.startsWith("00")) ap = ap.slice(2);
+            if (ap.startsWith("0") && ap.length === 10) ap = "212" + ap.slice(1);
+            if (ap.length === 9) ap = "212" + ap;
+            return ap === normalized;
+          });
 
-        const apt = pending.length > 0 ? pending[0] : null;
+          // Find the most recent appointment that is still pending or modify_requested
+          const pending = matched
+            .filter((a: any) => !a.bookingStatus || a.bookingStatus === "pending" || a.bookingStatus === "modify_requested")
+            .sort((a: any, b: any) => b.id - a.id);
 
-        // Reply always goes to remoteJid (preserves @lid for LID-based WhatsApp accounts)
-        if (apt && reply === "1") {
-          await storage.updateAppointment(apt.id, { bookingStatus: "confirmed" } as any);
-          await sendBotConfirmed(remoteJid);
-          console.log(`[Bot] Appointment ${apt.id} confirmed by client (${remoteJid})`);
-          return;
-        }
+          const apt = pending.length > 0 ? pending[0] : null;
 
-        if (apt && reply === "2") {
-          await storage.updateAppointment(apt.id, { bookingStatus: "cancelled" } as any);
-          await sendBotCancelled(remoteJid);
-          console.log(`[Bot] Appointment ${apt.id} cancelled by client (${remoteJid})`);
-          return;
-        }
+          // Reply always goes to remoteJid (preserves @lid for LID-based WhatsApp accounts)
+          if (apt && reply === "1") {
+            await storage.updateAppointment(apt.id, { bookingStatus: "confirmed" } as any);
+            await sendBotConfirmed(remoteJid);
+            console.log(`[Bot] Appointment ${apt.id} confirmed by client (${remoteJid})`);
+            return;
+          }
 
-        if (apt && reply === "3") {
-          await storage.updateAppointment(apt.id, { bookingStatus: "modify_requested" } as any);
-          await sendBotModify(remoteJid);
-          console.log(`[Bot] Appointment ${apt.id} modify requested by client (${remoteJid})`);
-          return;
-        }
+          if (apt && reply === "2") {
+            await storage.updateAppointment(apt.id, { bookingStatus: "cancelled" } as any);
+            await sendBotCancelled(remoteJid);
+            console.log(`[Bot] Appointment ${apt.id} cancelled by client (${remoteJid})`);
+            return;
+          }
 
-        // For any other message (question, darija, etc.) → Gemini AI assistant
-        const { askGemini } = await import("./gemini");
-        const { sendWhatsAppMessage } = await import("./baileys");
+          if (apt && reply === "3") {
+            await storage.updateAppointment(apt.id, { bookingStatus: "modify_requested" } as any);
+            await sendBotModify(remoteJid);
+            console.log(`[Bot] Appointment ${apt.id} modify requested by client (${remoteJid})`);
+            return;
+          }
 
-        // Check reply cache first — avoids burning API quota on repeated identical messages
-        const cacheKey = `${remoteJid}:${reply.toLowerCase().trim()}`;
-        const cached = aiReplyCache.get(cacheKey);
-        if (cached && Date.now() - cached.ts < AI_CACHE_TTL) {
-          await sendWhatsAppMessage(remoteJid, cached.reply);
-          console.log(`[Bot] Cache hit for ${remoteJid} — reusing reply without Gemini call`);
-          return;
-        }
+          // For any other message (question, darija, etc.) → Gemini AI assistant
+          const { askGemini, FALLBACK_REPLY } = await import("./gemini");
+          const { sendWhatsAppMessage } = await import("./baileys");
 
-        // Fetch real salon context (settings + services) to ground the AI
-        const [bizSettings, allServices] = await Promise.all([
-          storage.getBusinessSettings().catch(() => undefined),
-          storage.getServices().catch(() => []),
-        ]);
+          // Check reply cache first — avoids burning API quota on repeated identical messages
+          const cacheKey = `${remoteJid}:${reply.toLowerCase().trim()}`;
+          const cached = aiReplyCache.get(cacheKey);
+          if (cached && Date.now() - cached.ts < AI_CACHE_TTL) {
+            await sendWhatsAppMessage(remoteJid, cached.reply);
+            console.log(`[Bot] Cache hit for ${remoteJid} — reusing reply without Gemini call`);
+            return;
+          }
 
-        const salonCtx = {
-          name: bizSettings?.businessName || "PREGASQUAD",
-          address: bizSettings?.address || undefined,
-          phone: bizSettings?.phone || undefined,
-          openingTime: bizSettings?.openingTime || undefined,
-          closingTime: bizSettings?.closingTime || undefined,
-          currency: bizSettings?.currencySymbol || "DH",
-          services: (allServices || []).map((s: any) => ({
-            name: s.name,
-            price: s.price,
-            duration: s.duration,
-            category: s.category,
-          })),
-        };
+          // Fetch real salon context (settings + services) to ground the AI
+          const [bizSettings, allServices] = await Promise.all([
+            storage.getBusinessSettings().catch(() => undefined),
+            storage.getServices().catch(() => []),
+          ]);
 
-        const aiReply = await askGemini(reply, salonCtx);
-        if (!aiReply) {
-          console.warn(`[Bot] No AI reply for ${remoteJid} — staying silent (quota exhausted or no key)`);
-          return;
-        }
+          const salonCtx = {
+            name: bizSettings?.businessName || "PREGASQUAD",
+            address: bizSettings?.address || undefined,
+            phone: bizSettings?.phone || undefined,
+            openingTime: bizSettings?.openingTime || undefined,
+            closingTime: bizSettings?.closingTime || undefined,
+            currency: bizSettings?.currencySymbol || "DH",
+            services: (allServices || []).map((s: any) => ({
+              name: s.name,
+              price: s.price,
+              duration: s.duration,
+              category: s.category,
+            })),
+          };
 
-        // Cache this reply so identical follow-up messages don't hit Gemini again
-        aiReplyCache.set(cacheKey, { reply: aiReply, ts: Date.now() });
-        // Keep cache from growing unbounded — prune entries older than TTL
-        if (aiReplyCache.size > 500) {
-          const now = Date.now();
-          for (const [k, v] of aiReplyCache) {
-            if (now - v.ts > AI_CACHE_TTL) aiReplyCache.delete(k);
+          // askGemini returns FALLBACK_REPLY on quota errors — never silent unless no API key
+          const aiReply = await askGemini(reply, salonCtx);
+          if (!aiReply) {
+            // No API key configured — intentionally silent
+            console.warn(`[Bot] No Gemini API key — silent for ${remoteJid}`);
+            return;
+          }
+
+          // Cache this reply so identical follow-up messages don't hit Gemini again
+          aiReplyCache.set(cacheKey, { reply: aiReply, ts: Date.now() });
+          if (aiReplyCache.size > 500) {
+            const now = Date.now();
+            for (const [k, v] of aiReplyCache) {
+              if (now - v.ts > AI_CACHE_TTL) aiReplyCache.delete(k);
+            }
+          }
+
+          await sendWhatsAppMessage(remoteJid, aiReply);
+          console.log(`[Bot] Replied to ${remoteJid}: "${reply.slice(0, 40)}..."`);
+        } catch (err: any) {
+          console.error("[Bot] Error handling incoming message:", err.message);
+          // Never stay silent on unexpected errors — send fallback so client gets a response
+          try {
+            const { FALLBACK_REPLY } = await import("./gemini");
+            const { sendWhatsAppMessage } = await import("./baileys");
+            await sendWhatsAppMessage(remoteJid, FALLBACK_REPLY);
+          } catch {
+            // last-resort: nothing we can do
           }
         }
-
-        // Send to remoteJid — formatJid will pass it through unchanged (it already has @)
-        await sendWhatsAppMessage(remoteJid, aiReply);
-        console.log(`[Bot] Gemini replied to ${remoteJid}: "${reply.slice(0, 40)}..."`);
-      } catch (err: any) {
-        console.error("[Bot] Error handling incoming message:", err.message);
-      }
+      });
     });
   }).catch((err) => console.error("[Baileys] Import error:", err));
 
