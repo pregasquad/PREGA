@@ -182,29 +182,6 @@ export default function WhatsApp() {
       setTimeout(() => refetch(), 500);
     });
     socket.on("whatsapp:disconnected", () => refetch());
-    socket.on("whatsapp:pairing_refreshing", ({ attempt }: { attempt: number }) => {
-      setPairingCode(null);
-      setIsWaitingForCode(true);
-      if (countdownRef.current) clearInterval(countdownRef.current);
-      setWaitSeconds(0);
-      countdownRef.current = setInterval(() => setWaitSeconds((s) => s + 1), 1000);
-      if (attempt === 0) {
-        // attempt=0 means: code was shown, connection dropped, checking if phone accepted it
-        toast({ title: "Checking connection…", description: "Verifying if your phone accepted the code.", duration: 4000 });
-      }
-    });
-    socket.on("whatsapp:pairing_dropped", ({ reason }: { reason: string }) => {
-      setPairingCode(null);
-      setIsWaitingForCode(false);
-      if (countdownRef.current) clearInterval(countdownRef.current);
-      toast({
-        title: "Could not link device — please try again",
-        description: "WhatsApp couldn't complete the link. Enter your number and request a new code.",
-        variant: "destructive",
-        duration: 10000,
-      });
-      refetch();
-    });
     socket.on("whatsapp:logged_out", ({ reason }: { reason?: string }) => {
       setPairingCode(null);
       setIsWaitingForCode(false);
