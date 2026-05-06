@@ -1,18 +1,10 @@
 import * as postgresSchema from "@shared/schema/postgres";
 
-// Mutable — changes when automatic failover switches between PG and MySQL
-export let dbDialect: string = process.env.DB_DIALECT || 'postgres';
-
-// Always returns the live current dialect (safe across CJS/ESM)
-export function getDbDialect(): string { return dbDialect; }
+export const dbDialect = process.env.DB_DIALECT || 'postgres';
 
 let isOfflineMode = false;
 let lastConnectionCheck = 0;
 const CONNECTION_CHECK_INTERVAL = 30000;
-
-// When on MySQL fallback, retry PG every 5 health checks (~2.5 min)
-let pgRetryCounter = 0;
-const PG_RETRY_EVERY = 5;
 
 export function isDatabaseOffline(): boolean {
   return isOfflineMode;
@@ -25,99 +17,75 @@ export function setOfflineMode(offline: boolean): void {
   }
 }
 
+function getDatabaseUrl(): string | null {
+  if (dbDialect === 'mysql') {
+    const mysqlUrl = process.env.MYSQL_URL;
+    if (!mysqlUrl) {
+      console.warn("MYSQL_URL not set - running in offline mode");
+      return null;
+    }
+    return mysqlUrl;
+  } else {
+    const pgUrl = process.env.DATABASE_URL;
+    if (!pgUrl) {
+      console.warn("DATABASE_URL not set - running in offline mode");
+      return null;
+    }
+    return pgUrl;
+  }
+}
+
 let db: any;
 let pool: any;
 let schema: any = postgresSchema;
 
-// ── Per-dialect connection builders ──────────────────────────────────────────
-
-async function buildPostgresConnection(): Promise<{ db: any; pool: any; schema: any } | null> {
-  const pgUrl = process.env.KOYEB_DATABASE_URL || process.env.DATABASE_URL;
-  if (!pgUrl) return null;
-  try {
-    const { drizzle } = await import("drizzle-orm/node-postgres");
-    const pg = await import("pg");
-    const isKoyeb = !!process.env.KOYEB_DATABASE_URL;
-    const pgPool = new pg.default.Pool({
-      connectionString: pgUrl,
-      ssl: isKoyeb ? { rejectUnauthorized: false } : undefined,
-      connectionTimeoutMillis: 8000,
-    });
-    // Eagerly verify the connection
-    await pgPool.query("SELECT 1");
-    const pgDb = drizzle(pgPool, { schema: postgresSchema });
-    return { db: pgDb, pool: pgPool, schema: postgresSchema };
-  } catch {
-    return null;
-  }
-}
-
-async function buildMysqlConnection(): Promise<{ db: any; pool: any; schema: any } | null> {
-  const mysqlUrl = process.env.MYSQL_URL;
-  if (!mysqlUrl) return null;
-  try {
-    const { drizzle } = await import("drizzle-orm/mysql2");
-    const mysql = await import("mysql2/promise");
-    const schemaModule = await import("@shared/schema/mysql");
-    const mysqlPool = mysql.default.createPool({
-      uri: mysqlUrl,
-      waitForConnections: true,
-      connectionLimit: 10,
-      queueLimit: 0,
-      enableKeepAlive: true,
-      keepAliveInitialDelay: 0,
-      ssl: { rejectUnauthorized: false },
-      connectTimeout: 10000,
-    });
-    // Eagerly verify
-    const conn = await mysqlPool.getConnection();
-    await conn.query("SELECT 1");
-    conn.release();
-    const mysqlDb = drizzle(mysqlPool, { schema: schemaModule, mode: "default" });
-    return { db: mysqlDb, pool: mysqlPool, schema: schemaModule };
-  } catch {
-    return null;
-  }
-}
-
-// ── initializeDatabase ────────────────────────────────────────────────────────
-// Always tries Koyeb PostgreSQL first; falls back to TiDB MySQL automatically.
-
 export async function initializeDatabase(): Promise<boolean> {
-  // 1. Try PostgreSQL (primary)
-  const pgConn = await buildPostgresConnection();
-  if (pgConn) {
-    db       = pgConn.db;
-    pool     = pgConn.pool;
-    schema   = pgConn.schema;
-    dbDialect = 'postgres';
-    setOfflineMode(false);
-    console.log("✅ Using Koyeb PostgreSQL (primary)");
-    return true;
+  const databaseUrl = getDatabaseUrl();
+  
+  if (!databaseUrl) {
+    setOfflineMode(true);
+    console.log("Starting in OFFLINE MODE - no database configured");
+    return false;
   }
-
-  // 2. Fall back to TiDB MySQL
-  console.warn("⚠️  Koyeb PostgreSQL unreachable — trying TiDB MySQL fallback...");
-  const mysqlConn = await buildMysqlConnection();
-  if (mysqlConn) {
-    db       = mysqlConn.db;
-    pool     = mysqlConn.pool;
-    schema   = mysqlConn.schema;
-    dbDialect = 'mysql';
+  
+  try {
+    if (dbDialect === 'mysql') {
+      const { drizzle } = await import("drizzle-orm/mysql2");
+      const mysql = await import("mysql2/promise");
+      const schemaModule = await import("@shared/schema/mysql");
+      schema = schemaModule;
+      
+      pool = mysql.default.createPool({
+        uri: databaseUrl,
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0,
+        enableKeepAlive: true,
+        keepAliveInitialDelay: 0,
+        ssl: {
+          rejectUnauthorized: false,
+        },
+      });
+      
+      db = drizzle(pool, { schema, mode: "default" });
+      console.log("Using MySQL/TiDB database");
+    } else {
+      const { drizzle } = await import("drizzle-orm/node-postgres");
+      const pg = await import("pg");
+      
+      pool = new pg.default.Pool({ connectionString: databaseUrl });
+      db = drizzle(pool, { schema });
+      console.log("Using PostgreSQL database");
+    }
+    
     setOfflineMode(false);
-    console.log("✅ Using TiDB MySQL (fallback — Koyeb unavailable)");
     return true;
+  } catch (error) {
+    console.error("Failed to initialize database:", error);
+    setOfflineMode(true);
+    return false;
   }
-
-  // 3. Both unreachable
-  setOfflineMode(true);
-  console.log("❌ Starting in OFFLINE MODE — both databases unreachable");
-  return false;
 }
-
-// ── checkDatabaseConnection ───────────────────────────────────────────────────
-// Health-checks the active DB. On failure, tries the other DB automatically.
-// If currently on MySQL fallback, periodically retries PG to switch back.
 
 export async function checkDatabaseConnection(): Promise<boolean> {
   const now = Date.now();
@@ -127,57 +95,22 @@ export async function checkDatabaseConnection(): Promise<boolean> {
   lastConnectionCheck = now;
 
   if (!pool) {
-    return initializeDatabase();
+    const initialized = await initializeDatabase();
+    return initialized;
   }
 
-  // ── If we're currently on MySQL (fallback), try switching back to PG ──────
-  if (dbDialect === 'mysql') {
-    pgRetryCounter++;
-    if (pgRetryCounter >= PG_RETRY_EVERY) {
-      pgRetryCounter = 0;
-      const pgConn = await buildPostgresConnection();
-      if (pgConn) {
-        db       = pgConn.db;
-        pool     = pgConn.pool;
-        schema   = pgConn.schema;
-        dbDialect = 'postgres';
-        setOfflineMode(false);
-        console.log("✅ Koyeb PostgreSQL is back — switched from TiDB MySQL to PG");
-        return true;
-      }
-    }
-    // MySQL is still the active fallback — verify it's alive
-    try {
-      const conn = await pool.getConnection();
-      await conn.query("SELECT 1");
-      conn.release();
-      setOfflineMode(false);
-      return true;
-    } catch {
-      setOfflineMode(true);
-      return false;
-    }
-  }
-
-  // ── We're on PostgreSQL (primary) — health-check it ──────────────────────
   try {
-    await pool.query("SELECT 1");
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      await connection.query("SELECT 1");
+      connection.release();
+    } else {
+      await pool.query("SELECT 1");
+    }
     setOfflineMode(false);
     return true;
-  } catch (pgError) {
-    console.error("⚠️  Koyeb PostgreSQL health check failed — trying TiDB MySQL failover...");
-    const mysqlConn = await buildMysqlConnection();
-    if (mysqlConn) {
-      db       = mysqlConn.db;
-      pool     = mysqlConn.pool;
-      schema   = mysqlConn.schema;
-      dbDialect = 'mysql';
-      pgRetryCounter = 0;
-      setOfflineMode(false);
-      console.log("✅ Switched to TiDB MySQL fallback (Koyeb PG is down)");
-      return true;
-    }
-    console.error("❌ Both databases unreachable — entering offline mode");
+  } catch (error) {
+    console.error("Database connection check failed:", error);
     setOfflineMode(true);
     return false;
   }

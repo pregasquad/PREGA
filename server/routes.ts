@@ -6,7 +6,7 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import { setupAuth, registerAuthRoutes, isPinAuthenticated, requirePermission, checkRateLimit, recordFailedAttempt, clearAttempts } from "./replit_integrations/auth";
 import { vapidPublicKey, sendPushNotification, checkAndNotifyExpiringProducts, checkAndNotifyLowStock as broadcastLowStockNotifications, sendClosingReminderNow } from "./push";
-import { db, schema, pool, getDbDialect, isDatabaseOffline, checkDatabaseConnection } from "./db";
+import { db, schema, pool, dbDialect, isDatabaseOffline, checkDatabaseConnection } from "./db";
 import { eq } from "drizzle-orm";
 import { insertAdminRoleSchema, ROLE_PERMISSIONS } from "@shared/schema";
 import bcrypt from "bcryptjs";
@@ -2808,25 +2808,11 @@ export async function registerRoutes(
   // === Database status endpoint ===
   app.get("/api/status/database", async (_req, res) => {
     const isOnline = await checkDatabaseConnection();
-    const { getSyncStatus } = await import("./sync-mysql");
     res.json({ 
       online: isOnline, 
       mode: isOnline ? "online" : "offline",
-      activeDatabase: getDbDialect() === 'mysql' ? 'tidb-mysql' : 'koyeb-postgres',
-      hasPendingSync: offlineStorage.hasPendingSync(),
-      sync: getSyncStatus(),
+      hasPendingSync: offlineStorage.hasPendingSync()
     });
-  });
-
-  // === Manual sync trigger (owner only) ===
-  app.post("/api/status/sync-now", async (_req, res) => {
-    try {
-      const { syncPostgresToMySQL, getSyncStatus } = await import("./sync-mysql");
-      await syncPostgresToMySQL();
-      res.json({ ok: true, status: getSyncStatus() });
-    } catch (err: any) {
-      res.status(500).json({ ok: false, error: err.message });
-    }
   });
 
   // === Admin Roles ===
@@ -3783,7 +3769,7 @@ export async function registerRoutes(
       const cutoff = new Date(Date.now() - TOMBOLA_HOURS * 60 * 60 * 1000);
       let lastSpin: any = null;
 
-      if (getDbDialect() === 'mysql') {
+      if (dbDialect === 'mysql') {
         const conn = await pool().getConnection();
         const [rows] = await conn.query(
           `SELECT spun_at FROM tombola_spins WHERE device_id = ? AND spun_at > ? ORDER BY spun_at DESC LIMIT 1`,
@@ -3820,7 +3806,7 @@ export async function registerRoutes(
       const cutoff = new Date(Date.now() - TOMBOLA_HOURS * 60 * 60 * 1000);
       let lastSpin: any = null;
 
-      if (getDbDialect() === 'mysql') {
+      if (dbDialect === 'mysql') {
         const conn = await pool().getConnection();
         const [rows] = await conn.query(
           `SELECT spun_at FROM tombola_spins WHERE device_id = ? AND spun_at > ? ORDER BY spun_at DESC LIMIT 1`,
@@ -3843,7 +3829,7 @@ export async function registerRoutes(
 
       const { result, segmentIndex } = spinResult();
 
-      if (getDbDialect() === 'mysql') {
+      if (dbDialect === 'mysql') {
         const conn = await pool().getConnection();
         await conn.query(
           `INSERT INTO tombola_spins (device_id, result, segment_index, spun_at) VALUES (?, ?, ?, NOW())`,

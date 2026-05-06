@@ -6,7 +6,7 @@ Beauty Salon Appointment Management System built with React + Express + PostgreS
 ## Tech Stack
 - **Frontend**: React 18, Vite, TailwindCSS, Radix UI, TanStack Query
 - **Backend**: Express.js, TypeScript, Socket.IO
-- **Database**: PostgreSQL on Koyeb (pg driver), Drizzle ORM
+- **Database**: MySQL/TiDB (mysql2 driver), Drizzle ORM (also supports PostgreSQL via DB_DIALECT env var)
 - **File Storage**: Supabase Storage (avatars/photos)
 - **Build**: Vite (frontend), esbuild (server), tsx (dev)
 - **PWA**: Workbox service worker, offline-first with IndexedDB sync

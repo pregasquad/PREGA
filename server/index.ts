@@ -5,7 +5,6 @@ import { createServer } from "http";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { initializeDatabase, warmupDatabase, ensurePushSubscriptionsTable, ensureAppointmentsAuditColumns, ensureForeignKeyConstraints, ensureAdminRolesPhotoColumn, ensureProductExpiryColumns, ensureServiceStartingPriceColumn, ensureDeductionClearedColumns, ensureDeductionPaidBackColumn, ensureStaffIdBackfillMySQL, ensureStaffPaymentsTable, ensureStaffPublicTokens, ensureAutoLockColumn, ensureChargeAttachmentColumns, ensurePlanningShortcutsColumn, ensureAppointmentDiscountColumns, ensureTombolaSpinsTable, ensureSalonPaymentsTable } from "./db";
 import { checkAndSendClosingReminder, checkAndSendAppointmentReminders } from "./push";
-import { startMysqlSync } from "./sync-mysql";
 
 const app = express();
 const httpServer = createServer(app);
@@ -131,9 +130,6 @@ const startServer = async () => {
     },
     () => {
       log(`serving on port ${PORT} (${ENV} environment)`);
-
-      // Start background sync: Koyeb PostgreSQL → TiDB MySQL (every 2 min)
-      startMysqlSync();
 
       // Run immediately on startup (after 15s for DB to settle), then every 5 min
       setTimeout(() => {
