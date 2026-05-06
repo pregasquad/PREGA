@@ -944,6 +944,29 @@ export async function ensureTombolaSpinsTable(): Promise<void> {
   }
 }
 
+export async function ensureBookingStatusColumn(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      const [rows] = await connection.query(
+        `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'appointments' AND COLUMN_NAME = 'booking_status'`
+      );
+      if ((rows as any[]).length === 0) {
+        await connection.query(`ALTER TABLE appointments ADD COLUMN booking_status VARCHAR(20) DEFAULT 'pending'`);
+        console.log("Added booking_status column to appointments table");
+      }
+      connection.release();
+    } else {
+      await pool.query(`
+        ALTER TABLE appointments ADD COLUMN IF NOT EXISTS booking_status VARCHAR(20) DEFAULT 'pending'
+      `);
+    }
+    console.log("Booking status column ready");
+  } catch (error) {
+    console.error("Failed to ensure booking_status column:", error);
+  }
+}
+
 export async function ensureSalonPaymentsTable(): Promise<void> {
   try {
     if (dbDialect === 'mysql') {

@@ -23,6 +23,13 @@ export function setSocketIO(io: any): void {
   socketIO = io;
 }
 
+type IncomingMessageHandler = (phone: string, message: string) => Promise<void>;
+let incomingMessageHandler: IncomingMessageHandler | null = null;
+
+export function setIncomingMessageHandler(handler: IncomingMessageHandler): void {
+  incomingMessageHandler = handler;
+}
+
 function log(msg: string) {
   console.log(`[Baileys] ${msg}`);
 }
@@ -122,6 +129,29 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
   });
 
   sock.ev.on("creds.update", saveCreds);
+
+  // ── Incoming message handler (bot replies) ──────────────────────────────
+  sock.ev.on("messages.upsert", async ({ messages: msgs, type }: any) => {
+    if (type !== "notify") return;
+    for (const msg of msgs) {
+      if (msg.key.fromMe) continue;
+      if (!msg.key.remoteJid || msg.key.remoteJid.endsWith("@g.us")) continue;
+      const rawPhone = msg.key.remoteJid.replace("@s.whatsapp.net", "");
+      const text = (
+        msg.message?.conversation ||
+        msg.message?.extendedTextMessage?.text ||
+        msg.message?.imageMessage?.caption ||
+        ""
+      ).trim();
+      if (rawPhone && text && incomingMessageHandler) {
+        try {
+          await incomingMessageHandler(rawPhone, text);
+        } catch (err: any) {
+          log(`Incoming handler error: ${err.message}`);
+        }
+      }
+    }
+  });
 
   // ── Pairing code flow ───────────────────────────────────────────────────
   if (pairingPhone) {
@@ -401,20 +431,46 @@ export async function reconnect(): Promise<void> {
 }
 
 export async function sendAppointmentReminder(
-  clientPhone: string, clientName: string, appointmentDate: string,
-  appointmentTime: string, serviceName: string, salonName?: string
+  clientPhone: string, _clientName: string, _appointmentDate: string,
+  appointmentTime: string, serviceName: string, _salonName?: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  const salon = salonName || "PREGASQUAD";
-  const msg = `مرحباً ${clientName}! 💇‍♀️\n\n⏳ تذكير: موعدك بعد قليل!\n\n📅 التاريخ: ${appointmentDate}\n⏰ الوقت: ${appointmentTime}\n💅 الخدمة: ${serviceName}\n\nنتطلع لرؤيتك في ${salon}! 🌸`;
+  const msg = `Petit rappel ⏰\n\nVotre rendez-vous approche :\n\n✨ ${serviceName}\n🕒 ${appointmentTime}\n\nNous avons hâte de vous recevoir 💖\nÀ très bientôt au salon 🌸`;
   return sendWhatsAppMessage(clientPhone, msg);
 }
 
 export async function sendBookingConfirmation(
-  clientPhone: string, clientName: string, appointmentDate: string,
-  appointmentTime: string, serviceName: string, salonName?: string
+  clientPhone: string, _clientName: string, _appointmentDate: string,
+  appointmentTime: string, serviceName: string, _salonName?: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  const salon = salonName || "PREGASQUAD";
-  const msg = `مرحباً ${clientName}! ✨\n\nتم تأكيد حجزك بنجاح:\n📅 التاريخ: ${appointmentDate}\n⏰ الوقت: ${appointmentTime}\n💅 الخدمة: ${serviceName}\n\nشكراً لاختيارك ${salon}! 💕`;
+  const msg = `PREGASQUAD, BONJOUR! 💖\n\nNous vous confirmons votre rendez-vous au salon :\n\n✨ Service : ${serviceName}\n🕒 Heure : ${appointmentTime}\n\nMerci de confirmer votre présence en répondant :\n\n1️⃣ Confirmer\n2️⃣ Annuler\n3️⃣ Modifier\n\nNous restons à votre disposition 🌸`;
+  return sendWhatsAppMessage(clientPhone, msg);
+}
+
+export async function sendBotConfirmed(
+  clientPhone: string
+): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const msg = `Merci pour votre confirmation 💖\n\nVotre rendez-vous est bien confirmé ✅\nNous avons hâte de vous accueillir au salon 🌸`;
+  return sendWhatsAppMessage(clientPhone, msg);
+}
+
+export async function sendBotCancelled(
+  clientPhone: string
+): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const msg = `Votre rendez-vous a été annulé ❌\n\nN'hésitez pas à nous recontacter pour un nouveau créneau 🌸\nNous serons ravis de vous accueillir à nouveau 💖`;
+  return sendWhatsAppMessage(clientPhone, msg);
+}
+
+export async function sendBotModify(
+  clientPhone: string
+): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const msg = `Parfait ✨\n\nMerci de nous indiquer l'horaire qui vous convient le mieux 🕒\nNous ferons le nécessaire pour vous proposer une nouvelle disponibilité 💖`;
+  return sendWhatsAppMessage(clientPhone, msg);
+}
+
+export async function sendBotError(
+  clientPhone: string
+): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const msg = `Nous n'avons pas bien compris votre réponse 😊\n\nMerci de répondre avec :\n\n1️⃣ Confirmer\n2️⃣ Annuler\n3️⃣ Modifier`;
   return sendWhatsAppMessage(clientPhone, msg);
 }
 

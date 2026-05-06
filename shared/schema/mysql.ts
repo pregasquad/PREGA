@@ -98,6 +98,7 @@ export const appointments = mysqlTable("appointments", {
   giftCardDiscountAmount: double("gift_card_discount_amount").default(0),
   createdBy: text("created_by"),
   createdAt: timestamp("created_at").defaultNow(),
+  bookingStatus: varchar("booking_status", { length: 20 }).default("pending"),
 });
 
 export const services = mysqlTable("services", {

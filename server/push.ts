@@ -195,10 +195,13 @@ export async function checkAndSendAppointmentReminders(): Promise<void> {
 
     if (allAppointments.length === 0) return;
 
-    const { sendAppointmentReminder } = await import('./wawp');
+    const { sendAppointmentReminder } = await import('./baileys');
 
     for (const apt of allAppointments) {
       if (sentReminderIds.has(apt.id)) continue;
+
+      // Only remind pending or confirmed bookings (skip cancelled)
+      if ((apt as any).bookingStatus === 'cancelled') continue;
 
       // Try apt.phone first, fall back to phone embedded in client string "Name (0612345678)"
       const phone = apt.phone || apt.client?.match(/\(([^)]+)\)/)?.[1] || null;

@@ -3855,9 +3855,61 @@ export async function registerRoutes(
   await seedDatabase();
 
   // Initialize Baileys WhatsApp (non-blocking)
-  import("./baileys").then(({ initBaileys, setSocketIO }) => {
+  import("./baileys").then(({ initBaileys, setSocketIO, setIncomingMessageHandler, sendBotConfirmed, sendBotCancelled, sendBotModify, sendBotError }) => {
     setSocketIO(io);
     initBaileys().catch((err) => console.error("[Baileys] Startup error:", err));
+
+    // Register incoming message bot handler for booking confirmations
+    setIncomingMessageHandler(async (rawPhone: string, text: string) => {
+      try {
+        // Normalize the phone for DB matching
+        let normalized = rawPhone.replace(/[^0-9]/g, "");
+        if (normalized.startsWith("00")) normalized = normalized.slice(2);
+        if (normalized.startsWith("0") && normalized.length === 10) normalized = "212" + normalized.slice(1);
+        if (normalized.length === 9) normalized = "212" + normalized;
+
+        // Find all appointments that match this phone
+        const allApts = await storage.getAppointments();
+        const matched = allApts.filter((a: any) => {
+          if (!a.phone) return false;
+          let ap = a.phone.replace(/[^0-9]/g, "");
+          if (ap.startsWith("00")) ap = ap.slice(2);
+          if (ap.startsWith("0") && ap.length === 10) ap = "212" + ap.slice(1);
+          if (ap.length === 9) ap = "212" + ap;
+          return ap === normalized;
+        });
+
+        if (matched.length === 0) return;
+
+        // Find the most recent appointment that is still pending or modify_requested
+        const pending = matched
+          .filter((a: any) => !a.bookingStatus || a.bookingStatus === "pending" || a.bookingStatus === "modify_requested")
+          .sort((a: any, b: any) => b.id - a.id);
+
+        if (pending.length === 0) return;
+
+        const apt = pending[0];
+        const reply = text.trim();
+
+        if (reply === "1") {
+          await storage.updateAppointment(apt.id, { bookingStatus: "confirmed" } as any);
+          await sendBotConfirmed(rawPhone);
+          console.log(`[Bot] Appointment ${apt.id} confirmed by client`);
+        } else if (reply === "2") {
+          await storage.updateAppointment(apt.id, { bookingStatus: "cancelled" } as any);
+          await sendBotCancelled(rawPhone);
+          console.log(`[Bot] Appointment ${apt.id} cancelled by client`);
+        } else if (reply === "3") {
+          await storage.updateAppointment(apt.id, { bookingStatus: "modify_requested" } as any);
+          await sendBotModify(rawPhone);
+          console.log(`[Bot] Appointment ${apt.id} modify requested by client`);
+        } else {
+          await sendBotError(rawPhone);
+        }
+      } catch (err: any) {
+        console.error("[Bot] Error handling incoming message:", err.message);
+      }
+    });
   }).catch((err) => console.error("[Baileys] Import error:", err));
 
   return httpServer;

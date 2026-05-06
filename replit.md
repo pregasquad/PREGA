@@ -52,9 +52,16 @@ Beauty Salon Appointment Management System built with React + Express + PostgreS
 ## WhatsApp Integration (Baileys)
 - **Provider**: `@whiskeysockets/baileys` — free, open-source, no paid API required
 - **Auth**: QR code scan (like WhatsApp Web), session persisted to `./baileys_auth/` folder on disk
-- **Server module**: `server/baileys.ts` — exports `initBaileys`, `sendWhatsAppMessage`, `sendBookingConfirmation`, `sendAppointmentReminder`, `sendGiftCardNotification`, `sendWaitlistNotification`, `getStatus`, `getQRDataUrl`, `disconnect`, `reconnect`
+- **Server module**: `server/baileys.ts` — exports `initBaileys`, `sendWhatsAppMessage`, `sendBookingConfirmation`, `sendAppointmentReminder`, `sendBotConfirmed`, `sendBotCancelled`, `sendBotModify`, `sendBotError`, `setIncomingMessageHandler`, `getStatus`, `getQRDataUrl`, `disconnect`, `reconnect`
 - **Auto-start**: Baileys initializes non-blocking on server start; auto-reconnects on drop (except intentional logout)
-- **Routes**: `GET /api/whatsapp/qr`, `GET /api/whatsapp/status`, `POST /api/whatsapp/reconnect`, `POST /api/whatsapp/disconnect` (new); all `/api/notifications/*` routes updated to use Baileys
+- **WhatsApp Bot (Booking Confirmations)**:
+  - On new booking: sends French confirmation message with 1/2/3 reply options
+  - Client replies: `1` → confirmed, `2` → cancelled, `3` → modify requested
+  - Bot replies with French messages for each action
+  - `bookingStatus` column on appointments table: `pending` | `confirmed` | `cancelled` | `modify_requested`
+  - Incoming message handler registered in `server/routes.ts` via `setIncomingMessageHandler`
+- **Reminders**: French reminder messages sent via Baileys (replaces wawp); cancelled bookings are skipped
+- **Routes**: `GET /api/whatsapp/qr`, `GET /api/whatsapp/status`, `POST /api/whatsapp/reconnect`, `POST /api/whatsapp/disconnect`; all `/api/notifications/*` routes use Baileys
 - **Frontend page**: `client/src/pages/WhatsApp.tsx` — QR display, connection status, test send, broadcast
 - **Navigation**: `/whatsapp` route + sidebar item (admin_settings permission)
 - **Legacy providers**: `server/wawp.ts`, `server/whapi.ts`, `server/wsapi.ts`, `server/wozzapi.ts` kept as reference but no longer imported anywhere
