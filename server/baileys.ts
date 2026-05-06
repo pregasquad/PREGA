@@ -19,6 +19,12 @@ let pairingRetryCount = 0;
 const MAX_PAIRING_RETRIES = 2; // keep low — too many attempts triggers WhatsApp rate-limiting
 let isVerifyingLink = false;   // true while we reconnect to check if phone confirmed the code
 
+// Deduplication: track processed message IDs to avoid handling the same message twice
+// (Baileys can fire messages.upsert multiple times on reconnect/sync)
+const processedMessageIds = new Set<string>();
+// Clear old IDs every 10 minutes to avoid unbounded memory growth
+setInterval(() => processedMessageIds.clear(), 10 * 60 * 1000);
+
 export function setSocketIO(io: any): void {
   socketIO = io;
 }
@@ -134,8 +140,21 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
   sock.ev.on("messages.upsert", async ({ messages: msgs, type }: any) => {
     if (type !== "notify") return;
     for (const msg of msgs) {
+      // Skip own messages, groups, broadcasts, and status updates
       if (msg.key.fromMe) continue;
-      if (!msg.key.remoteJid || msg.key.remoteJid.endsWith("@g.us")) continue;
+      if (!msg.key.remoteJid) continue;
+      if (msg.key.remoteJid.endsWith("@g.us")) continue;
+      if (msg.key.remoteJid.includes("broadcast")) continue;
+      if (msg.key.remoteJid === "status@broadcast") continue;
+
+      // Deduplicate — Baileys can fire the same message event multiple times on reconnect
+      const msgId = msg.key.id;
+      if (msgId && processedMessageIds.has(msgId)) {
+        log(`Skipping duplicate message ${msgId}`);
+        continue;
+      }
+      if (msgId) processedMessageIds.add(msgId);
+
       const rawPhone = msg.key.remoteJid.replace("@s.whatsapp.net", "");
       const text = (
         msg.message?.conversation ||
@@ -143,7 +162,12 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
         msg.message?.imageMessage?.caption ||
         ""
       ).trim();
-      if (rawPhone && text && incomingMessageHandler) {
+
+      if (!rawPhone || !text) continue;
+
+      log(`Incoming message from ${rawPhone}: "${text.slice(0, 60)}"`);
+
+      if (incomingMessageHandler) {
         try {
           await incomingMessageHandler(rawPhone, text);
         } catch (err: any) {
