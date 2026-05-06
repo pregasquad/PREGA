@@ -21,6 +21,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useBusinessSettings } from "@/hooks/use-salon-data";
 import { connectQz, openCashDrawer, isQzConnected, checkPrintStationAsync, remoteOpenDrawer } from "@/lib/qzPrint";
 import type { Staff, Service, Appointment, Charge, StaffDeduction, StaffPayment, SalonPayment } from "@shared/schema";
+import { saveSalariesCache } from "@/lib/offlineDb";
 
 type PeriodType = "day" | "week" | "month" | "custom";
 
@@ -189,9 +190,11 @@ export default function Salaries() {
     queryFn: async () => {
       const res = await fetch("/api/salaries/compute");
       if (!res.ok) return { staff: [], services: [], staffCommissions: [], appointments: [], charges: [], deductions: [], staffPayments: [], salonPayments: [] };
-      return res.json();
+      const data = await res.json();
+      saveSalariesCache(data).catch(() => {});
+      return data;
     },
-    staleTime: 2 * 60 * 1000,
+    staleTime: Infinity,
     refetchOnWindowFocus: false,
     placeholderData: (prev) => prev,
   });

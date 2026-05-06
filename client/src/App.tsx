@@ -11,6 +11,7 @@ import { SpinningLogo } from "@/components/ui/spinning-logo";
 import { initGA } from "./lib/analytics";
 import { useAnalytics } from "./hooks/use-analytics";
 import { connectQz, initPrintSocket } from "./lib/qzPrint";
+import { saveSalariesCache } from "./lib/offlineDb";
 
 // Core pages - loaded immediately
 import Planning from "@/pages/Planning";
@@ -222,6 +223,20 @@ function App() {
     }
     initPrintSocket();
     connectQz().catch(() => {});
+
+    const isAuth = sessionStorage.getItem("user_authenticated") === "true" ||
+                   localStorage.getItem("user_authenticated") === "true";
+    if (isAuth) {
+      fetch("/api/salaries/compute", { credentials: "include" })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (data) {
+            queryClient.setQueryData(["/api/salaries/compute"], data);
+            saveSalariesCache(data).catch(() => {});
+          }
+        })
+        .catch(() => {});
+    }
   }, []);
 
   return (

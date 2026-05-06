@@ -278,3 +278,33 @@ export async function getSyncQueueCount(): Promise<number> {
   const queue = await getSyncQueue();
   return queue.length;
 }
+
+export async function saveSalariesCache(data: any): Promise<void> {
+  try {
+    const database = await initOfflineDb();
+    return new Promise((resolve, reject) => {
+      const transaction = database.transaction('metadata', 'readwrite');
+      const store = transaction.objectStore('metadata');
+      store.put({ key: 'salariesCache', data, savedAt: Date.now() });
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+  } catch (e) {
+    console.warn('[OfflineDB] Failed to save salaries cache:', e);
+  }
+}
+
+export async function getSalariesCache(): Promise<any | null> {
+  try {
+    const database = await initOfflineDb();
+    return new Promise((resolve, reject) => {
+      const transaction = database.transaction('metadata', 'readonly');
+      const store = transaction.objectStore('metadata');
+      const request = store.get('salariesCache');
+      request.onsuccess = () => resolve(request.result?.data ?? null);
+      request.onerror = () => reject(request.error);
+    });
+  } catch (e) {
+    return null;
+  }
+}

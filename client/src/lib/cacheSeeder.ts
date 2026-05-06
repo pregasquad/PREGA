@@ -1,5 +1,5 @@
 import { QueryClient } from "@tanstack/react-query";
-import { getFromOfflineStore, initOfflineDb } from "./offlineDb";
+import { getFromOfflineStore, getSalariesCache, initOfflineDb } from "./offlineDb";
 import { format, subDays } from "date-fns";
 
 function getTodayStr(): string {
@@ -70,6 +70,11 @@ export async function seedQueryCache(queryClient: QueryClient): Promise<void> {
 
     if (products.length > 0) {
       queryClient.setQueryData(["/api/products"], products);
+    }
+
+    const salariesCache = await getSalariesCache().catch(() => null);
+    if (salariesCache) {
+      queryClient.setQueryData(["/api/salaries/compute"], salariesCache);
     }
   } catch (e) {
     // Silently fail — seeding is best-effort, network will fill in
