@@ -12,8 +12,6 @@ export interface SalonContext {
 }
 
 function buildSystemPrompt(ctx: SalonContext): string {
-  const days = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
-
   const serviceLines = ctx.services.length > 0
     ? ctx.services
         .sort((a, b) => a.category.localeCompare(b.category))
@@ -21,30 +19,32 @@ function buildSystemPrompt(ctx: SalonContext): string {
         .join("\n")
     : "  (liste non disponible)";
 
-  return `Tu es une assistante professionnelle et chaleureuse du salon de beauté ${ctx.name}.
+  return `أنتِ مساعدة احترافية وودودة لصالون التجميل ${ctx.name}.
 
-=== INFORMATIONS DU SALON ===
-Nom : ${ctx.name}
-${ctx.address ? `Adresse : ${ctx.address}` : ""}
-${ctx.phone ? `Téléphone : ${ctx.phone}` : ""}
-${ctx.openingTime && ctx.closingTime ? `Horaires : ${ctx.openingTime} – ${ctx.closingTime}` : ""}
+=== معلومات الصالون ===
+الاسم: ${ctx.name}
+${ctx.address ? `العنوان: ${ctx.address}` : ""}
+${ctx.phone ? `الهاتف: ${ctx.phone}` : ""}
+${ctx.openingTime && ctx.closingTime ? `أوقات العمل: ${ctx.openingTime} – ${ctx.closingTime}` : ""}
 
-=== NOS SERVICES ET TARIFS ===
+=== خدماتنا وأسعارها ===
 ${serviceLines}
 
-=== RÈGLES ===
-- Réponds en français ou en darija marocaine selon la langue du client
-- Sois courte (3-5 lignes max), chaleureuse et professionnelle
-- Utilise les vrais prix et services listés ci-dessus pour répondre
-- Pour réserver, invite le client à utiliser notre page de réservation en ligne ou à nous appeler
-- Ne donne jamais de disponibilités en temps réel — dis que l'équipe confirmera
-- Termine toujours avec un emoji chaleureux 💖 🌸 ✨`;
+=== القواعد ===
+- إذا كتب العميل بالدارجة المغربية، ردّي عليه بالدارجة المغربية مكتوبة بالحروف العربية (مثل: واش، زوينة، بغيتي، كيفاش، معلومات، شنو...)
+- إذا كتب العميل بالفرنسية، ردّي عليه بالفرنسية
+- لا تكتبي الدارجة بالحروف اللاتينية أبدًا (لا "mrhba"، لا "zwina"، لا "bghiti"...) — استعملي دائمًا الحروف العربية للدارجة
+- كوني مختصرة (3-5 أسطر فقط)، دافئة واحترافية
+- استعملي الأسعار والخدمات الحقيقية المذكورة أعلاه في إجاباتك
+- للحجز، ادعي العميل للتواصل معنا مباشرة أو استعمال صفحة الحجز
+- لا تعطي أوقات متاحة بشكل مباشر — قولي أن الفريق سيؤكد
+- اختمي دائمًا برسالة دافئة وإيموجي 💖 🌸 ✨`;
 }
 
 export async function askGemini(userMessage: string, ctx: SalonContext): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return "💖 Marhba! N'hésitez pas à nous contacter pour plus d'informations 🌸";
+    return "💖 مرحباً! لا تترددي في التواصل معنا للمزيد من المعلومات 🌸";
   }
 
   const systemPrompt = buildSystemPrompt(ctx);
@@ -56,7 +56,7 @@ export async function askGemini(userMessage: string, ctx: SalonContext): Promise
       body: JSON.stringify({
         contents: [
           {
-            parts: [{ text: `${systemPrompt}\n\nClient: ${userMessage}` }],
+            parts: [{ text: `${systemPrompt}\n\nرسالة العميل: ${userMessage}` }],
           },
         ],
         generationConfig: {
@@ -68,15 +68,15 @@ export async function askGemini(userMessage: string, ctx: SalonContext): Promise
 
     if (!response.ok) {
       console.error(`[Gemini] API error: ${response.status} ${await response.text()}`);
-      return "💖 Marhba! N'hésitez pas à nous contacter pour plus d'informations 🌸";
+      return "💖 مرحباً! لا تترددي في التواصل معنا للمزيد من المعلومات 🌸";
     }
 
     const data = (await response.json()) as any;
     const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) return "💖 Marhba! N'hésitez pas à nous contacter pour plus d'informations 🌸";
+    if (!text) return "💖 مرحباً! لا تترددي في التواصل معنا للمزيد من المعلومات 🌸";
     return text.trim();
   } catch (err: any) {
     console.error(`[Gemini] Error: ${err.message}`);
-    return "💖 Marhba! N'hésitez pas à nous contacter pour plus d'informations 🌸";
+    return "💖 مرحباً! لا تترددي في التواصل معنا للمزيد من المعلومات 🌸";
   }
 }
