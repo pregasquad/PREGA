@@ -1215,6 +1215,35 @@ export async function saveBotMemory(mem: BotClientMemory): Promise<void> {
   }
 }
 
+export async function ensureMapsLinkColumn(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      const [rows] = await connection.query(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_NAME = 'business_settings' AND COLUMN_NAME = 'maps_link'
+      `);
+      if ((rows as any[]).length === 0) {
+        await connection.query(`ALTER TABLE business_settings ADD COLUMN maps_link TEXT NULL`);
+        console.log("Added maps_link column to business_settings table");
+      }
+      connection.release();
+    } else {
+      await pool.query(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'business_settings' AND column_name = 'maps_link') THEN
+            ALTER TABLE business_settings ADD COLUMN maps_link TEXT NULL;
+          END IF;
+        END $$;
+      `);
+    }
+    console.log("maps_link column ready");
+  } catch (error) {
+    console.error("Failed to ensure maps_link column:", error);
+  }
+}
+
 export async function ensureTtsVoiceColumn(): Promise<void> {
   try {
     if (dbDialect === 'mysql') {

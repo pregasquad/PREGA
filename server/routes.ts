@@ -4169,6 +4169,7 @@ export async function registerRoutes(
           const salonCtx = {
             name: bizSettings?.businessName || "PREGASQUAD",
             address: bizSettings?.address || undefined,
+            mapsLink: (bizSettings as any)?.mapsLink || undefined,
             phone: bizSettings?.phone || undefined,
             openingTime: bizSettings?.openingTime || undefined,
             closingTime: bizSettings?.closingTime || undefined,

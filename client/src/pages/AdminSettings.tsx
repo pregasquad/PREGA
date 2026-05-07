@@ -37,6 +37,7 @@ interface BusinessSettings {
   businessName: string;
   logo?: string | null;
   address?: string | null;
+  mapsLink?: string | null;
   phone?: string | null;
   email?: string | null;
   currency: string;
@@ -673,6 +674,17 @@ export default function AdminSettings() {
                         placeholder={t("admin.addressPlaceholder")}
                         className="glass-subtle rounded-xl border-0 h-11"
                         data-testid="input-address"
+                      />
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">رابط Google Maps</Label>
+                      <Input
+                        value={businessForm.mapsLink || ""}
+                        onChange={(e) => setBusinessForm(prev => ({ ...prev, mapsLink: e.target.value }))}
+                        placeholder="https://maps.app.goo.gl/..."
+                        className="glass-subtle rounded-xl border-0 h-11"
+                        data-testid="input-maps-link"
+                        dir="ltr"
                       />
                     </div>
                   </div>

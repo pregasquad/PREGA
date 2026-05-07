@@ -318,6 +318,7 @@ export const businessSettings = mysqlTable("business_settings", {
   businessName: varchar("business_name", { length: 255 }).notNull().default("PREGA SQUAD"),
   logo: text("logo"),
   address: text("address"),
+  mapsLink: text("maps_link"),
   phone: varchar("phone", { length: 50 }),
   email: varchar("email", { length: 255 }),
   currency: varchar("currency", { length: 10 }).notNull().default("MAD"),

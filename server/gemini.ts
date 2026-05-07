@@ -41,6 +41,7 @@ export interface ClientMemory {
 export interface SalonContext {
   name: string;
   address?: string;
+  mapsLink?: string;
   phone?: string;
   openingTime?: string;
   closingTime?: string;
@@ -116,7 +117,9 @@ ${lines.join("\n")}
 ━━━ معلومات الصالون ━━━
 الاسم: ${ctx.name}
 ${ctx.address ? `العنوان: ${ctx.address}` : ""}
+${ctx.mapsLink ? `رابط Google Maps: ${ctx.mapsLink}` : ""}
 ${ctx.openingTime && ctx.closingTime ? `أوقات العمل: ${ctx.openingTime} – ${ctx.closingTime}` : ""}
+• عند السؤال عن الموقع أو العنوان أو "فين كاينين" أو "كيفاش نوصلو" → ردّي دائماً بالعنوان الكامل${ctx.mapsLink ? ` مع رابط Google Maps مباشرة` : ""} — لا تذكري الإيميل أبداً في هذا السياق
 ${memorySection}
 ━━━ قائمة الخدمات والأسعار ━━━
 ${serviceBlock}
