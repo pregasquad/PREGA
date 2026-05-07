@@ -2742,7 +2742,7 @@ export default function Planning() {
                             </FormControl>
                           </PopoverTrigger>
                           <PopoverContent 
-                            className="w-[calc(100vw-48px)] max-w-[376px] p-0 rounded-xl glass-card shadow-2xl" 
+                            className="w-[calc(100vw-48px)] max-w-[376px] p-0 rounded-xl glass-card shadow-2xl z-[9999]" 
                             align="center" 
                             side={isMobile ? "top" : "bottom"}
                             sideOffset={4}
@@ -2758,11 +2758,11 @@ export default function Planning() {
                             </div>
                             <div 
                               className="h-[180px] overflow-y-auto p-1.5"
-                              style={{ overscrollBehavior: 'contain' }}
+                              style={{ overscrollBehavior: 'contain', touchAction: 'pan-y' }}
                             >
                               {Object.entries(groupedServices).map(([category, categoryServices]) => (
                                 <div key={category}>
-                                  <div className="px-2 py-1 text-[10px] font-bold gradient-text uppercase glass-subtle rounded-md mb-0.5 sticky top-0">{category}</div>
+                                  <div className="px-2 py-1 text-[10px] font-bold gradient-text uppercase glass-subtle rounded-md mb-0.5">{category}</div>
                                   {categoryServices.map(s => (
                                     <div
                                       key={s.id}
