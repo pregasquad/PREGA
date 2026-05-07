@@ -119,11 +119,16 @@ let verifyRetryCount = 0;
 let verifyReconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let qrTimeoutCount = 0; // consecutive 408 QR-expired disconnects
 
-// Deduplication: track processed message IDs to avoid handling the same message twice
-// (Baileys can fire messages.upsert multiple times on reconnect/sync)
-const processedMessageIds = new Set<string>();
-// Clear old IDs every 10 minutes to avoid unbounded memory growth
-setInterval(() => processedMessageIds.clear(), 10 * 60 * 1000);
+// Deduplication: Map<msgId, processedAt ms> — per-entry TTL, never wipe the whole set
+// so a reconnect near the clear boundary can't replay already-processed messages.
+const processedMessageIds = new Map<string, number>();
+const MSG_DEDUP_TTL = 10 * 60 * 1000;
+setInterval(() => {
+  const cutoff = Date.now() - MSG_DEDUP_TTL;
+  for (const [id, ts] of processedMessageIds) {
+    if (ts < cutoff) processedMessageIds.delete(id);
+  }
+}, 2 * 60 * 1000);
 
 export function setSocketIO(io: any): void {
   socketIO = io;
@@ -261,13 +266,26 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
       if (msg.key.remoteJid.includes("broadcast")) continue;
       if (msg.key.remoteJid === "status@broadcast") continue;
 
-      // Deduplicate — Baileys can fire the same message event multiple times on reconnect
+      // Deduplicate — per-entry TTL prevents replay on reconnect
       const msgId = msg.key.id;
       if (msgId && processedMessageIds.has(msgId)) {
         log(`Skipping duplicate message ${msgId}`);
         continue;
       }
-      if (msgId) processedMessageIds.add(msgId);
+      if (msgId) processedMessageIds.set(msgId, Date.now());
+
+      // ── Filter non-conversational message types ──────────────────────────
+      const msgType = Object.keys(msg.message || {})[0] || "";
+      // Stickers
+      if (msgType === "stickerMessage") continue;
+      // Reactions (👍❤️ etc.)
+      if (msgType === "reactionMessage") continue;
+      // Protocol / ephemeral / key-distribution (internal WA housekeeping)
+      if (msgType === "protocolMessage") continue;
+      if (msgType === "ephemeralMessage") continue;
+      if (msgType === "senderKeyDistributionMessage") continue;
+      // Status updates from others
+      if (msgType === "statusJidList") continue;
 
       const remoteJid = msg.key.remoteJid;
       // Best-effort numeric phone (works for @s.whatsapp.net; won't be a real phone for @lid)
@@ -278,6 +296,8 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
         msg.message?.conversation ||
         msg.message?.extendedTextMessage?.text ||
         msg.message?.imageMessage?.caption ||
+        msg.message?.ephemeralMessage?.message?.conversation ||
+        msg.message?.ephemeralMessage?.message?.extendedTextMessage?.text ||
         ""
       ).trim();
 
@@ -578,6 +598,18 @@ function formatJid(phone: string): string {
   if (cleaned.startsWith("0") && cleaned.length === 10) cleaned = "212" + cleaned.slice(1);
   if (cleaned.length === 9) cleaned = "212" + cleaned;
   return cleaned + "@s.whatsapp.net";
+}
+
+/** Show "typing…" indicator to the client — call before sending a reply */
+export async function sendTypingPresence(jid: string): Promise<void> {
+  if (!sock || status !== "open") return;
+  try { await sock.sendPresenceUpdate("composing", jid); } catch {}
+}
+
+/** Clear typing indicator */
+export async function stopTypingPresence(jid: string): Promise<void> {
+  if (!sock || status !== "open") return;
+  try { await sock.sendPresenceUpdate("paused", jid); } catch {}
 }
 
 export async function sendWhatsAppMessage(

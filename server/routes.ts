@@ -4067,13 +4067,17 @@ export async function registerRoutes(
 
           // For any other message (question, darija, etc.) → Gemini AI assistant
           const { askGemini, FALLBACK_REPLY } = await import("./gemini");
-          const { sendWhatsAppMessage } = await import("./baileys");
+          const { sendWhatsAppMessage, sendTypingPresence, stopTypingPresence } = await import("./baileys");
 
           // Load persistent memory for this client (DB-backed, survives restarts)
           const mem = await loadMemory(remoteJid);
           const history = getActiveHistory(mem);
           const hasHistory = history.length > 0;
           const isReturningClient = (mem.visitCount ?? 0) > 0;
+
+          // First message of the day = no active history OR last seen > 20h ago
+          const lastSeenMs = mem.lastSeen ? new Date(mem.lastSeen).getTime() : 0;
+          const isNewConversation = !hasHistory || (Date.now() - lastSeenMs > 20 * 60 * 60 * 1000);
 
           // Use reply cache only when there's no active conversation context.
           if (!hasHistory) {
@@ -4107,6 +4111,7 @@ export async function registerRoutes(
             closingTime: bizSettings?.closingTime || undefined,
             currency: bizSettings?.currencySymbol || "DH",
             services: serviceList,
+            isNewConversation, // tells Gemini whether to greet or not
             // Inject client memory so the AI knows returning clients by name/preferences
             clientMemory: {
               clientName: mem.clientName,
@@ -4160,6 +4165,13 @@ export async function registerRoutes(
               }
             }
           }
+
+          // ── Realistic typing delay ─────────────────────────────────────────
+          // Show "composing…" then wait ~35ms per char (min 1.5s, max 6s)
+          await sendTypingPresence(remoteJid);
+          const typingDelay = Math.min(Math.max(1500, aiReply.length * 35), 6000);
+          await new Promise<void>((r) => setTimeout(r, typingDelay));
+          await stopTypingPresence(remoteJid);
 
           await sendWhatsAppMessage(remoteJid, aiReply);
           const turnNum = Math.floor(newHistory.length / 2);
