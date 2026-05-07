@@ -4081,6 +4081,10 @@ export async function registerRoutes(
       if (remoteJid.endsWith("@g.us")) return;
       if (remoteJid.includes("broadcast") || remoteJid === "status@broadcast") return;
 
+      // Check if bot is enabled before processing
+      const botSettings = await storage.getBusinessSettings().catch(() => null);
+      if (botSettings && (botSettings as any).botEnabled === false) return;
+
       addToBuffer(remoteJid, text, imageBase64, imageMimeType, isVoice, async (msgs: BufferedMsg[]) => {
         try {
           // ── Merge all buffered messages into one context ─────────────────

@@ -28,6 +28,8 @@ import {
   Mic,
   Sparkles,
   Save,
+  Bot,
+  BotOff,
 } from "lucide-react";
 
 interface WAStatus {
@@ -413,6 +415,22 @@ export default function WhatsApp() {
       toast({ title: "خطأ", description: err.message, variant: "destructive" }),
   });
 
+  const toggleBotMutation = useMutation({
+    mutationFn: (enabled: boolean) =>
+      apiRequest("PATCH", "/api/business-settings", { botEnabled: enabled }).then((r) => r.json()),
+    onSuccess: (_data, enabled) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/business-settings"] });
+      toast({
+        title: enabled ? "البوت مفعّل ✓" : "البوت متوقف ✓",
+        description: enabled ? "لينا راه كيجاوب دابا 🤖" : "البوت متوقف — الرسائل ما غاديش تتجاوب أوتوماتيك",
+      });
+    },
+    onError: (err: any) =>
+      toast({ title: "خطأ", description: err.message, variant: "destructive" }),
+  });
+
+  const botEnabled = bizSettings?.botEnabled !== false;
+
   const { data: clients } = useQuery<any[]>({
     queryKey: ["/api/clients"],
     queryFn: () => apiRequest("GET", "/api/clients").then((r) => r.json()),
@@ -471,6 +489,39 @@ export default function WhatsApp() {
             data-testid="button-refresh-status"
           >
             <RefreshCw className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+      </div>
+
+      {/* ── BOT TOGGLE ── */}
+      <div className={`rounded-2xl border p-5 transition-all ${botEnabled ? "bg-emerald-500/5 border-emerald-500/30" : "bg-red-500/5 border-red-500/30"}`}>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className={`p-2.5 rounded-xl border ${botEnabled ? "bg-emerald-500/10 border-emerald-500/20" : "bg-red-500/10 border-red-500/20"}`}>
+              {botEnabled ? <Bot className="w-5 h-5 text-emerald-400" /> : <BotOff className="w-5 h-5 text-red-400" />}
+            </div>
+            <div>
+              <p className="font-semibold text-sm">البوت (لينا)</p>
+              <p className={`text-xs mt-0.5 ${botEnabled ? "text-emerald-400" : "text-red-400"}`}>
+                {botEnabled ? "مفعّل — كيجاوب على الرسائل أوتوماتيك 🟢" : "متوقف — الرسائل ما غاديش تتجاوب 🔴"}
+              </p>
+            </div>
+          </div>
+          <Button
+            data-testid="button-toggle-bot"
+            size="sm"
+            disabled={toggleBotMutation.isPending}
+            onClick={() => toggleBotMutation.mutate(!botEnabled)}
+            className={`min-w-[90px] ${botEnabled ? "bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30" : "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"}`}
+            variant="ghost"
+          >
+            {toggleBotMutation.isPending ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : botEnabled ? (
+              <><BotOff className="w-4 h-4 mr-1.5" />إيقاف</>
+            ) : (
+              <><Bot className="w-4 h-4 mr-1.5" />تفعيل</>
+            )}
           </Button>
         </div>
       </div>
