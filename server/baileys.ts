@@ -759,7 +759,7 @@ export async function sendBookingConfirmation(
   clientPhone: string, _clientName: string, _appointmentDate: string,
   appointmentTime: string, serviceName: string, _salonName?: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  const msg = `PREGASQUAD, BONJOUR! 💖\n\nNous vous confirmons votre rendez-vous au salon :\n\n✨ Service : ${serviceName}\n🕒 Heure : ${appointmentTime}\n\nMerci de confirmer votre présence en répondant :\n\n1️⃣ Confirmer\n2️⃣ Annuler\n3️⃣ Modifier\n\nNous restons à votre disposition 🌸`;
+  const msg = `PREGASQUAD 💖\n\nVotre rendez-vous est confirmé ✅\n\n✨ Service : ${serviceName}\n🕒 Heure : ${appointmentTime}\n\nNous avons hâte de vous accueillir au salon 🌸`;
   return sendWhatsAppMessage(clientPhone, msg);
 }
 
