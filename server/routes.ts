@@ -3972,33 +3972,74 @@ export async function registerRoutes(
     return { ...mem, convHistory: trimmed };
   }
 
-  // Anti-spam queue — one active processing slot + one pending slot per JID.
-  // If a message arrives while one is being processed, it waits in the pending
-  // slot (overwriting any previous pending). This prevents Gemini from being
-  // hammered when a user sends multiple messages rapidly.
-  const jidQueue = new Map<string, { processing: boolean; pending: string | null }>();
+  // ── Smart message buffer — collects all messages per user, waits for silence,
+  //    then flushes as ONE merged context to the AI. This prevents multiple
+  //    replies when a client sends text + images in quick succession.
+  interface BufferedMsg {
+    text: string;
+    imageBase64?: string;
+    imageMimeType?: string;
+  }
 
-  function enqueueMessage(remoteJid: string, phone: string, text: string, processMsg: (t: string) => Promise<void>): void {
-    const slot = jidQueue.get(remoteJid);
+  interface JidSession {
+    buffer: BufferedMsg[];
+    timer: ReturnType<typeof setTimeout> | null;
+    processing: boolean;
+  }
 
-    if (!slot || !slot.processing) {
-      // No active task — start immediately
-      jidQueue.set(remoteJid, { processing: true, pending: null });
-      processMsg(text).finally(() => {
-        const s = jidQueue.get(remoteJid);
-        if (s?.pending !== null && s?.pending !== undefined) {
-          const next = s.pending;
-          jidQueue.set(remoteJid, { processing: true, pending: null });
-          processMsg(next).finally(() => jidQueue.delete(remoteJid));
+  const jidSessions = new Map<string, JidSession>();
+  // Wait this long after the LAST message before replying (reset on every new message)
+  const BUFFER_DELAY_MS = 15_000;
+
+  async function runFlush(remoteJid: string, flush: (msgs: BufferedMsg[]) => Promise<void>): Promise<void> {
+    const sess = jidSessions.get(remoteJid);
+    if (!sess || sess.buffer.length === 0) return;
+
+    const batch = [...sess.buffer];
+    sess.buffer = [];
+    sess.timer = null;
+    sess.processing = true;
+    console.log(`[Bot] Flushing ${batch.length} buffered message(s) for ${remoteJid}`);
+
+    try {
+      await flush(batch);
+    } finally {
+      const s = jidSessions.get(remoteJid);
+      if (s) {
+        s.processing = false;
+        if (s.buffer.length > 0) {
+          // New messages arrived while processing — schedule another flush
+          s.timer = setTimeout(() => runFlush(remoteJid, flush), BUFFER_DELAY_MS);
         } else {
-          jidQueue.delete(remoteJid);
+          jidSessions.delete(remoteJid);
         }
-      });
-    } else {
-      // Already processing — park as pending (newest wins)
-      console.log(`[Bot] Anti-spam: queuing message for ${remoteJid} (previous pending overwritten)`);
-      jidQueue.set(remoteJid, { processing: true, pending: text });
+      }
     }
+  }
+
+  function addToBuffer(
+    remoteJid: string,
+    text: string,
+    imageBase64: string | undefined,
+    imageMimeType: string | undefined,
+    flush: (msgs: BufferedMsg[]) => Promise<void>
+  ): void {
+    let sess = jidSessions.get(remoteJid);
+    if (!sess) {
+      sess = { buffer: [], timer: null, processing: false };
+      jidSessions.set(remoteJid, sess);
+    }
+
+    sess.buffer.push({ text, imageBase64, imageMimeType });
+    console.log(`[Bot] Buffered msg ${sess.buffer.length} for ${remoteJid} — waiting ${BUFFER_DELAY_MS / 1000}s after last message`);
+
+    // Reset debounce timer on every new message
+    if (sess.timer) clearTimeout(sess.timer);
+
+    // Don't arm a new timer while processing — buffer will be picked up after flush
+    if (sess.processing) return;
+
+    sess.timer = setTimeout(() => runFlush(remoteJid, flush), BUFFER_DELAY_MS);
   }
 
   import("./baileys").then(({ initBaileys, setSocketIO, setIncomingMessageHandler, sendBotConfirmed, sendBotCancelled, sendBotModify, sendBotError }) => {
@@ -4013,19 +4054,29 @@ export async function registerRoutes(
       initBaileys().catch((err) => console.error("[Baileys] Startup error:", err));
     }
 
-    // Register incoming message bot handler for booking confirmations
+    // Register incoming message handler — uses smart buffer so rapid messages
+    // (text + images sent in quick succession) are collected and answered as ONE reply.
     // remoteJid = full WhatsApp JID (may be @s.whatsapp.net OR @lid for newer accounts)
     // phone     = numeric digits extracted from JID — used ONLY for DB matching
-    // All replies go to remoteJid directly so LID-based accounts get the correct reply
     setIncomingMessageHandler(async (remoteJid: string, phone: string, text: string, imageBase64?: string, imageMimeType?: string) => {
-      // Ignore empty messages (no text AND no image), groups, and broadcasts
+      // Ignore empty messages, groups, and broadcasts
       if ((!text || !text.trim()) && !imageBase64) return;
       if (remoteJid.endsWith("@g.us")) return;
       if (remoteJid.includes("broadcast") || remoteJid === "status@broadcast") return;
 
-      enqueueMessage(remoteJid, phone, text, async (msgText) => {
+      addToBuffer(remoteJid, text, imageBase64, imageMimeType, async (msgs: BufferedMsg[]) => {
         try {
-          const reply = msgText.trim();
+          // ── Merge all buffered messages into one context ─────────────────
+          const mergedText = msgs.map((m) => m.text).filter(Boolean).join("\n").trim();
+          // Use the last image in the batch (most recent photo sent)
+          const imgMsg = [...msgs].reverse().find((m) => m.imageBase64);
+          const mergedImageBase64 = imgMsg?.imageBase64;
+          const mergedImageMimeType = imgMsg?.imageMimeType;
+          const batchSize = msgs.length;
+
+          if (batchSize > 1) {
+            console.log(`[Bot] Merged batch of ${batchSize} message(s) for ${remoteJid}: "${mergedText.slice(0, 60)}"`);
+          }
 
           // Normalize the phone for DB matching (digits only)
           let normalized = phone.replace(/[^0-9]/g, "");
@@ -4033,7 +4084,7 @@ export async function registerRoutes(
           if (normalized.startsWith("0") && normalized.length === 10) normalized = "212" + normalized.slice(1);
           if (normalized.length === 9) normalized = "212" + normalized;
 
-          // Find all appointments that match this phone
+          // ── Appointment quick-reply check (1/2/3) ────────────────────────
           const allApts = await storage.getAppointments();
           const matched = allApts.filter((a: any) => {
             if (!a.phone) return false;
@@ -4044,38 +4095,37 @@ export async function registerRoutes(
             return ap === normalized;
           });
 
-          // Find the most recent appointment that is still pending or modify_requested
           const pendingApts = matched
             .filter((a: any) => !a.bookingStatus || a.bookingStatus === "pending" || a.bookingStatus === "modify_requested")
             .sort((a: any, b: any) => b.id - a.id);
 
           const apt = pendingApts.length > 0 ? pendingApts[0] : null;
 
-          // Reply always goes to remoteJid (preserves @lid for LID-based WhatsApp accounts)
-          if (apt && reply === "1") {
+          if (apt && mergedText === "1") {
             await storage.updateAppointment(apt.id, { bookingStatus: "confirmed" } as any);
             await sendBotConfirmed(remoteJid);
             console.log(`[Bot] Appointment ${apt.id} confirmed by client (${remoteJid})`);
             return;
           }
-
-          if (apt && reply === "2") {
+          if (apt && mergedText === "2") {
             await storage.updateAppointment(apt.id, { bookingStatus: "cancelled" } as any);
             await sendBotCancelled(remoteJid);
             console.log(`[Bot] Appointment ${apt.id} cancelled by client (${remoteJid})`);
             return;
           }
-
-          if (apt && reply === "3") {
+          if (apt && mergedText === "3") {
             await storage.updateAppointment(apt.id, { bookingStatus: "modify_requested" } as any);
             await sendBotModify(remoteJid);
             console.log(`[Bot] Appointment ${apt.id} modify requested by client (${remoteJid})`);
             return;
           }
 
-          // For any other message (question, darija, etc.) → Gemini AI assistant
+          // ── AI assistant reply ───────────────────────────────────────────
           const { askGemini, FALLBACK_REPLY } = await import("./gemini");
           const { sendWhatsAppMessage, sendTypingPresence, stopTypingPresence } = await import("./baileys");
+
+          // Show typing immediately — client sees we're working on a reply
+          await sendTypingPresence(remoteJid);
 
           // Load persistent memory for this client (DB-backed, survives restarts)
           const mem = await loadMemory(remoteJid);
@@ -4087,18 +4137,19 @@ export async function registerRoutes(
           const lastSeenMs = mem.lastSeen ? new Date(mem.lastSeen).getTime() : 0;
           const isNewConversation = !hasHistory || (Date.now() - lastSeenMs > 20 * 60 * 60 * 1000);
 
-          // Use reply cache only when there's no active conversation context.
-          if (!hasHistory) {
-            const cacheKey = `${remoteJid}:${reply.toLowerCase().trim()}`;
+          // Cache hit — only for text-only, no-history first contacts
+          if (!hasHistory && !mergedImageBase64) {
+            const cacheKey = `${remoteJid}:${mergedText.toLowerCase().trim()}`;
             const cached = aiReplyCache.get(cacheKey);
             if (cached && Date.now() - cached.ts < AI_CACHE_TTL) {
+              await stopTypingPresence(remoteJid);
               await sendWhatsAppMessage(remoteJid, cached.reply);
-              console.log(`[Bot] Cache hit for ${remoteJid} — skipping Gemini call`);
+              console.log(`[Bot] Cache hit for ${remoteJid} — skipping AI call`);
               return;
             }
           }
 
-          // Fetch real salon context (settings + services) to ground the AI
+          // Fetch salon context (settings + services list)
           const [bizSettings, allServices] = await Promise.all([
             storage.getBusinessSettings().catch(() => undefined),
             storage.getServices().catch(() => []),
@@ -4120,8 +4171,7 @@ export async function registerRoutes(
             closingTime: bizSettings?.closingTime || undefined,
             currency: bizSettings?.currencySymbol || "DH",
             services: serviceList,
-            isNewConversation, // tells Gemini whether to greet or not
-            // Inject client memory so the AI knows returning clients by name/preferences
+            isNewConversation,
             clientMemory: {
               clientName: mem.clientName,
               language: mem.language !== "unknown" ? mem.language : undefined,
@@ -4131,21 +4181,23 @@ export async function registerRoutes(
             },
           };
 
-          const { reply: aiReply, newHistory } = await askGemini(reply, salonCtx, history, imageBase64, imageMimeType);
+          // Single AI call with merged context from all buffered messages
+          const { reply: aiReply, newHistory } = await askGemini(
+            mergedText, salonCtx, history, mergedImageBase64, mergedImageMimeType
+          );
 
           if (!aiReply) {
-            console.warn(`[Bot] No Gemini API key — silent for ${remoteJid}`);
+            await stopTypingPresence(remoteJid);
+            console.warn(`[Bot] No AI reply — silent for ${remoteJid}`);
             return;
           }
 
-          // Only update memory on genuine AI replies (not fallback)
+          // Update client memory on genuine AI replies (not fallback)
           if (aiReply !== FALLBACK_REPLY) {
-            // Extract facts from this message
-            const detectedLang = detectLanguage(reply);
-            const detectedName = extractName(reply);
-            const mentionedSvcs = extractMentionedServices(reply + " " + aiReply, serviceList);
+            const detectedLang = detectLanguage(mergedText);
+            const detectedName = extractName(mergedText);
+            const mentionedSvcs = extractMentionedServices(mergedText + " " + aiReply, serviceList);
 
-            // Merge into memory
             const updatedMem: BotClientMemory = mergeHistory(
               {
                 ...mem,
@@ -4153,8 +4205,8 @@ export async function registerRoutes(
                 language: (detectedLang !== "unknown" ? detectedLang : mem.language) || "unknown",
                 preferredServices: Array.from(
                   new Set([...(mem.preferredServices || []), ...mentionedSvcs])
-                ).slice(0, 20), // cap at 20 to avoid bloat
-                visitCount: (mem.visitCount || 0) + (hasHistory ? 0 : 1), // increment once per session
+                ).slice(0, 20),
+                visitCount: (mem.visitCount || 0) + (hasHistory ? 0 : 1),
                 lastSeen: new Date(),
               },
               newHistory
@@ -4162,9 +4214,9 @@ export async function registerRoutes(
 
             await persistMemory(updatedMem);
 
-            // Cache first-contact replies to avoid duplicate Gemini calls
-            if (!hasHistory) {
-              const cacheKey = `${remoteJid}:${reply.toLowerCase().trim()}`;
+            // Cache first-contact text-only replies
+            if (!hasHistory && !mergedImageBase64) {
+              const cacheKey = `${remoteJid}:${mergedText.toLowerCase().trim()}`;
               aiReplyCache.set(cacheKey, { reply: aiReply, ts: Date.now() });
               if (aiReplyCache.size > 500) {
                 const now = Date.now();
@@ -4175,28 +4227,29 @@ export async function registerRoutes(
             }
           }
 
-          // ── Realistic typing delay ─────────────────────────────────────────
-          // Show "composing…" then wait ~35ms per char (min 1.5s, max 6s)
-          await sendTypingPresence(remoteJid);
+          // ── Human-like typing delay (proportional to reply length) ───────
+          // Typing presence was already started above — just wait before sending
           const typingDelay = Math.min(Math.max(1500, aiReply.length * 35), 6000);
           await new Promise<void>((r) => setTimeout(r, typingDelay));
           await stopTypingPresence(remoteJid);
 
           const finalReply = hasHistory ? aiReply : `أهلا بك!\n\n${aiReply}`;
           await sendWhatsAppMessage(remoteJid, finalReply);
+
           const turnNum = Math.floor(newHistory.length / 2);
           const clientLabel = mem.clientName ? `${mem.clientName} (${remoteJid})` : remoteJid;
-          console.log(`[Bot] ${isReturningClient ? "↩ returning" : "★ new"} client ${clientLabel} — turn ${turnNum}: "${reply.slice(0, 40)}..."`);
+          const batchNote = batchSize > 1 ? ` [${batchSize} msgs merged]` : "";
+          const imgNote = mergedImageBase64 ? " [+image]" : "";
+          console.log(`[Bot] ${isReturningClient ? "↩ returning" : "★ new"} client ${clientLabel} — turn ${turnNum}${batchNote}${imgNote}`);
+
         } catch (err: any) {
-          console.error("[Bot] Error handling incoming message:", err.message);
-          // Never stay silent on unexpected errors — send fallback so client gets a response
+          console.error("[Bot] Error handling buffered batch:", err.message);
           try {
             const { FALLBACK_REPLY } = await import("./gemini");
-            const { sendWhatsAppMessage } = await import("./baileys");
+            const { sendWhatsAppMessage, stopTypingPresence } = await import("./baileys");
+            await stopTypingPresence(remoteJid);
             await sendWhatsAppMessage(remoteJid, FALLBACK_REPLY);
-          } catch {
-            // last-resort: nothing we can do
-          }
+          } catch { /* last-resort */ }
         }
       });
     });
