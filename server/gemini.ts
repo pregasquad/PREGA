@@ -291,8 +291,16 @@ async function callGroq(
 
 /**
  * Transcribe a voice note (audio buffer as base64).
- * Cascade: Gemini 1.5 Flash (native audio) → Groq Whisper large-v3-turbo.
- * Returns the transcribed text, or null if both fail.
+ *
+ * Confirmed audio-capable Gemini models (from official docs, all support
+ * Text/Image/Video/Audio/PDF inline input):
+ *   gemini-2.5-flash-lite   — fastest, lowest cost          ✅ audio
+ *   gemini-2.5-flash        — best price/perf balance        ✅ audio
+ *   gemini-3-flash-preview  — newest gen (used in audio docs)✅ audio
+ *   gemini-3.1-flash-lite-preview — frontier-class lite      ✅ audio
+ *   gemini-1.5-flash        — proven, well-tested fallback   ✅ audio
+ *
+ * Final fallback: Groq Whisper large-v3-turbo (STT-only model, very fast).
  */
 export async function transcribeAudio(
   audioBase64: string,
@@ -301,40 +309,69 @@ export async function transcribeAudio(
   // Strip codec params — keep only the base MIME type
   const cleanMime = mimeType.split(";")[0].trim();
 
-  // ── 1. Gemini 1.5 Flash — supports OGG/Opus audio natively as inline data ──
+  // ── 1. Gemini cascade — try from fastest to most capable ─────────────────
+  const TRANSCRIPTION_MODELS = [
+    "gemini-2.5-flash-lite",          // fastest current-gen, confirmed audio ✅
+    "gemini-2.5-flash",               // more capable if lite fails           ✅
+    "gemini-3-flash-preview",         // newest gen, shown in audio docs      ✅
+    "gemini-3.1-flash-lite-preview",  // frontier-class lite preview          ✅
+    "gemini-1.5-flash",               // proven STT fallback                  ✅
+  ];
+
   const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
   if (geminiKey) {
-    try {
-      const model = "gemini-1.5-flash";
-      const url = `${GEMINI_BASE}/${model}:generateContent?key=${geminiKey}`;
-      const body = JSON.stringify({
-        contents: [{
-          parts: [
-            { inlineData: { mimeType: cleanMime, data: audioBase64 } },
-            { text: "اكتبي نص هاد الرسالة الصوتية بالضبط كما هي، بدون أي تعليق أو إضافة." },
-          ],
-        }],
-        generationConfig: { maxOutputTokens: 400, temperature: 0 },
-      });
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body,
-      });
-      if (res.ok) {
-        const data = (await res.json()) as any;
-        const text: string | undefined = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-        if (text) {
-          console.log(`[Transcription] Gemini ${model}: "${text.slice(0, 80)}"`);
-          return text;
-        }
-      } else {
-        const errBody = await res.text();
-        console.warn(`[Transcription] Gemini error ${res.status}: ${errBody.slice(0, 200)}`);
+    for (const model of TRANSCRIPTION_MODELS) {
+      // Skip if this model is on text-generation cooldown (quota hit)
+      if (modelCooldowns[model] && Date.now() < modelCooldowns[model]) {
+        const secs = Math.ceil((modelCooldowns[model] - Date.now()) / 1000);
+        console.warn(`[Transcription] ${model} in cooldown (${secs}s) — skipping`);
+        continue;
       }
-    } catch (err: any) {
-      console.warn(`[Transcription] Gemini threw: ${err.message}`);
+      try {
+        const url = `${GEMINI_BASE}/${model}:generateContent?key=${geminiKey}`;
+        const body = JSON.stringify({
+          contents: [{
+            parts: [
+              { inlineData: { mimeType: cleanMime, data: audioBase64 } },
+              { text: "اكتبي نص هاد الرسالة الصوتية بالضبط كما هي، بدون أي تعليق أو إضافة." },
+            ],
+          }],
+          generationConfig: { maxOutputTokens: 400, temperature: 0 },
+        });
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body,
+        });
+        if (res.ok) {
+          const data = (await res.json()) as any;
+          const text: string | undefined = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+          if (text) {
+            console.log(`[Transcription] ${model}: "${text.slice(0, 80)}"`);
+            return text;
+          }
+          // Empty reply — try next model
+          console.warn(`[Transcription] ${model}: empty reply — trying next`);
+        } else {
+          const status = res.status;
+          if (status === 429) {
+            modelCooldowns[model] = Date.now() + QUOTA_COOLDOWN_MS;
+            console.warn(`[Transcription] ${model} quota (429) — cooldown, trying next`);
+          } else if (status === 400) {
+            // 400 usually means the model doesn't support this audio format/input
+            const errBody = await res.text();
+            const isUnsupported = errBody.includes("audio") || errBody.includes("INVALID_ARGUMENT") || errBody.includes("inlineData");
+            console.warn(`[Transcription] ${model} 400${isUnsupported ? " (audio not supported)" : ""} — trying next`);
+          } else {
+            const errBody = await res.text();
+            console.warn(`[Transcription] ${model} error ${status}: ${errBody.slice(0, 150)} — trying next`);
+          }
+        }
+      } catch (err: any) {
+        console.warn(`[Transcription] ${model} threw: ${err.message} — trying next`);
+      }
     }
+    console.warn("[Transcription] All Gemini models failed — trying Groq Whisper");
   }
 
   // ── 2. Groq Whisper large-v3-turbo fallback ───────────────────────────────
