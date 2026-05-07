@@ -4164,6 +4164,48 @@ export async function registerRoutes(
             // No appointment found — fall through so AI can respond naturally
           }
 
+          // ── Short-reply fast-path (no AI needed) ─────────────────────────
+          {
+            const t = mergedText.trim().toLowerCase();
+            const shortReplies: [RegExp, string[]][] = [
+              // Thank you
+              [/^(شكرا|شكراً|شكرا بزاف|merci|merci beaucoup|thank you|thanks|thx|🙏|شكرا لك|شكراً لك)$/i, [
+                "بالله عليك 🌸 يسعدنا نخدموك!",
+                "هيا بالله 💖 ننتظروك!",
+                "والله سعداء بيك 🌸",
+              ]],
+              // Ok / acknowledged
+              [/^(ok|okay|واخا|وخا|oki|oké|d'accord|مزيان|مليح|ها|هه|👍|👌|✅)$/i, [
+                "واخا 😊 إلى خصك شي حاجة أخرى أنا هنا 🌸",
+                "مزيان 💖 أي وقت بغيتي راسليني",
+                "👌 نتمنى نشوفوك قريباً!",
+              ]],
+              // Goodbye
+              [/^(بسلامة|مع السلامة|au revoir|bye|bbye|سلام|تصبح على خير|تصبحي على خير|lila sa3ida|bonne nuit|bonne journée|👋)$/i, [
+                "بسلامة 🌸 ننتظروك دايما!",
+                "مع السلامة 💖 تصبحي على خير!",
+                "يسلمك ربي 🌸 أي وقت راسليني!",
+              ]],
+              // Yes / confirm
+              [/^(ايه|أيه|آيه|نعم|oui|yes|yep|yap|أكيد|أيوا|ewa|ewa ewa)$/i, [
+                "واخا 😊 راسليني هنا وغادي يتواصلو معاكِ الفريق 🌸",
+              ]],
+            ];
+
+            for (const [pattern, responses] of shortReplies) {
+              if (pattern.test(t)) {
+                const { sendWhatsAppMessage, sendTypingPresence, stopTypingPresence } = await import("./baileys");
+                await sendTypingPresence(remoteJid);
+                await new Promise<void>((r) => setTimeout(r, 800 + Math.floor(Math.random() * 600)));
+                await stopTypingPresence(remoteJid);
+                const reply = responses[Math.floor(Math.random() * responses.length)];
+                await sendWhatsAppMessage(remoteJid, reply);
+                console.log(`[Bot] Short-reply fast-path for ${remoteJid}: "${t}"`);
+                return;
+              }
+            }
+          }
+
           // ── AI assistant reply ───────────────────────────────────────────
           const { askGemini, FALLBACK_REPLY } = await import("./gemini");
           const { sendWhatsAppMessage, sendTypingPresence, stopTypingPresence } = await import("./baileys");
