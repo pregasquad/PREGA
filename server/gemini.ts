@@ -1,4 +1,5 @@
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
+const XAI_BASE = "https://api.x.ai/v1";
 
 const MODEL_CASCADE = [
   "gemini-3.1-flash-lite-preview",
@@ -222,8 +223,77 @@ async function callGemini(
   return { reply: text ? text.trim() : null, isQuotaError: false, isTruncated: false };
 }
 
+async function callGrok(
+  userMessage: string,
+  systemPrompt: string,
+  apiKey: string,
+  history: ConversationTurn[],
+  imageBase64?: string,
+  imageMimeType?: string
+): Promise<{ reply: string | null; isQuotaError: boolean }> {
+  const messages: { role: string; content: any }[] = [
+    { role: "system", content: systemPrompt },
+    ...history.map((turn) => ({
+      role: turn.role === "model" ? "assistant" : "user",
+      content: turn.text,
+    })),
+  ];
+
+  // Build the final user message content (text + optional image)
+  if (imageBase64 && imageMimeType) {
+    messages.push({
+      role: "user",
+      content: [
+        {
+          type: "image_url",
+          image_url: { url: `data:${imageMimeType};base64,${imageBase64}` },
+        },
+        { type: "text", text: userMessage || "شوفي هاد الصورة وجاوبي عليها بما يناسب الصالون." },
+      ],
+    });
+  } else {
+    messages.push({ role: "user", content: userMessage });
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(`${XAI_BASE}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "grok-3-mini",
+        messages,
+        max_tokens: 700,
+        temperature: 0.65,
+      }),
+    });
+  } catch (networkErr: any) {
+    console.warn(`[Grok] Network error: ${networkErr.message}`);
+    return { reply: null, isQuotaError: false };
+  }
+
+  if (!response.ok) {
+    const status = response.status;
+    if (status === 429) {
+      console.warn("[Grok] Quota exhausted (429)");
+      return { reply: null, isQuotaError: true };
+    }
+    const errBody = await response.text();
+    console.error(`[Grok] Error ${status}: ${errBody.slice(0, 300)}`);
+    return { reply: null, isQuotaError: false };
+  }
+
+  const data = (await response.json()) as any;
+  const text: string | undefined = data?.choices?.[0]?.message?.content;
+  return { reply: text ? text.trim() : null, isQuotaError: false };
+}
+
 /**
  * Ask Gemini with multi-turn history, optional client memory, and optional image.
+ * Falls back to Grok (xAI) if all Gemini models are exhausted.
  * Truncated responses are never saved to history.
  */
 export async function askGemini(
@@ -234,31 +304,68 @@ export async function askGemini(
   imageMimeType?: string
 ): Promise<{ reply: string | null; newHistory: ConversationTurn[] }> {
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-  if (!apiKey) {
-    console.warn("[Gemini] No API key — skipping AI reply");
-    return { reply: null, newHistory: history };
-  }
-
   const systemPrompt = buildSystemPrompt(ctx);
   const now = Date.now();
 
-  for (let i = 0; i < MODEL_CASCADE.length; i++) {
-    const model = MODEL_CASCADE[i];
+  if (apiKey) {
+    for (let i = 0; i < MODEL_CASCADE.length; i++) {
+      const model = MODEL_CASCADE[i];
 
-    // Skip model if it's still in its per-model cooldown
-    if (modelCooldowns[model] && now < modelCooldowns[model]) {
-      const secs = Math.ceil((modelCooldowns[model] - now) / 1000);
-      console.warn(`[Gemini] ${model} in cooldown (${secs}s) — skipping to next`);
-      continue;
+      // Skip model if it's still in its per-model cooldown
+      if (modelCooldowns[model] && now < modelCooldowns[model]) {
+        const secs = Math.ceil((modelCooldowns[model] - now) / 1000);
+        console.warn(`[Gemini] ${model} in cooldown (${secs}s) — skipping to next`);
+        continue;
+      }
+
+      try {
+        const { reply, isQuotaError, isTruncated } = await callGemini(
+          model, userMessage, systemPrompt, apiKey, history, imageBase64, imageMimeType
+        );
+
+        if (reply) {
+          console.log(`[Gemini] ${model} replied (turn ${Math.floor(history.length / 2) + 1})${imageBase64 ? " [with image]" : ""}`);
+          const historyUserText = imageBase64
+            ? `[صورة]${userMessage ? ` + "${userMessage}"` : ""}`
+            : userMessage;
+          const newHistory: ConversationTurn[] = [
+            ...history,
+            { role: "user", text: historyUserText },
+            { role: "model", text: reply },
+          ];
+          return { reply, newHistory };
+        }
+
+        if (isQuotaError) {
+          modelCooldowns[model] = Date.now() + QUOTA_COOLDOWN_MS;
+          console.error(`[Gemini] Quota exhausted on ${model} — cooldown ${QUOTA_COOLDOWN_MS / 1000}s, trying next model…`);
+          continue;
+        }
+
+        if (i < MODEL_CASCADE.length - 1) {
+          const reason = isTruncated ? "truncated" : "failed";
+          console.warn(`[Gemini] ${model} ${reason} — trying next model in ~2-3s`);
+          await retryDelay();
+        }
+      } catch (err: any) {
+        console.error(`[Gemini] ${model} threw: ${err.message}`);
+        if (i < MODEL_CASCADE.length - 1) await retryDelay();
+      }
     }
+    console.warn("[Gemini] All models exhausted — trying Grok fallback…");
+  } else {
+    console.warn("[Gemini] No API key — trying Grok fallback…");
+  }
 
+  // Grok (xAI) fallback — last resort in the cascade
+  const grokKey = process.env.XAI_API_KEY;
+  if (grokKey) {
     try {
-      const { reply, isQuotaError, isTruncated } = await callGemini(
-        model, userMessage, systemPrompt, apiKey, history, imageBase64, imageMimeType
+      const { reply, isQuotaError } = await callGrok(
+        userMessage, systemPrompt, grokKey, history, imageBase64, imageMimeType
       );
-
       if (reply) {
-        console.log(`[Gemini] ${model} replied (turn ${Math.floor(history.length / 2) + 1})${imageBase64 ? " [with image]" : ""}`);
+        console.log(`[Grok] grok-3-mini replied (turn ${Math.floor(history.length / 2) + 1})${imageBase64 ? " [with image]" : ""}`);
         const historyUserText = imageBase64
           ? `[صورة]${userMessage ? ` + "${userMessage}"` : ""}`
           : userMessage;
@@ -269,25 +376,18 @@ export async function askGemini(
         ];
         return { reply, newHistory };
       }
-
       if (isQuotaError) {
-        modelCooldowns[model] = Date.now() + QUOTA_COOLDOWN_MS;
-        console.error(`[Gemini] Quota exhausted on ${model} — cooldown ${QUOTA_COOLDOWN_MS / 1000}s, trying next model…`);
-        // Don't return — fall through to next model in cascade
-        continue;
-      }
-
-      if (i < MODEL_CASCADE.length - 1) {
-        const reason = isTruncated ? "truncated" : "failed";
-        console.warn(`[Gemini] ${model} ${reason} — trying next model in ~2-3s`);
-        await retryDelay();
+        console.error("[Grok] Quota exhausted — using fallback reply");
+      } else {
+        console.error("[Grok] No reply — using fallback reply");
       }
     } catch (err: any) {
-      console.error(`[Gemini] ${model} threw: ${err.message}`);
-      if (i < MODEL_CASCADE.length - 1) await retryDelay();
+      console.error(`[Grok] threw: ${err.message}`);
     }
+  } else {
+    console.warn("[Grok] No XAI_API_KEY set — skipping Grok fallback");
   }
 
-  console.error("[Gemini] All models exhausted — fallback reply");
+  console.error("[AI] All models exhausted — fallback reply");
   return { reply: FALLBACK_REPLY, newHistory: history };
 }
