@@ -4009,9 +4009,9 @@ export async function registerRoutes(
     // remoteJid = full WhatsApp JID (may be @s.whatsapp.net OR @lid for newer accounts)
     // phone     = numeric digits extracted from JID — used ONLY for DB matching
     // All replies go to remoteJid directly so LID-based accounts get the correct reply
-    setIncomingMessageHandler(async (remoteJid: string, phone: string, text: string) => {
-      // Ignore empty messages, group JIDs, status broadcasts — belt-and-suspenders guard
-      if (!text || !text.trim()) return;
+    setIncomingMessageHandler(async (remoteJid: string, phone: string, text: string, imageBase64?: string, imageMimeType?: string) => {
+      // Ignore empty messages (no text AND no image), groups, and broadcasts
+      if ((!text || !text.trim()) && !imageBase64) return;
       if (remoteJid.endsWith("@g.us")) return;
       if (remoteJid.includes("broadcast") || remoteJid === "status@broadcast") return;
 
@@ -4117,7 +4117,7 @@ export async function registerRoutes(
             },
           };
 
-          const { reply: aiReply, newHistory } = await askGemini(reply, salonCtx, history);
+          const { reply: aiReply, newHistory } = await askGemini(reply, salonCtx, history, imageBase64, imageMimeType);
 
           if (!aiReply) {
             console.warn(`[Bot] No Gemini API key — silent for ${remoteJid}`);

@@ -12,11 +12,11 @@ const retryDelay = () =>
   new Promise<void>((r) => setTimeout(r, 2000 + Math.floor(Math.random() * 1000)));
 
 export const FALLBACK_REPLY =
-  "شكراً لتواصلك معنا 💖\nفريقنا متاح للإجابة على استفساراتك.\nيرجى التواصل معنا مباشرة أو الاتصال بالصالون 🌸";
+  "شكراً على تواصلك معنا 🌸\nفريقنا سيرد عليك في أقرب وقت — تواصلي معنا هنا مباشرة 💖";
 
 export interface ClientMemory {
   clientName?: string | null;
-  language?: string;           // 'arabic' | 'french' | 'darija' | 'unknown'
+  language?: string;
   preferredServices?: string[];
   personalityNotes?: string | null;
   visitCount?: number;
@@ -43,7 +43,6 @@ let cachedPromptKey = "";
 let cachedPrompt = "";
 
 function buildSystemPrompt(ctx: SalonContext): string {
-  // Include client memory in the cache key so returning clients get personalised prompts
   const mem = ctx.clientMemory;
   const memKey = mem
     ? `${mem.clientName ?? ""}|${mem.language ?? ""}|${(mem.preferredServices ?? []).join(",")}|${mem.visitCount ?? 0}`
@@ -68,60 +67,59 @@ function buildSystemPrompt(ctx: SalonContext): string {
           .join("\n\n")
       : "  (liste non disponible)";
 
-  // Build client memory section (only shown for returning clients)
+  // Build client memory section for returning clients
   let memorySection = "";
   if (mem && (mem.visitCount ?? 0) > 1) {
     const lines: string[] = [];
     if (mem.clientName) lines.push(`الاسم: ${mem.clientName}`);
     lines.push(`عدد المحادثات السابقة: ${(mem.visitCount ?? 1) - 1}`);
     if (mem.preferredServices && mem.preferredServices.length > 0)
-      lines.push(`الخدمات التي سأل/ت عنها من قبل: ${mem.preferredServices.join("، ")}`);
+      lines.push(`الخدمات التي سألت عنها من قبل: ${mem.preferredServices.join("، ")}`);
     if (mem.language && mem.language !== "unknown")
-      lines.push(`اللغة المفضلة: ${mem.language}`);
-    if (mem.personalityNotes)
-      lines.push(`ملاحظات: ${mem.personalityNotes}`);
+      lines.push(`لغتها المفضلة: ${mem.language}`);
     memorySection = `
-━━━ معلومات العميل الحالي ━━━
+━━━ معلومات العميلة الحالية ━━━
 ${lines.join("\n")}
-(استعمل هذه المعلومات لتخصيص ردك — رحّب بالعميل باسمه إذا كان معروفاً)
 `;
   } else if (mem?.clientName) {
-    memorySection = `\n━━━ معلومات العميل الحالي ━━━\nالاسم: ${mem.clientName}\n`;
+    memorySection = `\n━━━ معلومات العميلة ━━━\nالاسم: ${mem.clientName}\n`;
   }
 
+  const clientFirstName = mem?.clientName || null;
+
   const prompt = `أنتِ موظفة استقبال حقيقية في صالون ${ctx.name} — اسمك "لينا".
-تتحدثين مع العملاء عبر واتساب كأي موظفة بشرية، بأسلوب طبيعي ودافئ تماماً كما لو كنتِ تردين على رسالة من صديقة.
+تردين على واتساب كموظفة بشرية حقيقية، بطريقة طبيعية ومريحة.
 
 ━━━ هويتك ━━━
 • اسمك لينا، موظفة في ${ctx.name}
-• لستِ روبوتاً ولا برنامجاً — أنتِ إنسانة تعمل في الصالون
-• إذا سألك أحد "هل أنتِ بوت؟" أو "هل أنتِ إنسان؟" أو "هل أنتِ ذكاء اصطناعي؟": قولي بشكل طبيعي "لا حبيبتي أنا لينا من فريق ${ctx.name} 😊" أو ما شابه ذلك بنفس الطابع
-• لا تذكري أبداً كلمات: روبوت، بوت، ذكاء اصطناعي، AI، assistant, chatbot، برنامج، نظام
+• أنتِ إنسانة وليست برنامجاً أو روبوتاً
+• إذا سألك أحد "هل أنتِ بوت؟" أو "هل أنتِ ذكاء اصطناعي؟" → ردّي بشكل طبيعي مثل: "لا، أنا لينا 😊 كيف نقدر نعاونك؟"
+• ممنوع تذكر: روبوت، بوت، ذكاء اصطناعي، AI، chatbot، assistant، برنامج، نظام
 
 ━━━ معلومات الصالون ━━━
 الاسم: ${ctx.name}
 ${ctx.address ? `العنوان: ${ctx.address}` : ""}
-${ctx.phone ? `للحجز والاستفسار: ${ctx.phone}` : ""}
 ${ctx.openingTime && ctx.closingTime ? `أوقات العمل: ${ctx.openingTime} – ${ctx.closingTime}` : ""}
 ${memorySection}
 ━━━ قائمة الخدمات والأسعار ━━━
 ${serviceBlock}
 
 ━━━ اللغة ━━━
-1. العميل يكتب بالعربية أو الدارجة بالحروف العربية → ردّي بالدارجة المغربية بالحروف العربية
-2. العميل يكتب بالفرنسية → ردّي بالفرنسية
-3. العميل يكتب بالدارجة بالحروف اللاتينية (bghit, dial, taman, wach, ndir, kifach, 3raf, zloul, wash, mashi, bzzaf, chhal...) → ردّي بالدارجة بالحروف العربية
-4. لا تكتبي الدارجة بالحروف اللاتينية أبداً في ردودك
+1. العميلة تكتب بالعربية أو الدارجة بالحروف العربية → ردّي بالدارجة المغربية بالحروف العربية
+2. العميلة تكتب بالفرنسية → ردّي بالفرنسية
+3. العميلة تكتب بالدارجة بالحروف اللاتينية (bghit, dial, taman, wach, ndir, kifach, 3raf, zloul, wash, mashi, bzzaf, chhal...) → ردّي بالدارجة بالحروف العربية
+4. لا تكتبي الدارجة بالحروف اللاتينية أبداً
 
 ━━━ أسلوب الرد ━━━
-• تحدثي بشكل إنساني طبيعي — مثل موظفة تعرف زبوناتها وتحب شغلها
-• لا تستعملي صياغات رسمية جافة أو جمل تبدو آلية
-• إذا سألتك عن سعر خدمة: قولي السعر مباشرة من القائمة بلا تردد — لا تقولي "تواصل معنا"
-• إذا سألتك عن عدة خدمات: اذكري سعر كل واحدة
+• تحدثي بشكل إنساني طبيعي — كأنك صاحبة تعرف هاد الشخص
+• ممنوع تستعملي "حبيبتي" في كل رسالة — استعمليها مرة مرة فقط، أحياناً لا تستعمليها أبداً${clientFirstName ? `\n• إذا عرفتِ اسمها فاستعمليه بشكل طبيعي: ${clientFirstName}` : ""}
+• تنوعي في التعابير: مرة "صاحبتي"، مرة الاسم، مرة مباشرة بدون نداء
+• عند السؤال عن الأسعار: اذكري السعر مباشرة من القائمة — لا تقولي "تواصلي معنا للأسعار"
+• عند السؤال عن عدة خدمات: اذكري سعر كل واحدة
 • أكملي جملتك دائماً حتى النهاية — لا تقطعي الكلام في المنتصف
-• إذا عرفتِ اسم العميلة، استعمليه بشكل طبيعي في الرد
-• للحجز: وجّهي العميلة للتواصل${ctx.phone ? ` على ${ctx.phone}` : " مباشرة"} — قولي أن الفريق سيحدد الوقت المناسب
-• اختمي دائماً بإيموجي دافئ 💖 🌸 ✨ كما تفعل أي موظفة ودودة`;
+• للحجز أو تحديد الوقت: قولي "راسلينا هنا وغادي يتواصلوا معاك الفريق باش يحددوا ليك الموعد" — لا تعطي رقم الهاتف لأن العميلة راها فالواتساب الآن
+• إذا جات العميلة بصورة: حلليها وجاوبي على حساب اللي شفتيه (نوع الشعر، اللون، الخدمة المناسبة...)
+• اختمي برسالة دافئة وإيموجي 💖 🌸 ✨ — لكن لا تكرري نفس الجملة في كل رسالة`;
 
   cachedPromptKey = key;
   cachedPrompt = prompt;
@@ -133,16 +131,28 @@ async function callGemini(
   userMessage: string,
   systemPrompt: string,
   apiKey: string,
-  history: ConversationTurn[]
+  history: ConversationTurn[],
+  imageBase64?: string,
+  imageMimeType?: string
 ): Promise<{ reply: string | null; isQuotaError: boolean; isTruncated: boolean }> {
   const url = `${GEMINI_BASE}/${model}:generateContent?key=${apiKey}`;
 
-  const contents: { role: string; parts: { text: string }[] }[] = [
+  // Build the current user message parts (text + optional image)
+  const currentUserParts: any[] = [];
+  if (imageBase64 && imageMimeType) {
+    currentUserParts.push({ inlineData: { mimeType: imageMimeType, data: imageBase64 } });
+  }
+  // Always add text — use a default prompt if no caption was provided with the image
+  currentUserParts.push({
+    text: userMessage || (imageBase64 ? "شوفي هاد الصورة وجاوبي عليها بما يناسب الصالون." : ""),
+  });
+
+  const contents: { role: string; parts: any[] }[] = [
     ...history.map((turn) => ({
       role: turn.role,
       parts: [{ text: turn.text }],
     })),
-    { role: "user", parts: [{ text: userMessage }] },
+    { role: "user", parts: currentUserParts },
   ];
 
   let response: Response;
@@ -185,7 +195,7 @@ async function callGemini(
   const finishReason: string = candidate?.finishReason ?? "STOP";
 
   if (finishReason === "MAX_TOKENS") {
-    console.warn(`[Gemini] ${model} truncated (MAX_TOKENS) — discarding to avoid history corruption`);
+    console.warn(`[Gemini] ${model} truncated (MAX_TOKENS) — discarding`);
     return { reply: null, isQuotaError: false, isTruncated: true };
   }
 
@@ -193,13 +203,15 @@ async function callGemini(
 }
 
 /**
- * Ask Gemini with multi-turn history and optional client memory.
+ * Ask Gemini with multi-turn history, optional client memory, and optional image.
  * Truncated responses are never saved to history.
  */
 export async function askGemini(
   userMessage: string,
   ctx: SalonContext,
-  history: ConversationTurn[] = []
+  history: ConversationTurn[] = [],
+  imageBase64?: string,
+  imageMimeType?: string
 ): Promise<{ reply: string | null; newHistory: ConversationTurn[] }> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -220,14 +232,18 @@ export async function askGemini(
     const model = MODEL_CASCADE[i];
     try {
       const { reply, isQuotaError, isTruncated } = await callGemini(
-        model, userMessage, systemPrompt, apiKey, history
+        model, userMessage, systemPrompt, apiKey, history, imageBase64, imageMimeType
       );
 
       if (reply) {
-        console.log(`[Gemini] ${model} replied (turn ${Math.floor(history.length / 2) + 1})`);
+        console.log(`[Gemini] ${model} replied (turn ${Math.floor(history.length / 2) + 1})${imageBase64 ? " [with image]" : ""}`);
+        // Store a text-only summary in history (can't store raw image bytes)
+        const historyUserText = imageBase64
+          ? `[صورة]${userMessage ? ` + "${userMessage}"` : ""}`
+          : userMessage;
         const newHistory: ConversationTurn[] = [
           ...history,
-          { role: "user", text: userMessage },
+          { role: "user", text: historyUserText },
           { role: "model", text: reply },
         ];
         return { reply, newHistory };

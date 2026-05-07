@@ -131,7 +131,14 @@ export function setSocketIO(io: any): void {
 
 // remoteJid = full JID (e.g. "212713446214@s.whatsapp.net" or "85715031466043@lid")
 // phone     = best-effort numeric phone extracted from JID (may not match for LID accounts)
-type IncomingMessageHandler = (remoteJid: string, phone: string, text: string) => Promise<void>;
+// imageBase64 / imageMimeType = set when the message contains a photo
+type IncomingMessageHandler = (
+  remoteJid: string,
+  phone: string,
+  text: string,
+  imageBase64?: string,
+  imageMimeType?: string
+) => Promise<void>;
 let incomingMessageHandler: IncomingMessageHandler | null = null;
 
 export function setIncomingMessageHandler(handler: IncomingMessageHandler): void {
@@ -265,6 +272,8 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
       const remoteJid = msg.key.remoteJid;
       // Best-effort numeric phone (works for @s.whatsapp.net; won't be a real phone for @lid)
       const rawPhone = remoteJid.replace(/@(s\.whatsapp\.net|lid|c\.us)$/, "");
+
+      const isImageMsg = !!msg.message?.imageMessage;
       const text = (
         msg.message?.conversation ||
         msg.message?.extendedTextMessage?.text ||
@@ -272,13 +281,29 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
         ""
       ).trim();
 
-      if (!rawPhone || !text) continue;
+      // Skip if there is no text AND no image — truly empty message
+      if (!rawPhone || (!text && !isImageMsg)) continue;
 
-      log(`Incoming message from ${remoteJid}: "${text.slice(0, 60)}"`);
+      // Download image if present — pass as base64 to the handler for vision analysis
+      let imageBase64: string | undefined;
+      let imageMimeType: string | undefined;
+      if (isImageMsg) {
+        try {
+          const { downloadMediaMessage } = await import("@whiskeysockets/baileys");
+          const buffer = await downloadMediaMessage(msg, "buffer", {}) as Buffer;
+          imageBase64 = buffer.toString("base64");
+          imageMimeType = msg.message?.imageMessage?.mimetype || "image/jpeg";
+          log(`Image downloaded (${Math.round(buffer.length / 1024)} KB, ${imageMimeType})`);
+        } catch (imgErr: any) {
+          log(`Image download failed: ${imgErr.message} — continuing with text only`);
+        }
+      }
+
+      log(`Incoming from ${remoteJid}: "${text.slice(0, 60)}"${isImageMsg ? " [+image]" : ""}`);
 
       if (incomingMessageHandler) {
         try {
-          await incomingMessageHandler(remoteJid, rawPhone, text);
+          await incomingMessageHandler(remoteJid, rawPhone, text, imageBase64, imageMimeType);
         } catch (err: any) {
           log(`Incoming handler error: ${err.message}`);
         }
