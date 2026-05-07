@@ -3979,6 +3979,7 @@ export async function registerRoutes(
     text: string;
     imageBase64?: string;
     imageMimeType?: string;
+    isVoice?: boolean; // true if the message came from a WhatsApp voice note
   }
 
   interface JidSession {
@@ -4022,6 +4023,7 @@ export async function registerRoutes(
     text: string,
     imageBase64: string | undefined,
     imageMimeType: string | undefined,
+    isVoice: boolean | undefined,
     flush: (msgs: BufferedMsg[]) => Promise<void>
   ): void {
     let sess = jidSessions.get(remoteJid);
@@ -4030,7 +4032,7 @@ export async function registerRoutes(
       jidSessions.set(remoteJid, sess);
     }
 
-    sess.buffer.push({ text, imageBase64, imageMimeType });
+    sess.buffer.push({ text, imageBase64, imageMimeType, isVoice });
     console.log(`[Bot] Buffered msg ${sess.buffer.length} for ${remoteJid} — waiting ${BUFFER_DELAY_MS / 1000}s after last message`);
 
     // Reset debounce timer on every new message
@@ -4058,13 +4060,13 @@ export async function registerRoutes(
     // (text + images sent in quick succession) are collected and answered as ONE reply.
     // remoteJid = full WhatsApp JID (may be @s.whatsapp.net OR @lid for newer accounts)
     // phone     = numeric digits extracted from JID — used ONLY for DB matching
-    setIncomingMessageHandler(async (remoteJid: string, phone: string, text: string, imageBase64?: string, imageMimeType?: string) => {
+    setIncomingMessageHandler(async (remoteJid: string, phone: string, text: string, imageBase64?: string, imageMimeType?: string, isVoice?: boolean) => {
       // Ignore empty messages, groups, and broadcasts
       if ((!text || !text.trim()) && !imageBase64) return;
       if (remoteJid.endsWith("@g.us")) return;
       if (remoteJid.includes("broadcast") || remoteJid === "status@broadcast") return;
 
-      addToBuffer(remoteJid, text, imageBase64, imageMimeType, async (msgs: BufferedMsg[]) => {
+      addToBuffer(remoteJid, text, imageBase64, imageMimeType, isVoice, async (msgs: BufferedMsg[]) => {
         try {
           // ── Merge all buffered messages into one context ─────────────────
           const mergedText = msgs.map((m) => m.text).filter(Boolean).join("\n").trim();
@@ -4228,19 +4230,50 @@ export async function registerRoutes(
           }
 
           // ── Human-like typing delay (proportional to reply length) ───────
-          // Typing presence was already started above — just wait before sending
           const typingDelay = Math.min(Math.max(1500, aiReply.length * 35), 6000);
           await new Promise<void>((r) => setTimeout(r, typingDelay));
           await stopTypingPresence(remoteJid);
 
           const finalReply = hasHistory ? aiReply : `أهلا بك!\n\n${aiReply}`;
-          await sendWhatsAppMessage(remoteJid, finalReply);
+
+          // ── Respond in kind: voice note → voice note, text → text ────────
+          const batchHasVoice = msgs.some((m) => m.isVoice);
+          let repliedWithVoice = false;
+
+          if (batchHasVoice) {
+            try {
+              const { textToSpeech } = await import("./gemini");
+              const { sendWhatsAppVoiceNote } = await import("./baileys");
+              const ttsResult = await textToSpeech(finalReply);
+              if (ttsResult) {
+                const { success } = await sendWhatsAppVoiceNote(
+                  remoteJid, ttsResult.pcmBase64, ttsResult.sampleRate
+                );
+                if (success) {
+                  repliedWithVoice = true;
+                  console.log(`[Bot] Voice reply sent to ${remoteJid}`);
+                } else {
+                  console.warn(`[Bot] Voice send failed — falling back to text`);
+                }
+              } else {
+                console.warn(`[Bot] TTS failed — falling back to text`);
+              }
+            } catch (ttsErr: any) {
+              console.warn(`[Bot] TTS error: ${ttsErr.message} — falling back to text`);
+            }
+          }
+
+          // Send text reply if: not a voice batch, or voice send failed
+          if (!repliedWithVoice) {
+            await sendWhatsAppMessage(remoteJid, finalReply);
+          }
 
           const turnNum = Math.floor(newHistory.length / 2);
           const clientLabel = mem.clientName ? `${mem.clientName} (${remoteJid})` : remoteJid;
           const batchNote = batchSize > 1 ? ` [${batchSize} msgs merged]` : "";
           const imgNote = mergedImageBase64 ? " [+image]" : "";
-          console.log(`[Bot] ${isReturningClient ? "↩ returning" : "★ new"} client ${clientLabel} — turn ${turnNum}${batchNote}${imgNote}`);
+          const replyMode = repliedWithVoice ? " [🎙️ voice reply]" : "";
+          console.log(`[Bot] ${isReturningClient ? "↩ returning" : "★ new"} client ${clientLabel} — turn ${turnNum}${batchNote}${imgNote}${replyMode}`);
 
         } catch (err: any) {
           console.error("[Bot] Error handling buffered batch:", err.message);

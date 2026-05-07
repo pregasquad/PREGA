@@ -136,12 +136,14 @@ export function setSocketIO(io: any): void {
 // remoteJid = full JID (e.g. "212713446214@s.whatsapp.net" or "85715031466043@lid")
 // phone     = best-effort numeric phone extracted from JID (may not match for LID accounts)
 // imageBase64 / imageMimeType = set when the message contains a photo
+// isVoice = true when the message originated from a WhatsApp voice note
 type IncomingMessageHandler = (
   remoteJid: string,
   phone: string,
   text: string,
   imageBase64?: string,
-  imageMimeType?: string
+  imageMimeType?: string,
+  isVoice?: boolean
 ) => Promise<void>;
 let incomingMessageHandler: IncomingMessageHandler | null = null;
 
@@ -354,7 +356,7 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
 
       if (incomingMessageHandler) {
         try {
-          await incomingMessageHandler(remoteJid, rawPhone, effectiveText, imageBase64, imageMimeType);
+          await incomingMessageHandler(remoteJid, rawPhone, effectiveText, imageBase64, imageMimeType, isAudioMsg);
         } catch (err: any) {
           log(`Incoming handler error: ${err.message}`);
         }
@@ -613,6 +615,64 @@ function formatJid(phone: string): string {
   if (cleaned.startsWith("0") && cleaned.length === 10) cleaned = "212" + cleaned.slice(1);
   if (cleaned.length === 9) cleaned = "212" + cleaned;
   return cleaned + "@s.whatsapp.net";
+}
+
+/**
+ * Convert raw PCM audio (from Gemini TTS) to OGG/Opus via ffmpeg,
+ * then send as a WhatsApp voice note (ptt=true).
+ * pcmBase64 = base64-encoded signed 16-bit little-endian PCM
+ * sampleRate = sample rate in Hz (typically 24000 from Gemini TTS)
+ */
+export async function sendWhatsAppVoiceNote(
+  to: string,
+  pcmBase64: string,
+  sampleRate: number = 24000
+): Promise<{ success: boolean; error?: string }> {
+  if (!sock || status !== "open") {
+    return { success: false, error: "WhatsApp not connected" };
+  }
+  try {
+    const pcmBuffer = Buffer.from(pcmBase64, "base64");
+
+    // Convert raw PCM → OGG/Opus using ffmpeg (required by WhatsApp for voice notes)
+    const oggBuffer = await new Promise<Buffer>((resolve, reject) => {
+      const { spawn } = require("child_process") as typeof import("child_process");
+      const proc = spawn("ffmpeg", [
+        "-f", "s16le",          // input format: signed 16-bit little-endian PCM
+        "-ar", String(sampleRate), // sample rate
+        "-ac", "1",             // mono
+        "-i", "pipe:0",         // read from stdin
+        "-c:a", "libopus",      // encode as Opus
+        "-b:a", "32k",          // 32 kbps — good quality for voice
+        "-vbr", "on",
+        "-compression_level", "10",
+        "-f", "ogg",            // OGG container
+        "pipe:1",               // write to stdout
+      ]);
+      const chunks: Buffer[] = [];
+      proc.stdout.on("data", (c: Buffer) => chunks.push(c));
+      proc.stderr.on("data", () => {}); // suppress ffmpeg output
+      proc.on("close", (code: number) => {
+        if (code === 0) resolve(Buffer.concat(chunks));
+        else reject(new Error(`ffmpeg exited with code ${code}`));
+      });
+      proc.on("error", reject);
+      proc.stdin.write(pcmBuffer);
+      proc.stdin.end();
+    });
+
+    const jid = formatJid(to);
+    const result = await sock.sendMessage(jid, {
+      audio: oggBuffer,
+      mimetype: "audio/ogg; codecs=opus",
+      ptt: true, // sends as voice note, not regular audio file
+    });
+    log(`Voice note sent to ${to} (${Math.round(oggBuffer.length / 1024)} KB OGG)`);
+    return { success: true, messageId: result?.key?.id };
+  } catch (err: any) {
+    log(`sendWhatsAppVoiceNote error: ${err.message}`);
+    return { success: false, error: err.message };
+  }
 }
 
 /** Show "typing…" indicator to the client — call before sending a reply */

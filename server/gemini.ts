@@ -418,6 +418,85 @@ export async function transcribeAudio(
 }
 
 /**
+ * Convert text to speech using Gemini TTS models.
+ * Cascade: gemini-3.1-flash-tts-preview → gemini-2.5-flash-preview-tts
+ * Returns raw PCM audio as base64 + sample rate, or null if unavailable.
+ *
+ * Gemini TTS returns audio/L16 (signed 16-bit PCM) — convert to OGG/Opus
+ * with ffmpeg before sending as a WhatsApp voice note.
+ */
+export async function textToSpeech(
+  text: string
+): Promise<{ pcmBase64: string; sampleRate: number } | null> {
+  const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (!geminiKey) return null;
+
+  const TTS_MODELS = [
+    "gemini-3.1-flash-tts-preview",   // newest, lowest latency
+    "gemini-2.5-flash-preview-tts",   // stable fallback
+  ];
+
+  // Arabic-friendly voice — "Aoede" has good Arabic/multilingual quality
+  const VOICE = "Aoede";
+
+  for (const model of TTS_MODELS) {
+    if (modelCooldowns[model] && Date.now() < modelCooldowns[model]) {
+      const secs = Math.ceil((modelCooldowns[model] - Date.now()) / 1000);
+      console.warn(`[TTS] ${model} in cooldown (${secs}s) — skipping`);
+      continue;
+    }
+    try {
+      const res = await fetch(
+        `${GEMINI_BASE}/${model}:generateContent?key=${geminiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text }] }],
+            generationConfig: {
+              responseModalities: ["AUDIO"],
+              speechConfig: {
+                voiceConfig: { prebuiltVoiceConfig: { voiceName: VOICE } },
+              },
+            },
+          }),
+        }
+      );
+
+      if (res.ok) {
+        const data = (await res.json()) as any;
+        const part = data?.candidates?.[0]?.content?.parts?.[0];
+        const pcmBase64: string | undefined = part?.inlineData?.data;
+        const mimeType: string = part?.inlineData?.mimeType ?? "audio/L16;rate=24000";
+
+        if (pcmBase64) {
+          // Extract sample rate from mime type e.g. "audio/L16;rate=24000"
+          const rateMatch = mimeType.match(/rate=(\d+)/);
+          const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
+          console.log(`[TTS] ${model}: ${Math.round(pcmBase64.length * 0.75 / 1024)} KB PCM @ ${sampleRate}Hz`);
+          return { pcmBase64, sampleRate };
+        }
+        console.warn(`[TTS] ${model}: empty audio response`);
+      } else {
+        const status = res.status;
+        if (status === 429) {
+          modelCooldowns[model] = Date.now() + QUOTA_COOLDOWN_MS;
+          console.warn(`[TTS] ${model} quota (429) — cooldown, trying next`);
+        } else {
+          const errBody = await res.text();
+          console.warn(`[TTS] ${model} error ${status}: ${errBody.slice(0, 150)}`);
+        }
+      }
+    } catch (err: any) {
+      console.warn(`[TTS] ${model} threw: ${err.message}`);
+    }
+  }
+
+  console.warn("[TTS] All Gemini TTS models failed");
+  return null;
+}
+
+/**
  * Ask Gemini with multi-turn history, optional client memory, and optional image.
  * Falls back through all free-tier Groq models if all Gemini models are exhausted.
  * Truncated responses are never saved to history.
