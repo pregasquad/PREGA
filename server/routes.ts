@@ -4101,6 +4101,7 @@ export async function registerRoutes(
             price: s.price,
             duration: s.duration,
             category: s.category,
+            isStartingPrice: !!s.isStartingPrice,
           }));
 
           const salonCtx = {
@@ -4173,7 +4174,8 @@ export async function registerRoutes(
           await new Promise<void>((r) => setTimeout(r, typingDelay));
           await stopTypingPresence(remoteJid);
 
-          await sendWhatsAppMessage(remoteJid, aiReply);
+          const finalReply = `أهلا بك!\n\n${aiReply}`;
+          await sendWhatsAppMessage(remoteJid, finalReply);
           const turnNum = Math.floor(newHistory.length / 2);
           const clientLabel = mem.clientName ? `${mem.clientName} (${remoteJid})` : remoteJid;
           console.log(`[Bot] ${isReturningClient ? "↩ returning" : "★ new"} client ${clientLabel} — turn ${turnNum}: "${reply.slice(0, 40)}..."`);
