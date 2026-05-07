@@ -112,11 +112,9 @@ let lastPairingError: string | null = null;
 let status: Status = "disconnected";
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let shouldReconnect = false;
+let reconnectAttempts = 0; // exponential backoff counter
 let socketIO: any = null;
 let pendingPairingPhone: string | null = null;
-let isVerifyingLink = false;
-let verifyRetryCount = 0;
-let verifyReconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
 // Deduplication: Map<msgId, processedAt ms> — per-entry TTL, never wipe the whole set
 // so a reconnect near the clear boundary can't replay already-processed messages.
@@ -165,13 +163,16 @@ function wipeAuth() {
   clearAuthFromDb().catch(() => {}); // also wipe from DB (non-blocking)
 }
 
-function scheduleReconnect(delayMs = 20000) {
+// Exponential backoff: 5s → 10s → 20s → 40s → 60s (cap)
+function scheduleReconnect(delayMs?: number) {
   if (reconnectTimer) clearTimeout(reconnectTimer);
   if (!shouldReconnect) return;
+  const backoffMs = delayMs ?? Math.min(5000 * Math.pow(2, reconnectAttempts), 60000);
+  reconnectAttempts++;
+  log(`Reconnecting in ${Math.round(backoffMs / 1000)}s (attempt ${reconnectAttempts})…`);
   reconnectTimer = setTimeout(() => {
-    log("Reconnecting…");
     connectSocket().catch((err) => log(`Reconnect failed: ${err.message}`));
-  }, delayMs);
+  }, backoffMs);
 }
 
 async function fetchVersionWithFallback() {
@@ -468,13 +469,12 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
       pendingPairingPhone = null;
       lastPairingError = null;
       shouldReconnect = true;
-      isVerifyingLink = false;
-      verifyRetryCount = 0;
-
-      if (verifyReconnectTimer) { clearTimeout(verifyReconnectTimer); verifyReconnectTimer = null; }
+      reconnectAttempts = 0; // reset backoff on successful connect
       const phone = sock?.user?.id?.split(":")[0] ?? "?";
       log(`Connected as +${phone}`);
       if (socketIO) socketIO.emit("whatsapp:connected", { phone });
+      // Extra safety: persist session to DB immediately on open
+      saveAuthToDb().catch(() => {});
     }
 
     if (connection === "close") {
@@ -536,9 +536,9 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
         log(isDeviceRemoved ? "Device removed by WhatsApp — session cleared" : "Logged out — session cleared");
         if (socketIO) socketIO.emit("whatsapp:logged_out", { reason: isDeviceRemoved ? "device_removed" : "logged_out" });
       } else {
-        // ── Other disconnect ─────────────────────────────────────────────
+        // ── Other disconnect — use exponential backoff ───────────────────
         if (socketIO) socketIO.emit("whatsapp:disconnected", { reason });
-        if (shouldReconnect) scheduleReconnect(20000);
+        if (shouldReconnect) scheduleReconnect(); // uses backoff: 5s→10s→20s→40s→60s
       }
     }
   });

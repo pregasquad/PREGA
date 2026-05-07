@@ -286,14 +286,9 @@ export default function WhatsApp() {
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [status, refetch, isWaitingForCode]);
 
-  // ── Auto-clear stale paired-device history when no phone is connected ────
-  const clearedSessionRef = useRef(false);
-  useEffect(() => {
-    if (!clearedSessionRef.current && waData && status === "disconnected") {
-      clearedSessionRef.current = true;
-      apiRequest("POST", "/api/whatsapp/clear-session").catch(() => {});
-    }
-  }, [waData, status]);
+  // NOTE: We deliberately do NOT auto-clear the session on page load.
+  // Koyeb takes a few seconds to restore the session from the DB on startup,
+  // and auto-wiping during that window would destroy valid credentials.
 
   // ── Clear pairing state once connected ──────────────────────────────────
   useEffect(() => {
