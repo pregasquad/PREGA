@@ -4156,7 +4156,7 @@ export async function registerRoutes(
               await stopTypingPresence(remoteJid);
               await sendWhatsAppMessage(
                 remoteJid,
-                `واخا حبيبتي 💙\n\nتم إلغاء ميعادك بنجاح ✅\n\nإذا بغيتِ تحجزي وقت آخر، راسليني هنا وغادي يتواصلو معاك الفريق 🌸\nكنتمنو نشوفوك قريباً 💖`
+                `واخا حبيبتي 💙\n\nتم إلغاء ميعادك بنجاح ✅\n\nإذا بغيتِ تحجزي وقت آخر، راسليني هنا وغادي يتواصلو معاكِ الفريق 🌸\nكنتمنو نشوفوك قريباً 💖`
               );
               console.log(`[Bot] Appointment ${aptToCancel.id} cancelled via natural language from ${remoteJid}`);
               return;

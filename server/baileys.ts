@@ -773,7 +773,7 @@ export async function sendBotConfirmed(
 export async function sendBotCancelled(
   clientPhone: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  const msg = `Votre rendez-vous a été annulé ❌\n\nN'hésitez pas à nous recontacter pour un nouveau créneau 🌸\nNous serons ravis de vous accueillir à nouveau 💖`;
+  const msg = `Votre rendez-vous a été annulé ✅\n\nN'hésitez pas à nous contacter pour réserver un nouveau créneau 🌸\nNous serons ravis de vous accueillir à nouveau 💖`;
   return sendWhatsAppMessage(clientPhone, msg);
 }
 
