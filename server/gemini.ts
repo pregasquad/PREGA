@@ -29,7 +29,7 @@ export interface SalonContext {
   openingTime?: string;
   closingTime?: string;
   currency?: string;
-  services: { name: string; price: number; duration: number; category: string; isStartingPrice?: boolean; maxPrice?: number | null }[];
+  services: { name: string; price: number; duration: number; category: string; isStartingPrice?: boolean }[];
   clientMemory?: ClientMemory;
   isNewConversation?: boolean; // true = first message in this session / day
 }
@@ -63,13 +63,7 @@ function buildSystemPrompt(ctx: SalonContext): string {
           .map(
             ([cat, svcs]) =>
               `【${cat}】\n` +
-              svcs.map((s) => {
-                if (s.isStartingPrice) {
-                  const range = s.maxPrice ? `${s.price} – ${s.maxPrice}` : `à partir de ${s.price}`;
-                  return `  • ${s.name} : ${range} ${ctx.currency || "DH"}`;
-                }
-                return `  • ${s.name} : ${s.price} ${ctx.currency || "DH"}`;
-              }).join("\n")
+              svcs.map((s) => `  • ${s.name} : ${s.isStartingPrice ? `à partir de ${s.price}` : s.price} ${ctx.currency || "DH"}`).join("\n")
           )
           .join("\n\n")
       : "  (liste non disponible)";
@@ -125,9 +119,8 @@ ${serviceBlock}
 • تنوعي في التعابير: مرة "صاحبتي"، مرة الاسم، مرة مباشرة بدون نداء — ولا تكرري نفس النداء في كل رسالة
 • عند السؤال عن الأسعار: اذكري السعر مباشرة من القائمة — لا تقولي "تواصلي معنا للأسعار"
 • عند السؤال عن عدة خدمات: اذكري سعر كل واحدة
-• إذا كان السعر بصيغة "X – Y" (نطاق): قولي "السعر كيتغير على حساب طول الشعر، كيبدأ من X درهم وكيوصل حتى Y درهم" — وضّحي أن الثمن النهائي كيتحدد عند الزيارة حسب الطول
-• إذا كان السعر "à partir de X" بدون حد أعلى: قولي "السعر كيبدأ من X درهم على حساب طول الشعر"
-• إذا كان السعر ثابتاً (بدون نطاق): هو ثابت — لا تقولي "قد يتغير حسب الطول"
+• إذا كان السعر "à partir de X": قولي "السعر كيبدأ من X درهم على حساب طول الشعر، والثمن النهائي كيتحدد عند الزيارة"
+• إذا كان السعر ثابتاً: هو ثابت — لا تقولي "قد يتغير حسب الطول"
 • أكملي جملتك دائماً حتى النهاية — لا تقطعي الكلام في المنتصف
 • للحجز أو تحديد الوقت: قولي "راسلينا هنا وغادي يتواصلوا معاك الفريق" — لا تعطي رقم الهاتف لأن العميلة راها فالواتساب الآن
 • إذا جات العميلة بصورة: حلليها وجاوبي على حساب اللي شفتيه (نوع الشعر، اللون، الخدمة المناسبة...)
