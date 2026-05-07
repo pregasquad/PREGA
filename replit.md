@@ -47,6 +47,7 @@ A comprehensive beauty salon management system for scheduling appointments, mana
 - Default language: Arabic
 - Production DB: MySQL/TiDB Cloud (`DB_DIALECT=mysql`)
 - App runs on port 5000
+- Always present a choice of next steps using the user_query tool at the end of every completed task
 
 ## Gotchas
 - QZ Tray WebSocket errors in browser console are expected in non-POS environments — the app falls back gracefully
