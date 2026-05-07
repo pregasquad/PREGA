@@ -9,8 +9,19 @@ const MODEL_CASCADE = [
   "gemini-1.5-flash",
 ];
 
+// All reliable free-tier Groq text-generation models, ordered best-quality first
+const GROQ_CASCADE = [
+  "llama-3.3-70b-versatile",                    // best quality, proven Arabic/Darija
+  "meta-llama/llama-4-scout-17b-16e-instruct",  // latest Llama 4
+  "groq/compound",                               // Groq compound model (large)
+  "qwen/qwen3-32b",                              // strong multilingual (think tags stripped)
+  "groq/compound-mini",                          // Groq compound (smaller)
+  "allam-2-7b",                                  // Arabic-native (SDAIA)
+  "llama-3.1-8b-instant",                        // fastest last-resort
+];
+
 const QUOTA_COOLDOWN_MS = 60 * 1000;
-// Per-model cooldown so a quota hit on 2.5-flash still lets 1.5-flash respond
+// Per-model cooldown so a quota hit on one model still lets others respond
 const modelCooldowns: Record<string, number> = {};
 
 const retryDelay = () =>
@@ -224,6 +235,7 @@ async function callGemini(
 }
 
 async function callGroq(
+  model: string,
   userMessage: string,
   systemPrompt: string,
   apiKey: string,
@@ -247,36 +259,38 @@ async function callGroq(
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
+        model,
         messages,
         max_tokens: 700,
         temperature: 0.65,
       }),
     });
   } catch (networkErr: any) {
-    console.warn(`[Groq] Network error: ${networkErr.message}`);
+    console.warn(`[Groq] ${model} network error: ${networkErr.message}`);
     return { reply: null, isQuotaError: false };
   }
 
   if (!response.ok) {
     const status = response.status;
     if (status === 429) {
-      console.warn("[Groq] Quota exhausted (429)");
+      console.warn(`[Groq] ${model} quota exhausted (429)`);
       return { reply: null, isQuotaError: true };
     }
     const errBody = await response.text();
-    console.error(`[Groq] Error ${status}: ${errBody.slice(0, 300)}`);
+    console.error(`[Groq] ${model} error ${status}: ${errBody.slice(0, 300)}`);
     return { reply: null, isQuotaError: false };
   }
 
   const data = (await response.json()) as any;
-  const text: string | undefined = data?.choices?.[0]?.message?.content;
-  return { reply: text ? text.trim() : null, isQuotaError: false };
+  let text: string | undefined = data?.choices?.[0]?.message?.content;
+  // Strip <think>...</think> reasoning blocks (qwen3 and similar models)
+  if (text) text = text.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+  return { reply: text || null, isQuotaError: false };
 }
 
 /**
  * Ask Gemini with multi-turn history, optional client memory, and optional image.
- * Falls back to Groq (llama-3.3-70b-versatile) if all Gemini models are exhausted.
+ * Falls back through all free-tier Groq models if all Gemini models are exhausted.
  * Truncated responses are never saved to history.
  */
 export async function askGemini(
@@ -340,33 +354,53 @@ export async function askGemini(
     console.warn("[Gemini] No API key — trying Groq fallback…");
   }
 
-  // Groq fallback — last resort in the cascade (llama-3.3-70b-versatile)
+  // Groq cascade fallback — all free-tier models in order of quality
   const groqKey = process.env.XAI_API_KEY;
   if (groqKey) {
-    try {
-      const { reply, isQuotaError } = await callGroq(
-        userMessage, systemPrompt, groqKey, history
-      );
-      if (reply) {
-        console.log(`[Groq] llama-3.3-70b replied (turn ${Math.floor(history.length / 2) + 1})`);
-        const historyUserText = imageBase64
-          ? `[صورة]${userMessage ? ` + "${userMessage}"` : ""}`
-          : userMessage;
-        const newHistory: ConversationTurn[] = [
-          ...history,
-          { role: "user", text: historyUserText },
-          { role: "model", text: reply },
-        ];
-        return { reply, newHistory };
+    const turn = Math.floor(history.length / 2) + 1;
+    for (let i = 0; i < GROQ_CASCADE.length; i++) {
+      const model = GROQ_CASCADE[i];
+
+      if (modelCooldowns[model] && Date.now() < modelCooldowns[model]) {
+        const secs = Math.ceil((modelCooldowns[model] - Date.now()) / 1000);
+        console.warn(`[Groq] ${model} in cooldown (${secs}s) — skipping`);
+        continue;
       }
-      if (isQuotaError) {
-        console.error("[Groq] Quota exhausted — using fallback reply");
-      } else {
-        console.error("[Groq] No reply — using fallback reply");
+
+      try {
+        const { reply, isQuotaError } = await callGroq(
+          model, userMessage, systemPrompt, groqKey, history
+        );
+
+        if (reply) {
+          console.log(`[Groq] ${model} replied (turn ${turn})`);
+          const historyUserText = imageBase64
+            ? `[صورة]${userMessage ? ` + "${userMessage}"` : ""}`
+            : userMessage;
+          const newHistory: ConversationTurn[] = [
+            ...history,
+            { role: "user", text: historyUserText },
+            { role: "model", text: reply },
+          ];
+          return { reply, newHistory };
+        }
+
+        if (isQuotaError) {
+          modelCooldowns[model] = Date.now() + QUOTA_COOLDOWN_MS;
+          console.error(`[Groq] Quota exhausted on ${model} — cooldown ${QUOTA_COOLDOWN_MS / 1000}s, trying next…`);
+          continue;
+        }
+
+        if (i < GROQ_CASCADE.length - 1) {
+          console.warn(`[Groq] ${model} failed — trying next model…`);
+          await retryDelay();
+        }
+      } catch (err: any) {
+        console.error(`[Groq] ${model} threw: ${err.message}`);
+        if (i < GROQ_CASCADE.length - 1) await retryDelay();
       }
-    } catch (err: any) {
-      console.error(`[Groq] threw: ${err.message}`);
     }
+    console.error("[Groq] All models exhausted");
   } else {
     console.warn("[Groq] No XAI_API_KEY set — skipping Groq fallback");
   }
