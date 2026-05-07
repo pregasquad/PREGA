@@ -161,30 +161,41 @@ async function callGemini(
     { role: "user", parts: currentUserParts },
   ];
 
+  const body = JSON.stringify({
+    systemInstruction: { parts: [{ text: systemPrompt }] },
+    contents,
+    generationConfig: { maxOutputTokens: 700, temperature: 0.65 },
+  });
+
   let response: Response;
-  try {
-    response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        contents,
-        generationConfig: {
-          maxOutputTokens: 700,
-          temperature: 0.65,
-        },
-      }),
-    });
-  } catch (networkErr: any) {
-    console.warn(`[Gemini] ${model} network error: ${networkErr.message}`);
-    return { reply: null, isQuotaError: false, isTruncated: false };
+  const MAX_503_RETRIES = 2;
+  for (let attempt = 0; attempt <= MAX_503_RETRIES; attempt++) {
+    try {
+      response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+      });
+    } catch (networkErr: any) {
+      console.warn(`[Gemini] ${model} network error: ${networkErr.message}`);
+      return { reply: null, isQuotaError: false, isTruncated: false };
+    }
+    if (response.status !== 503 || attempt === MAX_503_RETRIES) break;
+    const wait = 3000 + attempt * 2000;
+    console.warn(`[Gemini] ${model} overloaded (503) — retry ${attempt + 1}/${MAX_503_RETRIES} in ${wait / 1000}s`);
+    await new Promise<void>((r) => setTimeout(r, wait));
   }
 
   if (!response.ok) {
     const status = response.status;
-    if (status === 429 || status === 503) {
-      console.warn(`[Gemini] ${model} quota/overload (${status})`);
+    if (status === 429) {
+      console.warn(`[Gemini] ${model} quota exhausted (429)`);
       return { reply: null, isQuotaError: true, isTruncated: false };
+    }
+    if (status === 503) {
+      // Temporary overload — NOT a quota issue, just retry
+      console.warn(`[Gemini] ${model} overloaded (503) — will retry`);
+      return { reply: null, isQuotaError: false, isTruncated: false };
     }
     if (status === 404) {
       console.warn(`[Gemini] ${model} not found (404) — skipping`);
