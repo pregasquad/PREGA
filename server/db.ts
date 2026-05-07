@@ -857,6 +857,35 @@ export async function ensureServiceStartingPriceColumn(): Promise<void> {
   }
 }
 
+export async function ensureServiceMaxPriceColumn(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      const [rows] = await connection.query(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_NAME = 'services' AND COLUMN_NAME = 'max_price'
+      `);
+      if ((rows as any[]).length === 0) {
+        await connection.query(`ALTER TABLE services ADD COLUMN max_price DOUBLE NULL`);
+        console.log("Added max_price column to services table");
+      }
+      connection.release();
+    } else {
+      await pool.query(`
+        DO $$ 
+        BEGIN 
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'services' AND column_name = 'max_price') THEN
+            ALTER TABLE services ADD COLUMN max_price DOUBLE PRECISION NULL;
+          END IF;
+        END $$;
+      `);
+    }
+    console.log("Service max price column ready");
+  } catch (error) {
+    console.error("Failed to ensure service max price column:", error);
+  }
+}
+
 export async function ensurePlanningShortcutsColumn(): Promise<void> {
   try {
     if (dbDialect === 'mysql') {

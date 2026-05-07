@@ -4102,6 +4102,7 @@ export async function registerRoutes(
             duration: s.duration,
             category: s.category,
             isStartingPrice: !!s.isStartingPrice,
+            maxPrice: s.maxPrice ?? null,
           }));
 
           const salonCtx = {

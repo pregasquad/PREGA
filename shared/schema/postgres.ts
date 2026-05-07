@@ -113,6 +113,7 @@ export const services = pgTable("services", {
   commissionPercent: doublePrecision("commission_percent").notNull().default(50),
   loyaltyPointsMultiplier: integer("loyalty_points_multiplier").notNull().default(1),
   isStartingPrice: boolean("is_starting_price").notNull().default(false),
+  maxPrice: doublePrecision("max_price"),
 });
 
 export const categories = pgTable("categories", {

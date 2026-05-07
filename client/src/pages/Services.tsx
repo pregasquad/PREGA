@@ -26,6 +26,7 @@ const serviceFormSchema = insertServiceSchema.extend({
   linkedProductId: z.coerce.number().optional().nullable(),
   linkedProductIds: z.array(z.number()).default([]),
   commissionPercent: z.coerce.number().min(0).max(100).default(50),
+  maxPrice: z.coerce.number().optional().nullable(),
 });
 
 export default function Services() {
@@ -95,7 +96,7 @@ export default function Services() {
 
   const sForm = useForm({
     resolver: zodResolver(serviceFormSchema),
-    defaultValues: { name: "", price: 0, duration: 30, category: "", linkedProductId: null, linkedProductIds: [] as number[], commissionPercent: 50, isStartingPrice: false }
+    defaultValues: { name: "", price: 0, duration: 30, category: "", linkedProductId: null, linkedProductIds: [] as number[], commissionPercent: 50, isStartingPrice: false, maxPrice: null }
   });
 
   const cForm = useForm({
@@ -216,7 +217,7 @@ export default function Services() {
                             <div key={service.id} data-testid={`card-service-${service.id}`} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/50 group">
                               <div className="min-w-0">
                                 <h4 className="font-semibold text-sm truncate">{service.name}</h4>
-                                <p className="text-xs text-muted-foreground">{service.duration} {t("common.minutes")} • {service.isStartingPrice ? `${t("services.startingFrom")} ` : ''}{service.price} DH • {t("services.commission")} {service.commissionPercent ?? 50}%</p>
+                                <p className="text-xs text-muted-foreground">{service.duration} {t("common.minutes")} • {service.isStartingPrice ? `${t("services.startingFrom")} ${service.price}${(service as any).maxPrice ? ` – ${(service as any).maxPrice}` : ''} DH` : `${service.price} DH`} • {t("services.commission")} {service.commissionPercent ?? 50}%</p>
                                 {(((service.linkedProductIds as number[] | null | undefined) || []).length > 0 || service.linkedProductId) && (
                                   <div className="text-xs text-primary flex items-center gap-1 mt-1 flex-wrap">
                                     <Package className="w-3 h-3" />
@@ -372,6 +373,26 @@ export default function Services() {
                   </FormItem>
                 )}
               />
+              {sForm.watch("isStartingPrice") && (
+                <FormField
+                  control={sForm.control}
+                  name="maxPrice"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("services.maxPrice", { defaultValue: "Prix maximum (DH)" })}</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="ex: 750"
+                          {...field}
+                          value={field.value ?? ""}
+                          onChange={e => field.onChange(e.target.value === "" ? null : Number(e.target.value))}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              )}
               <Button type="submit" className="w-full" disabled={createService.isPending}>{t("common.add")}</Button>
             </form>
           </Form>
@@ -434,6 +455,26 @@ export default function Services() {
                   </FormItem>
                 )}
               />
+              {editSForm.watch("isStartingPrice") && (
+                <FormField
+                  control={editSForm.control}
+                  name="maxPrice"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("services.maxPrice", { defaultValue: "Prix maximum (DH)" })}</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="ex: 750"
+                          {...field}
+                          value={field.value ?? ""}
+                          onChange={e => field.onChange(e.target.value === "" ? null : Number(e.target.value))}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              )}
               <FormField
                 control={editSForm.control}
                 name="linkedProductIds"

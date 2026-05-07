@@ -29,7 +29,7 @@ export interface SalonContext {
   openingTime?: string;
   closingTime?: string;
   currency?: string;
-  services: { name: string; price: number; duration: number; category: string; isStartingPrice?: boolean }[];
+  services: { name: string; price: number; duration: number; category: string; isStartingPrice?: boolean; maxPrice?: number | null }[];
   clientMemory?: ClientMemory;
   isNewConversation?: boolean; // true = first message in this session / day
 }
@@ -63,7 +63,13 @@ function buildSystemPrompt(ctx: SalonContext): string {
           .map(
             ([cat, svcs]) =>
               `【${cat}】\n` +
-              svcs.map((s) => `  • ${s.name} : ${s.isStartingPrice ? `à partir de ${s.price}` : s.price} ${ctx.currency || "DH"}`).join("\n")
+              svcs.map((s) => {
+                if (s.isStartingPrice) {
+                  const range = s.maxPrice ? `${s.price} – ${s.maxPrice}` : `à partir de ${s.price}`;
+                  return `  • ${s.name} : ${range} ${ctx.currency || "DH"}`;
+                }
+                return `  • ${s.name} : ${s.price} ${ctx.currency || "DH"}`;
+              }).join("\n")
           )
           .join("\n\n")
       : "  (liste non disponible)";

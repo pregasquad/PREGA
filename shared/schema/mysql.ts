@@ -112,6 +112,7 @@ export const services = mysqlTable("services", {
   commissionPercent: double("commission_percent").notNull().default(50),
   loyaltyPointsMultiplier: int("loyalty_points_multiplier").notNull().default(1),
   isStartingPrice: boolean("is_starting_price").notNull().default(false),
+  maxPrice: double("max_price"),
 });
 
 export const categories = mysqlTable("categories", {
