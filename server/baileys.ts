@@ -636,27 +636,11 @@ export async function sendWhatsAppVoiceNote(
 
     // Convert raw PCM → OGG/Opus using ffmpeg (required by WhatsApp for voice notes)
     const oggBuffer = await new Promise<Buffer>((resolve, reject) => {
-      const { spawn, spawnSync } = require("child_process") as typeof import("child_process");
-      const fs = require("fs") as typeof import("fs");
+      const { spawn } = require("child_process") as typeof import("child_process");
 
-      // Resolve ffmpeg: env override → shell which → known locations → bare name fallback
-      const ffmpegBin = (() => {
-        if (process.env.FFMPEG_PATH) return process.env.FFMPEG_PATH;
-        // Use shell:true so the child process inherits the full shell PATH (works on Koyeb/Linux)
-        const which = spawnSync("which", ["ffmpeg"], { encoding: "utf8", shell: true });
-        if (which.status === 0 && which.stdout.trim()) return which.stdout.trim();
-        // Check common installation paths explicitly (Debian/Ubuntu, Alpine, Nix)
-        const candidates = [
-          "/usr/bin/ffmpeg",
-          "/usr/local/bin/ffmpeg",
-          "/bin/ffmpeg",
-          "/nix/store/x5hwjkyng8385q1pqhz8wyqkq0izmhpi-replit-runtime-path/bin/ffmpeg",
-        ];
-        for (const p of candidates) {
-          try { if (fs.existsSync(p)) return p; } catch {}
-        }
-        return "ffmpeg"; // last resort — rely on PATH at spawn time
-      })();
+      // ffmpeg-static bundles a pre-built ffmpeg binary — works on any platform/deployment
+      const bundledFfmpeg: string | null = require("ffmpeg-static");
+      const ffmpegBin = process.env.FFMPEG_PATH || bundledFfmpeg || "ffmpeg";
 
       const proc = spawn(ffmpegBin, [
         "-f", "s16le",          // input format: signed 16-bit little-endian PCM
