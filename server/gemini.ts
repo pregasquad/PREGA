@@ -140,6 +140,7 @@ ${serviceBlock}
 • أكملي جملتك دائماً حتى النهاية — لا تقطعي الكلام في المنتصف
 • للحجز أو تحديد الوقت: قولي "راسلينا هنا وغادي يتواصلوا معاك الفريق" — لا تعطي رقم الهاتف لأن العميلة راها فالواتساب الآن
 • إذا جات العميلة بصورة: حلليها وجاوبي على حساب اللي شفتيه (نوع الشعر، اللون، الخدمة المناسبة...)
+• إذا جات العميلة برسالة صوتية (🎙️ رسالة صوتية: "..."): تصرفي بشكل طبيعي كأنك سمعتيها — لا تقولي "سمعت رسالتك الصوتية" أو "شكراً على الرسالة الصوتية" — جاوبي مباشرة على المحتوى كما لو كانت كتبت النص
 • اختمي برسالة دافئة وإيموجي 💖 🌸 ✨ — لكن لا تكرري نفس الجملة في كل رسالة`;
 
   cachedPromptKey = key;
@@ -286,6 +287,97 @@ async function callGroq(
   // Strip <think>...</think> reasoning blocks (qwen3 and similar models)
   if (text) text = text.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
   return { reply: text || null, isQuotaError: false };
+}
+
+/**
+ * Transcribe a voice note (audio buffer as base64).
+ * Cascade: Gemini 1.5 Flash (native audio) → Groq Whisper large-v3-turbo.
+ * Returns the transcribed text, or null if both fail.
+ */
+export async function transcribeAudio(
+  audioBase64: string,
+  mimeType: string   // e.g. "audio/ogg; codecs=opus"
+): Promise<string | null> {
+  // Strip codec params — keep only the base MIME type
+  const cleanMime = mimeType.split(";")[0].trim();
+
+  // ── 1. Gemini 1.5 Flash — supports OGG/Opus audio natively as inline data ──
+  const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (geminiKey) {
+    try {
+      const model = "gemini-1.5-flash";
+      const url = `${GEMINI_BASE}/${model}:generateContent?key=${geminiKey}`;
+      const body = JSON.stringify({
+        contents: [{
+          parts: [
+            { inlineData: { mimeType: cleanMime, data: audioBase64 } },
+            { text: "اكتبي نص هاد الرسالة الصوتية بالضبط كما هي، بدون أي تعليق أو إضافة." },
+          ],
+        }],
+        generationConfig: { maxOutputTokens: 400, temperature: 0 },
+      });
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+      });
+      if (res.ok) {
+        const data = (await res.json()) as any;
+        const text: string | undefined = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+        if (text) {
+          console.log(`[Transcription] Gemini ${model}: "${text.slice(0, 80)}"`);
+          return text;
+        }
+      } else {
+        const errBody = await res.text();
+        console.warn(`[Transcription] Gemini error ${res.status}: ${errBody.slice(0, 200)}`);
+      }
+    } catch (err: any) {
+      console.warn(`[Transcription] Gemini threw: ${err.message}`);
+    }
+  }
+
+  // ── 2. Groq Whisper large-v3-turbo fallback ───────────────────────────────
+  const groqKey = process.env.XAI_API_KEY;
+  if (groqKey) {
+    try {
+      const audioBuffer = Buffer.from(audioBase64, "base64");
+      const extMap: Record<string, string> = {
+        "audio/ogg": "ogg", "audio/mpeg": "mp3", "audio/mp4": "mp4",
+        "audio/webm": "webm", "audio/wav": "wav", "audio/flac": "flac",
+        "audio/aac": "aac", "audio/aiff": "aiff",
+      };
+      const ext = extMap[cleanMime] ?? "ogg";
+
+      const formData = new FormData();
+      formData.append("file", new Blob([audioBuffer], { type: cleanMime }), `voice.${ext}`);
+      formData.append("model", "whisper-large-v3-turbo");
+      // No language hint — auto-detect handles Arabic / Darija / French better
+
+      const res = await fetch(`${GROQ_BASE}/audio/transcriptions`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${groqKey}` },
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = (await res.json()) as any;
+        const text: string | undefined = data?.text?.trim();
+        if (text) {
+          console.log(`[Transcription] Groq Whisper: "${text.slice(0, 80)}"`);
+          return text;
+        }
+      } else {
+        const errBody = await res.text();
+        console.warn(`[Transcription] Groq Whisper error ${res.status}: ${errBody.slice(0, 200)}`);
+      }
+    } catch (err: any) {
+      console.warn(`[Transcription] Groq Whisper threw: ${err.message}`);
+    }
+  }
+
+  console.warn("[Transcription] Both Gemini and Groq Whisper failed — returning null");
+  return null;
 }
 
 /**

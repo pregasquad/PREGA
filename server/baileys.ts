@@ -291,6 +291,8 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
       const rawPhone = remoteJid.replace(/@(s\.whatsapp\.net|lid|c\.us)$/, "");
 
       const isImageMsg = !!msg.message?.imageMessage;
+      const isAudioMsg = !!(msg.message?.audioMessage?.url || msg.message?.audioMessage?.directPath);
+
       const text = (
         msg.message?.conversation ||
         msg.message?.extendedTextMessage?.text ||
@@ -300,8 +302,8 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
         ""
       ).trim();
 
-      // Skip if there is no text AND no image — truly empty message
-      if (!rawPhone || (!text && !isImageMsg)) continue;
+      // Skip if there is no text, no image, and no audio — truly empty message
+      if (!rawPhone || (!text && !isImageMsg && !isAudioMsg)) continue;
 
       // Download image if present — pass as base64 to the handler for vision analysis
       let imageBase64: string | undefined;
@@ -318,11 +320,41 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
         }
       }
 
-      log(`Incoming from ${remoteJid}: "${text.slice(0, 60)}"${isImageMsg ? " [+image]" : ""}`);
+      // Transcribe voice note if present — result is added to the text context
+      let effectiveText = text;
+      if (isAudioMsg) {
+        try {
+          const { downloadMediaMessage } = await import("@whiskeysockets/baileys");
+          const buffer = await downloadMediaMessage(msg, "buffer", {}) as Buffer;
+          const audioMime = msg.message?.audioMessage?.mimetype || "audio/ogg; codecs=opus";
+          log(`Voice note received (${Math.round(buffer.length / 1024)} KB) — transcribing…`);
+          const { transcribeAudio } = await import("./gemini");
+          const transcription = await transcribeAudio(buffer.toString("base64"), audioMime);
+          if (transcription) {
+            // Wrap so the AI knows it came from a voice message
+            effectiveText = text
+              ? `${text}\n🎙️ رسالة صوتية: "${transcription}"`
+              : `🎙️ رسالة صوتية: "${transcription}"`;
+            log(`Voice transcribed: "${transcription.slice(0, 80)}"`);
+          } else {
+            // Transcription failed — tell AI there was a voice note it couldn't hear
+            effectiveText = text || "🎙️ (رسالة صوتية — لم أتمكن من سماعها)";
+            log("Voice transcription failed — passing fallback text");
+          }
+        } catch (audioErr: any) {
+          log(`Voice note error: ${audioErr.message}`);
+          effectiveText = text || "🎙️ (رسالة صوتية — خطأ في التحويل)";
+        }
+      }
+
+      // Skip if still nothing usable after all processing
+      if (!effectiveText && !imageBase64) continue;
+
+      log(`Incoming from ${remoteJid}: "${effectiveText.slice(0, 60)}"${isImageMsg ? " [+image]" : ""}${isAudioMsg ? " [+voice]" : ""}`);
 
       if (incomingMessageHandler) {
         try {
-          await incomingMessageHandler(remoteJid, rawPhone, text, imageBase64, imageMimeType);
+          await incomingMessageHandler(remoteJid, rawPhone, effectiveText, imageBase64, imageMimeType);
         } catch (err: any) {
           log(`Incoming handler error: ${err.message}`);
         }
