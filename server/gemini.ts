@@ -1,5 +1,5 @@
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
-const XAI_BASE = "https://api.x.ai/v1";
+const GROQ_BASE = "https://api.groq.com/openai/v1";
 
 const MODEL_CASCADE = [
   "gemini-3.1-flash-lite-preview",
@@ -223,66 +223,49 @@ async function callGemini(
   return { reply: text ? text.trim() : null, isQuotaError: false, isTruncated: false };
 }
 
-async function callGrok(
+async function callGroq(
   userMessage: string,
   systemPrompt: string,
   apiKey: string,
-  history: ConversationTurn[],
-  imageBase64?: string,
-  imageMimeType?: string
+  history: ConversationTurn[]
 ): Promise<{ reply: string | null; isQuotaError: boolean }> {
-  const messages: { role: string; content: any }[] = [
+  const messages: { role: string; content: string }[] = [
     { role: "system", content: systemPrompt },
     ...history.map((turn) => ({
       role: turn.role === "model" ? "assistant" : "user",
       content: turn.text,
     })),
+    { role: "user", content: userMessage || "." },
   ];
-
-  // Build the final user message content (text + optional image)
-  if (imageBase64 && imageMimeType) {
-    messages.push({
-      role: "user",
-      content: [
-        {
-          type: "image_url",
-          image_url: { url: `data:${imageMimeType};base64,${imageBase64}` },
-        },
-        { type: "text", text: userMessage || "شوفي هاد الصورة وجاوبي عليها بما يناسب الصالون." },
-      ],
-    });
-  } else {
-    messages.push({ role: "user", content: userMessage });
-  }
 
   let response: Response;
   try {
-    response = await fetch(`${XAI_BASE}/chat/completions`, {
+    response = await fetch(`${GROQ_BASE}/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "grok-3-mini",
+        model: "llama-3.3-70b-versatile",
         messages,
         max_tokens: 700,
         temperature: 0.65,
       }),
     });
   } catch (networkErr: any) {
-    console.warn(`[Grok] Network error: ${networkErr.message}`);
+    console.warn(`[Groq] Network error: ${networkErr.message}`);
     return { reply: null, isQuotaError: false };
   }
 
   if (!response.ok) {
     const status = response.status;
     if (status === 429) {
-      console.warn("[Grok] Quota exhausted (429)");
+      console.warn("[Groq] Quota exhausted (429)");
       return { reply: null, isQuotaError: true };
     }
     const errBody = await response.text();
-    console.error(`[Grok] Error ${status}: ${errBody.slice(0, 300)}`);
+    console.error(`[Groq] Error ${status}: ${errBody.slice(0, 300)}`);
     return { reply: null, isQuotaError: false };
   }
 
@@ -293,7 +276,7 @@ async function callGrok(
 
 /**
  * Ask Gemini with multi-turn history, optional client memory, and optional image.
- * Falls back to Grok (xAI) if all Gemini models are exhausted.
+ * Falls back to Groq (llama-3.3-70b-versatile) if all Gemini models are exhausted.
  * Truncated responses are never saved to history.
  */
 export async function askGemini(
@@ -352,20 +335,20 @@ export async function askGemini(
         if (i < MODEL_CASCADE.length - 1) await retryDelay();
       }
     }
-    console.warn("[Gemini] All models exhausted — trying Grok fallback…");
+    console.warn("[Gemini] All models exhausted — trying Groq fallback…");
   } else {
-    console.warn("[Gemini] No API key — trying Grok fallback…");
+    console.warn("[Gemini] No API key — trying Groq fallback…");
   }
 
-  // Grok (xAI) fallback — last resort in the cascade
-  const grokKey = process.env.XAI_API_KEY;
-  if (grokKey) {
+  // Groq fallback — last resort in the cascade (llama-3.3-70b-versatile)
+  const groqKey = process.env.XAI_API_KEY;
+  if (groqKey) {
     try {
-      const { reply, isQuotaError } = await callGrok(
-        userMessage, systemPrompt, grokKey, history, imageBase64, imageMimeType
+      const { reply, isQuotaError } = await callGroq(
+        userMessage, systemPrompt, groqKey, history
       );
       if (reply) {
-        console.log(`[Grok] grok-3-mini replied (turn ${Math.floor(history.length / 2) + 1})${imageBase64 ? " [with image]" : ""}`);
+        console.log(`[Groq] llama-3.3-70b replied (turn ${Math.floor(history.length / 2) + 1})`);
         const historyUserText = imageBase64
           ? `[صورة]${userMessage ? ` + "${userMessage}"` : ""}`
           : userMessage;
@@ -377,15 +360,15 @@ export async function askGemini(
         return { reply, newHistory };
       }
       if (isQuotaError) {
-        console.error("[Grok] Quota exhausted — using fallback reply");
+        console.error("[Groq] Quota exhausted — using fallback reply");
       } else {
-        console.error("[Grok] No reply — using fallback reply");
+        console.error("[Groq] No reply — using fallback reply");
       }
     } catch (err: any) {
-      console.error(`[Grok] threw: ${err.message}`);
+      console.error(`[Groq] threw: ${err.message}`);
     }
   } else {
-    console.warn("[Grok] No XAI_API_KEY set — skipping Grok fallback");
+    console.warn("[Groq] No XAI_API_KEY set — skipping Groq fallback");
   }
 
   console.error("[AI] All models exhausted — fallback reply");
