@@ -4003,7 +4003,15 @@ export async function registerRoutes(
 
   import("./baileys").then(({ initBaileys, setSocketIO, setIncomingMessageHandler, sendBotConfirmed, sendBotCancelled, sendBotModify, sendBotError }) => {
     setSocketIO(io);
-    initBaileys().catch((err) => console.error("[Baileys] Startup error:", err));
+    // On Replit dev, don't auto-connect — both Replit and Koyeb share the same DB session,
+    // so two simultaneous connections cause WhatsApp conflict (440/replaced) disconnect loops.
+    // The user can still connect manually from the WhatsApp settings page.
+    const isReplit = !!process.env.REPL_ID;
+    if (isReplit) {
+      console.log("[Baileys] Replit dev detected — skipping auto-connect to avoid conflict with Koyeb production");
+    } else {
+      initBaileys().catch((err) => console.error("[Baileys] Startup error:", err));
+    }
 
     // Register incoming message bot handler for booking confirmations
     // remoteJid = full WhatsApp JID (may be @s.whatsapp.net OR @lid for newer accounts)
