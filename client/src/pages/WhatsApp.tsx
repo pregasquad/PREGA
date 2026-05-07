@@ -826,7 +826,7 @@ export default function WhatsApp() {
         <div className="flex items-center gap-2">
           <Mic className="w-5 h-5 text-muted-foreground" />
           <span className="font-semibold">صوت البوت (رسائل صوتية)</span>
-          <Badge variant="secondary" className="text-xs mr-auto">Gemini TTS</Badge>
+          <Badge variant="secondary" className="text-xs mr-auto">Gemini 2.5 Flash TTS</Badge>
         </div>
         <p className="text-xs text-muted-foreground leading-relaxed">
           عندما يرسل العميل رسالة صوتية، يرد البوت بصوت — اختاري صوت لينا المناسب للصالون 💅

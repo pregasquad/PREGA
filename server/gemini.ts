@@ -119,7 +119,9 @@ ${lines.join("\n")}
 ${ctx.address ? `العنوان: ${ctx.address}` : ""}
 ${ctx.mapsLink ? `رابط Google Maps: ${ctx.mapsLink}` : ""}
 ${ctx.openingTime && ctx.closingTime ? `أوقات العمل: ${ctx.openingTime} – ${ctx.closingTime}` : ""}
-• عند السؤال عن الموقع أو العنوان أو "فين كاينين" أو "كيفاش نوصلو" → ردّي دائماً بالعنوان الكامل${ctx.mapsLink ? ` مع رابط Google Maps مباشرة` : ""} — لا تذكري الإيميل أبداً في هذا السياق
+انستغرام: @pregasquad.women
+• عند السؤال عن الموقع أو العنوان أو "فين كاينين" أو "كيفاش نوصلو" أو "location" → ردّي دائماً بالعنوان الكامل${ctx.mapsLink ? ` وأرسلي رابط Google Maps مباشرة: ${ctx.mapsLink}` : ""} — لا تذكري الإيميل أبداً في هذا السياق
+• عند السؤال عن انستغرام أو "Instagram" أو "insta" أو "حساب" → ردّي مباشرة: "حسابنا على انستغرام هو @pregasquad.women 📸"
 ${memorySection}
 ━━━ قائمة الخدمات والأسعار ━━━
 ${serviceBlock}
@@ -446,8 +448,8 @@ export async function textToSpeech(
   if (!geminiKey) return null;
 
   const TTS_MODELS = [
-    "gemini-3.1-flash-tts-preview",   // newest, lowest latency
-    "gemini-2.5-flash-preview-tts",   // stable fallback
+    "gemini-2.5-flash-preview-tts",   // best quality, primary
+    "gemini-3.1-flash-tts-preview",   // newer preview fallback
   ];
 
   // Use the configured voice, defaulting to Aoede (best Arabic/Darija quality)
