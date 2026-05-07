@@ -38,6 +38,7 @@ interface WAStatus {
   pairingCode?: string | null;
   pairingCodeExpiresAt?: number | null;
   pairingError?: string | null;
+  isReplitDev?: boolean;
 }
 
 function StatusBadge({ status }: { status: WAStatus["status"] }) {
@@ -150,6 +151,7 @@ export default function WhatsApp() {
 
   const status = waData?.status ?? "disconnected";
   const connected = waData?.connected ?? false;
+  const isReplitDev = waData?.isReplitDev ?? false;
 
   // ── Start expiry countdown from a known expiresAt timestamp ─────────────
   const startExpiryCountdown = (expiresAt: number) => {
@@ -318,7 +320,10 @@ export default function WhatsApp() {
   const connectQRMutation = useMutation({
     mutationFn: () =>
       apiRequest("POST", "/api/whatsapp/connect-qr").then((r) => r.json()),
-    onSuccess: () => setTimeout(() => refetch(), 1500),
+    onSuccess: (data) => {
+      if (data?.error === "REPLIT_DEV") return; // handled by banner
+      setTimeout(() => refetch(), 1500);
+    },
     onError: (err: any) =>
       toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
@@ -329,7 +334,6 @@ export default function WhatsApp() {
         r.json()
       ),
     onMutate: () => {
-      // Reset stale error tracking so a previous error doesn't fire immediately
       shownErrorRef.current = null;
       setIsWaitingForCode(true);
       setPairingCode(null);
@@ -338,18 +342,18 @@ export default function WhatsApp() {
       if (!data.success) {
         setIsWaitingForCode(false);
         if (countdownRef.current) clearInterval(countdownRef.current);
+        if (data.error === "REPLIT_DEV") return; // handled by banner
         toast({
-          title: "Failed to start pairing",
-          description: data.error || "Try again",
+          title: "فشل في بدء الربط",
+          description: data.error || "حاول مرة أخرى",
           variant: "destructive",
         });
       }
-      // If success, keep isWaitingForCode=true and wait for code via polling
     },
     onError: (err: any) => {
       setIsWaitingForCode(false);
       if (countdownRef.current) clearInterval(countdownRef.current);
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "خطأ", description: err.message, variant: "destructive" });
     },
   });
 
@@ -543,7 +547,20 @@ export default function WhatsApp() {
             <span className="font-semibold">Link your WhatsApp</span>
           </div>
 
-          <Tabs defaultValue="qr">
+          {/* Replit dev environment warning */}
+          {isReplitDev && (
+            <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30">
+              <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-amber-400">بيئة التطوير — الربط غير متاح هنا</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  ربط واتساب يعمل فقط من رابط Koyeb الإنتاجي. افتح تطبيقك على Koyeb وقم بالربط من هناك.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <Tabs defaultValue="phone">
             <TabsList className="w-full rounded-xl">
               <TabsTrigger value="qr" className="flex-1 rounded-lg gap-2">
                 <QrCode className="w-3.5 h-3.5" />

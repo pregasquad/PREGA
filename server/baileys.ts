@@ -175,8 +175,8 @@ function scheduleReconnect(delayMs = 20000) {
 }
 
 async function fetchVersionWithFallback() {
-  // This version was verified working on Replit — update if WhatsApp rejects connections
-  const FALLBACK_VERSION: [number, number, number] = [2, 3000, 1035194821];
+  // Updated regularly — use latest verified working version if fetch fails
+  const FALLBACK_VERSION: [number, number, number] = [2, 3000, 1023505673];
   try {
     const { fetchLatestBaileysVersion } = await import("@whiskeysockets/baileys");
     const result = await Promise.race([
@@ -241,7 +241,7 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
       keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" })),
     },
     logger: pinoLogger,
-    browser: Browsers.macOS("Chrome"),
+    browser: Browsers.ubuntu("Chrome"),
     printQRInTerminal: false,
     syncFullHistory: false,
     markOnlineOnConnect: false,

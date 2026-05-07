@@ -2474,7 +2474,8 @@ export async function registerRoutes(
       const pairingCode = getPairingCode();
       const pairingCodeExpiresAt = getPairingCodeExpiresAt();
       const pairingError = getLastPairingError();
-      res.json({ status: s.status, connected: s.connected, phone: s.phone, qr, pairingCode, pairingCodeExpiresAt, pairingError });
+      const isReplitDev = !!process.env.REPL_ID;
+      res.json({ status: s.status, connected: s.connected, phone: s.phone, qr, pairingCode, pairingCodeExpiresAt, pairingError, isReplitDev });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
@@ -2490,6 +2491,9 @@ export async function registerRoutes(
   });
 
   app.post("/api/whatsapp/connect-qr", isPinAuthenticated, async (_req, res) => {
+    if (process.env.REPL_ID) {
+      return res.status(400).json({ success: false, error: "REPLIT_DEV" });
+    }
     try {
       const { startQR } = await import("./baileys");
       startQR(); // non-blocking — QR arrives via polling /api/whatsapp/qr
@@ -2500,6 +2504,9 @@ export async function registerRoutes(
   });
 
   app.post("/api/whatsapp/pairing-code", isPinAuthenticated, async (req, res) => {
+    if (process.env.REPL_ID) {
+      return res.status(400).json({ success: false, error: "REPLIT_DEV" });
+    }
     try {
       const { startPairingCode } = await import("./baileys");
       const { phone } = z.object({ phone: z.string().min(8) }).parse(req.body);
