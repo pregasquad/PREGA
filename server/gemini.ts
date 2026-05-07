@@ -6,7 +6,8 @@ const MODEL_CASCADE = [
 ];
 
 const QUOTA_COOLDOWN_MS = 60 * 1000;
-let quotaExhaustedUntil = 0;
+// Per-model cooldown so a quota hit on 2.5-flash still lets 1.5-flash respond
+const modelCooldowns: Record<string, number> = {};
 
 const retryDelay = () =>
   new Promise<void>((r) => setTimeout(r, 2000 + Math.floor(Math.random() * 1000)));
@@ -224,17 +225,19 @@ export async function askGemini(
     return { reply: null, newHistory: history };
   }
 
-  const now = Date.now();
-  if (now < quotaExhaustedUntil) {
-    const remainingSecs = Math.ceil((quotaExhaustedUntil - now) / 1000);
-    console.warn(`[Gemini] Quota cooldown (${remainingSecs}s) — fallback`);
-    return { reply: FALLBACK_REPLY, newHistory: history };
-  }
-
   const systemPrompt = buildSystemPrompt(ctx);
+  const now = Date.now();
 
   for (let i = 0; i < MODEL_CASCADE.length; i++) {
     const model = MODEL_CASCADE[i];
+
+    // Skip model if it's still in its per-model cooldown
+    if (modelCooldowns[model] && now < modelCooldowns[model]) {
+      const secs = Math.ceil((modelCooldowns[model] - now) / 1000);
+      console.warn(`[Gemini] ${model} in cooldown (${secs}s) — skipping to next`);
+      continue;
+    }
+
     try {
       const { reply, isQuotaError, isTruncated } = await callGemini(
         model, userMessage, systemPrompt, apiKey, history, imageBase64, imageMimeType
@@ -242,7 +245,6 @@ export async function askGemini(
 
       if (reply) {
         console.log(`[Gemini] ${model} replied (turn ${Math.floor(history.length / 2) + 1})${imageBase64 ? " [with image]" : ""}`);
-        // Store a text-only summary in history (can't store raw image bytes)
         const historyUserText = imageBase64
           ? `[صورة]${userMessage ? ` + "${userMessage}"` : ""}`
           : userMessage;
@@ -255,9 +257,10 @@ export async function askGemini(
       }
 
       if (isQuotaError) {
-        quotaExhaustedUntil = Date.now() + QUOTA_COOLDOWN_MS;
-        console.error(`[Gemini] Quota exhausted on ${model} — cooldown ${QUOTA_COOLDOWN_MS / 1000}s`);
-        return { reply: FALLBACK_REPLY, newHistory: history };
+        modelCooldowns[model] = Date.now() + QUOTA_COOLDOWN_MS;
+        console.error(`[Gemini] Quota exhausted on ${model} — cooldown ${QUOTA_COOLDOWN_MS / 1000}s, trying next model…`);
+        // Don't return — fall through to next model in cascade
+        continue;
       }
 
       if (i < MODEL_CASCADE.length - 1) {
