@@ -183,11 +183,6 @@ async function callGemini(
       console.warn(`[Gemini] ${model} quota exhausted (429)`);
       return { reply: null, isQuotaError: true, isTruncated: false };
     }
-    if (status === 503) {
-      // Temporary overload — NOT a quota issue, just retry
-      console.warn(`[Gemini] ${model} overloaded (503) — will retry`);
-      return { reply: null, isQuotaError: false, isTruncated: false };
-    }
     if (status === 404) {
       console.warn(`[Gemini] ${model} not found (404) — skipping`);
       return { reply: null, isQuotaError: false, isTruncated: false };
