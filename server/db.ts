@@ -1024,3 +1024,164 @@ export async function ensureSalonPaymentsTable(): Promise<void> {
     console.error("Failed to ensure salon_payments table:", error);
   }
 }
+
+// ── Bot client memory ─────────────────────────────────────────────────────────
+
+export interface BotClientMemory {
+  jid: string;
+  clientName?: string | null;
+  language: string;            // 'arabic' | 'french' | 'darija' | 'unknown'
+  preferredServices: string[]; // service names the client has asked about
+  personalityNotes?: string | null;
+  convHistory: { role: "user" | "model"; text: string }[];
+  visitCount: number;
+  lastSeen: Date | null;
+}
+
+export async function ensureBotMemoryTable(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS bot_client_memory (
+          jid            VARCHAR(100)  NOT NULL PRIMARY KEY,
+          client_name    VARCHAR(255),
+          language       VARCHAR(20)   NOT NULL DEFAULT 'unknown',
+          preferred_services LONGTEXT,
+          personality_notes  TEXT,
+          conv_history   LONGTEXT,
+          visit_count    INT           NOT NULL DEFAULT 1,
+          last_seen      TIMESTAMP     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+          created_at     TIMESTAMP     DEFAULT CURRENT_TIMESTAMP NOT NULL
+        )
+      `);
+      connection.release();
+    } else {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS bot_client_memory (
+          jid                VARCHAR(100)  NOT NULL PRIMARY KEY,
+          client_name        VARCHAR(255),
+          language           VARCHAR(20)   NOT NULL DEFAULT 'unknown',
+          preferred_services TEXT,
+          personality_notes  TEXT,
+          conv_history       TEXT,
+          visit_count        INT           NOT NULL DEFAULT 1,
+          last_seen          TIMESTAMP     DEFAULT CURRENT_TIMESTAMP NOT NULL,
+          created_at         TIMESTAMP     DEFAULT CURRENT_TIMESTAMP NOT NULL
+        )
+      `);
+    }
+    console.log("Bot client memory table ready");
+  } catch (error) {
+    console.error("Failed to ensure bot_client_memory table:", error);
+  }
+}
+
+export async function getBotMemory(jid: string): Promise<BotClientMemory | null> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      const [rows] = await connection.query(
+        `SELECT * FROM bot_client_memory WHERE jid = ?`, [jid]
+      );
+      connection.release();
+      const row = (rows as any[])[0];
+      if (!row) return null;
+      return {
+        jid: row.jid,
+        clientName: row.client_name ?? null,
+        language: row.language || 'unknown',
+        preferredServices: row.preferred_services
+          ? (typeof row.preferred_services === 'string'
+              ? JSON.parse(row.preferred_services)
+              : row.preferred_services)
+          : [],
+        personalityNotes: row.personality_notes ?? null,
+        convHistory: row.conv_history ? JSON.parse(row.conv_history) : [],
+        visitCount: row.visit_count || 1,
+        lastSeen: row.last_seen ? new Date(row.last_seen) : null,
+      };
+    } else {
+      const result = await pool.query(
+        `SELECT * FROM bot_client_memory WHERE jid = $1`, [jid]
+      );
+      const row = result.rows[0];
+      if (!row) return null;
+      return {
+        jid: row.jid,
+        clientName: row.client_name ?? null,
+        language: row.language || 'unknown',
+        preferredServices: row.preferred_services
+          ? (typeof row.preferred_services === 'string'
+              ? JSON.parse(row.preferred_services)
+              : row.preferred_services)
+          : [],
+        personalityNotes: row.personality_notes ?? null,
+        convHistory: row.conv_history ? JSON.parse(row.conv_history) : [],
+        visitCount: row.visit_count || 1,
+        lastSeen: row.last_seen ? new Date(row.last_seen) : null,
+      };
+    }
+  } catch (err) {
+    console.error("[BotMemory] getBotMemory failed for", jid, err);
+    return null;
+  }
+}
+
+export async function saveBotMemory(mem: BotClientMemory): Promise<void> {
+  try {
+    const servicesJson = JSON.stringify(mem.preferredServices || []);
+    const historyJson  = JSON.stringify(mem.convHistory || []);
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      await connection.query(
+        `INSERT INTO bot_client_memory
+           (jid, client_name, language, preferred_services, personality_notes, conv_history, visit_count, last_seen)
+         VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+         ON DUPLICATE KEY UPDATE
+           client_name        = COALESCE(VALUES(client_name), client_name),
+           language           = VALUES(language),
+           preferred_services = VALUES(preferred_services),
+           personality_notes  = COALESCE(VALUES(personality_notes), personality_notes),
+           conv_history       = VALUES(conv_history),
+           visit_count        = VALUES(visit_count),
+           last_seen          = NOW()`,
+        [
+          mem.jid,
+          mem.clientName || null,
+          mem.language,
+          servicesJson,
+          mem.personalityNotes || null,
+          historyJson,
+          mem.visitCount,
+        ]
+      );
+      connection.release();
+    } else {
+      await pool.query(
+        `INSERT INTO bot_client_memory
+           (jid, client_name, language, preferred_services, personality_notes, conv_history, visit_count, last_seen)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+         ON CONFLICT (jid) DO UPDATE SET
+           client_name        = COALESCE(EXCLUDED.client_name, bot_client_memory.client_name),
+           language           = EXCLUDED.language,
+           preferred_services = EXCLUDED.preferred_services,
+           personality_notes  = COALESCE(EXCLUDED.personality_notes, bot_client_memory.personality_notes),
+           conv_history       = EXCLUDED.conv_history,
+           visit_count        = EXCLUDED.visit_count,
+           last_seen          = NOW()`,
+        [
+          mem.jid,
+          mem.clientName || null,
+          mem.language,
+          servicesJson,
+          mem.personalityNotes || null,
+          historyJson,
+          mem.visitCount,
+        ]
+      );
+    }
+  } catch (err) {
+    console.error("[BotMemory] saveBotMemory failed for", mem.jid, err);
+  }
+}

@@ -6,7 +6,7 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import { setupAuth, registerAuthRoutes, isPinAuthenticated, requirePermission, checkRateLimit, recordFailedAttempt, clearAttempts } from "./replit_integrations/auth";
 import { vapidPublicKey, sendPushNotification, checkAndNotifyExpiringProducts, checkAndNotifyLowStock as broadcastLowStockNotifications, sendClosingReminderNow } from "./push";
-import { db, schema, pool, dbDialect, isDatabaseOffline, checkDatabaseConnection } from "./db";
+import { db, schema, pool, dbDialect, isDatabaseOffline, checkDatabaseConnection, getBotMemory, saveBotMemory, type BotClientMemory } from "./db";
 import { eq } from "drizzle-orm";
 import { insertAdminRoleSchema, ROLE_PERMISSIONS } from "@shared/schema";
 import bcrypt from "bcryptjs";
@@ -3869,39 +3869,107 @@ export async function registerRoutes(
 
   // AI reply cache — avoids burning Gemini quota on repeated identical messages
   // Only used when there is no active conversation history for a JID.
-  // Key: "remoteJid:normalizedMessage" → cached reply + timestamp
   const aiReplyCache = new Map<string, { reply: string; ts: number }>();
   const AI_CACHE_TTL = 15 * 60 * 1000; // 15 minutes
 
-  // Conversation history store — keeps the last N exchanges per JID for
-  // natural multi-turn context. Entries expire after 30 minutes of inactivity.
+  // In-memory shadow of the DB memory — reduces DB reads on rapid back-and-forth.
+  // Flushed to DB after every exchange.
   type ConvTurn = { role: "user" | "model"; text: string };
-  const convStore = new Map<string, { turns: ConvTurn[]; lastActivity: number }>();
-  const CONV_MAX_TURNS = 5;   // keep last 5 user+model pairs = 10 total entries
-  const CONV_TTL = 30 * 60 * 1000; // 30 minutes inactivity resets context
+  const memCache = new Map<string, BotClientMemory>();
 
-  function getHistory(jid: string): ConvTurn[] {
-    const entry = convStore.get(jid);
-    if (!entry) return [];
-    if (Date.now() - entry.lastActivity > CONV_TTL) {
-      convStore.delete(jid);
-      return [];
-    }
-    return entry.turns;
+  // How long an idle conversation keeps its context (30 min)
+  const CONV_TTL = 30 * 60 * 1000;
+  // Maximum recent turns to keep in history (5 back-and-forth = 10 entries)
+  const CONV_MAX_TURNS = 5;
+
+  // ── Memory extraction helpers ──────────────────────────────────────────────
+
+  /** Detect the dominant language of a message */
+  function detectLanguage(text: string): string {
+    const arabicChars  = (text.match(/[\u0600-\u06FF]/g) || []).length;
+    const latinChars   = (text.match(/[a-zA-Z]/g) || []).length;
+    const darijaLatin  = /\b(bghit|wach|dial|taman|ndir|kifach|mnin|fain|kayn|hna|dyal|zloul|ana|nta|hiya|huwa|3ref|3reft|wash|gha|mashi|bzzaf|chhal|makayn|ola|wla|ndir|diri|nhar|liyam|smiyti|ismi)\b/i;
+    if (arabicChars > 3) return arabicChars > latinChars * 1.5 ? "arabic" : "darija";
+    if (darijaLatin.test(text)) return "darija";
+    if (latinChars > 3) return "french";
+    return "unknown";
   }
 
-  function saveHistory(jid: string, turns: ConvTurn[]): void {
-    // Trim to the last CONV_MAX_TURNS exchanges (each exchange = 2 turns)
-    const maxEntries = CONV_MAX_TURNS * 2;
-    const trimmed = turns.length > maxEntries ? turns.slice(turns.length - maxEntries) : turns;
-    convStore.set(jid, { turns: trimmed, lastActivity: Date.now() });
-    // Prune expired conversations to keep memory bounded
-    if (convStore.size > 1000) {
-      const cutoff = Date.now() - CONV_TTL;
-      for (const [k, v] of convStore) {
-        if (v.lastActivity < cutoff) convStore.delete(k);
-      }
+  /** Try to extract a client first name from their message */
+  function extractName(text: string): string | null {
+    const patterns = [
+      /أنا\s+([\u0600-\u06FF]+)/,
+      /اسمي\s+([\u0600-\u06FFa-zA-Z]+)/,
+      /سميتي\s+([\u0600-\u06FFa-zA-Z]+)/,
+      /إسمي\s+([\u0600-\u06FFa-zA-Z]+)/,
+      /je\s+m['']?appelle\s+([A-Za-zÀ-ÿ]+)/i,
+      /je\s+suis\s+([A-Za-zÀ-ÿ]+)/i,
+      /c['']?est\s+([A-Za-zÀ-ÿ]+)/i,
+      /ana\s+([A-Za-zÀ-ÿ\u0600-\u06FF]+)/i,
+      /smiyti\s+([A-Za-zÀ-ÿ\u0600-\u06FF]+)/i,
+    ];
+    for (const p of patterns) {
+      const m = text.match(p);
+      if (m?.[1] && m[1].length >= 2) return m[1];
     }
+    return null;
+  }
+
+  /** Return service names from the message that match the known services list */
+  function extractMentionedServices(text: string, services: { name: string }[]): string[] {
+    const lower = text.toLowerCase();
+    return services.filter((s) => lower.includes(s.name.toLowerCase())).map((s) => s.name);
+  }
+
+  // ── DB-backed memory load/save ────────────────────────────────────────────
+
+  async function loadMemory(jid: string): Promise<BotClientMemory> {
+    // Return in-memory shadow if fresh enough
+    const cached = memCache.get(jid);
+    if (cached) return cached;
+
+    const dbMem = await getBotMemory(jid);
+    if (dbMem) {
+      memCache.set(jid, dbMem);
+      return dbMem;
+    }
+    // New client — create a blank memory record
+    const blank: BotClientMemory = {
+      jid,
+      clientName: null,
+      language: "unknown",
+      preferredServices: [],
+      personalityNotes: null,
+      convHistory: [],
+      visitCount: 0,
+      lastSeen: null,
+    };
+    memCache.set(jid, blank);
+    return blank;
+  }
+
+  async function persistMemory(mem: BotClientMemory): Promise<void> {
+    memCache.set(mem.jid, mem);
+    // Fire-and-forget — don't block the reply on the DB write
+    saveBotMemory(mem).catch((err) =>
+      console.error("[BotMemory] Background save failed:", err)
+    );
+  }
+
+  /** Get the active conversation turns from memory, respecting the 30-min TTL */
+  function getActiveHistory(mem: BotClientMemory): ConvTurn[] {
+    if (!mem.lastSeen) return [];
+    if (Date.now() - new Date(mem.lastSeen).getTime() > CONV_TTL) return [];
+    return mem.convHistory;
+  }
+
+  /** Merge new turns into memory, trimming to max depth */
+  function mergeHistory(mem: BotClientMemory, newTurns: ConvTurn[]): BotClientMemory {
+    const maxEntries = CONV_MAX_TURNS * 2;
+    const trimmed = newTurns.length > maxEntries
+      ? newTurns.slice(newTurns.length - maxEntries)
+      : newTurns;
+    return { ...mem, convHistory: trimmed };
   }
 
   // Anti-spam queue — one active processing slot + one pending slot per JID.
@@ -4001,12 +4069,13 @@ export async function registerRoutes(
           const { askGemini, FALLBACK_REPLY } = await import("./gemini");
           const { sendWhatsAppMessage } = await import("./baileys");
 
-          // Load conversation history for this JID (empty [] on first contact or after 30 min idle)
-          const history = getHistory(remoteJid);
+          // Load persistent memory for this client (DB-backed, survives restarts)
+          const mem = await loadMemory(remoteJid);
+          const history = getActiveHistory(mem);
           const hasHistory = history.length > 0;
+          const isReturningClient = (mem.visitCount ?? 0) > 0;
 
           // Use reply cache only when there's no active conversation context.
-          // With history, the same message can get a different reply based on prior turns.
           if (!hasHistory) {
             const cacheKey = `${remoteJid}:${reply.toLowerCase().trim()}`;
             const cached = aiReplyCache.get(cacheKey);
@@ -4023,6 +4092,13 @@ export async function registerRoutes(
             storage.getServices().catch(() => []),
           ]);
 
+          const serviceList = (allServices || []).map((s: any) => ({
+            name: s.name,
+            price: s.price,
+            duration: s.duration,
+            category: s.category,
+          }));
+
           const salonCtx = {
             name: bizSettings?.businessName || "PREGASQUAD",
             address: bizSettings?.address || undefined,
@@ -4030,29 +4106,49 @@ export async function registerRoutes(
             openingTime: bizSettings?.openingTime || undefined,
             closingTime: bizSettings?.closingTime || undefined,
             currency: bizSettings?.currencySymbol || "DH",
-            services: (allServices || []).map((s: any) => ({
-              name: s.name,
-              price: s.price,
-              duration: s.duration,
-              category: s.category,
-            })),
+            services: serviceList,
+            // Inject client memory so the AI knows returning clients by name/preferences
+            clientMemory: {
+              clientName: mem.clientName,
+              language: mem.language !== "unknown" ? mem.language : undefined,
+              preferredServices: mem.preferredServices,
+              personalityNotes: mem.personalityNotes,
+              visitCount: mem.visitCount,
+            },
           };
 
-          // askGemini returns FALLBACK_REPLY on quota errors — never silent unless no API key.
-          // It also returns the updated history to persist (only if the AI actually replied).
           const { reply: aiReply, newHistory } = await askGemini(reply, salonCtx, history);
 
           if (!aiReply) {
-            // No API key configured — intentionally silent
             console.warn(`[Bot] No Gemini API key — silent for ${remoteJid}`);
             return;
           }
 
-          // Persist updated history only on genuine AI replies (not fallback messages).
-          // Fallback replies don't add context, so we leave the history untouched.
+          // Only update memory on genuine AI replies (not fallback)
           if (aiReply !== FALLBACK_REPLY) {
-            saveHistory(remoteJid, newHistory);
-            // Also cache for first-contact replies (no history) so duplicates skip Gemini
+            // Extract facts from this message
+            const detectedLang = detectLanguage(reply);
+            const detectedName = extractName(reply);
+            const mentionedSvcs = extractMentionedServices(reply + " " + aiReply, serviceList);
+
+            // Merge into memory
+            const updatedMem: BotClientMemory = mergeHistory(
+              {
+                ...mem,
+                clientName: detectedName || mem.clientName,
+                language: (detectedLang !== "unknown" ? detectedLang : mem.language) || "unknown",
+                preferredServices: Array.from(
+                  new Set([...(mem.preferredServices || []), ...mentionedSvcs])
+                ).slice(0, 20), // cap at 20 to avoid bloat
+                visitCount: (mem.visitCount || 0) + (hasHistory ? 0 : 1), // increment once per session
+                lastSeen: new Date(),
+              },
+              newHistory
+            );
+
+            await persistMemory(updatedMem);
+
+            // Cache first-contact replies to avoid duplicate Gemini calls
             if (!hasHistory) {
               const cacheKey = `${remoteJid}:${reply.toLowerCase().trim()}`;
               aiReplyCache.set(cacheKey, { reply: aiReply, ts: Date.now() });
@@ -4067,7 +4163,8 @@ export async function registerRoutes(
 
           await sendWhatsAppMessage(remoteJid, aiReply);
           const turnNum = Math.floor(newHistory.length / 2);
-          console.log(`[Bot] Replied to ${remoteJid} (turn ${turnNum}): "${reply.slice(0, 40)}..."`);
+          const clientLabel = mem.clientName ? `${mem.clientName} (${remoteJid})` : remoteJid;
+          console.log(`[Bot] ${isReturningClient ? "↩ returning" : "★ new"} client ${clientLabel} — turn ${turnNum}: "${reply.slice(0, 40)}..."`);
         } catch (err: any) {
           console.error("[Bot] Error handling incoming message:", err.message);
           // Never stay silent on unexpected errors — send fallback so client gets a response
