@@ -117,7 +117,6 @@ let pendingPairingPhone: string | null = null;
 let isVerifyingLink = false;
 let verifyRetryCount = 0;
 let verifyReconnectTimer: ReturnType<typeof setTimeout> | null = null;
-let qrTimeoutCount = 0; // consecutive 408 QR-expired disconnects
 
 // Deduplication: Map<msgId, processedAt ms> — per-entry TTL, never wipe the whole set
 // so a reconnect near the clear boundary can't replay already-processed messages.
@@ -437,7 +436,7 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
       shouldReconnect = true;
       isVerifyingLink = false;
       verifyRetryCount = 0;
-      qrTimeoutCount = 0;
+
       if (verifyReconnectTimer) { clearTimeout(verifyReconnectTimer); verifyReconnectTimer = null; }
       const phone = sock?.user?.id?.split(":")[0] ?? "?";
       log(`Connected as +${phone}`);
@@ -504,22 +503,6 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
         if (socketIO) socketIO.emit("whatsapp:logged_out", { reason: isDeviceRemoved ? "device_removed" : "logged_out" });
       } else {
         // ── Other disconnect ─────────────────────────────────────────────
-        // 408 = "QR refs attempts ended" (nobody scanned the QR in time).
-        // After 3 consecutive misses the stale session is dead — wipe and stop.
-        const QR_TIMEOUT = 408;
-        if (reason === QR_TIMEOUT) {
-          qrTimeoutCount++;
-          log(`QR timeout #${qrTimeoutCount} — ${qrTimeoutCount >= 3 ? "giving up, wiping stale session" : "retrying…"}`);
-          if (qrTimeoutCount >= 3) {
-            shouldReconnect = false;
-            wipeAuth();
-            status = "disconnected";
-            if (socketIO) socketIO.emit("whatsapp:logged_out", { reason: "session_expired" });
-            return;
-          }
-        } else {
-          qrTimeoutCount = 0; // reset on non-408 disconnects
-        }
         if (socketIO) socketIO.emit("whatsapp:disconnected", { reason });
         if (shouldReconnect) scheduleReconnect(20000);
       }
