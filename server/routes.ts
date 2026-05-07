@@ -3993,6 +3993,20 @@ export async function registerRoutes(
   // Wait this long after the LAST message before replying (reset on every new message)
   const BUFFER_DELAY_MS = 10_000;
 
+  function detectCancellationIntent(text: string): boolean {
+    const t = text.toLowerCase().trim();
+    return (
+      // Arabic script patterns
+      /إلغاء|ألغي|نلغي|بغيت\s*نلغي|بغيت\s*نلغيو|بغيت\s*نكنسل|بغيت\s*نقطع|ما\s*نجيش|ما\s*نقدرش\s*نجي|مكنجيش|مكنقدرش\s*نجي|ما\s*قادرش\s*نجي|ما\s*غادي\s*نجي|ما\s*نقدر\s*نجي/.test(text) ||
+      // Darija in Latin script
+      /\b(nannuli|nannulti|nannuliha|bghit\s+n[a-z]*nul|bghit\s+nqt[ae]3|bghit\s+nqat3|ma\s+najich|ma\s+n[a-z]*ji\s*ch|ma\s+n9derch|makan9derch|bghit\s+cancel|bghit\s+annuler|bghit\s+n7yyad|nqder\s*maji|maqaderch\s*nji)\b/i.test(t) ||
+      // French
+      /\b(annuler|annulation|je\s+veux\s+annuler|je\s+souhaite\s+annuler|je\s+voulais\s+annuler|annule\s+mon|annule\s+le)\b/i.test(t) ||
+      // English
+      /\bcancel\s*(my\s*)?(appointment|booking|rdv|rendez.?vous)?\b/i.test(t)
+    );
+  }
+
   async function runFlush(remoteJid: string, flush: (msgs: BufferedMsg[]) => Promise<void>): Promise<void> {
     const sess = jidSessions.get(remoteJid);
     if (!sess || sess.buffer.length === 0) return;
@@ -4079,6 +4093,75 @@ export async function registerRoutes(
 
           if (batchSize > 1) {
             console.log(`[Bot] Merged batch of ${batchSize} message(s) for ${remoteJid}: "${mergedText.slice(0, 60)}"`);
+          }
+
+          // Normalize the phone for DB matching (digits only)
+          let normalized = phone.replace(/[^0-9]/g, "");
+          if (normalized.startsWith("00")) normalized = normalized.slice(2);
+          if (normalized.startsWith("0") && normalized.length === 10) normalized = "212" + normalized.slice(1);
+          if (normalized.length === 9) normalized = "212" + normalized;
+
+          // ── Appointment quick-reply check (1/2/3) ────────────────────────
+          const allApts = await storage.getAppointments();
+          const matched = allApts.filter((a: any) => {
+            if (!a.phone) return false;
+            let ap = a.phone.replace(/[^0-9]/g, "");
+            if (ap.startsWith("00")) ap = ap.slice(2);
+            if (ap.startsWith("0") && ap.length === 10) ap = "212" + ap.slice(1);
+            if (ap.length === 9) ap = "212" + ap;
+            return ap === normalized;
+          });
+
+          const pendingApts = matched
+            .filter((a: any) => !a.bookingStatus || a.bookingStatus === "pending" || a.bookingStatus === "modify_requested")
+            .sort((a: any, b: any) => b.id - a.id);
+
+          const apt = pendingApts.length > 0 ? pendingApts[0] : null;
+
+          if (apt && mergedText === "1") {
+            await storage.updateAppointment(apt.id, { bookingStatus: "confirmed" } as any);
+            await sendBotConfirmed(remoteJid);
+            console.log(`[Bot] Appointment ${apt.id} confirmed by client (${remoteJid})`);
+            return;
+          }
+          if (apt && mergedText === "2") {
+            await storage.updateAppointment(apt.id, { bookingStatus: "cancelled" } as any);
+            await sendBotCancelled(remoteJid);
+            console.log(`[Bot] Appointment ${apt.id} cancelled by client (${remoteJid})`);
+            return;
+          }
+          if (apt && mergedText === "3") {
+            await storage.updateAppointment(apt.id, { bookingStatus: "modify_requested" } as any);
+            await sendBotModify(remoteJid);
+            console.log(`[Bot] Appointment ${apt.id} modify requested by client (${remoteJid})`);
+            return;
+          }
+
+          // ── Natural-language cancellation (any upcoming appointment) ─────
+          if (detectCancellationIntent(mergedText)) {
+            const cancellableApts = matched
+              .filter((a: any) => {
+                const s = a.bookingStatus;
+                return !s || s === "pending" || s === "confirmed" || s === "modify_requested";
+              })
+              .sort((a: any, b: any) => b.id - a.id);
+
+            if (cancellableApts.length > 0) {
+              const { sendWhatsAppMessage, sendTypingPresence, stopTypingPresence } = await import("./baileys");
+              await sendTypingPresence(remoteJid);
+              const aptToCancel = cancellableApts[0];
+              await storage.updateAppointment(aptToCancel.id, { bookingStatus: "cancelled" } as any);
+              const typingMs = 1500 + Math.floor(Math.random() * 1000);
+              await new Promise<void>((r) => setTimeout(r, typingMs));
+              await stopTypingPresence(remoteJid);
+              await sendWhatsAppMessage(
+                remoteJid,
+                `واخا حبيبتي 💙\n\nتم إلغاء ميعادك بنجاح ✅\n\nإذا بغيتِ تحجزي وقت آخر، راسليني هنا وغادي يتواصلو معاك الفريق 🌸\nكنتمنو نشوفوك قريباً 💖`
+              );
+              console.log(`[Bot] Appointment ${aptToCancel.id} cancelled via natural language from ${remoteJid}`);
+              return;
+            }
+            // No appointment found — fall through so AI can respond naturally
           }
 
           // ── AI assistant reply ───────────────────────────────────────────
