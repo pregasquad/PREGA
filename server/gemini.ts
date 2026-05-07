@@ -233,7 +233,7 @@ export async function askGemini(
   imageBase64?: string,
   imageMimeType?: string
 ): Promise<{ reply: string | null; newHistory: ConversationTurn[] }> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
   if (!apiKey) {
     console.warn("[Gemini] No API key — skipping AI reply");
     return { reply: null, newHistory: history };
