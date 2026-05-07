@@ -4047,7 +4047,15 @@ export async function registerRoutes(
 
   import("./baileys").then(({ initBaileys, setSocketIO, setIncomingMessageHandler, sendBotConfirmed, sendBotCancelled, sendBotModify, sendBotError }) => {
     setSocketIO(io);
-    initBaileys().catch((err) => console.error("[Baileys] Startup error:", err));
+    // On Replit dev, skip auto-connect — Koyeb production holds the active session.
+    // Two simultaneous connections with the same creds cause WhatsApp to kick both (440/replaced).
+    // The user can still manually link from the WhatsApp settings page when needed;
+    // the new session is saved to the DB and Koyeb picks it up on its next restart.
+    if (!process.env.REPL_ID) {
+      initBaileys().catch((err) => console.error("[Baileys] Startup error:", err));
+    } else {
+      console.log("[Baileys] Replit dev — skipping auto-connect (Koyeb holds the active session). Link manually when needed.");
+    }
 
     // Register incoming message handler — uses smart buffer so rapid messages
     // (text + images sent in quick succession) are collected and answered as ONE reply.
