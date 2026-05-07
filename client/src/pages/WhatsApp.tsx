@@ -320,8 +320,7 @@ export default function WhatsApp() {
   const connectQRMutation = useMutation({
     mutationFn: () =>
       apiRequest("POST", "/api/whatsapp/connect-qr").then((r) => r.json()),
-    onSuccess: (data) => {
-      if (data?.error === "REPLIT_DEV") return; // handled by banner
+    onSuccess: () => {
       setTimeout(() => refetch(), 1500);
     },
     onError: (err: any) =>
@@ -342,7 +341,6 @@ export default function WhatsApp() {
       if (!data.success) {
         setIsWaitingForCode(false);
         if (countdownRef.current) clearInterval(countdownRef.current);
-        if (data.error === "REPLIT_DEV") return; // handled by banner
         toast({
           title: "فشل في بدء الربط",
           description: data.error || "حاول مرة أخرى",
@@ -546,19 +544,6 @@ export default function WhatsApp() {
             <Smartphone className="w-5 h-5 text-muted-foreground" />
             <span className="font-semibold">Link your WhatsApp</span>
           </div>
-
-          {/* Replit dev environment warning */}
-          {isReplitDev && (
-            <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30">
-              <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <p className="text-sm font-semibold text-amber-400">بيئة التطوير — الربط غير متاح هنا</p>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  ربط واتساب يعمل فقط من رابط Koyeb الإنتاجي. افتح تطبيقك على Koyeb وقم بالربط من هناك.
-                </p>
-              </div>
-            </div>
-          )}
 
           <Tabs defaultValue="phone">
             <TabsList className="w-full rounded-xl">

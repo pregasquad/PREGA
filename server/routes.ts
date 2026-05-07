@@ -2491,9 +2491,6 @@ export async function registerRoutes(
   });
 
   app.post("/api/whatsapp/connect-qr", isPinAuthenticated, async (_req, res) => {
-    if (process.env.REPL_ID) {
-      return res.status(400).json({ success: false, error: "REPLIT_DEV" });
-    }
     try {
       const { startQR } = await import("./baileys");
       startQR(); // non-blocking — QR arrives via polling /api/whatsapp/qr
@@ -2504,9 +2501,6 @@ export async function registerRoutes(
   });
 
   app.post("/api/whatsapp/pairing-code", isPinAuthenticated, async (req, res) => {
-    if (process.env.REPL_ID) {
-      return res.status(400).json({ success: false, error: "REPLIT_DEV" });
-    }
     try {
       const { startPairingCode } = await import("./baileys");
       const { phone } = z.object({ phone: z.string().min(8) }).parse(req.body);
@@ -4053,15 +4047,7 @@ export async function registerRoutes(
 
   import("./baileys").then(({ initBaileys, setSocketIO, setIncomingMessageHandler, sendBotConfirmed, sendBotCancelled, sendBotModify, sendBotError }) => {
     setSocketIO(io);
-    // On Replit dev, don't auto-connect — both Replit and Koyeb share the same DB session,
-    // so two simultaneous connections cause WhatsApp conflict (440/replaced) disconnect loops.
-    // The user can still connect manually from the WhatsApp settings page.
-    const isReplit = !!process.env.REPL_ID;
-    if (isReplit) {
-      console.log("[Baileys] Replit dev detected — skipping auto-connect to avoid conflict with Koyeb production");
-    } else {
-      initBaileys().catch((err) => console.error("[Baileys] Startup error:", err));
-    }
+    initBaileys().catch((err) => console.error("[Baileys] Startup error:", err));
 
     // Register incoming message handler — uses smart buffer so rapid messages
     // (text + images sent in quick succession) are collected and answered as ONE reply.
