@@ -3878,6 +3878,343 @@ export async function registerRoutes(
   type ConvTurn = { role: "user" | "model"; text: string };
   const memCache = new Map<string, BotClientMemory>();
 
+  // ── WhatsApp Booking Session ──────────────────────────────────────────────
+  // Multi-turn guided booking flow: intent → service → date → time → confirm
+  interface BookingSession {
+    step: "awaiting_service" | "awaiting_date" | "awaiting_time" | "confirming";
+    selectedService?: { name: string; price: number; duration: number; category: string };
+    selectedDate?: string; // YYYY-MM-DD
+    selectedTime?: string; // HH:MM
+    clientName?: string;
+    phone?: string;
+    lastActivity: number;
+  }
+  const bookingSessions = new Map<string, BookingSession>();
+  const BOOKING_SESSION_TTL = 10 * 60 * 1000; // 10 min idle → session expires
+
+  function isBookingIntent(text: string): boolean {
+    const t = text.toLowerCase().trim();
+    return /\b(حجز|حجوز|حاجز|نحجز|بغيت نحجز|bghit|rdv|rendez.?vous|réservation|reserver|réserver|حجزة|موعد|دير لي موعد|خذ لي موعد|reservation)\b/i.test(t)
+      || /\b(book|booking|nakhod|nchouf|ndir|want to book)\b/i.test(t)
+      || /(بغيت\s+.*(موعد|حجز|خدمة))/i.test(t)
+      || /(je\s+veux|j'aimerais|prendre)\s+(un\s+)?(rdv|rendez|rendez-vous)/i.test(t);
+  }
+
+  function isCancelFlow(text: string): boolean {
+    return /\b(لا|لالا|لا شكرا|annuler|non|cancel|stop|وقف|خلص|ماخدتيش|مخدتيش)\b/i.test(text.toLowerCase());
+  }
+
+  function getDateLabel(dateStr: string): string {
+    const today = new Date();
+    const d = new Date(dateStr + "T00:00:00");
+    const todayStr = today.toISOString().split("T")[0];
+    const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split("T")[0];
+    if (dateStr === todayStr) return "اليوم";
+    if (dateStr === tomorrowStr) return "غدا";
+    const days = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+    return `${days[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}`;
+  }
+
+  async function getAvailableSlots(date: string, duration: number): Promise<string[]> {
+    try {
+      const bizSettings = await storage.getBusinessSettings().catch(() => undefined);
+      const openTime = bizSettings?.openingTime || "09:00";
+      const closeTime = bizSettings?.closingTime || "19:00";
+      const [openH, openM] = openTime.split(":").map(Number);
+      const [closeH, closeM] = closeTime.split(":").map(Number);
+      const openMins = openH * 60 + openM;
+      const closeMins = closeH * 60 + closeM;
+
+      const existingApts = await storage.getAppointments(date).catch(() => []);
+      const busySlots = (existingApts as any[]).map((a: any) => {
+        const [h, m] = (a.startTime || "00:00").split(":").map(Number);
+        return { start: h * 60 + m, end: h * 60 + m + (a.duration || 60) };
+      });
+
+      const slots: string[] = [];
+      const now = new Date();
+      const todayStr = now.toISOString().split("T")[0];
+      const nowMins = date === todayStr ? now.getHours() * 60 + now.getMinutes() + 30 : 0;
+
+      for (let t = openMins; t + duration <= closeMins; t += 30) {
+        if (t < nowMins) continue;
+        const slotEnd = t + duration;
+        const isBooked = busySlots.some((b) => t < b.end && slotEnd > b.start);
+        if (!isBooked) {
+          const h = Math.floor(t / 60).toString().padStart(2, "0");
+          const m = (t % 60).toString().padStart(2, "0");
+          slots.push(`${h}:${m}`);
+        }
+      }
+      return slots;
+    } catch {
+      return [];
+    }
+  }
+
+  async function handleBookingFlow(
+    jid: string,
+    phone: string,
+    text: string,
+    clientName: string | null | undefined,
+    sendFn: (msg: string) => Promise<void>
+  ): Promise<boolean> {
+    const now = Date.now();
+    let session = bookingSessions.get(jid);
+
+    // Expire stale session
+    if (session && now - session.lastActivity > BOOKING_SESSION_TTL) {
+      bookingSessions.delete(jid);
+      session = undefined;
+    }
+
+    // ── No active session — check for booking intent ──────────────────────
+    if (!session) {
+      if (!isBookingIntent(text)) return false;
+
+      const allServices = await storage.getServices().catch(() => []);
+      if (!allServices || allServices.length === 0) {
+        await sendFn("عفواً، ما قدرتش نحضر قائمة الخدمات دابا. حاول مرة أخرى 🙏");
+        return true;
+      }
+
+      // Show services list grouped
+      const categories = new Map<string, typeof allServices>();
+      for (const s of allServices as any[]) {
+        const cat = s.category || "Général";
+        if (!categories.has(cat)) categories.set(cat, []);
+        categories.get(cat)!.push(s);
+      }
+
+      let msg = `😊 أهلا${clientName ? ` ${clientName}` : ""}! غادي نحجزو ليك 💅\n\nاختاري الخدمة اللي تبغي:\n`;
+      let idx = 1;
+      const indexMap: { name: string; price: number; duration: number; category: string }[] = [];
+      for (const [cat, svcs] of categories) {
+        msg += `\n*${cat}*\n`;
+        for (const s of svcs as any[]) {
+          msg += `${idx}. ${s.name} — ${s.price} DH (${s.duration} دق)\n`;
+          indexMap.push({ name: s.name, price: s.price, duration: s.duration, category: cat });
+          idx++;
+        }
+      }
+      msg += `\nأرسلي رقم الخدمة 👆`;
+
+      bookingSessions.set(jid, {
+        step: "awaiting_service",
+        phone,
+        clientName: clientName || undefined,
+        lastActivity: now,
+        _serviceList: indexMap,
+      } as any);
+
+      await sendFn(msg);
+      return true;
+    }
+
+    // ── Cancel flow ───────────────────────────────────────────────────────
+    if (isCancelFlow(text)) {
+      bookingSessions.delete(jid);
+      await sendFn("واخا، لغينا الحجز 😊 إلا احتجتي أي حاجة أنا هنا 💖");
+      return true;
+    }
+
+    session.lastActivity = now;
+
+    // ── Step: awaiting_service ────────────────────────────────────────────
+    if (session.step === "awaiting_service") {
+      const serviceList: { name: string; price: number; duration: number; category: string }[] = (session as any)._serviceList || [];
+      const num = parseInt(text.trim(), 10);
+
+      // Try numeric selection first
+      if (!isNaN(num) && num >= 1 && num <= serviceList.length) {
+        session.selectedService = serviceList[num - 1];
+        session.step = "awaiting_date";
+
+        // Offer today & tomorrow
+        const today = new Date().toISOString().split("T")[0];
+        const tomorrow = new Date(Date.now() + 86400000).toISOString().split("T")[0];
+        const bizSettings = await storage.getBusinessSettings().catch(() => undefined);
+        const workingDays: number[] = (bizSettings?.workingDays as any) || [1, 2, 3, 4, 5, 6];
+
+        const candidates: string[] = [];
+        for (let i = 0; i < 7; i++) {
+          const d = new Date(Date.now() + i * 86400000);
+          if (workingDays.includes(d.getDay())) {
+            candidates.push(d.toISOString().split("T")[0]);
+            if (candidates.length === 3) break;
+          }
+        }
+
+        let msg = `✅ *${session.selectedService.name}* — ${session.selectedService.price} DH\n\nأختاري التاريخ:\n`;
+        candidates.forEach((d, i) => { msg += `${i + 1}. ${getDateLabel(d)}\n`; });
+        msg += `\nأو كتبي تاريخ بهاد الشكل: 2025-06-15`;
+
+        (session as any)._dateCandidates = candidates;
+        bookingSessions.set(jid, session);
+        await sendFn(msg);
+        return true;
+      }
+
+      // Name match
+      const lower = text.toLowerCase();
+      const matched = serviceList.find((s) => lower.includes(s.name.toLowerCase()));
+      if (matched) {
+        session.selectedService = matched;
+        session.step = "awaiting_date";
+        const workingDays: number[] = ((await storage.getBusinessSettings().catch(() => undefined))?.workingDays as any) || [1, 2, 3, 4, 5, 6];
+        const candidates: string[] = [];
+        for (let i = 0; i < 7; i++) {
+          const d = new Date(Date.now() + i * 86400000);
+          if (workingDays.includes(d.getDay())) { candidates.push(d.toISOString().split("T")[0]); if (candidates.length === 3) break; }
+        }
+        let msg = `✅ *${matched.name}* — ${matched.price} DH\n\nأختاري التاريخ:\n`;
+        candidates.forEach((d, i) => { msg += `${i + 1}. ${getDateLabel(d)}\n`; });
+        msg += `\nأو كتبي تاريخ: 2025-06-15`;
+        (session as any)._dateCandidates = candidates;
+        bookingSessions.set(jid, session);
+        await sendFn(msg);
+        return true;
+      }
+
+      await sendFn("ما فهمتش 😅 أرسلي رقم الخدمة من القائمة (مثلاً: 1 أو 2)");
+      return true;
+    }
+
+    // ── Step: awaiting_date ───────────────────────────────────────────────
+    if (session.step === "awaiting_date") {
+      const candidates: string[] = (session as any)._dateCandidates || [];
+      const num = parseInt(text.trim(), 10);
+      let chosenDate: string | undefined;
+
+      if (!isNaN(num) && num >= 1 && num <= candidates.length) {
+        chosenDate = candidates[num - 1];
+      } else if (/^\d{4}-\d{2}-\d{2}$/.test(text.trim())) {
+        chosenDate = text.trim();
+      } else if (/اليوم|today/i.test(text)) {
+        chosenDate = new Date().toISOString().split("T")[0];
+      } else if (/غدا|demain|tomorrow/i.test(text)) {
+        chosenDate = new Date(Date.now() + 86400000).toISOString().split("T")[0];
+      }
+
+      if (!chosenDate) {
+        await sendFn("ما فهمتش التاريخ 😅 أرسلي رقم من القائمة أو التاريخ بهاد الشكل: 2025-06-15");
+        return true;
+      }
+
+      const slots = await getAvailableSlots(chosenDate, session.selectedService?.duration || 60);
+      if (slots.length === 0) {
+        await sendFn(`للأسف ما كاين حتى وقت خالي ليوم ${getDateLabel(chosenDate)} 😔\nأختاري يوم آخر:`);
+        return true;
+      }
+
+      session.selectedDate = chosenDate;
+      session.step = "awaiting_time";
+
+      let msg = `📅 *${getDateLabel(chosenDate)}* — الأوقات الخالية:\n`;
+      slots.slice(0, 8).forEach((s, i) => { msg += `${i + 1}. ${s}\n`; });
+      if (slots.length > 8) msg += `...وأكثر\n`;
+      msg += `\nأختاري رقم الوقت المناسب 👆`;
+
+      (session as any)._slots = slots.slice(0, 8);
+      bookingSessions.set(jid, session);
+      await sendFn(msg);
+      return true;
+    }
+
+    // ── Step: awaiting_time ───────────────────────────────────────────────
+    if (session.step === "awaiting_time") {
+      const slots: string[] = (session as any)._slots || [];
+      const num = parseInt(text.trim(), 10);
+      let chosenTime: string | undefined;
+
+      if (!isNaN(num) && num >= 1 && num <= slots.length) {
+        chosenTime = slots[num - 1];
+      } else if (/^\d{2}:\d{2}$/.test(text.trim())) {
+        chosenTime = text.trim();
+      }
+
+      if (!chosenTime) {
+        await sendFn("ما فهمتش الوقت 😅 أرسلي رقم من القائمة (مثلاً: 1)");
+        return true;
+      }
+
+      session.selectedTime = chosenTime;
+      session.step = "confirming";
+      bookingSessions.set(jid, session);
+
+      const svc = session.selectedService!;
+      const msg = `✨ تأكيد الحجز:\n\n*الخدمة:* ${svc.name}\n*التاريخ:* ${getDateLabel(session.selectedDate!)}\n*الوقت:* ${chosenTime}\n*السعر:* ${svc.price} DH\n\nأرسلي *نعم* للتأكيد أو *لا* للإلغاء 🙏`;
+      await sendFn(msg);
+      return true;
+    }
+
+    // ── Step: confirming ──────────────────────────────────────────────────
+    if (session.step === "confirming") {
+      const isConfirm = /^(نعم|yes|oui|أيه|آه|تأكيد|confirm|ok|okay|واخا|waxha|yep|yah|1)$/i.test(text.trim());
+      const isDeny = /^(لا|لالا|non|no|cancel|إلغاء|ماخدتيش|مخدتيش)$/i.test(text.trim());
+
+      if (isDeny) {
+        bookingSessions.delete(jid);
+        await sendFn("واخا، لغينا الحجز 😊 إلا احتجتي أي حاجة أنا هنا 💖");
+        return true;
+      }
+
+      if (!isConfirm) {
+        await sendFn("أرسلي *نعم* للتأكيد أو *لا* للإلغاء 🙏");
+        return true;
+      }
+
+      // Create the appointment
+      try {
+        const svc = session.selectedService!;
+        const clientNameFinal = session.clientName || "عميلة واتساب";
+        const phoneFormatted = phone ? (phone.startsWith("0") ? "212" + phone.slice(1) : phone) : null;
+
+        const assignedStaff = await findAvailableStaffForCategory(
+          svc.category, session.selectedDate!, session.selectedTime!, svc.duration
+        );
+
+        const apt = await storage.createAppointment({
+          client: clientNameFinal,
+          service: svc.name,
+          staff: assignedStaff,
+          duration: svc.duration,
+          price: svc.price,
+          total: svc.price,
+          date: session.selectedDate!,
+          startTime: session.selectedTime!,
+          paid: false,
+          phone: phoneFormatted,
+          bookingStatus: "pending",
+          servicesJson: [{ name: svc.name, price: svc.price, duration: svc.duration }],
+        } as any);
+
+        bookingSessions.delete(jid);
+
+        // Emit socket event so planning board updates live
+        io.emit("booking:created", apt);
+
+        await sendFn(
+          `🎉 تم الحجز بنجاح!\n\n` +
+          `*${svc.name}*\n` +
+          `📅 ${getDateLabel(session.selectedDate!)} — ${session.selectedTime!}\n` +
+          `👩‍💼 ${assignedStaff}\n` +
+          `💰 ${svc.price} DH\n\n` +
+          `سنرسل لك تذكيرا قبل الموعد بساعة ⏰\nنتشرفو بزيارتك 💖`
+        );
+
+        console.log(`[Bot] WhatsApp booking created: apt#${(apt as any).id} for ${clientNameFinal} (${jid})`);
+      } catch (err: any) {
+        bookingSessions.delete(jid);
+        console.error("[Bot] Booking creation failed:", err.message);
+        await sendFn("عفواً، وقع خطأ أثناء الحجز 😔 راسلينا مباشرة وغادي نحجزو ليك 🙏");
+      }
+      return true;
+    }
+
+    return false;
+  }
+
   // How long an idle conversation keeps its context (30 min)
   const CONV_TTL = 30 * 60 * 1000;
   // Maximum recent turns to keep in history (5 back-and-forth = 10 entries)
@@ -4121,6 +4458,21 @@ export async function registerRoutes(
             await sendBotModify(remoteJid);
             console.log(`[Bot] Appointment ${apt.id} modify requested by client (${remoteJid})`);
             return;
+          }
+
+          // ── WhatsApp Booking Flow (structured multi-turn) ─────────────────
+          // Only intercept text messages — images/voice go straight to AI
+          if (!mergedImageBase64) {
+            const { sendWhatsAppMessage: sendMsg } = await import("./baileys");
+            const memForBooking = await loadMemory(remoteJid);
+            const handled = await handleBookingFlow(
+              remoteJid,
+              normalized,
+              mergedText,
+              memForBooking.clientName,
+              async (msg) => { await sendMsg(remoteJid, msg); }
+            );
+            if (handled) return;
           }
 
           // ── AI assistant reply ───────────────────────────────────────────
