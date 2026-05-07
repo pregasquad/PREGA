@@ -4164,6 +4164,36 @@ export async function registerRoutes(
             // No appointment found — fall through so AI can respond naturally
           }
 
+          // ── Short-reply fast-path: merci/شكرا/bye/بسلامة only ───────────
+          {
+            const t = mergedText.trim().toLowerCase();
+            const shortReplies: [RegExp, string[]][] = [
+              [/^(شكرا|شكراً|شكرا بزاف|chokran|merci|merci beaucoup|thank you|thanks|thx|🙏|شكرا لك|شكراً لك)$/i, [
+                "بالله عليك 🌸 يسعدنا نخدموك!",
+                "هيا بالله 💖 ننتظروك!",
+                "والله سعداء بيك 🌸",
+              ]],
+              [/^(بسلامة|بالسلامة|مع السلامة|au revoir|bye|byee|bbye|سلام|تصبح على خير|تصبحي على خير|lila sa3ida|bonne nuit|bonne journée|👋)$/i, [
+                "بسلامة 🌸 ننتظروك دايما!",
+                "مع السلامة 💖 تصبحي على خير!",
+                "يسلمك ربي 🌸 أي وقت راسليني!",
+              ]],
+            ];
+
+            for (const [pattern, responses] of shortReplies) {
+              if (pattern.test(t)) {
+                const { sendWhatsAppMessage: _send, sendTypingPresence: _tp, stopTypingPresence: _stp } = await import("./baileys");
+                await _tp(remoteJid);
+                await new Promise<void>((r) => setTimeout(r, 700 + Math.floor(Math.random() * 500)));
+                await _stp(remoteJid);
+                const reply = responses[Math.floor(Math.random() * responses.length)];
+                await _send(remoteJid, reply);
+                console.log(`[Bot] Short-reply fast-path for ${remoteJid}: "${t}"`);
+                return;
+              }
+            }
+          }
+
           // ── AI assistant reply ───────────────────────────────────────────
           const { askGemini, FALLBACK_REPLY } = await import("./gemini");
           const { sendWhatsAppMessage, sendTypingPresence, stopTypingPresence } = await import("./baileys");
