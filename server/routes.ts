@@ -4174,7 +4174,7 @@ export async function registerRoutes(
           await new Promise<void>((r) => setTimeout(r, typingDelay));
           await stopTypingPresence(remoteJid);
 
-          const finalReply = `أهلا بك!\n\n${aiReply}`;
+          const finalReply = hasHistory ? aiReply : `أهلا بك!\n\n${aiReply}`;
           await sendWhatsAppMessage(remoteJid, finalReply);
           const turnNum = Math.floor(newHistory.length / 2);
           const clientLabel = mem.clientName ? `${mem.clientName} (${remoteJid})` : remoteJid;
