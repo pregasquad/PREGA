@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { io } from "socket.io-client";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,9 @@ import {
   Hash,
   Phone,
   Trash2,
+  Mic,
+  Sparkles,
+  Save,
 } from "lucide-react";
 
 interface WAStatus {
@@ -136,6 +139,7 @@ export default function WhatsApp() {
     "مرحباً! هذه رسالة اختبار من صالون PREGASQUAD 💅"
   );
   const [broadcastMsg, setBroadcastMsg] = useState("");
+  const [selectedVoice, setSelectedVoice] = useState("Aoede");
 
   const { data: waData, refetch } = useQuery<WAStatus>({
     queryKey: ["/api/whatsapp/qr"],
@@ -390,6 +394,26 @@ export default function WhatsApp() {
     },
     onError: (err: any) =>
       toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const { data: bizSettings } = useQuery<any>({
+    queryKey: ["/api/business-settings"],
+    queryFn: () => apiRequest("GET", "/api/business-settings").then((r) => r.json()),
+  });
+
+  useEffect(() => {
+    if (bizSettings?.ttsVoice) setSelectedVoice(bizSettings.ttsVoice);
+  }, [bizSettings?.ttsVoice]);
+
+  const saveVoiceMutation = useMutation({
+    mutationFn: (voice: string) =>
+      apiRequest("PATCH", "/api/business-settings", { ttsVoice: voice }).then((r) => r.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/business-settings"] });
+      toast({ title: "تم الحفظ ✓", description: "تم تحديث صوت البوت بنجاح" });
+    },
+    onError: (err: any) =>
+      toast({ title: "خطأ", description: err.message, variant: "destructive" }),
   });
 
   const { data: clients } = useQuery<any[]>({
@@ -798,6 +822,66 @@ export default function WhatsApp() {
               : `Broadcast to ${clientsWithPhone.length} clients`}
           </Button>
         </div>
+      </div>
+
+      {/* ── BOT VOICE SETTINGS ── */}
+      <div className="rounded-2xl border bg-card p-5 space-y-4">
+        <div className="flex items-center gap-2">
+          <Mic className="w-5 h-5 text-muted-foreground" />
+          <span className="font-semibold">صوت البوت (رسائل صوتية)</span>
+          <Badge variant="secondary" className="text-xs mr-auto">Gemini TTS</Badge>
+        </div>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          عندما يرسل العميل رسالة صوتية، يرد البوت بصوت — اختاري صوت لينا المناسب للصالون 💅
+        </p>
+        <div className="grid grid-cols-1 gap-2" dir="rtl">
+          {[
+            { id: "Aoede",  icon: "🌸", label: "آوڤي",   desc: "ناعمة ودافئة — مثالية للدارجة",  feminine: true  },
+            { id: "Kore",   icon: "✨", label: "كوري",   desc: "شبابية وحيوية — طاقة إيجابية",  feminine: true  },
+            { id: "Puck",   icon: "😄", label: "پاك",    desc: "مرحة وخفيفة — تلقائية",        feminine: false },
+            { id: "Charon", icon: "🎯", label: "شارون",  desc: "واثقة وهادئة — ثقة عالية",     feminine: false },
+            { id: "Fenrir", icon: "💪", label: "فنرير",  desc: "قوية ومقنعة — أسلوب حازم",    feminine: false },
+          ].map((v) => (
+            <button
+              key={v.id}
+              data-testid={`button-voice-${v.id}`}
+              onClick={() => setSelectedVoice(v.id)}
+              className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-right transition-all ${
+                selectedVoice === v.id
+                  ? "border-emerald-500/60 bg-emerald-500/10 ring-1 ring-emerald-500/40"
+                  : "border-border bg-muted/30 hover:bg-muted/60"
+              }`}
+            >
+              <span className="text-xl">{v.icon}</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-sm">{v.label}</span>
+                  <span className="text-[10px] font-mono text-muted-foreground">{v.id}</span>
+                  {v.feminine && (
+                    <Badge variant="outline" className="text-[9px] px-1 py-0 border-pink-500/40 text-pink-400">أنثوي</Badge>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">{v.desc}</p>
+              </div>
+              {selectedVoice === v.id && (
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+              )}
+            </button>
+          ))}
+        </div>
+        <Button
+          className="w-full"
+          onClick={() => saveVoiceMutation.mutate(selectedVoice)}
+          disabled={saveVoiceMutation.isPending || selectedVoice === (bizSettings?.ttsVoice ?? "Aoede")}
+          data-testid="button-save-voice"
+        >
+          {saveVoiceMutation.isPending ? (
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          ) : (
+            <Save className="w-4 h-4 mr-2" />
+          )}
+          {saveVoiceMutation.isPending ? "جاري الحفظ…" : "حفظ الصوت"}
+        </Button>
       </div>
     </div>
   );

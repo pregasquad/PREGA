@@ -4244,7 +4244,7 @@ export async function registerRoutes(
             try {
               const { textToSpeech } = await import("./gemini");
               const { sendWhatsAppVoiceNote } = await import("./baileys");
-              const ttsResult = await textToSpeech(finalReply);
+              const ttsResult = await textToSpeech(finalReply, bizSettings?.ttsVoice || "Aoede");
               if (ttsResult) {
                 const { success } = await sendWhatsAppVoiceNote(
                   remoteJid, ttsResult.pcmBase64, ttsResult.sampleRate

@@ -335,6 +335,7 @@ export const businessSettings = pgTable("business_settings", {
   cancellationHours: integer("cancellation_hours").notNull().default(24),
   autoLockEnabled: boolean("auto_lock_enabled").notNull().default(false),
   planningShortcuts: json("planning_shortcuts").$type<string[]>().notNull().default(["services", "clients", "salaries", "inventory"]),
+  ttsVoice: varchar("tts_voice", { length: 50 }).notNull().default("Aoede"),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 

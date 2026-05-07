@@ -1214,3 +1214,32 @@ export async function saveBotMemory(mem: BotClientMemory): Promise<void> {
     console.error("[BotMemory] saveBotMemory failed for", mem.jid, err);
   }
 }
+
+export async function ensureTtsVoiceColumn(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      const [rows] = await connection.query(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_NAME = 'business_settings' AND COLUMN_NAME = 'tts_voice'
+      `);
+      if ((rows as any[]).length === 0) {
+        await connection.query(`ALTER TABLE business_settings ADD COLUMN tts_voice VARCHAR(50) NOT NULL DEFAULT 'Aoede'`);
+        console.log("Added tts_voice column to business_settings table");
+      }
+      connection.release();
+    } else {
+      await pool.query(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'business_settings' AND column_name = 'tts_voice') THEN
+            ALTER TABLE business_settings ADD COLUMN tts_voice VARCHAR(50) NOT NULL DEFAULT 'Aoede';
+          END IF;
+        END $$;
+      `);
+    }
+    console.log("TTS voice column ready");
+  } catch (error) {
+    console.error("Failed to ensure tts_voice column:", error);
+  }
+}
