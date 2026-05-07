@@ -15,7 +15,6 @@ const retryDelay = () =>
   new Promise<void>((r) => setTimeout(r, 2000 + Math.floor(Math.random() * 1000)));
 
 // Fallback reply sent to the client when all Gemini models are unavailable.
-// Keeps the bot responsive even when quota is exhausted.
 export const FALLBACK_REPLY =
   "شكراً لتواصلك معنا 💖\nفريقنا متاح للإجابة على استفساراتك.\nيرجى التواصل معنا مباشرة أو الاتصال بالصالون 🌸";
 
@@ -35,7 +34,7 @@ export interface ConversationTurn {
   text: string;
 }
 
-// Cache the system prompt per salon snapshot to avoid rebuilding it on every message.
+// Cache the built system prompt per salon snapshot to avoid rebuilding on every message.
 let cachedPromptKey = "";
 let cachedPrompt = "";
 
@@ -43,37 +42,47 @@ function buildSystemPrompt(ctx: SalonContext): string {
   const key = `${ctx.name}|${ctx.currency}|${ctx.services.length}`;
   if (key === cachedPromptKey) return cachedPrompt;
 
-  const serviceLines =
+  // Group services by category so the list is easier to read
+  const byCategory: Record<string, typeof ctx.services> = {};
+  for (const s of ctx.services) {
+    (byCategory[s.category] = byCategory[s.category] || []).push(s);
+  }
+  const serviceBlock =
     ctx.services.length > 0
-      ? ctx.services
-          .sort((a, b) => a.category.localeCompare(b.category))
-          .map(
-            (s) =>
-              `  - ${s.name} (${s.category}) : ${s.price} ${ctx.currency || "DH"} — ${s.duration} min`
+      ? Object.entries(byCategory)
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([cat, svcs]) =>
+            `【${cat}】\n` +
+            svcs.map((s) => `  • ${s.name} : ${s.price} ${ctx.currency || "DH"}`).join("\n")
           )
-          .join("\n")
+          .join("\n\n")
       : "  (liste non disponible)";
 
-  const prompt = `أنتِ مساعدة احترافية وودودة لصالون التجميل ${ctx.name}.
+  const prompt = `أنتِ مساعدة احترافية وودودة لصالون التجميل "${ctx.name}".
+مهمتكِ: الإجابة على أسئلة العملاء بشكل كامل وواضح، مع ذكر الأسعار الحقيقية دائماً.
 
-=== معلومات الصالون ===
+━━━ معلومات الصالون ━━━
 الاسم: ${ctx.name}
 ${ctx.address ? `العنوان: ${ctx.address}` : ""}
-${ctx.phone ? `الهاتف: ${ctx.phone}` : ""}
+${ctx.phone ? `الهاتف للحجز: ${ctx.phone}` : ""}
 ${ctx.openingTime && ctx.closingTime ? `أوقات العمل: ${ctx.openingTime} – ${ctx.closingTime}` : ""}
 
-=== خدماتنا وأسعارها ===
-${serviceLines}
+━━━ قائمة الخدمات والأسعار الكاملة ━━━
+${serviceBlock}
 
-=== القواعد ===
-- إذا كتب العميل بالدارجة المغربية، ردّي عليه بالدارجة المغربية بالحروف العربية
-- إذا كتب العميل بالفرنسية، ردّي عليه بالفرنسية
-- لا تكتبي الدارجة بالحروف اللاتينية أبدًا — استعملي دائمًا الحروف العربية للدارجة
-- كوني مختصرة (3-5 أسطر)، دافئة واحترافية
-- استعملي الأسعار والخدمات الحقيقية المذكورة أعلاه
-- للحجز، ادعي العميل للتواصل معنا مباشرة
-- لا تعطي أوقات متاحة مباشرة — قولي أن الفريق سيؤكد
-- اختمي دائمًا برسالة دافئة وإيموجي 💖 🌸 ✨`;
+━━━ قواعد اللغة ━━━
+1. إذا كتب العميل بالعربية أو بالدارجة المغربية بالحروف العربية → ردّي بالدارجة المغربية بالحروف العربية
+2. إذا كتب العميل بالفرنسية → ردّي بالفرنسية
+3. إذا كتب العميل بالدارجة بالحروف اللاتينية أو مزيج (مثل: bghit, dial, taman, wach, zloul, nails, brushing, coiffure, prix, kifach, ndir, 3raf) → هذه دارجة مغربية بخط لاتيني، ردّي عليها بالدارجة المغربية بالحروف العربية
+4. لا تكتبي الدارجة بالحروف اللاتينية في ردودك — استعملي دائماً الحروف العربية
+
+━━━ قواعد المحتوى ━━━
+• عند السؤال عن الأسعار أو خدمة معينة: اذكري الأسعار الحقيقية من القائمة أعلاه مباشرة — لا تقولي "تواصل معنا للأسعار"، بل اذكري السعر فوراً
+• عند السؤال عن عدة خدمات (مثل nails و brushing): اذكري سعر كل خدمة على حدة
+• أكملي ردودك دائماً حتى النهاية — لا تقطعي الجملة في المنتصف
+• للحجز: وجّهي العميل للتواصل المباشر${ctx.phone ? ` على ${ctx.phone}` : ""}
+• لا تعطي أوقات متاحة محددة — قولي أن الفريق سيؤكد
+• اختمي كل رد بإيموجي دافئ 💖 🌸 ✨`;
 
   cachedPromptKey = key;
   cachedPrompt = prompt;
@@ -86,17 +95,15 @@ async function callGemini(
   systemPrompt: string,
   apiKey: string,
   history: ConversationTurn[]
-): Promise<{ reply: string | null; isQuotaError: boolean }> {
+): Promise<{ reply: string | null; isQuotaError: boolean; isTruncated: boolean }> {
   const url = `${GEMINI_BASE}/${model}:generateContent?key=${apiKey}`;
 
   // Build multi-turn contents array from conversation history + current message
   const contents: { role: string; parts: { text: string }[] }[] = [
-    // Previous turns
     ...history.map((turn) => ({
       role: turn.role,
       parts: [{ text: turn.text }],
     })),
-    // Current user message
     { role: "user", parts: [{ text: userMessage }] },
   ];
 
@@ -106,52 +113,63 @@ async function callGemini(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        // systemInstruction keeps the prompt separate from the conversation turns,
-        // so it doesn't consume user/model turn slots and isn't repeated in history.
+        // systemInstruction keeps the prompt outside conversation turns
         systemInstruction: {
           parts: [{ text: systemPrompt }],
         },
         contents,
         generationConfig: {
-          maxOutputTokens: 350,
-          temperature: 0.7,
+          // 700 tokens — enough to list a full service price menu without truncation
+          maxOutputTokens: 700,
+          temperature: 0.65,
         },
       }),
     });
   } catch (networkErr: any) {
     console.warn(`[Gemini] ${model} network error: ${networkErr.message}`);
-    return { reply: null, isQuotaError: false };
+    return { reply: null, isQuotaError: false, isTruncated: false };
   }
 
   if (!response.ok) {
     const status = response.status;
     if (status === 429 || status === 503) {
       console.warn(`[Gemini] ${model} quota/overload (${status})`);
-      return { reply: null, isQuotaError: true };
+      return { reply: null, isQuotaError: true, isTruncated: false };
     }
     if (status === 404) {
       console.warn(`[Gemini] ${model} not found (404) — skipping`);
-      return { reply: null, isQuotaError: false };
+      return { reply: null, isQuotaError: false, isTruncated: false };
     }
     const errBody = await response.text();
     console.error(`[Gemini] ${model} error ${status}: ${errBody.slice(0, 300)}`);
-    return { reply: null, isQuotaError: false };
+    return { reply: null, isQuotaError: false, isTruncated: false };
   }
 
   const data = (await response.json()) as any;
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  return { reply: text ? text.trim() : null, isQuotaError: false };
+  const candidate = data?.candidates?.[0];
+  const text = candidate?.content?.parts?.[0]?.text;
+
+  // finishReason "MAX_TOKENS" means the response was cut off — don't treat it as a good reply
+  const finishReason: string = candidate?.finishReason ?? "STOP";
+  const isTruncated = finishReason === "MAX_TOKENS";
+
+  if (isTruncated) {
+    console.warn(`[Gemini] ${model} response truncated (MAX_TOKENS) — discarding to avoid history corruption`);
+    // Return null so the cascade tries the next model with a fresh attempt
+    return { reply: null, isQuotaError: false, isTruncated: true };
+  }
+
+  return { reply: text ? text.trim() : null, isQuotaError: false, isTruncated: false };
 }
 
 /**
  * Ask Gemini for a reply, supporting multi-turn conversation history.
  *
  * Returns:
- * - `reply`: the AI reply string, FALLBACK_REPLY on quota errors, or null if no API key
- * - `newHistory`: updated conversation turns to persist (unchanged on fallback/error)
+ * - `reply`: AI reply string, FALLBACK_REPLY on quota errors, or null if no API key
+ * - `newHistory`: updated turns to persist — only set when a complete AI reply was received
  *
- * Only successful AI replies are appended to history — fallback messages are not,
- * so the conversation context stays coherent.
+ * Truncated responses (MAX_TOKENS) are never saved to history to prevent context corruption.
  */
 export async function askGemini(
   userMessage: string,
@@ -177,11 +195,12 @@ export async function askGemini(
   for (let i = 0; i < MODEL_CASCADE.length; i++) {
     const model = MODEL_CASCADE[i];
     try {
-      const { reply, isQuotaError } = await callGemini(model, userMessage, systemPrompt, apiKey, history);
+      const { reply, isQuotaError, isTruncated } = await callGemini(
+        model, userMessage, systemPrompt, apiKey, history
+      );
 
       if (reply) {
-        console.log(`[Gemini] ${model} replied (turn ${history.length / 2 + 1})`);
-        // Append user message + model reply to history
+        console.log(`[Gemini] ${model} replied (turn ${Math.floor(history.length / 2) + 1})`);
         const newHistory: ConversationTurn[] = [
           ...history,
           { role: "user", text: userMessage },
@@ -198,9 +217,10 @@ export async function askGemini(
         return { reply: FALLBACK_REPLY, newHistory: history };
       }
 
-      // Non-quota failure — wait then try next model
+      // Truncated or unexpected failure — wait then try next model
       if (i < MODEL_CASCADE.length - 1) {
-        console.warn(`[Gemini] ${model} failed — retrying next model in ~2-3s`);
+        const reason = isTruncated ? "truncated" : "failed";
+        console.warn(`[Gemini] ${model} ${reason} — retrying next model in ~2-3s`);
         await retryDelay();
       }
     } catch (err: any) {
