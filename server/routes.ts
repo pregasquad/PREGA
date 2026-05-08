@@ -4503,7 +4503,8 @@ export async function registerRoutes(
           await new Promise<void>((r) => setTimeout(r, typingDelay));
           await stopTypingPresence(remoteJid);
 
-          const finalReply = hasHistory ? aiReply : `مرحبا بيك أحبيبا 🌸\n\n${aiReply}`;
+          // AI now handles the full first-message greeting via the prompt
+          const finalReply = aiReply;
 
           // ── Respond in kind: voice note → voice note, text → text ────────
           const batchHasVoice = msgs.some((m) => m.isVoice);
