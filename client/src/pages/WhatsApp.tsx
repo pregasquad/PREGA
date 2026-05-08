@@ -158,6 +158,7 @@ export default function WhatsApp() {
 
   // ── Phone number filter state ──────────────────────────────────────────────
   const [filterOpen, setFilterOpen] = useState(false);
+  const [filterDirty, setFilterDirty] = useState(false);
   const [filterMode, setFilterMode] = useState<"all" | "allowlist" | "blocklist">("all");
   const [filterNumbers, setFilterNumbers] = useState<string[]>([]);
   const [filterInput, setFilterInput] = useState("");
@@ -509,21 +510,33 @@ export default function WhatsApp() {
       }).then((r) => r.json()),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/business-settings"] });
+      setFilterDirty(false);
       toast({ title: "تم الحفظ ✓", description: "تم تحديث إعدادات الفلتر" });
     },
     onError: (err: any) =>
-      toast({ title: "خطأ", description: err.message, variant: "destructive" }),
+      toast({ title: "خطأ في الحفظ", description: err.message, variant: "destructive" }),
   });
 
+  const normalizeFilterNumber = (n: string) => {
+    let d = n.replace(/[^0-9]/g, "");
+    if (d.startsWith("00")) d = d.slice(2);
+    if (d.startsWith("0") && d.length === 10) d = "212" + d.slice(1);
+    if (d.length === 9) d = "212" + d;
+    return d;
+  };
+
   const addFilterNumber = () => {
-    const trimmed = filterInput.trim();
-    if (!trimmed || filterNumbers.includes(trimmed)) { setFilterInput(""); return; }
-    setFilterNumbers((prev) => [...prev, trimmed]);
+    const normalized = normalizeFilterNumber(filterInput.trim());
+    if (!normalized || filterNumbers.includes(normalized)) { setFilterInput(""); return; }
+    setFilterNumbers((prev) => [...prev, normalized]);
+    setFilterDirty(true);
     setFilterInput("");
   };
 
-  const removeFilterNumber = (num: string) =>
+  const removeFilterNumber = (num: string) => {
     setFilterNumbers((prev) => prev.filter((n) => n !== num));
+    setFilterDirty(true);
+  };
 
   const botEnabled = bizSettings?.botEnabled !== false;
 
@@ -1333,8 +1346,13 @@ export default function WhatsApp() {
             </div>
 
             {/* Save button */}
+            {filterDirty && (
+              <p className="text-xs text-amber-400 text-center font-medium animate-pulse">
+                ⚠️ لديك تغييرات غير محفوظة — اضغط على حفظ
+              </p>
+            )}
             <Button
-              className="w-full"
+              className={`w-full ${filterDirty ? "bg-amber-600 hover:bg-amber-700 text-white" : ""}`}
               onClick={() => saveFilterMutation.mutate({ mode: filterMode, numbers: filterNumbers })}
               disabled={saveFilterMutation.isPending}
               data-testid="button-save-filter"

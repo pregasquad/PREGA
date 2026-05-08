@@ -39,7 +39,7 @@ export default function Charges() {
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const isAdmin = sessionStorage.getItem("admin_authenticated") === "true";
+  const isAdmin = sessionStorage.getItem("current_user_role") === "owner";
   const { data: salonSettings } = useBusinessSettings();
 
   const [withdrawalAmount, setWithdrawalAmount] = useState("");
