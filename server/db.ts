@@ -195,7 +195,7 @@ export async function ensureAppointmentsAuditColumns(): Promise<void> {
       // Check if created_by column exists
       const [createdByRows] = await connection.query(`
         SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
-        WHERE TABLE_NAME = 'appointments' AND COLUMN_NAME = 'created_by'
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'appointments' AND COLUMN_NAME = 'created_by'
       `);
       
       if ((createdByRows as any[]).length === 0) {
@@ -206,7 +206,7 @@ export async function ensureAppointmentsAuditColumns(): Promise<void> {
       // Check if created_at column exists
       const [createdAtRows] = await connection.query(`
         SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
-        WHERE TABLE_NAME = 'appointments' AND COLUMN_NAME = 'created_at'
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'appointments' AND COLUMN_NAME = 'created_at'
       `);
       
       if ((createdAtRows as any[]).length === 0) {
@@ -217,7 +217,7 @@ export async function ensureAppointmentsAuditColumns(): Promise<void> {
       // Check if services_json column exists (for multi-service appointments)
       const [servicesJsonRows] = await connection.query(`
         SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
-        WHERE TABLE_NAME = 'appointments' AND COLUMN_NAME = 'services_json'
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'appointments' AND COLUMN_NAME = 'services_json'
       `);
       
       if ((servicesJsonRows as any[]).length === 0) {
@@ -256,7 +256,7 @@ export async function ensureAppointmentDiscountColumns(): Promise<void> {
       const discountCols = ['loyalty_discount_amount', 'loyalty_points_redeemed', 'gift_card_discount_amount'];
       for (const col of discountCols) {
         const [rows] = await connection.query(
-          `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'appointments' AND COLUMN_NAME = ?`,
+          `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'appointments' AND COLUMN_NAME = ?`,
           [col]
         );
         if ((rows as any[]).length === 0) {
@@ -298,7 +298,7 @@ export async function ensureStaffIdBackfillMySQL(): Promise<void> {
     // Ensure photo_url column exists on staff (MEDIUMTEXT for base64)
     const [photoRows] = await connection.query(`
       SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
-      WHERE TABLE_NAME = 'staff' AND COLUMN_NAME = 'photo_url'
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'staff' AND COLUMN_NAME = 'photo_url'
     `);
     if ((photoRows as any[]).length === 0) {
       await connection.query(`ALTER TABLE staff ADD COLUMN photo_url MEDIUMTEXT`);
@@ -308,7 +308,7 @@ export async function ensureStaffIdBackfillMySQL(): Promise<void> {
     // Ensure staff_id column exists on appointments
     const [appStaffIdRows] = await connection.query(`
       SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
-      WHERE TABLE_NAME = 'appointments' AND COLUMN_NAME = 'staff_id'
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'appointments' AND COLUMN_NAME = 'staff_id'
     `);
     if ((appStaffIdRows as any[]).length === 0) {
       await connection.query(`ALTER TABLE appointments ADD COLUMN staff_id INT`);
@@ -318,7 +318,7 @@ export async function ensureStaffIdBackfillMySQL(): Promise<void> {
     // Ensure staff_id column exists on staff_deductions
     const [dedStaffIdRows] = await connection.query(`
       SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
-      WHERE TABLE_NAME = 'staff_deductions' AND COLUMN_NAME = 'staff_id'
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'staff_deductions' AND COLUMN_NAME = 'staff_id'
     `);
     if ((dedStaffIdRows as any[]).length === 0) {
       await connection.query(`ALTER TABLE staff_deductions ADD COLUMN staff_id INT`);
@@ -343,7 +343,7 @@ export async function ensureStaffIdBackfillMySQL(): Promise<void> {
     // Add indexes for staff_id columns
     const [appIdxRows] = await connection.query(`
       SELECT INDEX_NAME FROM INFORMATION_SCHEMA.STATISTICS 
-      WHERE TABLE_NAME = 'appointments' AND INDEX_NAME = 'idx_appointments_staff_id'
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'appointments' AND INDEX_NAME = 'idx_appointments_staff_id'
     `);
     if ((appIdxRows as any[]).length === 0) {
       await connection.query(`CREATE INDEX idx_appointments_staff_id ON appointments(staff_id)`);
@@ -351,7 +351,7 @@ export async function ensureStaffIdBackfillMySQL(): Promise<void> {
     
     const [dedIdxRows] = await connection.query(`
       SELECT INDEX_NAME FROM INFORMATION_SCHEMA.STATISTICS 
-      WHERE TABLE_NAME = 'staff_deductions' AND INDEX_NAME = 'idx_staff_deductions_staff_id'
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'staff_deductions' AND INDEX_NAME = 'idx_staff_deductions_staff_id'
     `);
     if ((dedIdxRows as any[]).length === 0) {
       await connection.query(`CREATE INDEX idx_staff_deductions_staff_id ON staff_deductions(staff_id)`);
@@ -626,7 +626,7 @@ export async function ensureAdminRolesPhotoColumn(): Promise<void> {
       // Check if photo_url column exists
       const [rows] = await connection.query(`
         SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS 
-        WHERE TABLE_NAME = 'admin_roles' AND COLUMN_NAME = 'photo_url'
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'admin_roles' AND COLUMN_NAME = 'photo_url'
       `);
       
       if ((rows as any[]).length === 0) {
@@ -670,7 +670,7 @@ export async function ensureProductExpiryColumns(): Promise<void> {
       
       const [expiryRows] = await connection.query(`
         SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
-        WHERE TABLE_NAME = 'products' AND COLUMN_NAME = 'expiry_date'
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'products' AND COLUMN_NAME = 'expiry_date'
       `);
       
       if ((expiryRows as any[]).length === 0) {
@@ -680,7 +680,7 @@ export async function ensureProductExpiryColumns(): Promise<void> {
       
       const [warningRows] = await connection.query(`
         SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
-        WHERE TABLE_NAME = 'products' AND COLUMN_NAME = 'expiry_warning_days'
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'products' AND COLUMN_NAME = 'expiry_warning_days'
       `);
       
       if ((warningRows as any[]).length === 0) {
@@ -714,7 +714,7 @@ export async function ensureDeductionClearedColumns(): Promise<void> {
       const connection = await pool.getConnection();
       const [rows] = await connection.query(`
         SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
-        WHERE TABLE_NAME = 'staff_deductions' AND COLUMN_NAME = 'cleared'
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'staff_deductions' AND COLUMN_NAME = 'cleared'
       `);
       if ((rows as any[]).length === 0) {
         await connection.query(`ALTER TABLE staff_deductions ADD COLUMN cleared BOOLEAN NOT NULL DEFAULT FALSE`);
@@ -744,7 +744,7 @@ export async function ensureDeductionPaidBackColumn(): Promise<void> {
       const connection = await pool.getConnection();
       const [rows] = await connection.query(`
         SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
-        WHERE TABLE_NAME = 'staff_deductions' AND COLUMN_NAME = 'paid_back'
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'staff_deductions' AND COLUMN_NAME = 'paid_back'
       `);
       if ((rows as any[]).length === 0) {
         await connection.query(`ALTER TABLE staff_deductions ADD COLUMN paid_back DOUBLE NOT NULL DEFAULT 0`);
@@ -772,7 +772,7 @@ export async function ensureAutoLockColumn(): Promise<void> {
       const connection = await pool.getConnection();
       const [rows] = await connection.query(`
         SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
-        WHERE TABLE_NAME = 'business_settings' AND COLUMN_NAME = 'auto_lock_enabled'
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'business_settings' AND COLUMN_NAME = 'auto_lock_enabled'
       `);
       if ((rows as any[]).length === 0) {
         await connection.query(`ALTER TABLE business_settings ADD COLUMN auto_lock_enabled BOOLEAN NOT NULL DEFAULT FALSE`);
@@ -801,7 +801,7 @@ export async function ensureChargeAttachmentColumns(): Promise<void> {
       const connection = await pool.getConnection();
       const [rows] = await connection.query(`
         SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
-        WHERE TABLE_NAME = 'charges' AND COLUMN_NAME = 'attachment'
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'charges' AND COLUMN_NAME = 'attachment'
       `);
       if ((rows as any[]).length === 0) {
         await connection.query(`ALTER TABLE charges ADD COLUMN attachment LONGTEXT NULL DEFAULT NULL`);
@@ -834,7 +834,7 @@ export async function ensureServiceStartingPriceColumn(): Promise<void> {
       const connection = await pool.getConnection();
       const [rows] = await connection.query(`
         SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
-        WHERE TABLE_NAME = 'services' AND COLUMN_NAME = 'is_starting_price'
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'services' AND COLUMN_NAME = 'is_starting_price'
       `);
       if ((rows as any[]).length === 0) {
         await connection.query(`ALTER TABLE services ADD COLUMN is_starting_price BOOLEAN NOT NULL DEFAULT FALSE`);
@@ -863,7 +863,7 @@ export async function ensureServiceMaxPriceColumn(): Promise<void> {
       const connection = await pool.getConnection();
       const [rows] = await connection.query(`
         SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
-        WHERE TABLE_NAME = 'services' AND COLUMN_NAME = 'max_price'
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'services' AND COLUMN_NAME = 'max_price'
       `);
       if ((rows as any[]).length === 0) {
         await connection.query(`ALTER TABLE services ADD COLUMN max_price DOUBLE NULL`);
@@ -892,7 +892,7 @@ export async function ensurePlanningShortcutsColumn(): Promise<void> {
       const connection = await pool.getConnection();
       const [rows] = await connection.query(`
         SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
-        WHERE TABLE_NAME = 'business_settings' AND COLUMN_NAME = 'planning_shortcuts'
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'business_settings' AND COLUMN_NAME = 'planning_shortcuts'
       `);
       if ((rows as any[]).length === 0) {
         // In MySQL/TiDB, JSON columns cannot have a literal string default in older versions
@@ -978,7 +978,7 @@ export async function ensureBookingStatusColumn(): Promise<void> {
     if (dbDialect === 'mysql') {
       const connection = await pool.getConnection();
       const [rows] = await connection.query(
-        `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'appointments' AND COLUMN_NAME = 'booking_status'`
+        `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'appointments' AND COLUMN_NAME = 'booking_status'`
       );
       if ((rows as any[]).length === 0) {
         await connection.query(`ALTER TABLE appointments ADD COLUMN booking_status VARCHAR(20) DEFAULT 'pending'`);
@@ -1264,7 +1264,7 @@ export async function ensureMapsLinkColumn(): Promise<void> {
       const connection = await pool.getConnection();
       const [rows] = await connection.query(`
         SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_NAME = 'business_settings' AND COLUMN_NAME = 'maps_link'
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'business_settings' AND COLUMN_NAME = 'maps_link'
       `);
       if ((rows as any[]).length === 0) {
         await connection.query(`ALTER TABLE business_settings ADD COLUMN maps_link TEXT NULL`);
@@ -1293,7 +1293,7 @@ export async function ensureBotEnabledColumn(): Promise<void> {
       const connection = await pool.getConnection();
       const [rows] = await connection.query(`
         SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_NAME = 'business_settings' AND COLUMN_NAME = 'bot_enabled'
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'business_settings' AND COLUMN_NAME = 'bot_enabled'
       `);
       if ((rows as any[]).length === 0) {
         await connection.query(`ALTER TABLE business_settings ADD COLUMN bot_enabled BOOLEAN NOT NULL DEFAULT TRUE`);
@@ -1402,7 +1402,7 @@ export async function ensureTtsVoiceColumn(): Promise<void> {
       const connection = await pool.getConnection();
       const [rows] = await connection.query(`
         SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_NAME = 'business_settings' AND COLUMN_NAME = 'tts_voice'
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'business_settings' AND COLUMN_NAME = 'tts_voice'
       `);
       if ((rows as any[]).length === 0) {
         await connection.query(`ALTER TABLE business_settings ADD COLUMN tts_voice VARCHAR(50) NOT NULL DEFAULT 'Aoede'`);
