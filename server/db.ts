@@ -1375,3 +1375,34 @@ export async function ensureTtsVoiceColumn(): Promise<void> {
     console.error("Failed to ensure tts_voice column:", error);
   }
 }
+
+export async function ensureOwnerWithdrawalsTable(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS owner_withdrawals (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          amount DOUBLE NOT NULL,
+          date TEXT NOT NULL,
+          notes TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+        )
+      `);
+      connection.release();
+    } else {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS owner_withdrawals (
+          id SERIAL PRIMARY KEY,
+          amount DOUBLE PRECISION NOT NULL,
+          date TEXT NOT NULL,
+          notes TEXT,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL
+        )
+      `);
+    }
+    console.log("Owner withdrawals table ready");
+  } catch (error) {
+    console.error("Failed to ensure owner_withdrawals table:", error);
+  }
+}

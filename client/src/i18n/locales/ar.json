@@ -246,7 +246,24 @@
     "fileTooLarge": "الملف كبير جداً (الحد الأقصى 10 ميغابايت)",
     "compressionFailed": "فشل ضغط الملف",
     "downloadFailed": "فشل تحميل الملف",
-    "noExpensesForPeriod": "لا توجد مصاريف لهذه الفترة"
+    "noExpensesForPeriod": "لا توجد مصاريف لهذه الفترة",
+    "totalDeductions": "إجمالي الخصومات",
+    "totalCombined": "المجموع الكلي (مصاريف + سحوبات)"
+  },
+  "ownerWithdrawals": {
+    "title": "سحوبات المالك من الصندوق",
+    "addWithdrawal": "إضافة سحب",
+    "amount": "المبلغ المسحوب",
+    "notes": "ملاحظات",
+    "notesPlaceholder": "مثال: مصاريف شخصية",
+    "withdrawalAdded": "تم تسجيل السحب بنجاح",
+    "withdrawalDeleted": "تم حذف السحب بنجاح",
+    "totalWithdrawals": "إجمالي سحوبات المالك",
+    "noWithdrawals": "لا توجد سحوبات لهذه الفترة",
+    "fillAllFields": "يرجى إدخال المبلغ والتاريخ",
+    "caisseBreakdown": "ما خرج من الصندوق هذا الشهر",
+    "myWithdrawals": "سحوباتي الشخصية",
+    "totalOutOfCaisse": "إجمالي ما خرج من الصندوق"
   },
   "salaries": {
     "title": "الرواتب",

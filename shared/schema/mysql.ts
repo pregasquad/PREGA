@@ -648,3 +648,19 @@ export const tombolaSpins = mysqlTable("tombola_spins", {
   spunAt: timestamp("spun_at").defaultNow().notNull(),
 });
 export type TombolaSpin = typeof tombolaSpins.$inferSelect;
+
+export const ownerWithdrawals = mysqlTable("owner_withdrawals", {
+  id: serial("id").primaryKey(),
+  amount: double("amount").notNull(),
+  date: text("date").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertOwnerWithdrawalSchema = createInsertSchema(ownerWithdrawals).omit({ id: true, createdAt: true }).extend({
+  amount: z.number().min(0, "Amount must be non-negative"),
+  date: z.string().min(1, "Date is required"),
+  notes: z.string().optional().nullable(),
+});
+export type OwnerWithdrawal = typeof ownerWithdrawals.$inferSelect;
+export type InsertOwnerWithdrawal = z.infer<typeof insertOwnerWithdrawalSchema>;

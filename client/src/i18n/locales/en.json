@@ -246,7 +246,24 @@
     "fileTooLarge": "File too large (max 10MB)",
     "compressionFailed": "Failed to compress file",
     "downloadFailed": "Failed to download file",
-    "noExpensesForPeriod": "No expenses for this period"
+    "noExpensesForPeriod": "No expenses for this period",
+    "totalDeductions": "Total Deductions",
+    "totalCombined": "Combined Total (Expenses + Withdrawals)"
+  },
+  "ownerWithdrawals": {
+    "title": "Owner Cash Withdrawals",
+    "addWithdrawal": "Add Withdrawal",
+    "amount": "Amount Withdrawn",
+    "notes": "Notes",
+    "notesPlaceholder": "E.g. Personal expenses",
+    "withdrawalAdded": "Withdrawal recorded successfully",
+    "withdrawalDeleted": "Withdrawal deleted successfully",
+    "totalWithdrawals": "Total Owner Withdrawals",
+    "noWithdrawals": "No withdrawals for this period",
+    "fillAllFields": "Please enter the amount and date",
+    "caisseBreakdown": "What left the cash register this month",
+    "myWithdrawals": "My personal withdrawals",
+    "totalOutOfCaisse": "Total out of cash register"
   },
   "salaries": {
     "title": "Salaries",

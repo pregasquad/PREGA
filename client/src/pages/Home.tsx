@@ -346,6 +346,9 @@ export default function Home() {
   const { data: charges = [] } = useQuery<any[]>({
     queryKey: ["/api/charges"],
   });
+  const { data: ownerWithdrawalsData = [] } = useQuery<any[]>({
+    queryKey: ["/api/owner-withdrawals"],
+  });
   const { data: lowStockProducts = [] } = useQuery<any[]>({
     queryKey: ["/api/products/low-stock"],
   });
@@ -441,8 +444,13 @@ export default function Home() {
     return todayCharges.reduce((sum: number, c: any) => sum + (c.amount || 0), 0);
   }, [charges, todayDate]);
 
+  const todayOwnerWithdrawals = useMemo(() => {
+    const todayW = ownerWithdrawalsData.filter((w: any) => w.date === todayDate);
+    return todayW.reduce((sum: number, w: any) => sum + (w.amount || 0), 0);
+  }, [ownerWithdrawalsData, todayDate]);
+
   const salonPortion = todayStats.totalRevenue - todayStats.totalCommissions;
-  const netProfit = salonPortion - todayExpenses;
+  const netProfit = salonPortion - todayExpenses - todayOwnerWithdrawals;
 
   const closingChecklist = useMemo(() => {
     const unpaidCount = appointments.filter((app: any) => !app.paid).length;

@@ -84,6 +84,7 @@ export default function Reports() {
   const { data: services = [] } = useServices();
   const { data: charges = [] } = useQuery<any[]>({ queryKey: ["/api/charges"] });
   const { data: expenseCategories = [] } = useQuery<any[]>({ queryKey: ["/api/expense-categories"] });
+  const { data: ownerWithdrawalsAll = [] } = useQuery<any[]>({ queryKey: ["/api/owner-withdrawals"] });
   const { data: staffCommissions = [] } = useQuery<{ id: number; staffId: number; serviceId: number; percentage: number }[]>({
     queryKey: ["/api/staff-commissions"],
   });
@@ -128,6 +129,14 @@ export default function Reports() {
     });
   }, [charges, dateRange]);
 
+  const filteredOwnerWithdrawals = useMemo(() => {
+    return (ownerWithdrawalsAll || []).filter((w: any) => {
+      try {
+        return isWithinInterval(parseISO(w.date), { start: dateRange.start, end: dateRange.end });
+      } catch { return false; }
+    });
+  }, [ownerWithdrawalsAll, dateRange]);
+
   const navigatePeriod = (direction: "prev" | "next") => {
     if (viewMode === "weekly") {
       setSelectedDate(direction === "prev" ? subWeeks(selectedDate, 1) : addWeeks(selectedDate, 1));
@@ -141,6 +150,7 @@ export default function Reports() {
     const paidRevenue = filteredAppointments.filter(app => app.paid).reduce((sum, app) => sum + Number(app.total || 0), 0);
     const unpaidRevenue = totalRevenue - paidRevenue;
     const totalExpenses = filteredCharges.reduce((sum: number, ch: any) => sum + Number(ch.amount || 0), 0);
+    const totalOwnerWithdrawals = filteredOwnerWithdrawals.reduce((sum: number, w: any) => sum + Number(w.amount || 0), 0);
 
     let totalCommissions = 0;
     filteredAppointments.forEach((app: any) => {
@@ -157,7 +167,7 @@ export default function Reports() {
     });
 
     const salonPortion = totalRevenue - totalCommissions;
-    const netProfit = salonPortion - totalExpenses;
+    const netProfit = salonPortion - totalExpenses - totalOwnerWithdrawals;
     const totalAppointments = filteredAppointments.length;
 
     const staffRevenue = staffList.map(s => {
@@ -177,8 +187,8 @@ export default function Reports() {
       .sort((a, b) => b.value - a.value)
       .slice(0, 6);
 
-    return { totalRevenue, paidRevenue, unpaidRevenue, totalExpenses, netProfit, totalAppointments, staffRevenue, serviceData };
-  }, [filteredAppointments, filteredCharges, staffList, services, staffCommissions]);
+    return { totalRevenue, paidRevenue, unpaidRevenue, totalExpenses, totalOwnerWithdrawals, netProfit, totalAppointments, staffRevenue, serviceData };
+  }, [filteredAppointments, filteredCharges, filteredOwnerWithdrawals, staffList, services, staffCommissions]);
 
   const dailyRevenueData = useMemo(() => {
     try {
@@ -443,6 +453,9 @@ export default function Reports() {
               <DollarSign className="w-4 h-4 text-red-500 shrink-0" />
             </div>
             <p className="text-lg md:text-2xl font-bold mt-1 text-red-600 dark:text-red-400" data-testid="text-total-expenses">{formatCurrency(stats.totalExpenses)} DH</p>
+            {stats.totalOwnerWithdrawals > 0 && (
+              <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5">{t("ownerWithdrawals.title")}: {formatCurrency(stats.totalOwnerWithdrawals)} DH</p>
+            )}
           </CardContent>
         </Card>
         <Card className="border shadow-sm">

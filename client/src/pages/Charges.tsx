@@ -7,10 +7,11 @@ import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, TrendingDown, FolderPlus, RefreshCw, ChevronLeft, ChevronRight, Calendar, Paperclip, X, Image, FileText, Eye } from "lucide-react";
+import { Plus, Trash2, TrendingDown, FolderPlus, RefreshCw, ChevronLeft, ChevronRight, Calendar, Paperclip, X, Image, FileText, Wallet } from "lucide-react";
 import { autoPrintExpense } from "@/lib/printReceipt";
 import { useBusinessSettings } from "@/hooks/use-salon-data";
 import { refreshSalariesBackground } from "@/lib/salariesRefresher";
@@ -41,6 +42,10 @@ export default function Charges() {
   const isAdmin = sessionStorage.getItem("admin_authenticated") === "true";
   const { data: salonSettings } = useBusinessSettings();
 
+  const [withdrawalAmount, setWithdrawalAmount] = useState("");
+  const [withdrawalDate, setWithdrawalDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [withdrawalNotes, setWithdrawalNotes] = useState("");
+
   const getLocale = () => {
     switch (i18n.language) {
       case "fr": return fr;
@@ -61,6 +66,10 @@ export default function Charges() {
     queryKey: ["/api/expense-categories"],
   });
 
+  const { data: ownerWithdrawals = [] } = useQuery<any[]>({
+    queryKey: ["/api/owner-withdrawals"],
+  });
+
   const defaultChargeTypes = DEFAULT_CHARGE_TYPES_KEYS.map(item => ({
     id: 0,
     name: item.value,
@@ -70,6 +79,42 @@ export default function Charges() {
   const chargeTypes = categories.length > 0 
     ? categories.map((c: any) => ({ id: c.id, name: c.name, label: c.name }))
     : defaultChargeTypes;
+
+  const createWithdrawalMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/owner-withdrawals", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/owner-withdrawals"] });
+      setWithdrawalAmount("");
+      setWithdrawalNotes("");
+      toast({ title: t("ownerWithdrawals.withdrawalAdded") });
+    },
+  });
+
+  const deleteWithdrawalMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/owner-withdrawals/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/owner-withdrawals"] });
+      toast({ title: t("ownerWithdrawals.withdrawalDeleted") });
+    },
+  });
+
+  const handleWithdrawalSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!withdrawalAmount || !withdrawalDate) {
+      toast({ title: t("ownerWithdrawals.fillAllFields"), variant: "destructive" });
+      return;
+    }
+    createWithdrawalMutation.mutate({
+      amount: Number(withdrawalAmount),
+      date: withdrawalDate,
+      notes: withdrawalNotes || null,
+    });
+  };
 
   const createCategoryMutation = useMutation({
     mutationFn: async (name: string) => {
@@ -287,7 +332,17 @@ export default function Charges() {
     }
   });
 
+  const filteredWithdrawals = ownerWithdrawals.filter((w: any) => {
+    try {
+      const wDate = parseISO(w.date);
+      return isWithinInterval(wDate, { start: monthStart, end: monthEnd });
+    } catch {
+      return false;
+    }
+  });
+
   const totalCharges = filteredCharges.reduce((sum: number, c: any) => sum + c.amount, 0);
+  const totalWithdrawals = filteredWithdrawals.reduce((sum: number, w: any) => sum + w.amount, 0);
 
   return (
     <div className="h-full flex flex-col gap-4 md:gap-6 p-2 md:p-4 animate-fade-in" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
@@ -320,6 +375,104 @@ export default function Charges() {
           </Button>
         </div>
       </div>
+
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+              <Wallet className="w-5 h-5" />
+              {t("ownerWithdrawals.title")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <form onSubmit={handleWithdrawalSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label>{t("ownerWithdrawals.amount")} ({t("common.currency")})</Label>
+                  <Input
+                    type="number"
+                    value={withdrawalAmount}
+                    onChange={(e) => setWithdrawalAmount(e.target.value)}
+                    placeholder="0"
+                    data-testid="input-withdrawal-amount"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>{t("common.date")}</Label>
+                  <Input
+                    type="date"
+                    value={withdrawalDate}
+                    onChange={(e) => setWithdrawalDate(e.target.value)}
+                    data-testid="input-withdrawal-date"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>{t("ownerWithdrawals.notes")}</Label>
+                  <Textarea
+                    value={withdrawalNotes}
+                    onChange={(e) => setWithdrawalNotes(e.target.value)}
+                    placeholder={t("ownerWithdrawals.notesPlaceholder")}
+                    rows={2}
+                    data-testid="input-withdrawal-notes"
+                  />
+                </div>
+                <Button type="submit" className="w-full bg-amber-600 hover:bg-amber-700 text-white" disabled={createWithdrawalMutation.isPending} data-testid="button-submit-withdrawal">
+                  <Plus className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
+                  {t("ownerWithdrawals.addWithdrawal")}
+                </Button>
+              </form>
+
+              <div className="space-y-3">
+                <div className="p-3 bg-muted/40 rounded-lg space-y-2 border">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("ownerWithdrawals.caisseBreakdown")}</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+                      <TrendingDown className="w-3.5 h-3.5 text-destructive" />
+                      {t("expenses.totalExpenses")}
+                    </span>
+                    <span className="text-sm font-semibold text-destructive">- {totalCharges} {t("common.currency")}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+                      <Wallet className="w-3.5 h-3.5 text-amber-600" />
+                      {t("ownerWithdrawals.myWithdrawals")}
+                    </span>
+                    <span className="text-sm font-semibold text-amber-700 dark:text-amber-400">- {totalWithdrawals} {t("common.currency")}</span>
+                  </div>
+                  <div className="flex items-center justify-between pt-1 border-t">
+                    <span className="text-sm font-bold">{t("ownerWithdrawals.totalOutOfCaisse")}</span>
+                    <span className="text-base font-bold text-destructive">{totalCharges + totalWithdrawals} {t("common.currency")}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {filteredWithdrawals.map((w: any) => (
+                    <div key={w.id} className="p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg flex justify-between items-center gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-semibold text-amber-700 dark:text-amber-400">{w.amount} {t("common.currency")}</div>
+                        <div className="text-xs text-muted-foreground">{w.date}</div>
+                        {w.notes && <div className="text-xs text-muted-foreground truncate">{w.notes}</div>}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 shrink-0 text-destructive"
+                        onClick={() => deleteWithdrawalMutation.mutate(w.id)}
+                        data-testid={`button-delete-withdrawal-${w.id}`}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  {filteredWithdrawals.length === 0 && (
+                    <p className="text-center text-muted-foreground py-4 text-sm">{t("ownerWithdrawals.noWithdrawals")}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         <Card className="lg:col-span-1">
@@ -436,6 +589,20 @@ export default function Charges() {
             <p className="text-4xl font-bold text-destructive">{totalCharges} {t("common.currency")}</p>
           </CardContent>
         </Card>
+
+        {isAdmin && (
+          <Card className="lg:col-span-1">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Wallet className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                {t("ownerWithdrawals.totalWithdrawals")}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-4xl font-bold text-amber-600 dark:text-amber-400">{totalWithdrawals} {t("common.currency")}</p>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       <Card className="flex-1">

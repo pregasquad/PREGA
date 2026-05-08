@@ -24,7 +24,8 @@ import {
   type StaffGoal, type InsertStaffGoal,
   type MessageTemplate, type InsertMessageTemplate,
   type StaffPayment, type InsertStaffPayment,
-  type SalonPayment, type InsertSalonPayment
+  type SalonPayment, type InsertSalonPayment,
+  type OwnerWithdrawal, type InsertOwnerWithdrawal
 } from "@shared/schema";
 import { eq, desc, and, gte, lte, sql, isNull } from "drizzle-orm";
 import { authStorage, type IAuthStorage } from "./replit_integrations/auth/storage";
@@ -84,6 +85,10 @@ export interface IStorage extends IAuthStorage {
   createCharge(charge: InsertCharge): Promise<Charge>;
   updateCharge(id: number, data: Partial<InsertCharge>): Promise<void>;
   deleteCharge(id: number): Promise<void>;
+
+  getOwnerWithdrawals(): Promise<OwnerWithdrawal[]>;
+  createOwnerWithdrawal(withdrawal: InsertOwnerWithdrawal): Promise<OwnerWithdrawal>;
+  deleteOwnerWithdrawal(id: number): Promise<void>;
 
   getStaffDeductions(): Promise<StaffDeduction[]>;
   createStaffDeduction(deduction: InsertStaffDeduction): Promise<StaffDeduction>;
@@ -753,6 +758,34 @@ export class DatabaseStorage implements IStorage {
   async deleteCharge(id: number): Promise<void> {
     const s = schema();
     await db().delete(s.charges).where(eq(s.charges.id, id));
+  }
+
+  async getOwnerWithdrawals(): Promise<OwnerWithdrawal[]> {
+    const s = schema();
+    const items = await db().select().from(s.ownerWithdrawals).orderBy(desc(s.ownerWithdrawals.createdAt));
+    return items.map((item: any) => ({
+      ...item,
+      amount: Number(item.amount || 0)
+    }));
+  }
+
+  async createOwnerWithdrawal(withdrawal: InsertOwnerWithdrawal): Promise<OwnerWithdrawal> {
+    const s = schema();
+    if (isMySQL()) {
+      const result = await db().insert(s.ownerWithdrawals).values(withdrawal);
+      const insertId = (result as any).insertId ?? (result as any)[0]?.insertId;
+      if (!insertId) throw new Error("Failed to get insert ID");
+      const [created] = await db().select().from(s.ownerWithdrawals).where(eq(s.ownerWithdrawals.id, insertId));
+      if (!created) throw new Error("Failed to retrieve created withdrawal");
+      return created;
+    }
+    const [created] = await db().insert(s.ownerWithdrawals).values(withdrawal).returning();
+    return created;
+  }
+
+  async deleteOwnerWithdrawal(id: number): Promise<void> {
+    const s = schema();
+    await db().delete(s.ownerWithdrawals).where(eq(s.ownerWithdrawals.id, id));
   }
 
   async getStaffDeductions(): Promise<StaffDeduction[]> {

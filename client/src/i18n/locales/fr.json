@@ -246,7 +246,24 @@
     "fileTooLarge": "Fichier trop volumineux (max 10 Mo)",
     "compressionFailed": "Échec de la compression du fichier",
     "downloadFailed": "Échec du téléchargement du fichier",
-    "noExpensesForPeriod": "Aucune dépense pour cette période"
+    "noExpensesForPeriod": "Aucune dépense pour cette période",
+    "totalDeductions": "Total des Déductions",
+    "totalCombined": "Total Combiné (Charges + Retraits)"
+  },
+  "ownerWithdrawals": {
+    "title": "Retraits du Propriétaire (Caisse)",
+    "addWithdrawal": "Ajouter un retrait",
+    "amount": "Montant retiré",
+    "notes": "Notes",
+    "notesPlaceholder": "Ex: Dépenses personnelles",
+    "withdrawalAdded": "Retrait enregistré avec succès",
+    "withdrawalDeleted": "Retrait supprimé avec succès",
+    "totalWithdrawals": "Total retraits propriétaire",
+    "noWithdrawals": "Aucun retrait pour cette période",
+    "fillAllFields": "Veuillez entrer le montant et la date",
+    "caisseBreakdown": "Ce qui est sorti de la caisse ce mois",
+    "myWithdrawals": "Mes retraits personnels",
+    "totalOutOfCaisse": "Total sorti de la caisse"
   },
   "salaries": {
     "title": "Salaires",

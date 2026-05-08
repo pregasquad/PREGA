@@ -2118,6 +2118,37 @@ export async function registerRoutes(
     }
   });
 
+  // Owner Withdrawals
+  app.get("/api/owner-withdrawals", isPinAuthenticated, async (_req, res) => {
+    try {
+      const items = await storage.getOwnerWithdrawals();
+      res.json(items);
+    } catch (err) {
+      console.error("Error fetching owner withdrawals:", err);
+      res.status(500).json({ message: "Failed to fetch owner withdrawals" });
+    }
+  });
+
+  app.post("/api/owner-withdrawals", isPinAuthenticated, requirePermission("manage_expenses"), async (req, res) => {
+    try {
+      const item = await storage.createOwnerWithdrawal(req.body);
+      res.status(201).json(item);
+    } catch (err) {
+      console.error("Error creating owner withdrawal:", err);
+      res.status(400).json({ message: "Failed to create owner withdrawal" });
+    }
+  });
+
+  app.delete("/api/owner-withdrawals/:id", isPinAuthenticated, requirePermission("manage_expenses"), async (req, res) => {
+    try {
+      await storage.deleteOwnerWithdrawal(Number(req.params.id));
+      res.status(204).send();
+    } catch (err) {
+      console.error("Error deleting owner withdrawal:", err);
+      res.status(500).json({ message: "Failed to delete owner withdrawal" });
+    }
+  });
+
   // Staff Deductions - protected routes
   app.get("/api/staff-deductions", isPinAuthenticated, async (_req, res) => {
     try {
