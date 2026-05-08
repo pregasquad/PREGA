@@ -2624,7 +2624,6 @@ export async function registerRoutes(
       const { getBotMemory, saveBotMemory } = await import("./db");
       let mem = await getBotMemory(jid);
       if (!mem) {
-        // Create a minimal memory entry so we can store the block flag
         mem = {
           jid,
           phone: null,
@@ -2641,7 +2640,12 @@ export async function registerRoutes(
         mem = { ...mem, botBlocked: blocked };
       }
       await saveBotMemory(mem);
-      console.log(`[Bot] JID ${jid} bot_blocked set to ${blocked}`);
+      // Clear AI reply cache for this JID so unblocking takes effect immediately
+      // The cache key is `${jid}:${text}` — wipe all entries for this JID
+      for (const key of aiReplyCache.keys()) {
+        if (key.startsWith(`${jid}:`)) aiReplyCache.delete(key);
+      }
+      console.log(`[Bot] JID ${jid} bot_blocked set to ${blocked}, cache cleared`);
       res.json({ success: true, blocked });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });

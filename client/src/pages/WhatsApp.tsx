@@ -594,7 +594,7 @@ export default function WhatsApp() {
   }
 
   return (
-    <div className="page-wrapper p-4 md:p-6 space-y-5 max-w-xl mx-auto">
+    <div className="page-wrapper p-3 sm:p-4 md:p-6 space-y-4 max-w-xl mx-auto w-full">
       {/* Header */}
       <div className="flex items-center gap-3">
         <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
@@ -619,16 +619,16 @@ export default function WhatsApp() {
       </div>
 
       {/* ── BOT TOGGLE ── */}
-      <div className={`rounded-2xl border p-5 transition-all ${botEnabled ? "bg-emerald-500/5 border-emerald-500/30" : "bg-red-500/5 border-red-500/30"}`}>
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className={`p-2.5 rounded-xl border ${botEnabled ? "bg-emerald-500/10 border-emerald-500/20" : "bg-red-500/10 border-red-500/20"}`}>
-              {botEnabled ? <Bot className="w-5 h-5 text-emerald-400" /> : <BotOff className="w-5 h-5 text-red-400" />}
+      <div className={`rounded-2xl border p-4 transition-all ${botEnabled ? "bg-emerald-500/5 border-emerald-500/30" : "bg-red-500/5 border-red-500/30"}`}>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className={`p-2 rounded-xl border shrink-0 ${botEnabled ? "bg-emerald-500/10 border-emerald-500/20" : "bg-red-500/10 border-red-500/20"}`}>
+              {botEnabled ? <Bot className="w-4 h-4 text-emerald-400" /> : <BotOff className="w-4 h-4 text-red-400" />}
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="font-semibold text-sm">البوت (لينا)</p>
-              <p className={`text-xs mt-0.5 ${botEnabled ? "text-emerald-400" : "text-red-400"}`}>
-                {botEnabled ? "مفعّل — كيجاوب على الرسائل أوتوماتيك 🟢" : "متوقف — الرسائل ما غاديش تتجاوب 🔴"}
+              <p className={`text-xs mt-0.5 truncate ${botEnabled ? "text-emerald-400" : "text-red-400"}`}>
+                {botEnabled ? "مفعّل — كيجاوب أوتوماتيك 🟢" : "متوقف — الرسائل ما غاديش تتجاوب 🔴"}
               </p>
             </div>
           </div>
@@ -637,15 +637,15 @@ export default function WhatsApp() {
             size="sm"
             disabled={toggleBotMutation.isPending}
             onClick={() => toggleBotMutation.mutate(!botEnabled)}
-            className={`min-w-[90px] ${botEnabled ? "bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30" : "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"}`}
+            className={`shrink-0 min-w-[80px] ${botEnabled ? "bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30" : "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"}`}
             variant="ghost"
           >
             {toggleBotMutation.isPending ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : botEnabled ? (
-              <><BotOff className="w-4 h-4 mr-1.5" />إيقاف</>
+              <><BotOff className="w-4 h-4 mr-1" />إيقاف</>
             ) : (
-              <><Bot className="w-4 h-4 mr-1.5" />تفعيل</>
+              <><Bot className="w-4 h-4 mr-1" />تفعيل</>
             )}
           </Button>
         </div>
@@ -898,7 +898,7 @@ export default function WhatsApp() {
       )}
 
       {/* ── TEST MESSAGE ── */}
-      <div className="rounded-2xl border bg-card p-5 space-y-4">
+      <div className="rounded-2xl border bg-card p-4 space-y-3">
         <div className="flex items-center gap-2">
           <Send className="w-5 h-5 text-muted-foreground" />
           <span className="font-semibold">Test Message</span>
@@ -949,7 +949,7 @@ export default function WhatsApp() {
       </div>
 
       {/* ── BROADCAST ── */}
-      <div className="rounded-2xl border bg-card p-5 space-y-4">
+      <div className="rounded-2xl border bg-card p-4 space-y-3">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Users className="w-5 h-5 text-muted-foreground" />
@@ -998,7 +998,7 @@ export default function WhatsApp() {
       </div>
 
       {/* ── BOT VOICE SETTINGS ── */}
-      <div className="rounded-2xl border bg-card p-5 space-y-4">
+      <div className="rounded-2xl border bg-card p-4 space-y-3">
         <div className="flex items-center gap-2">
           <Mic className="w-5 h-5 text-muted-foreground" />
           <span className="font-semibold">صوت البوت (رسائل صوتية)</span>
@@ -1294,11 +1294,11 @@ export default function WhatsApp() {
 
         {/* Collapsed body */}
         {filterOpen && (
-          <div className="px-5 pb-5 space-y-4 border-t border-border/50">
+          <div className="px-4 pb-4 space-y-4 border-t border-border/50">
             {/* Mode selector */}
             <div className="space-y-2 pt-4">
               <Label className="text-xs text-muted-foreground uppercase tracking-wider">وضع الفلتر</Label>
-              <div className="grid grid-cols-3 gap-2" dir="rtl">
+              <div className="grid grid-cols-3 gap-1.5" dir="rtl">
                 {([
                   { value: "all",       label: "الجميع",       desc: "يرد على كل الأرقام",          color: "blue"    },
                   { value: "allowlist", label: "قائمة بيضاء",  desc: "يرد فقط على الأرقام المحددة", color: "emerald" },
@@ -1308,7 +1308,7 @@ export default function WhatsApp() {
                     key={opt.value}
                     data-testid={`button-filter-mode-${opt.value}`}
                     onClick={() => setFilterMode(opt.value)}
-                    className={`flex flex-col items-center gap-1 rounded-xl border px-3 py-2.5 text-center transition-all text-xs ${
+                    className={`flex flex-col items-center gap-0.5 rounded-xl border px-2 py-2 text-center transition-all text-xs ${
                       filterMode === opt.value
                         ? opt.color === "blue"
                           ? "border-blue-500/60 bg-blue-500/10 ring-1 ring-blue-500/40 text-blue-400"
@@ -1318,8 +1318,8 @@ export default function WhatsApp() {
                         : "border-border bg-muted/30 hover:bg-muted/60 text-muted-foreground"
                     }`}
                   >
-                    <span className="font-semibold">{opt.label}</span>
-                    <span className="text-[10px] leading-tight opacity-80">{opt.desc}</span>
+                    <span className="font-semibold text-[11px]">{opt.label}</span>
+                    <span className="text-[9px] leading-tight opacity-80 hidden sm:block">{opt.desc}</span>
                   </button>
                 ))}
               </div>
