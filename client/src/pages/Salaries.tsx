@@ -1120,7 +1120,7 @@ export default function Salaries() {
                         >
                           <Wallet className="h-3 w-3 text-primary shrink-0" />
                           <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                            Historique des paiements
+                            {t("salaries.paymentHistory")}
                           </span>
                           <span className="text-[10px] text-muted-foreground">{staffHistory.length}</span>
                           <ChevronDown className={`h-3 w-3 text-muted-foreground ml-auto transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
@@ -1261,7 +1261,7 @@ export default function Salaries() {
                     >
                       <Wallet className="h-3 w-3 text-primary shrink-0" />
                       <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                        Historique des collectes
+                        {t("salaries.collectionHistory")}
                       </span>
                       <span className="text-[10px] text-muted-foreground">{sortedSalonPayments.length}</span>
                       <ChevronDown className={`h-3 w-3 text-muted-foreground ml-auto transition-transform duration-200 ${salonHistoryOpen ? "rotate-180" : ""}`} />

@@ -18,6 +18,7 @@
     "inventory": "المخزون",
     "expenses": "المصاريف",
     "salaries": "الرواتب",
+    "staffManagement": "إدارة الموظفين",
     "staffCommissions": "العمولات",
     "staffPerformance": "أداء الموظفين",
     "reports": "التقارير",
@@ -362,7 +363,9 @@
     "paymentRecorded": "تم تسجيل الدفعة",
     "noEarnings": "لا توجد أرباح متراكمة",
     "lastPaid": "آخر دفعة",
-    "never": "أبداً"
+    "never": "أبداً",
+    "paymentHistory": "سجل المدفوعات",
+    "collectionHistory": "سجل التحصيلات"
   },
   "staffPerformance": {
     "title": "أداء الموظفين",
@@ -631,7 +634,10 @@
     "staff": "الموظف",
     "dateTime": "التاريخ/الوقت",
     "status": "الحالة",
-    "actions": "الإجراءات"
+    "actions": "الإجراءات",
+    "deleteConfirmTitle": "حذف هذا الموعد؟",
+    "appointmentDeleted": "تم حذف الموعد",
+    "deleteFailed": "فشل حذف الموعد"
   },
   "admin": {
     "title": "إعدادات المدير",
@@ -816,7 +822,17 @@
     "revenue": "الإيرادات",
     "appointments": "المواعيد",
     "noStaffData": "لا يوجد أعضاء فريق بعد",
-    "totalExpenses": "إجمالي المصاريف"
+    "totalExpenses": "إجمالي المصاريف",
+    "briefingTitle": "ملخص اليوم",
+    "briefingUnpaid": "غير مدفوع",
+    "briefingRemaining": "متبقي",
+    "briefingStart": "بداية",
+    "briefingLetsGo": "هيا نبدأ! 💪",
+    "todaySchedule": "جدول اليوم",
+    "nextAppt": "التالي",
+    "inProgress": "جارٍ",
+    "allDone": "كل المواعيد اكتملت ✓",
+    "noAppointmentsScheduled": "لا توجد مواعيد لليوم"
   },
   "login": {
     "welcomeBack": "مرحباً بعودتك",

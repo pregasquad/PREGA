@@ -1459,6 +1459,35 @@ export async function ensureTtsVoiceColumn(): Promise<void> {
   }
 }
 
+export async function ensureCategoriesColorColumn(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      const [rows] = await connection.query(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'categories' AND COLUMN_NAME = 'color'
+      `);
+      if ((rows as any[]).length === 0) {
+        await connection.query(`ALTER TABLE categories ADD COLUMN color VARCHAR(50) NULL`);
+        console.log("Added color column to categories table");
+      }
+      connection.release();
+    } else {
+      await pool.query(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'categories' AND column_name = 'color') THEN
+            ALTER TABLE categories ADD COLUMN color VARCHAR(50);
+          END IF;
+        END $$;
+      `);
+    }
+    console.log("Categories color column ready");
+  } catch (error) {
+    console.error("Failed to ensure categories color column:", error);
+  }
+}
+
 export async function ensureOwnerWithdrawalsTable(): Promise<void> {
   try {
     if (dbDialect === 'mysql') {

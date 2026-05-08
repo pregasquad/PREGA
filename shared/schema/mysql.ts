@@ -118,6 +118,7 @@ export const services = mysqlTable("services", {
 export const categories = mysqlTable("categories", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull().unique(),
+  color: varchar("color", { length: 50 }),
 });
 
 export const staff = mysqlTable("staff", {

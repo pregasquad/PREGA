@@ -18,6 +18,7 @@
     "inventory": "Inventory",
     "expenses": "Expenses",
     "salaries": "Salaries",
+    "staffManagement": "Staff Management",
     "staffCommissions": "Commissions",
     "staffPerformance": "Staff Performance",
     "reports": "Reports",
@@ -362,7 +363,9 @@
     "paymentRecorded": "Payment recorded",
     "noEarnings": "No earnings accumulated",
     "lastPaid": "Last paid",
-    "never": "Never"
+    "never": "Never",
+    "paymentHistory": "Payment History",
+    "collectionHistory": "Collection History"
   },
   "staffPerformance": {
     "title": "Staff Performance",
@@ -626,7 +629,10 @@
     "staff": "Staff",
     "dateTime": "Date/Time",
     "status": "Status",
-    "actions": "Actions"
+    "actions": "Actions",
+    "deleteConfirmTitle": "Delete this appointment?",
+    "appointmentDeleted": "Appointment deleted",
+    "deleteFailed": "Failed to delete appointment"
   },
   "schedule": {
     "manageSchedule": "Manage Schedule",
@@ -851,7 +857,17 @@
     "revenue": "Revenue",
     "appointments": "Appts",
     "noStaffData": "No team members yet",
-    "totalExpenses": "Total Expenses"
+    "totalExpenses": "Total Expenses",
+    "briefingTitle": "Today's Briefing",
+    "briefingUnpaid": "Unpaid",
+    "briefingRemaining": "Remaining",
+    "briefingStart": "Start",
+    "briefingLetsGo": "Let's go! 💪",
+    "todaySchedule": "Today's Schedule",
+    "nextAppt": "Next",
+    "inProgress": "In Progress",
+    "allDone": "All appointments done ✓",
+    "noAppointmentsScheduled": "No appointments today"
   },
   "login": {
     "welcomeBack": "Welcome Back",

@@ -18,6 +18,7 @@
     "inventory": "Stock",
     "expenses": "Dépenses",
     "salaries": "Salaires",
+    "staffManagement": "Gestion du Personnel",
     "staffCommissions": "Commissions",
     "staffPerformance": "Performance Staff",
     "reports": "Rapports",
@@ -362,7 +363,9 @@
     "paymentRecorded": "Paiement enregistré",
     "noEarnings": "Aucun gain accumulé",
     "lastPaid": "Dernier paiement",
-    "never": "Jamais"
+    "never": "Jamais",
+    "paymentHistory": "Historique des paiements",
+    "collectionHistory": "Historique des collectes"
   },
   "staffPerformance": {
     "title": "Performance Staff",
@@ -626,7 +629,10 @@
     "staff": "Staff",
     "dateTime": "Date/Heure",
     "status": "Statut",
-    "actions": "Actions"
+    "actions": "Actions",
+    "deleteConfirmTitle": "Supprimer ce rendez-vous ?",
+    "appointmentDeleted": "Rendez-vous supprimé",
+    "deleteFailed": "Échec de la suppression"
   },
   "schedule": {
     "manageSchedule": "Gérer le Planning",
@@ -851,7 +857,17 @@
     "revenue": "Revenus",
     "appointments": "RDV",
     "noStaffData": "Aucun membre d'équipe",
-    "totalExpenses": "Total Dépenses"
+    "totalExpenses": "Total Dépenses",
+    "briefingTitle": "Briefing du jour",
+    "briefingUnpaid": "Impayés",
+    "briefingRemaining": "Restants",
+    "briefingStart": "Début",
+    "briefingLetsGo": "C'est parti ! 💪",
+    "todaySchedule": "Planning du jour",
+    "nextAppt": "Prochain",
+    "inProgress": "En cours",
+    "allDone": "Tous les RDV terminés ✓",
+    "noAppointmentsScheduled": "Aucun rendez-vous aujourd'hui"
   },
   "login": {
     "welcomeBack": "Bienvenue",

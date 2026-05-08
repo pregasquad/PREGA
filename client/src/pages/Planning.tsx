@@ -1512,7 +1512,7 @@ export default function Planning() {
           clientPhone: (app.client || "").match(/\(([^)]+)\)/)?.[1] || app.phone || "",
           services: serviceLabel,
           staffName: app.staff || "",
-          date: app.date ? new Date(app.date).toLocaleDateString("fr-FR") : format(date, "dd/MM/yyyy"),
+          date: app.date ? format(new Date(app.date), "dd/MM/yyyy") : format(date, "dd/MM/yyyy"),
           time: app.startTime || "",
           duration: app.duration || 0,
           total: app.total ?? app.price ?? 0,

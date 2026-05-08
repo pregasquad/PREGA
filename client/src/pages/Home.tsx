@@ -105,7 +105,8 @@ function EditStaffForm({ staff, categories, onSubmit, isPending, t }: {
   );
 }
 
-function DayOpeningBriefing({ appointments, todayDate, businessName }: { appointments: any[]; todayDate: string; businessName?: string }) {
+function DayOpeningBriefing({ appointments, todayDate, businessName, currency }: { appointments: any[]; todayDate: string; businessName?: string; currency?: string }) {
+  const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -113,17 +114,16 @@ function DayOpeningBriefing({ appointments, todayDate, businessName }: { appoint
     const already = localStorage.getItem(key);
     const unpaidCount = appointments.filter((a: any) => !a.paid).length;
     if (!already && unpaidCount > 0) {
-      // Slight delay so the page finishes loading first
-      const t = setTimeout(() => {
+      const timer = setTimeout(() => {
         setOpen(true);
         localStorage.setItem(key, "1");
       }, 800);
-      return () => clearTimeout(t);
+      return () => clearTimeout(timer);
     }
   }, [todayDate, appointments.length]);
 
-  const timeToMinutes = (t: string) => {
-    const [h, m] = (t || "00:00").split(":").map(Number);
+  const timeToMinutes = (time: string) => {
+    const [h, m] = (time || "00:00").split(":").map(Number);
     return h * 60 + m;
   };
 
@@ -133,6 +133,9 @@ function DayOpeningBriefing({ appointments, todayDate, businessName }: { appoint
 
   const totalRevenue = sorted.reduce((s: number, a: any) => s + (a.total || 0), 0);
   const firstAppt = sorted[0];
+  const curr = currency || "DH";
+
+  const dateLocale = i18n.language === "ar" ? "ar-MA" : i18n.language === "fr" ? "fr-FR" : "en-GB";
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -141,26 +144,26 @@ function DayOpeningBriefing({ appointments, todayDate, businessName }: { appoint
         <div className="bg-gradient-to-br from-orange-400 to-pink-500 px-5 pt-6 pb-5 text-white">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-2xl">☀️</span>
-            <span className="text-xs font-semibold uppercase tracking-widest opacity-80">Briefing du jour</span>
+            <span className="text-xs font-semibold uppercase tracking-widest opacity-80">{t("home.briefingTitle")}</span>
           </div>
           <h2 className="text-xl font-bold leading-tight">{businessName || "PREGA SQUAD"}</h2>
           <p className="text-sm opacity-90 mt-0.5">
-            {new Date(todayDate + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
+            {new Date(todayDate + "T12:00:00").toLocaleDateString(dateLocale, { weekday: "long", day: "numeric", month: "long" })}
           </p>
 
           {/* Quick stats */}
           <div className="grid grid-cols-3 gap-2 mt-4">
             <div className="bg-white/20 rounded-xl px-3 py-2 text-center">
               <p className="text-xl font-bold">{sorted.length}</p>
-              <p className="text-[10px] font-medium opacity-80 uppercase">Impayés</p>
+              <p className="text-[10px] font-medium opacity-80 uppercase">{t("home.briefingUnpaid")}</p>
             </div>
             <div className="bg-white/20 rounded-xl px-3 py-2 text-center">
               <p className="text-xl font-bold">{totalRevenue}</p>
-              <p className="text-[10px] font-medium opacity-80 uppercase">DH restants</p>
+              <p className="text-[10px] font-medium opacity-80 uppercase">{curr} {t("home.briefingRemaining")}</p>
             </div>
             <div className="bg-white/20 rounded-xl px-3 py-2 text-center">
               <p className="text-xl font-bold">{firstAppt ? firstAppt.startTime : "--"}</p>
-              <p className="text-[10px] font-medium opacity-80 uppercase">Début</p>
+              <p className="text-[10px] font-medium opacity-80 uppercase">{t("home.briefingStart")}</p>
             </div>
           </div>
         </div>
@@ -183,7 +186,7 @@ function DayOpeningBriefing({ appointments, todayDate, businessName }: { appoint
                 <p className="text-sm font-medium truncate leading-tight">{appt.client}</p>
                 <p className="text-xs text-muted-foreground truncate">{appt.service}{appt.staff ? ` · ${appt.staff}` : ""}</p>
               </div>
-              <p className="text-sm font-bold shrink-0">{appt.total} DH</p>
+              <p className="text-sm font-bold shrink-0">{appt.total} {curr}</p>
             </div>
           ))}
         </div>
@@ -194,7 +197,7 @@ function DayOpeningBriefing({ appointments, todayDate, businessName }: { appoint
             className="w-full rounded-xl bg-gradient-to-r from-orange-400 to-pink-500 text-white font-semibold hover:opacity-90"
             onClick={() => setOpen(false)}
           >
-            C'est parti ! 💪
+            {t("home.briefingLetsGo")}
           </Button>
         </div>
       </DialogContent>
@@ -202,18 +205,20 @@ function DayOpeningBriefing({ appointments, todayDate, businessName }: { appoint
   );
 }
 
-function TodayScheduleReminder({ appointments }: { appointments: any[] }) {
+function TodayScheduleReminder({ appointments, currency }: { appointments: any[]; currency?: string }) {
+  const { t } = useTranslation();
   const [now, setNow] = useState(new Date());
   const [expanded, setExpanded] = useState(true);
   const notifiedRef = useRef<Set<number>>(new Set());
+  const curr = currency || "DH";
 
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 60000);
     return () => clearInterval(interval);
   }, []);
 
-  const timeToMinutes = (t: string) => {
-    const [h, m] = (t || "00:00").split(":").map(Number);
+  const timeToMinutes = (time: string) => {
+    const [h, m] = (time || "00:00").split(":").map(Number);
     return h * 60 + m;
   };
 
@@ -242,19 +247,19 @@ function TodayScheduleReminder({ appointments }: { appointments: any[] }) {
     if (nextMinutes !== null && nextMinutes <= 10 && nextMinutes > 0) {
       notifiedRef.current.add(next.id);
       if ("Notification" in window && Notification.permission === "granted") {
-        new Notification("⏰ Prochain RDV dans " + nextMinutes + " min", {
-          body: `${next.client} — ${next.service} à ${next.startTime}`,
+        new Notification(`⏰ ${t("home.nextAppt")} ${next.startTime} (${nextMinutes} min)`, {
+          body: `${next.client} — ${next.service}`,
           icon: "/icon-192.png",
         });
       }
     }
-  }, [next, nextMinutes]);
+  }, [next, nextMinutes, t]);
 
   if (sorted.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-border/60 bg-muted/30 px-4 py-3 flex items-center gap-3 text-muted-foreground text-sm">
         <CalendarCheck className="w-4 h-4 shrink-0" />
-        <span>Aucun rendez-vous aujourd'hui</span>
+        <span>{t("home.noAppointmentsScheduled")}</span>
       </div>
     );
   }
@@ -276,19 +281,19 @@ function TodayScheduleReminder({ appointments }: { appointments: any[] }) {
           )}
           <div className="text-left">
             <p className="text-sm font-semibold leading-tight">
-              Planning du jour
-              <span className="ms-2 text-xs font-normal text-muted-foreground">({sorted.length} RDV)</span>
+              {t("home.todaySchedule")}
+              <span className="ms-2 text-xs font-normal text-muted-foreground">({sorted.length})</span>
             </p>
             {next && nextMinutes !== null && (
               <p className="text-[11px] text-orange-500 font-medium mt-0.5">
-                Prochain: {next.startTime} — {next.client}
+                {t("home.nextAppt")}: {next.startTime} — {next.client}
                 {nextMinutes <= 60
-                  ? ` (dans ${nextMinutes} min)`
-                  : ` (dans ${Math.floor(nextMinutes / 60)}h${nextMinutes % 60 > 0 ? String(nextMinutes % 60).padStart(2, "0") : ""})`}
+                  ? ` (${nextMinutes} min)`
+                  : ` (${Math.floor(nextMinutes / 60)}h${nextMinutes % 60 > 0 ? String(nextMinutes % 60).padStart(2, "0") : ""})`}
               </p>
             )}
             {!next && (
-              <p className="text-[11px] text-emerald-500 font-medium mt-0.5">Tous les RDV terminés ✓</p>
+              <p className="text-[11px] text-emerald-500 font-medium mt-0.5">{t("home.allDone")}</p>
             )}
           </div>
         </div>
@@ -311,7 +316,7 @@ function TodayScheduleReminder({ appointments }: { appointments: any[] }) {
                     <span className="text-xs text-muted-foreground">·</span>
                     <span className="text-xs text-muted-foreground">{appt.duration} min</span>
                     {status === "inprogress" && (
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-orange-500 bg-orange-100 dark:bg-orange-900/30 px-1.5 py-0.5 rounded-full">En cours</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-orange-500 bg-orange-100 dark:bg-orange-900/30 px-1.5 py-0.5 rounded-full">{t("home.inProgress")}</span>
                     )}
                     {status === "done" && (
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
@@ -321,8 +326,8 @@ function TodayScheduleReminder({ appointments }: { appointments: any[] }) {
                   <p className="text-[11px] text-muted-foreground truncate">{appt.service} {appt.staff ? `· ${appt.staff}` : ""}</p>
                 </div>
                 <div className={`text-right shrink-0 ${appt.paid ? "text-emerald-600" : "text-amber-500"}`}>
-                  <p className="text-xs font-bold">{appt.total} DH</p>
-                  <p className="text-[10px]">{appt.paid ? "Payé" : "Impayé"}</p>
+                  <p className="text-xs font-bold">{appt.total} {curr}</p>
+                  <p className="text-[10px]">{appt.paid ? t("common.paid") : t("common.unpaid")}</p>
                 </div>
               </div>
             );
@@ -510,15 +515,15 @@ export default function Home() {
           </div>
         </div>
 
-        <DayOpeningBriefing appointments={appointments} todayDate={todayDate} businessName={bSettings?.businessName} />
-        <TodayScheduleReminder appointments={appointments} />
+        <DayOpeningBriefing appointments={appointments} todayDate={todayDate} businessName={bSettings?.businessName} currency={bSettings?.currencySymbol} />
+        <TodayScheduleReminder appointments={appointments} currency={bSettings?.currencySymbol} />
 
         <div className="grid grid-cols-2 gap-3" data-testid="section-summary-cards">
           <div className="glass-card rounded-2xl p-4 flex flex-col justify-between min-h-[100px]" data-testid="card-revenue">
             <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{t("home.todayRevenue")}</span>
             <div className="mt-2">
               <span className="text-2xl font-bold tracking-tight" data-testid="text-revenue-value">{todayStats.totalRevenue}</span>
-              <span className="text-sm font-medium text-muted-foreground ms-1">DH</span>
+              <span className="text-sm font-medium text-muted-foreground ms-1">{bSettings?.currencySymbol || "DH"}</span>
             </div>
           </div>
 
@@ -533,7 +538,7 @@ export default function Home() {
             <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{t("home.paidToday")}</span>
             <div className="mt-2">
               <span className="text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400" data-testid="text-paid-value">{todayStats.paidRevenue}</span>
-              <span className="text-sm font-medium text-muted-foreground ms-1">DH</span>
+              <span className="text-sm font-medium text-muted-foreground ms-1">{bSettings?.currencySymbol || "DH"}</span>
             </div>
           </div>
 
@@ -541,7 +546,7 @@ export default function Home() {
             <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{t("home.unpaidToday")}</span>
             <div className="mt-2">
               <span className={`text-2xl font-bold tracking-tight ${todayStats.unpaidRevenue > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'}`} data-testid="text-unpaid-value">{todayStats.unpaidRevenue}</span>
-              <span className="text-sm font-medium text-muted-foreground ms-1">DH</span>
+              <span className="text-sm font-medium text-muted-foreground ms-1">{bSettings?.currencySymbol || "DH"}</span>
             </div>
           </div>
         </div>
@@ -557,7 +562,7 @@ export default function Home() {
                   </div>
                   <div>
                     <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{t("home.salonRevenue")}</p>
-                    <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400" data-testid="text-salon-revenue">{todayStats.totalRevenue} DH</p>
+                    <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400" data-testid="text-salon-revenue">{todayStats.totalRevenue} {bSettings?.currencySymbol || "DH"}</p>
                   </div>
                 </div>
               </div>
@@ -571,7 +576,7 @@ export default function Home() {
                   </div>
                   <div>
                     <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{t("home.expenses")}</p>
-                    <p className="text-lg font-bold text-red-600 dark:text-red-400" data-testid="text-expenses">{todayExpenses} DH</p>
+                    <p className="text-lg font-bold text-red-600 dark:text-red-400" data-testid="text-expenses">{todayExpenses} {bSettings?.currencySymbol || "DH"}</p>
                   </div>
                 </div>
               </div>
@@ -581,7 +586,7 @@ export default function Home() {
               <div className="p-5 flex flex-col items-center justify-center">
                 <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-1">{t("home.netProfit")}</p>
                 <p className={`text-3xl font-extrabold tracking-tight ${netProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`} data-testid="text-net-profit">
-                  {netProfit >= 0 ? '+' : ''}{netProfit} DH
+                  {netProfit >= 0 ? '+' : ''}{netProfit} {bSettings?.currencySymbol || "DH"}
                 </p>
               </div>
             </CardContent>
@@ -702,7 +707,7 @@ export default function Home() {
                         <div className="flex items-center gap-4 text-xs">
                           <div>
                             <span className="text-muted-foreground">{t("home.revenue")}: </span>
-                            <span className="font-semibold text-emerald-600 dark:text-emerald-400" data-testid={`text-employee-revenue-${s.id}`}>{s.revenue} DH</span>
+                            <span className="font-semibold text-emerald-600 dark:text-emerald-400" data-testid={`text-employee-revenue-${s.id}`}>{s.revenue} {bSettings?.currencySymbol || "DH"}</span>
                           </div>
                           <div>
                             <span className="text-muted-foreground">{t("home.appointments")}: </span>
