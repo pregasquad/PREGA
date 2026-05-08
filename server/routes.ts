@@ -3878,8 +3878,8 @@ export async function registerRoutes(
   type ConvTurn = { role: "user" | "model"; text: string };
   const memCache = new Map<string, BotClientMemory>();
 
-  // How long an idle conversation keeps its context (48 hours — returning clients get full context)
-  const CONV_TTL = 48 * 60 * 60 * 1000;
+  // How long an idle conversation keeps its context (7 days — returning clients always get full context)
+  const CONV_TTL = 7 * 24 * 60 * 60 * 1000;
   // Maximum recent turns to keep in history (15 back-and-forth = 30 entries)
   const CONV_MAX_TURNS = 15;
 
