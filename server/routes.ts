@@ -2640,12 +2640,13 @@ export async function registerRoutes(
         mem = { ...mem, botBlocked: blocked };
       }
       await saveBotMemory(mem);
-      // Clear AI reply cache for this JID so unblocking takes effect immediately
-      // The cache key is `${jid}:${text}` — wipe all entries for this JID
+      // Invalidate in-memory shadow cache so the bot picks up the new blocked flag immediately
+      memCache.delete(jid);
+      // Also clear AI reply cache for this JID
       for (const key of aiReplyCache.keys()) {
         if (key.startsWith(`${jid}:`)) aiReplyCache.delete(key);
       }
-      console.log(`[Bot] JID ${jid} bot_blocked set to ${blocked}, cache cleared`);
+      console.log(`[Bot] JID ${jid} bot_blocked set to ${blocked}, memCache + aiReplyCache cleared`);
       res.json({ success: true, blocked });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
@@ -4272,8 +4273,8 @@ export async function registerRoutes(
           }
 
           // ── Per-conversation bot block check ────────────────────────────
-          const { getBotMemory: _checkBlock } = await import("./db");
-          const memCheck = await _checkBlock(remoteJid);
+          // Use loadMemory (memCache-backed) so block/unblock changes are instant.
+          const memCheck = await loadMemory(remoteJid);
           if (memCheck?.botBlocked) {
             console.log(`[Bot] ${remoteJid} is individually bot-blocked — skipping reply`);
             return;
