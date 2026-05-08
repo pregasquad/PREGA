@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Smartphone,
@@ -461,6 +462,7 @@ export default function WhatsApp() {
     visitCount: number;
     lastSeen: string | null;
     history: { role: "user" | "model"; text: string }[];
+    botBlocked: boolean;
   }
 
   const {
@@ -482,6 +484,20 @@ export default function WhatsApp() {
       queryClient.invalidateQueries({ queryKey: ["/api/whatsapp/bot-conversations"] });
       if (expandedJid === jid) setExpandedJid(null);
       toast({ title: "تم المسح ✓", description: "تم مسح سجل المحادثة" });
+    },
+    onError: (err: any) =>
+      toast({ title: "خطأ", description: err.message, variant: "destructive" }),
+  });
+
+  const blockConvMutation = useMutation({
+    mutationFn: ({ jid, blocked }: { jid: string; blocked: boolean }) =>
+      apiRequest("PATCH", `/api/whatsapp/bot-conversations/${encodeURIComponent(jid)}/block`, { blocked }).then((r) => r.json()),
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/whatsapp/bot-conversations"] });
+      toast({
+        title: vars.blocked ? "تم الإيقاف ✓" : "تم التفعيل ✓",
+        description: vars.blocked ? "البوت لن يرد على هذا الرقم" : "البوت سيرد من جديد على هذا الرقم",
+      });
     },
     onError: (err: any) =>
       toast({ title: "خطأ", description: err.message, variant: "destructive" }),
@@ -1097,51 +1113,80 @@ export default function WhatsApp() {
                   const isExpanded = expandedJid === conv.jid;
                   const lastMsg = conv.history[conv.history.length - 1];
                   return (
-                    <div key={conv.jid} className="transition-colors">
+                    <div key={conv.jid} className={`transition-colors ${conv.botBlocked ? "opacity-60" : ""}`}>
                       {/* Conversation row */}
-                      <button
-                        className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-muted/20 transition-colors"
-                        onClick={() => setExpandedJid(isExpanded ? null : conv.jid)}
-                        data-testid={`button-conv-${conv.phone}`}
-                      >
-                        {/* Avatar */}
-                        <div className="w-9 h-9 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center shrink-0">
-                          <User className="w-4 h-4 text-emerald-500" />
-                        </div>
-                        {/* Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm truncate" dir="ltr">
-                              {conv.clientName || conv.phone}
-                            </span>
-                            {conv.clientName && (
-                              <span className="text-[10px] font-mono text-muted-foreground" dir="ltr">
-                                {conv.phone}
-                              </span>
+                      <div className="flex items-center gap-0 px-5 py-3.5">
+                        <button
+                          className="flex items-center gap-3 flex-1 min-w-0 text-left hover:bg-muted/20 transition-colors rounded-lg pr-2"
+                          onClick={() => setExpandedJid(isExpanded ? null : conv.jid)}
+                          data-testid={`button-conv-${conv.phone}`}
+                        >
+                          {/* Avatar */}
+                          <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${conv.botBlocked ? "bg-destructive/10 border border-destructive/30" : "bg-emerald-500/15 border border-emerald-500/30"}`}>
+                            {conv.botBlocked ? (
+                              <BotOff className="w-4 h-4 text-destructive" />
+                            ) : (
+                              <User className="w-4 h-4 text-emerald-500" />
                             )}
-                            <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0">
-                              {langLabel(conv.language)}
+                          </div>
+                          {/* Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm truncate" dir="ltr">
+                                {conv.clientName || conv.phone}
+                              </span>
+                              {conv.clientName && (
+                                <span className="text-[10px] font-mono text-muted-foreground" dir="ltr">
+                                  {conv.phone}
+                                </span>
+                              )}
+                              <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0">
+                                {langLabel(conv.language)}
+                              </Badge>
+                              {conv.botBlocked && (
+                                <Badge variant="destructive" className="text-[9px] px-1 py-0 shrink-0">
+                                  موقوف
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground truncate mt-0.5" dir="rtl">
+                              {lastMsg?.role === "model" ? "لينا: " : ""}
+                              {lastMsg?.text?.replace(/^🎙️\s*/, "") ?? "—"}
+                            </p>
+                          </div>
+                          {/* Meta */}
+                          <div className="flex flex-col items-end gap-1 shrink-0">
+                            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                              <Clock className="w-2.5 h-2.5" />
+                              <span>{formatRelativeTime(conv.lastSeen)}</span>
+                            </div>
+                            <Badge variant="secondary" className="text-[9px] px-1.5 py-0">
+                              {conv.history.length} رسالة
                             </Badge>
                           </div>
-                          <p className="text-xs text-muted-foreground truncate mt-0.5" dir="rtl">
-                            {lastMsg?.role === "model" ? "لينا: " : ""}
-                            {lastMsg?.text?.replace(/^🎙️\s*/, "") ?? "—"}
-                          </p>
+                          <ChevronDown
+                            className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                          />
+                        </button>
+                        {/* Block toggle */}
+                        <div
+                          className="flex flex-col items-center gap-0.5 shrink-0 ml-3"
+                          title={conv.botBlocked ? "تفعيل البوت" : "إيقاف البوت"}
+                        >
+                          <Switch
+                            checked={!conv.botBlocked}
+                            onCheckedChange={(val) =>
+                              blockConvMutation.mutate({ jid: conv.jid, blocked: !val })
+                            }
+                            disabled={blockConvMutation.isPending}
+                            data-testid={`switch-bot-block-${conv.phone}`}
+                            className="data-[state=checked]:bg-emerald-500"
+                          />
+                          <span className="text-[9px] text-muted-foreground">
+                            {conv.botBlocked ? "موقوف" : "نشط"}
+                          </span>
                         </div>
-                        {/* Meta */}
-                        <div className="flex flex-col items-end gap-1 shrink-0">
-                          <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                            <Clock className="w-2.5 h-2.5" />
-                            <span>{formatRelativeTime(conv.lastSeen)}</span>
-                          </div>
-                          <Badge variant="secondary" className="text-[9px] px-1.5 py-0">
-                            {conv.history.length} رسالة
-                          </Badge>
-                        </div>
-                        <ChevronDown
-                          className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform ${isExpanded ? "rotate-180" : ""}`}
-                        />
-                      </button>
+                      </div>
 
                       {/* Expanded chat bubble view */}
                       {isExpanded && (

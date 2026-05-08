@@ -1066,6 +1066,7 @@ export interface BotClientMemory {
   convHistory: { role: "user" | "model"; text: string }[];
   visitCount: number;
   lastSeen: Date | null;
+  botBlocked?: boolean;        // true = bot will not reply to this conversation
 }
 
 export async function ensureBotMemoryTable(): Promise<void> {
@@ -1134,6 +1135,35 @@ export async function ensureBotMemoryPhoneColumn(): Promise<void> {
   }
 }
 
+export async function ensureBotBlockedColumn(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      const [cols] = await connection.query(
+        `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bot_client_memory' AND COLUMN_NAME = 'bot_blocked'`
+      );
+      if ((cols as any[]).length === 0) {
+        await connection.query(`ALTER TABLE bot_client_memory ADD COLUMN bot_blocked TINYINT(1) NOT NULL DEFAULT 0`);
+        console.log("Added bot_blocked column to bot_client_memory");
+      }
+      connection.release();
+    } else {
+      const res = await pool.query(
+        `SELECT column_name FROM information_schema.columns
+         WHERE table_name = 'bot_client_memory' AND column_name = 'bot_blocked'`
+      );
+      if (res.rows.length === 0) {
+        await pool.query(`ALTER TABLE bot_client_memory ADD COLUMN bot_blocked BOOLEAN NOT NULL DEFAULT FALSE`);
+        console.log("Added bot_blocked column to bot_client_memory");
+      }
+    }
+    console.log("Bot blocked column ready");
+  } catch (error) {
+    console.error("Failed to ensure bot_blocked column:", error);
+  }
+}
+
 export async function getBotMemory(jid: string): Promise<BotClientMemory | null> {
   try {
     if (dbDialect === 'mysql') {
@@ -1158,6 +1188,7 @@ export async function getBotMemory(jid: string): Promise<BotClientMemory | null>
         convHistory: row.conv_history ? JSON.parse(row.conv_history) : [],
         visitCount: row.visit_count || 1,
         lastSeen: row.last_seen ? new Date(row.last_seen) : null,
+        botBlocked: row.bot_blocked === 1 || row.bot_blocked === true,
       };
     } else {
       const result = await pool.query(
@@ -1179,6 +1210,7 @@ export async function getBotMemory(jid: string): Promise<BotClientMemory | null>
         convHistory: row.conv_history ? JSON.parse(row.conv_history) : [],
         visitCount: row.visit_count || 1,
         lastSeen: row.last_seen ? new Date(row.last_seen) : null,
+        botBlocked: row.bot_blocked === true,
       };
     }
   } catch (err) {
@@ -1191,12 +1223,13 @@ export async function saveBotMemory(mem: BotClientMemory): Promise<void> {
   try {
     const servicesJson = JSON.stringify(mem.preferredServices || []);
     const historyJson  = JSON.stringify(mem.convHistory || []);
+    const botBlocked   = mem.botBlocked ? 1 : 0;
     if (dbDialect === 'mysql') {
       const connection = await pool.getConnection();
       await connection.query(
         `INSERT INTO bot_client_memory
-           (jid, phone, client_name, language, preferred_services, personality_notes, conv_history, visit_count, last_seen)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+           (jid, phone, client_name, language, preferred_services, personality_notes, conv_history, visit_count, last_seen, bot_blocked)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)
          ON DUPLICATE KEY UPDATE
            phone              = COALESCE(VALUES(phone), phone),
            client_name        = COALESCE(VALUES(client_name), client_name),
@@ -1205,6 +1238,7 @@ export async function saveBotMemory(mem: BotClientMemory): Promise<void> {
            personality_notes  = COALESCE(VALUES(personality_notes), personality_notes),
            conv_history       = VALUES(conv_history),
            visit_count        = VALUES(visit_count),
+           bot_blocked        = VALUES(bot_blocked),
            last_seen          = NOW()`,
         [
           mem.jid,
@@ -1215,14 +1249,15 @@ export async function saveBotMemory(mem: BotClientMemory): Promise<void> {
           mem.personalityNotes || null,
           historyJson,
           mem.visitCount,
+          botBlocked,
         ]
       );
       connection.release();
     } else {
       await pool.query(
         `INSERT INTO bot_client_memory
-           (jid, phone, client_name, language, preferred_services, personality_notes, conv_history, visit_count, last_seen)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+           (jid, phone, client_name, language, preferred_services, personality_notes, conv_history, visit_count, last_seen, bot_blocked)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), $9)
          ON CONFLICT (jid) DO UPDATE SET
            phone              = COALESCE(EXCLUDED.phone, bot_client_memory.phone),
            client_name        = COALESCE(EXCLUDED.client_name, bot_client_memory.client_name),
@@ -1231,6 +1266,7 @@ export async function saveBotMemory(mem: BotClientMemory): Promise<void> {
            personality_notes  = COALESCE(EXCLUDED.personality_notes, bot_client_memory.personality_notes),
            conv_history       = EXCLUDED.conv_history,
            visit_count        = EXCLUDED.visit_count,
+           bot_blocked        = EXCLUDED.bot_blocked,
            last_seen          = NOW()`,
         [
           mem.jid,
@@ -1241,6 +1277,7 @@ export async function saveBotMemory(mem: BotClientMemory): Promise<void> {
           mem.personalityNotes || null,
           historyJson,
           mem.visitCount,
+          mem.botBlocked ?? false,
         ]
       );
     }
@@ -1259,6 +1296,7 @@ export async function getAllBotMemories(): Promise<BotClientMemory[]> {
       connection.release();
       return (rows as any[]).map((row) => ({
         jid: row.jid,
+        phone: row.phone ?? null,
         clientName: row.client_name ?? null,
         language: row.language || 'unknown',
         preferredServices: row.preferred_services
@@ -1268,6 +1306,7 @@ export async function getAllBotMemories(): Promise<BotClientMemory[]> {
         convHistory: row.conv_history ? JSON.parse(row.conv_history) : [],
         visitCount: row.visit_count || 0,
         lastSeen: row.last_seen ? new Date(row.last_seen) : null,
+        botBlocked: row.bot_blocked === 1 || row.bot_blocked === true,
       }));
     } else {
       const result = await pool.query(
@@ -1275,6 +1314,7 @@ export async function getAllBotMemories(): Promise<BotClientMemory[]> {
       );
       return result.rows.map((row: any) => ({
         jid: row.jid,
+        phone: row.phone ?? null,
         clientName: row.client_name ?? null,
         language: row.language || 'unknown',
         preferredServices: row.preferred_services
@@ -1284,6 +1324,7 @@ export async function getAllBotMemories(): Promise<BotClientMemory[]> {
         convHistory: row.conv_history ? JSON.parse(row.conv_history) : [],
         visitCount: row.visit_count || 0,
         lastSeen: row.last_seen ? new Date(row.last_seen) : null,
+        botBlocked: row.bot_blocked === true,
       }));
     }
   } catch (err) {

@@ -2587,12 +2587,13 @@ export async function registerRoutes(
         .filter((m) => m.convHistory && m.convHistory.length > 0)
         .map((m) => ({
           jid: m.jid,
-          phone: m.jid.replace("@s.whatsapp.net", ""),
+          phone: m.phone || m.jid.replace("@s.whatsapp.net", "").replace("@lid", ""),
           clientName: m.clientName ?? null,
           language: m.language,
           visitCount: m.visitCount,
           lastSeen: m.lastSeen ? m.lastSeen.toISOString() : null,
           history: m.convHistory,
+          botBlocked: m.botBlocked ?? false,
         }));
       res.json(result);
     } catch (err: any) {
@@ -2611,6 +2612,37 @@ export async function registerRoutes(
         await saveBotMemory({ ...mem, convHistory: [] });
       }
       res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.patch("/api/whatsapp/bot-conversations/:jid/block", isPinAuthenticated, async (req, res) => {
+    try {
+      const jid = decodeURIComponent(req.params.jid);
+      const { blocked } = z.object({ blocked: z.boolean() }).parse(req.body);
+      const { getBotMemory, saveBotMemory } = await import("./db");
+      let mem = await getBotMemory(jid);
+      if (!mem) {
+        // Create a minimal memory entry so we can store the block flag
+        mem = {
+          jid,
+          phone: null,
+          clientName: null,
+          language: "unknown",
+          preferredServices: [],
+          personalityNotes: null,
+          convHistory: [],
+          visitCount: 1,
+          lastSeen: null,
+          botBlocked: blocked,
+        };
+      } else {
+        mem = { ...mem, botBlocked: blocked };
+      }
+      await saveBotMemory(mem);
+      console.log(`[Bot] JID ${jid} bot_blocked set to ${blocked}`);
+      res.json({ success: true, blocked });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
@@ -4204,6 +4236,45 @@ export async function registerRoutes(
 
       addToBuffer(remoteJid, text, imageBase64, imageMimeType, isVoice, async (msgs: BufferedMsg[]) => {
         try {
+          // ── Re-check blocklist inside buffer callback ──────────────────────
+          // Handles the case where the number was added to the blocklist while
+          // messages were already sitting in the buffer.
+          const freshSettings = await storage.getBusinessSettings().catch(() => null);
+          if (!freshSettings || (freshSettings as any).botEnabled === false) return;
+          const freshFilterMode: string = (freshSettings as any).botFilterMode || "all";
+          if (freshFilterMode !== "all") {
+            const rawNums2: string = (freshSettings as any).botFilterNumbers || "[]";
+            let freshList: string[] = [];
+            try { freshList = JSON.parse(rawNums2); } catch { freshList = []; }
+            const normalizeNum2 = (n: string) => {
+              let d = n.replace(/[^0-9]/g, "");
+              if (d.startsWith("00")) d = d.slice(2);
+              if (d.startsWith("0") && d.length === 10) d = "212" + d.slice(1);
+              if (d.length === 9) d = "212" + d;
+              return d;
+            };
+            const freshNormalizedList = freshList.map(normalizeNum2).filter(Boolean);
+            let freshPhone = normalizeNum2(phone);
+            if (remoteJid.endsWith("@lid")) {
+              try {
+                const { getBotMemory: _bm } = await import("./db");
+                const me = await _bm(remoteJid);
+                if (me?.phone) freshPhone = normalizeNum2(me.phone);
+              } catch { /* ignore */ }
+            }
+            const freshInList = freshNormalizedList.includes(freshPhone);
+            if (freshFilterMode === "allowlist" && !freshInList) return;
+            if (freshFilterMode === "blocklist" && freshInList) return;
+          }
+
+          // ── Per-conversation bot block check ────────────────────────────
+          const { getBotMemory: _checkBlock } = await import("./db");
+          const memCheck = await _checkBlock(remoteJid);
+          if (memCheck?.botBlocked) {
+            console.log(`[Bot] ${remoteJid} is individually bot-blocked — skipping reply`);
+            return;
+          }
+
           // ── Merge all buffered messages into one context ─────────────────
           const mergedText = msgs.map((m) => m.text).filter(Boolean).join("\n").trim();
           // Use the last image in the batch (most recent photo sent)
