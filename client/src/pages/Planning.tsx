@@ -2132,7 +2132,7 @@ export default function Planning() {
                   return (
                     <div
                       key={`${s.id}-${hour}-covered`}
-                      className={cn("border-b border-slate-100/50 dark:border-slate-800/50 min-h-[60px] bg-transparent", isRtl ? "border-l border-slate-100/50 dark:border-slate-800/50" : "border-r border-slate-100/50 dark:border-slate-800/50")}
+                      className={cn("border-b border-slate-100/50 dark:border-slate-800/50 bg-transparent pointer-events-none", isRtl ? "border-l border-slate-100/50 dark:border-slate-800/50" : "border-r border-slate-100/50 dark:border-slate-800/50")}
                       style={{ gridColumn: colNum, gridRow: rowNum }}
                     />
                   );
@@ -2294,7 +2294,7 @@ export default function Planning() {
         }
       }}>
         <DialogContent 
-          className="w-[calc(100vw-16px)] max-w-[400px] p-0 border-0 rounded-2xl overflow-hidden animate-fade-in-scale flex flex-col liquid-glass-modal" 
+          className="w-[calc(100vw-16px)] max-w-[400px] max-h-[90dvh] p-0 border-0 rounded-2xl overflow-hidden animate-fade-in-scale flex flex-col liquid-glass-modal" 
           dir={isRtl ? "rtl" : "ltr"}
         >
           <Form {...form}>
@@ -2309,7 +2309,7 @@ export default function Planning() {
                   }
                 }
               }}
-              className="flex flex-col"
+              className="flex flex-col flex-1 min-h-0"
             >
               {/* Header + Price merged row */}
               <div className="liquid-glass-header px-3 py-2.5 relative overflow-hidden shrink-0">
@@ -2368,7 +2368,7 @@ export default function Planning() {
               </div>
               
               {/* Form body */}
-              <div className="px-3 py-2 space-y-2">
+              <div className="px-3 py-2 space-y-2 overflow-y-auto flex-1 min-h-0" style={{ WebkitOverflowScrolling: 'touch' }}>
                 {/* Row 1: Client full width */}
                 <FormField
                   control={form.control}
@@ -2758,7 +2758,9 @@ export default function Planning() {
                             </div>
                             <div 
                               className="h-[180px] overflow-y-auto p-1.5"
-                              style={{ overscrollBehavior: 'contain' }}
+                              style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}
+                              onTouchStart={(e) => e.stopPropagation()}
+                              onTouchMove={(e) => e.stopPropagation()}
                             >
                               {Object.entries(groupedServices).map(([category, categoryServices]) => (
                                 <div key={category}>
