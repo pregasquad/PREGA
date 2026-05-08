@@ -338,6 +338,8 @@ export const businessSettings = pgTable("business_settings", {
   planningShortcuts: json("planning_shortcuts").$type<string[]>().notNull().default(["services", "clients", "salaries", "inventory"]),
   ttsVoice: varchar("tts_voice", { length: 50 }).notNull().default("Aoede"),
   botEnabled: boolean("bot_enabled").notNull().default(true),
+  botFilterMode: varchar("bot_filter_mode", { length: 20 }).notNull().default("all"),
+  botFilterNumbers: text("bot_filter_numbers"),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 

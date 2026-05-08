@@ -3878,10 +3878,10 @@ export async function registerRoutes(
   type ConvTurn = { role: "user" | "model"; text: string };
   const memCache = new Map<string, BotClientMemory>();
 
-  // How long an idle conversation keeps its context (30 min)
-  const CONV_TTL = 30 * 60 * 1000;
-  // Maximum recent turns to keep in history (5 back-and-forth = 10 entries)
-  const CONV_MAX_TURNS = 5;
+  // How long an idle conversation keeps its context (48 hours — returning clients get full context)
+  const CONV_TTL = 48 * 60 * 60 * 1000;
+  // Maximum recent turns to keep in history (15 back-and-forth = 30 entries)
+  const CONV_MAX_TURNS = 15;
 
   // ── Memory extraction helpers ──────────────────────────────────────────────
 
@@ -4084,6 +4084,27 @@ export async function registerRoutes(
       // Check if bot is enabled before processing
       const botSettings = await storage.getBusinessSettings().catch(() => null);
       if (botSettings && (botSettings as any).botEnabled === false) return;
+
+      // ── Phone number filter (allowlist / blocklist) ────────────────────────
+      const filterMode: string = (botSettings as any)?.botFilterMode || "all";
+      if (filterMode !== "all") {
+        const rawNums: string = (botSettings as any)?.botFilterNumbers || "[]";
+        let filterList: string[] = [];
+        try { filterList = JSON.parse(rawNums); } catch { filterList = []; }
+        // Normalize each stored number the same way we normalize incoming JIDs
+        const normalizeNum = (n: string) => {
+          let d = n.replace(/[^0-9]/g, "");
+          if (d.startsWith("00")) d = d.slice(2);
+          if (d.startsWith("0") && d.length === 10) d = "212" + d.slice(1);
+          if (d.length === 9) d = "212" + d;
+          return d;
+        };
+        const normalizedList = filterList.map(normalizeNum).filter(Boolean);
+        const incomingNorm = normalizeNum(phone);
+        const isInList = normalizedList.includes(incomingNorm);
+        if (filterMode === "allowlist" && !isInList) return;  // not in allowlist → ignore
+        if (filterMode === "blocklist" && isInList) return;   // in blocklist → ignore
+      }
 
       addToBuffer(remoteJid, text, imageBase64, imageMimeType, isVoice, async (msgs: BufferedMsg[]) => {
         try {

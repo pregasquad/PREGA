@@ -30,6 +30,11 @@ import {
   Save,
   Bot,
   BotOff,
+  Filter,
+  Plus,
+  X,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 
 interface WAStatus {
@@ -143,6 +148,12 @@ export default function WhatsApp() {
   );
   const [broadcastMsg, setBroadcastMsg] = useState("");
   const [selectedVoice, setSelectedVoice] = useState("Aoede");
+
+  // ── Phone number filter state ──────────────────────────────────────────────
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterMode, setFilterMode] = useState<"all" | "allowlist" | "blocklist">("all");
+  const [filterNumbers, setFilterNumbers] = useState<string[]>([]);
+  const [filterInput, setFilterInput] = useState("");
 
   const { data: waData, refetch } = useQuery<WAStatus>({
     queryKey: ["/api/whatsapp/qr"],
@@ -402,7 +413,11 @@ export default function WhatsApp() {
 
   useEffect(() => {
     if (bizSettings?.ttsVoice) setSelectedVoice(bizSettings.ttsVoice);
-  }, [bizSettings?.ttsVoice]);
+    if (bizSettings?.botFilterMode) setFilterMode(bizSettings.botFilterMode);
+    if (bizSettings?.botFilterNumbers) {
+      try { setFilterNumbers(JSON.parse(bizSettings.botFilterNumbers)); } catch { setFilterNumbers([]); }
+    }
+  }, [bizSettings?.ttsVoice, bizSettings?.botFilterMode, bizSettings?.botFilterNumbers]);
 
   const saveVoiceMutation = useMutation({
     mutationFn: (voice: string) =>
@@ -428,6 +443,30 @@ export default function WhatsApp() {
     onError: (err: any) =>
       toast({ title: "خطأ", description: err.message, variant: "destructive" }),
   });
+
+  const saveFilterMutation = useMutation({
+    mutationFn: (payload: { mode: string; numbers: string[] }) =>
+      apiRequest("PATCH", "/api/business-settings", {
+        botFilterMode: payload.mode,
+        botFilterNumbers: JSON.stringify(payload.numbers),
+      }).then((r) => r.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/business-settings"] });
+      toast({ title: "تم الحفظ ✓", description: "تم تحديث إعدادات الفلتر" });
+    },
+    onError: (err: any) =>
+      toast({ title: "خطأ", description: err.message, variant: "destructive" }),
+  });
+
+  const addFilterNumber = () => {
+    const trimmed = filterInput.trim();
+    if (!trimmed || filterNumbers.includes(trimmed)) { setFilterInput(""); return; }
+    setFilterNumbers((prev) => [...prev, trimmed]);
+    setFilterInput("");
+  };
+
+  const removeFilterNumber = (num: string) =>
+    setFilterNumbers((prev) => prev.filter((n) => n !== num));
 
   const botEnabled = bizSettings?.botEnabled !== false;
 
@@ -930,6 +969,160 @@ export default function WhatsApp() {
           )}
           {saveVoiceMutation.isPending ? "جاري الحفظ…" : "حفظ الصوت"}
         </Button>
+      </div>
+
+      {/* ── PHONE NUMBER FILTER ── */}
+      <div className="rounded-2xl border bg-card overflow-hidden">
+        {/* Header — click to expand/collapse */}
+        <button
+          className="w-full flex items-center gap-3 p-5 text-left hover:bg-muted/30 transition-colors"
+          onClick={() => setFilterOpen((o) => !o)}
+          data-testid="button-toggle-filter"
+        >
+          <Filter className="w-5 h-5 text-muted-foreground shrink-0" />
+          <div className="flex-1">
+            <span className="font-semibold">فلتر الأرقام</span>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {filterMode === "all"
+                ? "البوت يرد على الجميع"
+                : filterMode === "allowlist"
+                ? `قائمة بيضاء — ${filterNumbers.length} رقم`
+                : `قائمة سوداء — ${filterNumbers.length} رقم`}
+            </p>
+          </div>
+          <Badge
+            variant="secondary"
+            className={`text-xs shrink-0 ${
+              filterMode === "allowlist"
+                ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
+                : filterMode === "blocklist"
+                ? "bg-red-500/15 text-red-400 border-red-500/30"
+                : ""
+            }`}
+          >
+            {filterMode === "all" ? "الكل" : filterMode === "allowlist" ? "قائمة بيضاء" : "قائمة سوداء"}
+          </Badge>
+          {filterOpen ? (
+            <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+          )}
+        </button>
+
+        {/* Collapsed body */}
+        {filterOpen && (
+          <div className="px-5 pb-5 space-y-4 border-t border-border/50">
+            {/* Mode selector */}
+            <div className="space-y-2 pt-4">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wider">وضع الفلتر</Label>
+              <div className="grid grid-cols-3 gap-2" dir="rtl">
+                {([
+                  { value: "all",       label: "الجميع",       desc: "يرد على كل الأرقام",          color: "blue"    },
+                  { value: "allowlist", label: "قائمة بيضاء",  desc: "يرد فقط على الأرقام المحددة", color: "emerald" },
+                  { value: "blocklist", label: "قائمة سوداء",  desc: "يتجاهل الأرقام المحددة",      color: "red"     },
+                ] as const).map((opt) => (
+                  <button
+                    key={opt.value}
+                    data-testid={`button-filter-mode-${opt.value}`}
+                    onClick={() => setFilterMode(opt.value)}
+                    className={`flex flex-col items-center gap-1 rounded-xl border px-3 py-2.5 text-center transition-all text-xs ${
+                      filterMode === opt.value
+                        ? opt.color === "blue"
+                          ? "border-blue-500/60 bg-blue-500/10 ring-1 ring-blue-500/40 text-blue-400"
+                          : opt.color === "emerald"
+                          ? "border-emerald-500/60 bg-emerald-500/10 ring-1 ring-emerald-500/40 text-emerald-400"
+                          : "border-red-500/60 bg-red-500/10 ring-1 ring-red-500/40 text-red-400"
+                        : "border-border bg-muted/30 hover:bg-muted/60 text-muted-foreground"
+                    }`}
+                  >
+                    <span className="font-semibold">{opt.label}</span>
+                    <span className="text-[10px] leading-tight opacity-80">{opt.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Number list — only shown when not "all" */}
+            {filterMode !== "all" && (
+              <div className="space-y-3">
+                <Label className="text-xs text-muted-foreground uppercase tracking-wider">
+                  {filterMode === "allowlist" ? "الأرقام المسموح لها" : "الأرقام المحظورة"}
+                </Label>
+
+                {/* Add number input */}
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="212XXXXXXXXX أو +212XXXXXXXXX"
+                    value={filterInput}
+                    onChange={(e) => setFilterInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && addFilterNumber()}
+                    className="flex-1 text-sm font-mono"
+                    data-testid="input-filter-number"
+                    dir="ltr"
+                  />
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={addFilterNumber}
+                    disabled={!filterInput.trim()}
+                    data-testid="button-add-filter-number"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                {/* Number chips */}
+                {filterNumbers.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-3 border rounded-xl border-dashed">
+                    لم تُضَف أي أرقام بعد
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {filterNumbers.map((num) => (
+                      <div
+                        key={num}
+                        className="flex items-center gap-1.5 rounded-full border bg-muted/50 px-3 py-1 text-xs font-mono"
+                        data-testid={`chip-filter-number-${num}`}
+                      >
+                        <span dir="ltr">{num}</span>
+                        <button
+                          onClick={() => removeFilterNumber(num)}
+                          className="text-muted-foreground hover:text-destructive transition-colors"
+                          data-testid={`button-remove-filter-${num}`}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Info box */}
+            <div className="flex items-start gap-2 p-3 rounded-xl bg-muted/40 border text-xs text-muted-foreground" dir="rtl">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-amber-400" />
+              <span>
+                أدخل الأرقام بالصيغة الدولية مثل <span dir="ltr" className="font-mono">212612345678</span> أو <span dir="ltr" className="font-mono">+212612345678</span> — البوت يُوحِّد الصيغ أوتوماتيك.
+              </span>
+            </div>
+
+            {/* Save button */}
+            <Button
+              className="w-full"
+              onClick={() => saveFilterMutation.mutate({ mode: filterMode, numbers: filterNumbers })}
+              disabled={saveFilterMutation.isPending}
+              data-testid="button-save-filter"
+            >
+              {saveFilterMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4 mr-2" />
+              )}
+              {saveFilterMutation.isPending ? "جاري الحفظ…" : "حفظ الفلتر"}
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

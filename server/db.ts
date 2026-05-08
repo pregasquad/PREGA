@@ -1273,6 +1273,37 @@ export async function ensureBotEnabledColumn(): Promise<void> {
   }
 }
 
+export async function ensureBotFilterColumns(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      const [rows] = await connection.query(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_NAME = 'business_settings' AND COLUMN_NAME = 'bot_filter_mode'
+      `);
+      if ((rows as any[]).length === 0) {
+        await connection.query(`ALTER TABLE business_settings ADD COLUMN bot_filter_mode VARCHAR(20) NOT NULL DEFAULT 'all'`);
+        await connection.query(`ALTER TABLE business_settings ADD COLUMN bot_filter_numbers TEXT`);
+        console.log("Added bot filter columns to business_settings");
+      }
+      connection.release();
+    } else {
+      await pool.query(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'business_settings' AND column_name = 'bot_filter_mode') THEN
+            ALTER TABLE business_settings ADD COLUMN bot_filter_mode VARCHAR(20) NOT NULL DEFAULT 'all';
+            ALTER TABLE business_settings ADD COLUMN bot_filter_numbers TEXT;
+          END IF;
+        END $$;
+      `);
+    }
+    console.log("Bot filter columns ready");
+  } catch (error) {
+    console.error("Failed to ensure bot filter columns:", error);
+  }
+}
+
 export async function ensureTtsVoiceColumn(): Promise<void> {
   try {
     if (dbDialect === 'mysql') {
