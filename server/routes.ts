@@ -2491,6 +2491,9 @@ export async function registerRoutes(
   });
 
   app.post("/api/whatsapp/connect-qr", isPinAuthenticated, async (_req, res) => {
+    if (process.env.REPL_ID) {
+      return res.status(400).json({ success: false, error: "REPLIT_DEV" });
+    }
     try {
       const { startQR } = await import("./baileys");
       startQR(); // non-blocking — QR arrives via polling /api/whatsapp/qr
@@ -2501,6 +2504,9 @@ export async function registerRoutes(
   });
 
   app.post("/api/whatsapp/pairing-code", isPinAuthenticated, async (req, res) => {
+    if (process.env.REPL_ID) {
+      return res.status(400).json({ success: false, error: "REPLIT_DEV" });
+    }
     try {
       const { startPairingCode } = await import("./baileys");
       const { phone } = z.object({ phone: z.string().min(8) }).parse(req.body);
@@ -4230,9 +4236,8 @@ export async function registerRoutes(
           const mem = await loadMemory(remoteJid);
           const history = getActiveHistory(mem);
           const hasHistory = history.length > 0;
-          const isReturningClient = (mem.visitCount ?? 0) > 0;
 
-          // First message of the day = no active history OR last seen > 20h ago
+          // New conversation = no history OR last seen > 20h (triggers welcome greeting)
           const lastSeenMs = mem.lastSeen ? new Date(mem.lastSeen).getTime() : 0;
           const isNewConversation = !hasHistory || (Date.now() - lastSeenMs > 20 * 60 * 60 * 1000);
 
@@ -4371,7 +4376,7 @@ export async function registerRoutes(
           const batchNote = batchSize > 1 ? ` [${batchSize} msgs merged]` : "";
           const imgNote = mergedImageBase64 ? " [+image]" : "";
           const replyMode = repliedWithVoice ? " [🎙️ voice reply]" : "";
-          console.log(`[Bot] ${isReturningClient ? "↩ returning" : "★ new"} client ${clientLabel} — turn ${turnNum}${batchNote}${imgNote}${replyMode}`);
+          console.log(`[Bot] ${hasHistory ? "↩ returning" : "★ new"} client ${clientLabel} — turn ${turnNum}${batchNote}${imgNote}${replyMode}`);
 
         } catch (err: any) {
           console.error("[Bot] Error handling buffered batch:", err.message);

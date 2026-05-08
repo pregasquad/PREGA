@@ -213,7 +213,7 @@ async function callGemini(
     generationConfig: { maxOutputTokens: 800, temperature: 0.75 },
   });
 
-  let response: Response;
+  let response!: Response;
   const MAX_503_RETRIES = 2;
   for (let attempt = 0; attempt <= MAX_503_RETRIES; attempt++) {
     try {

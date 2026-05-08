@@ -673,7 +673,7 @@ export async function sendWhatsAppVoiceNote(
       ptt: true, // sends as voice note, not regular audio file
     });
     log(`Voice note sent to ${to} (${Math.round(oggBuffer.length / 1024)} KB OGG)`);
-    return { success: true, messageId: result?.key?.id };
+    return { success: true };
   } catch (err: any) {
     log(`sendWhatsAppVoiceNote error: ${err.message}`);
     return { success: false, error: err.message };
