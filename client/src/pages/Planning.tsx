@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { CalendarIcon, ChevronLeft, ChevronRight, Plus, Trash2, Check, X, Search, Star, RefreshCw, Sparkles, CreditCard, Settings2, Scissors, Clock, User, ChevronsUpDown, ListTodo, Bell, UserCheck, Gift, AlertCircle, Wallet, Users, Package, Lock } from "lucide-react";
+import { CalendarIcon, ChevronLeft, ChevronRight, Plus, Trash2, Check, X, Search, Star, RefreshCw, Sparkles, CreditCard, Settings2, Scissors, Clock, User, ChevronsUpDown, ListTodo, Bell, UserCheck, Gift, AlertCircle, AlertTriangle, Wallet, Users, Package, Lock } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
 import { cn } from "@/lib/utils";
@@ -1653,6 +1653,32 @@ export default function Planning() {
     return false;
   };
 
+  // Detect scheduling conflicts: appointments for the same staff whose time ranges overlap
+  const conflictingIds = useMemo(() => {
+    const toMins = (t: string) => {
+      const [h, m] = (t || "00:00").split(":").map(Number);
+      const base = h * 60 + m;
+      return h < 6 ? base + 24 * 60 : base;
+    };
+    const ids = new Set<number>();
+    for (let i = 0; i < appointments.length; i++) {
+      const a = appointments[i];
+      const aStart = toMins(a.startTime);
+      const aEnd = aStart + (a.duration || 30);
+      for (let j = i + 1; j < appointments.length; j++) {
+        const b = appointments[j];
+        if (a.staffId !== b.staffId && !(a.staff && a.staff === b.staff)) continue;
+        const bStart = toMins(b.startTime);
+        const bEnd = bStart + (b.duration || 30);
+        if (aStart < bEnd && aEnd > bStart) {
+          ids.add(a.id);
+          ids.add(b.id);
+        }
+      }
+    }
+    return ids;
+  }, [appointments]);
+
   // Show loading screen only while actively loading
   if (isDataLoading) {
     return (
@@ -2143,6 +2169,7 @@ export default function Planning() {
 
                 const isDragOver = dragOverSlot?.staff === s.name && dragOverSlot?.time === hour;
                 const isDragging = draggedAppointment?.id === booking?.id;
+                const isConflicting = booking ? conflictingIds.has(booking.id) : false;
 
                 if (booking) {
                   return (
@@ -2158,7 +2185,8 @@ export default function Planning() {
                         className={cn(
                           "appointment-card h-full text-white cursor-grab active:cursor-grabbing relative rounded-md shadow-md",
                           span === 1 ? "flex items-center gap-1 px-1.5 py-0.5" : span <= 2 ? "flex flex-col px-1.5 py-1" : "flex flex-col px-2 py-1.5",
-                          isDragging && "opacity-50 scale-95"
+                          isDragging && "opacity-50 scale-95",
+                          isConflicting && "ring-2 ring-amber-400 ring-inset"
                         )}
                         style={{ 
                           background: `linear-gradient(135deg, ${s.color}ee, ${s.color}cc)`,
@@ -2170,6 +2198,13 @@ export default function Planning() {
                         onClick={(e) => handleAppointmentClick(e, booking)}
                       >
                         <div className="water-shimmer absolute inset-0 opacity-30" />
+                        {isConflicting && (
+                          <div className="absolute top-0.5 right-0.5 z-20 pointer-events-none">
+                            <div className="bg-amber-400 rounded-full p-0.5 shadow-md">
+                              <AlertTriangle className="w-2.5 h-2.5 text-white" strokeWidth={2.5} />
+                            </div>
+                          </div>
+                        )}
                         {(() => {
                           let servicesList: Array<{name: string, price: number, duration: number}> = [];
                           if (booking.servicesJson) {
