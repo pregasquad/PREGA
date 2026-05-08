@@ -2125,9 +2125,10 @@ export default function Planning() {
               {staffList.map((s, staffIndex) => {
                 const colNum = staffIndex + 2; // +2 because column 1 is time labels
                 const booking = getBooking(s.id, s.name, hour);
-                const isCovered = isSlotCovered(s.id, s.name, hour);
+                // Only treat as covered if there's no booking starting at this exact slot
+                const isCovered = !booking && isSlotCovered(s.id, s.name, hour);
 
-                // For covered slots, render empty cell with just borders
+                // For covered slots (no booking here), render empty cell with just borders
                 if (isCovered) {
                   return (
                     <div
