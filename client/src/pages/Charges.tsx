@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, startOfMonth, endOfMonth, parseISO, isWithinInterval, subMonths, addMonths } from "date-fns";
 import { fr, enUS, ar } from "date-fns/locale";
@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, TrendingDown, FolderPlus, RefreshCw, ChevronLeft, ChevronRight, Calendar, Paperclip, X, Image, FileText, Wallet } from "lucide-react";
+import { Plus, Trash2, TrendingDown, FolderPlus, RefreshCw, ChevronLeft, ChevronRight, Calendar, Paperclip, X, Image, FileText, Wallet, TrendingUp, ArrowRight } from "lucide-react";
 import { autoPrintExpense } from "@/lib/printReceipt";
 import { useBusinessSettings } from "@/hooks/use-salon-data";
 import { refreshSalariesBackground } from "@/lib/salariesRefresher";
@@ -68,6 +68,10 @@ export default function Charges() {
 
   const { data: ownerWithdrawals = [] } = useQuery<any[]>({
     queryKey: ["/api/owner-withdrawals"],
+  });
+
+  const { data: appointments = [] } = useQuery<any[]>({
+    queryKey: ["/api/appointments"],
   });
 
   const defaultChargeTypes = DEFAULT_CHARGE_TYPES_KEYS.map(item => ({
@@ -341,8 +345,20 @@ export default function Charges() {
     }
   });
 
+  const monthRevenue = useMemo(() => {
+    return (appointments as any[])
+      .filter((a: any) => {
+        if (!a.paid || !a.date) return false;
+        try {
+          return isWithinInterval(parseISO(a.date), { start: monthStart, end: monthEnd });
+        } catch { return false; }
+      })
+      .reduce((sum: number, a: any) => sum + Number(a.total || 0), 0);
+  }, [appointments, monthStart, monthEnd]);
+
   const totalCharges = filteredCharges.reduce((sum: number, c: any) => sum + c.amount, 0);
   const totalWithdrawals = filteredWithdrawals.reduce((sum: number, w: any) => sum + w.amount, 0);
+  const netRemaining = monthRevenue - totalWithdrawals - totalCharges;
 
   return (
     <div className="h-full flex flex-col gap-4 md:gap-6 p-2 md:p-4 animate-fade-in" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
@@ -425,13 +441,17 @@ export default function Charges() {
               <div className="space-y-3">
                 <div className="p-3 bg-muted/40 rounded-lg space-y-2 border">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("ownerWithdrawals.caisseBreakdown")}</p>
+
+                  {/* Month earnings row */}
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground flex items-center gap-1.5">
-                      <TrendingDown className="w-3.5 h-3.5 text-destructive" />
-                      {t("expenses.totalExpenses")}
+                      <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
+                      {t("reports.revenue")}
                     </span>
-                    <span className="text-sm font-semibold text-destructive">- {totalCharges} {t("common.currency")}</span>
+                    <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">+ {monthRevenue.toFixed(0)} {t("common.currency")}</span>
                   </div>
+
+                  {/* Withdrawals row */}
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground flex items-center gap-1.5">
                       <Wallet className="w-3.5 h-3.5 text-amber-600" />
@@ -439,9 +459,25 @@ export default function Charges() {
                     </span>
                     <span className="text-sm font-semibold text-amber-700 dark:text-amber-400">- {totalWithdrawals} {t("common.currency")}</span>
                   </div>
-                  <div className="flex items-center justify-between pt-1 border-t">
-                    <span className="text-sm font-bold">{t("ownerWithdrawals.totalOutOfCaisse")}</span>
-                    <span className="text-base font-bold text-destructive">{totalCharges + totalWithdrawals} {t("common.currency")}</span>
+
+                  {/* Charges row */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+                      <TrendingDown className="w-3.5 h-3.5 text-destructive" />
+                      {t("expenses.totalExpenses")}
+                    </span>
+                    <span className="text-sm font-semibold text-destructive">- {totalCharges} {t("common.currency")}</span>
+                  </div>
+
+                  {/* Net result */}
+                  <div className={`flex items-center justify-between pt-1.5 border-t mt-1 ${netRemaining >= 0 ? "border-emerald-500/30" : "border-red-500/30"}`}>
+                    <span className="text-sm font-bold flex items-center gap-1.5">
+                      <ArrowRight className="w-3.5 h-3.5" />
+                      {t("reports.netProfit")}
+                    </span>
+                    <span className={`text-base font-bold ${netRemaining >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"}`}>
+                      {netRemaining.toFixed(0)} {t("common.currency")}
+                    </span>
                   </div>
                 </div>
 
