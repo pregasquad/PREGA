@@ -11,9 +11,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, TrendingDown, FolderPlus, RefreshCw, ChevronLeft, ChevronRight, Calendar, Paperclip, X, Image, FileText, Wallet, TrendingUp, ArrowRight } from "lucide-react";
+import { Plus, Trash2, TrendingDown, FolderPlus, RefreshCw, ChevronLeft, ChevronRight, Calendar, Paperclip, X, Image, FileText, Wallet, TrendingUp, ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
 import { autoPrintExpense } from "@/lib/printReceipt";
-import { useBusinessSettings } from "@/hooks/use-salon-data";
+import { useBusinessSettings, useStaff, useServices } from "@/hooks/use-salon-data";
 import { refreshSalariesBackground } from "@/lib/salariesRefresher";
 
 const DEFAULT_CHARGE_TYPES_KEYS = [
@@ -41,6 +41,7 @@ export default function Charges() {
   const queryClient = useQueryClient();
   const isAdmin = sessionStorage.getItem("current_user_role") === "owner";
   const { data: salonSettings } = useBusinessSettings();
+  const [withdrawalsExpanded, setWithdrawalsExpanded] = useState(false);
 
   const [withdrawalAmount, setWithdrawalAmount] = useState("");
   const [withdrawalDate, setWithdrawalDate] = useState(format(new Date(), "yyyy-MM-dd"));
@@ -72,6 +73,12 @@ export default function Charges() {
 
   const { data: appointments = [] } = useQuery<any[]>({
     queryKey: ["/api/appointments"],
+  });
+
+  const { data: staffList = [] } = useStaff();
+  const { data: services = [] } = useServices();
+  const { data: staffCommissions = [] } = useQuery<any[]>({
+    queryKey: ["/api/staff-commissions"],
   });
 
   const defaultChargeTypes = DEFAULT_CHARGE_TYPES_KEYS.map(item => ({
@@ -346,15 +353,33 @@ export default function Charges() {
   });
 
   const monthRevenue = useMemo(() => {
-    return (appointments as any[])
-      .filter((a: any) => {
-        if (!a.paid || !a.date) return false;
-        try {
-          return isWithinInterval(parseISO(a.date), { start: monthStart, end: monthEnd });
-        } catch { return false; }
-      })
-      .reduce((sum: number, a: any) => sum + Number(a.total || 0), 0);
-  }, [appointments, monthStart, monthEnd]);
+    const monthApts = (appointments as any[]).filter((a: any) => {
+      if (!a.paid || !a.date) return false;
+      try {
+        return isWithinInterval(parseISO(a.date), { start: monthStart, end: monthEnd });
+      } catch { return false; }
+    });
+
+    let totalCommissions = 0;
+    let totalRevenue = 0;
+    for (const app of monthApts) {
+      const total = Number(app.total || 0);
+      totalRevenue += total;
+      const service = (services as any[]).find((s: any) => s.name === app.service);
+      let commissionRate = service?.commissionPercent ?? 50;
+      if (service) {
+        const staffMember = (staffList as any[]).find((s: any) => s.name === app.staff || s.id === app.staffId);
+        if (staffMember) {
+          const customComm = (staffCommissions as any[]).find(
+            (c: any) => c.staffId === staffMember.id && c.serviceId === service.id
+          );
+          if (customComm) commissionRate = customComm.percentage;
+        }
+      }
+      totalCommissions += total * (commissionRate / 100);
+    }
+    return totalRevenue - totalCommissions;
+  }, [appointments, monthStart, monthEnd, services, staffList, staffCommissions]);
 
   const totalCharges = filteredCharges.reduce((sum: number, c: any) => sum + c.amount, 0);
   const totalWithdrawals = filteredWithdrawals.reduce((sum: number, w: any) => sum + w.amount, 0);
@@ -481,27 +506,41 @@ export default function Charges() {
                   </div>
                 </div>
 
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {filteredWithdrawals.map((w: any) => (
-                    <div key={w.id} className="p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg flex justify-between items-center gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-semibold text-amber-700 dark:text-amber-400">{w.amount} {t("common.currency")}</div>
-                        <div className="text-xs text-muted-foreground">{w.date}</div>
-                        {w.notes && <div className="text-xs text-muted-foreground truncate">{w.notes}</div>}
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 shrink-0 text-destructive"
-                        onClick={() => deleteWithdrawalMutation.mutate(w.id)}
-                        data-testid={`button-delete-withdrawal-${w.id}`}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                <div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full flex items-center justify-between text-xs text-muted-foreground h-8 px-2"
+                    onClick={() => setWithdrawalsExpanded(!withdrawalsExpanded)}
+                    data-testid="button-toggle-withdrawals"
+                  >
+                    <span>{t("ownerWithdrawals.myWithdrawals")} ({filteredWithdrawals.length})</span>
+                    {withdrawalsExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                  </Button>
+                  {withdrawalsExpanded && (
+                    <div className="space-y-2 max-h-48 overflow-y-auto mt-1">
+                      {filteredWithdrawals.map((w: any) => (
+                        <div key={w.id} className="p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg flex justify-between items-center gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-semibold text-amber-700 dark:text-amber-400">{w.amount} {t("common.currency")}</div>
+                            <div className="text-xs text-muted-foreground">{w.date}</div>
+                            {w.notes && <div className="text-xs text-muted-foreground truncate">{w.notes}</div>}
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 shrink-0 text-destructive"
+                            onClick={() => deleteWithdrawalMutation.mutate(w.id)}
+                            data-testid={`button-delete-withdrawal-${w.id}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      {filteredWithdrawals.length === 0 && (
+                        <p className="text-center text-muted-foreground py-4 text-sm">{t("ownerWithdrawals.noWithdrawals")}</p>
+                      )}
                     </div>
-                  ))}
-                  {filteredWithdrawals.length === 0 && (
-                    <p className="text-center text-muted-foreground py-4 text-sm">{t("ownerWithdrawals.noWithdrawals")}</p>
                   )}
                 </div>
               </div>

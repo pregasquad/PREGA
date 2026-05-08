@@ -1058,6 +1058,7 @@ export async function ensureSalonPaymentsTable(): Promise<void> {
 
 export interface BotClientMemory {
   jid: string;
+  phone?: string | null;       // real phone number (resolved from @s.whatsapp.net or appointment lookup)
   clientName?: string | null;
   language: string;            // 'arabic' | 'french' | 'darija' | 'unknown'
   preferredServices: string[]; // service names the client has asked about
@@ -1106,6 +1107,33 @@ export async function ensureBotMemoryTable(): Promise<void> {
   }
 }
 
+export async function ensureBotMemoryPhoneColumn(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      const [cols] = await connection.query(
+        `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bot_client_memory' AND COLUMN_NAME = 'phone'`
+      );
+      if ((cols as any[]).length === 0) {
+        await connection.query(`ALTER TABLE bot_client_memory ADD COLUMN phone VARCHAR(30) NULL AFTER jid`);
+      }
+      connection.release();
+    } else {
+      const res = await pool.query(
+        `SELECT column_name FROM information_schema.columns
+         WHERE table_name = 'bot_client_memory' AND column_name = 'phone'`
+      );
+      if (res.rows.length === 0) {
+        await pool.query(`ALTER TABLE bot_client_memory ADD COLUMN phone VARCHAR(30) NULL`);
+      }
+    }
+    console.log("Bot memory phone column ready");
+  } catch (error) {
+    console.error("Failed to ensure bot_client_memory phone column:", error);
+  }
+}
+
 export async function getBotMemory(jid: string): Promise<BotClientMemory | null> {
   try {
     if (dbDialect === 'mysql') {
@@ -1118,6 +1146,7 @@ export async function getBotMemory(jid: string): Promise<BotClientMemory | null>
       if (!row) return null;
       return {
         jid: row.jid,
+        phone: row.phone ?? null,
         clientName: row.client_name ?? null,
         language: row.language || 'unknown',
         preferredServices: row.preferred_services
@@ -1138,6 +1167,7 @@ export async function getBotMemory(jid: string): Promise<BotClientMemory | null>
       if (!row) return null;
       return {
         jid: row.jid,
+        phone: row.phone ?? null,
         clientName: row.client_name ?? null,
         language: row.language || 'unknown',
         preferredServices: row.preferred_services
@@ -1165,9 +1195,10 @@ export async function saveBotMemory(mem: BotClientMemory): Promise<void> {
       const connection = await pool.getConnection();
       await connection.query(
         `INSERT INTO bot_client_memory
-           (jid, client_name, language, preferred_services, personality_notes, conv_history, visit_count, last_seen)
-         VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+           (jid, phone, client_name, language, preferred_services, personality_notes, conv_history, visit_count, last_seen)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
          ON DUPLICATE KEY UPDATE
+           phone              = COALESCE(VALUES(phone), phone),
            client_name        = COALESCE(VALUES(client_name), client_name),
            language           = VALUES(language),
            preferred_services = VALUES(preferred_services),
@@ -1177,6 +1208,7 @@ export async function saveBotMemory(mem: BotClientMemory): Promise<void> {
            last_seen          = NOW()`,
         [
           mem.jid,
+          mem.phone || null,
           mem.clientName || null,
           mem.language,
           servicesJson,
@@ -1189,9 +1221,10 @@ export async function saveBotMemory(mem: BotClientMemory): Promise<void> {
     } else {
       await pool.query(
         `INSERT INTO bot_client_memory
-           (jid, client_name, language, preferred_services, personality_notes, conv_history, visit_count, last_seen)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+           (jid, phone, client_name, language, preferred_services, personality_notes, conv_history, visit_count, last_seen)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
          ON CONFLICT (jid) DO UPDATE SET
+           phone              = COALESCE(EXCLUDED.phone, bot_client_memory.phone),
            client_name        = COALESCE(EXCLUDED.client_name, bot_client_memory.client_name),
            language           = EXCLUDED.language,
            preferred_services = EXCLUDED.preferred_services,
@@ -1201,6 +1234,7 @@ export async function saveBotMemory(mem: BotClientMemory): Promise<void> {
            last_seen          = NOW()`,
         [
           mem.jid,
+          mem.phone || null,
           mem.clientName || null,
           mem.language,
           servicesJson,

@@ -3,7 +3,7 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
-import { initializeDatabase, warmupDatabase, ensurePushSubscriptionsTable, ensureAppointmentsAuditColumns, ensureForeignKeyConstraints, ensureAdminRolesPhotoColumn, ensureProductExpiryColumns, ensureServiceStartingPriceColumn, ensureServiceMaxPriceColumn, ensureDeductionClearedColumns, ensureDeductionPaidBackColumn, ensureStaffIdBackfillMySQL, ensureStaffPaymentsTable, ensureStaffPublicTokens, ensureAutoLockColumn, ensureChargeAttachmentColumns, ensurePlanningShortcutsColumn, ensureAppointmentDiscountColumns, ensureTombolaSpinsTable, ensureSalonPaymentsTable, ensureBookingStatusColumn, ensureBaileysSessionTable, ensureBotMemoryTable, ensureTtsVoiceColumn, ensureMapsLinkColumn, ensureBotEnabledColumn, ensureBotFilterColumns, ensureOwnerWithdrawalsTable, ensureOwnerWithdrawalsNotesColumn } from "./db";
+import { initializeDatabase, warmupDatabase, ensurePushSubscriptionsTable, ensureAppointmentsAuditColumns, ensureForeignKeyConstraints, ensureAdminRolesPhotoColumn, ensureProductExpiryColumns, ensureServiceStartingPriceColumn, ensureServiceMaxPriceColumn, ensureDeductionClearedColumns, ensureDeductionPaidBackColumn, ensureStaffIdBackfillMySQL, ensureStaffPaymentsTable, ensureStaffPublicTokens, ensureAutoLockColumn, ensureChargeAttachmentColumns, ensurePlanningShortcutsColumn, ensureAppointmentDiscountColumns, ensureTombolaSpinsTable, ensureSalonPaymentsTable, ensureBookingStatusColumn, ensureBaileysSessionTable, ensureBotMemoryTable, ensureBotMemoryPhoneColumn, ensureTtsVoiceColumn, ensureMapsLinkColumn, ensureBotEnabledColumn, ensureBotFilterColumns, ensureOwnerWithdrawalsTable, ensureOwnerWithdrawalsNotesColumn } from "./db";
 import { checkAndSendClosingReminder, checkAndSendAppointmentReminders } from "./push";
 
 const app = express();
@@ -99,6 +99,7 @@ const startServer = async () => {
       await ensureBookingStatusColumn();
       await ensureBaileysSessionTable();
       await ensureBotMemoryTable();
+      await ensureBotMemoryPhoneColumn();
       await ensureTtsVoiceColumn();
       await ensureMapsLinkColumn();
       await ensureBotEnabledColumn();

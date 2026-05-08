@@ -4179,9 +4179,25 @@ export async function registerRoutes(
         let filterList: string[] = [];
         try { filterList = JSON.parse(rawNums); } catch { filterList = []; }
         const normalizedList = filterList.map(normalizeNum).filter(Boolean);
-        const incomingNorm = normalizeNum(phone);
-        const isInList = normalizedList.includes(incomingNorm);
-        console.log(`[Bot] Filter mode=${filterMode} list=${JSON.stringify(normalizedList)} incoming=${incomingNorm} inList=${isInList}`);
+
+        // For @lid JIDs the "phone" extracted from the JID is a numeric LID, not a real phone.
+        // Resolve the real phone from the bot_client_memory table (stored on first @s.whatsapp.net message).
+        let resolvedPhone = normalizeNum(phone);
+        if (remoteJid.endsWith("@lid")) {
+          try {
+            const { getBotMemory: _getBotMem } = await import("./db");
+            const memEntry = await _getBotMem(remoteJid);
+            if (memEntry?.phone) {
+              resolvedPhone = normalizeNum(memEntry.phone);
+              console.log(`[Bot] @lid resolved phone from memory: ${resolvedPhone}`);
+            } else {
+              console.log(`[Bot] @lid JID — no phone in memory yet, lidRaw=${phone}`);
+            }
+          } catch { /* ignore */ }
+        }
+
+        const isInList = normalizedList.includes(resolvedPhone);
+        console.log(`[Bot] Filter mode=${filterMode} list=${JSON.stringify(normalizedList)} incoming=${resolvedPhone} inList=${isInList}`);
         if (filterMode === "allowlist" && !isInList) return;  // not in allowlist → ignore
         if (filterMode === "blocklist" && isInList) return;   // in blocklist → ignore
       }
@@ -4377,9 +4393,14 @@ export async function registerRoutes(
             const detectedName = extractName(mergedText);
             const mentionedSvcs = extractMentionedServices(mergedText + " " + aiReply, serviceList);
 
+            // Store the real phone in memory so @lid JIDs can be resolved for filtering later
+            // For @s.whatsapp.net JIDs the phone is the real number; for @lid it's a LID (skip)
+            const realPhone = remoteJid.endsWith("@s.whatsapp.net") ? normalizeNum(phone) : (mem.phone || null);
+
             const updatedMem: BotClientMemory = mergeHistory(
               {
                 ...mem,
+                phone: realPhone,
                 clientName: detectedName || mem.clientName,
                 language: (detectedLang !== "unknown" ? detectedLang : mem.language) || "unknown",
                 preferredServices: Array.from(
