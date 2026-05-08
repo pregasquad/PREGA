@@ -4157,26 +4157,31 @@ export async function registerRoutes(
       if (remoteJid.includes("broadcast") || remoteJid === "status@broadcast") return;
 
       // Check if bot is enabled before processing
+      // NOTE: if DB fails, botSettings is null — we still apply filter logic conservatively
       const botSettings = await storage.getBusinessSettings().catch(() => null);
-      if (botSettings && (botSettings as any).botEnabled === false) return;
+      if (!botSettings) {
+        console.warn("[Bot] Could not load business settings — skipping reply for safety");
+        return;
+      }
+      if ((botSettings as any).botEnabled === false) return;
 
       // ── Phone number filter (allowlist / blocklist) ────────────────────────
-      const filterMode: string = (botSettings as any)?.botFilterMode || "all";
+      const filterMode: string = (botSettings as any).botFilterMode || "all";
+      const normalizeNum = (n: string) => {
+        let d = n.replace(/[^0-9]/g, "");
+        if (d.startsWith("00")) d = d.slice(2);
+        if (d.startsWith("0") && d.length === 10) d = "212" + d.slice(1);
+        if (d.length === 9) d = "212" + d;
+        return d;
+      };
       if (filterMode !== "all") {
-        const rawNums: string = (botSettings as any)?.botFilterNumbers || "[]";
+        const rawNums: string = (botSettings as any).botFilterNumbers || "[]";
         let filterList: string[] = [];
         try { filterList = JSON.parse(rawNums); } catch { filterList = []; }
-        // Normalize each stored number the same way we normalize incoming JIDs
-        const normalizeNum = (n: string) => {
-          let d = n.replace(/[^0-9]/g, "");
-          if (d.startsWith("00")) d = d.slice(2);
-          if (d.startsWith("0") && d.length === 10) d = "212" + d.slice(1);
-          if (d.length === 9) d = "212" + d;
-          return d;
-        };
         const normalizedList = filterList.map(normalizeNum).filter(Boolean);
         const incomingNorm = normalizeNum(phone);
         const isInList = normalizedList.includes(incomingNorm);
+        console.log(`[Bot] Filter mode=${filterMode} list=${JSON.stringify(normalizedList)} incoming=${incomingNorm} inList=${isInList}`);
         if (filterMode === "allowlist" && !isInList) return;  // not in allowlist → ignore
         if (filterMode === "blocklist" && isInList) return;   // in blocklist → ignore
       }

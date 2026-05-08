@@ -1320,14 +1320,30 @@ export async function ensureBotFilterColumns(): Promise<void> {
   try {
     if (dbDialect === 'mysql') {
       const connection = await pool.getConnection();
+      // Must filter by TABLE_SCHEMA = DATABASE() to avoid matching columns from
+      // other databases on the same TiDB Cloud server (which would cause the
+      // migration to think the column exists when it doesn't in our DB).
       const [rows] = await connection.query(`
         SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_NAME = 'business_settings' AND COLUMN_NAME = 'bot_filter_mode'
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = 'business_settings'
+          AND COLUMN_NAME = 'bot_filter_mode'
       `);
       if ((rows as any[]).length === 0) {
         await connection.query(`ALTER TABLE business_settings ADD COLUMN bot_filter_mode VARCHAR(20) NOT NULL DEFAULT 'all'`);
         await connection.query(`ALTER TABLE business_settings ADD COLUMN bot_filter_numbers TEXT`);
         console.log("Added bot filter columns to business_settings");
+      }
+      // Also ensure bot_filter_numbers exists (may have been missed on first run)
+      const [numRows] = await connection.query(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = 'business_settings'
+          AND COLUMN_NAME = 'bot_filter_numbers'
+      `);
+      if ((numRows as any[]).length === 0) {
+        await connection.query(`ALTER TABLE business_settings ADD COLUMN bot_filter_numbers TEXT`);
+        console.log("Added bot_filter_numbers column to business_settings");
       }
       connection.release();
     } else {
@@ -1336,6 +1352,8 @@ export async function ensureBotFilterColumns(): Promise<void> {
         BEGIN
           IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'business_settings' AND column_name = 'bot_filter_mode') THEN
             ALTER TABLE business_settings ADD COLUMN bot_filter_mode VARCHAR(20) NOT NULL DEFAULT 'all';
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'business_settings' AND column_name = 'bot_filter_numbers') THEN
             ALTER TABLE business_settings ADD COLUMN bot_filter_numbers TEXT;
           END IF;
         END $$;
@@ -1344,6 +1362,37 @@ export async function ensureBotFilterColumns(): Promise<void> {
     console.log("Bot filter columns ready");
   } catch (error) {
     console.error("Failed to ensure bot filter columns:", error);
+  }
+}
+
+export async function ensureOwnerWithdrawalsNotesColumn(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      const [rows] = await connection.query(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = 'owner_withdrawals'
+          AND COLUMN_NAME = 'notes'
+      `);
+      if ((rows as any[]).length === 0) {
+        await connection.query(`ALTER TABLE owner_withdrawals ADD COLUMN notes TEXT`);
+        console.log("Added notes column to owner_withdrawals");
+      }
+      connection.release();
+    } else {
+      await pool.query(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'owner_withdrawals' AND column_name = 'notes') THEN
+            ALTER TABLE owner_withdrawals ADD COLUMN notes TEXT;
+          END IF;
+        END $$;
+      `);
+    }
+    console.log("Owner withdrawals notes column ready");
+  } catch (error) {
+    console.error("Failed to ensure owner_withdrawals notes column:", error);
   }
 }
 
