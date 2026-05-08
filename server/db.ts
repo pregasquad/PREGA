@@ -1215,6 +1215,49 @@ export async function saveBotMemory(mem: BotClientMemory): Promise<void> {
   }
 }
 
+export async function getAllBotMemories(): Promise<BotClientMemory[]> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      const [rows] = await connection.query(
+        `SELECT * FROM bot_client_memory ORDER BY last_seen DESC LIMIT 100`
+      );
+      connection.release();
+      return (rows as any[]).map((row) => ({
+        jid: row.jid,
+        clientName: row.client_name ?? null,
+        language: row.language || 'unknown',
+        preferredServices: row.preferred_services
+          ? (typeof row.preferred_services === 'string' ? JSON.parse(row.preferred_services) : row.preferred_services)
+          : [],
+        personalityNotes: row.personality_notes ?? null,
+        convHistory: row.conv_history ? JSON.parse(row.conv_history) : [],
+        visitCount: row.visit_count || 0,
+        lastSeen: row.last_seen ? new Date(row.last_seen) : null,
+      }));
+    } else {
+      const result = await pool.query(
+        `SELECT * FROM bot_client_memory ORDER BY last_seen DESC LIMIT 100`
+      );
+      return result.rows.map((row: any) => ({
+        jid: row.jid,
+        clientName: row.client_name ?? null,
+        language: row.language || 'unknown',
+        preferredServices: row.preferred_services
+          ? (typeof row.preferred_services === 'string' ? JSON.parse(row.preferred_services) : row.preferred_services)
+          : [],
+        personalityNotes: row.personality_notes ?? null,
+        convHistory: row.conv_history ? JSON.parse(row.conv_history) : [],
+        visitCount: row.visit_count || 0,
+        lastSeen: row.last_seen ? new Date(row.last_seen) : null,
+      }));
+    }
+  } catch (err) {
+    console.error("[BotMemory] getAllBotMemories failed:", err);
+    return [];
+  }
+}
+
 export async function ensureMapsLinkColumn(): Promise<void> {
   try {
     if (dbDialect === 'mysql') {

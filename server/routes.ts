@@ -2547,6 +2547,44 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/whatsapp/bot-conversations", isPinAuthenticated, async (_req, res) => {
+    try {
+      const { getAllBotMemories } = await import("./db");
+      const memories = await getAllBotMemories();
+      // Return only what the UI needs — strip raw preferred_services list to keep payload small
+      const result = memories
+        .filter((m) => m.convHistory && m.convHistory.length > 0)
+        .map((m) => ({
+          jid: m.jid,
+          phone: m.jid.replace("@s.whatsapp.net", ""),
+          clientName: m.clientName ?? null,
+          language: m.language,
+          visitCount: m.visitCount,
+          lastSeen: m.lastSeen ? m.lastSeen.toISOString() : null,
+          history: m.convHistory,
+        }));
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.delete("/api/whatsapp/bot-conversations/:jid", isPinAuthenticated, async (req, res) => {
+    try {
+      const jid = decodeURIComponent(req.params.jid);
+      const { saveBotMemory } = await import("./db");
+      // Wipe conv history only — keep name, language, services
+      const { getBotMemory } = await import("./db");
+      const mem = await getBotMemory(jid);
+      if (mem) {
+        await saveBotMemory({ ...mem, convHistory: [] });
+      }
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   // WhatsApp Notifications (Baileys) - protected routes
   app.post("/api/notifications/send", isPinAuthenticated, async (req, res) => {
     try {

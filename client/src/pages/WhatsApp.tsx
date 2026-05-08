@@ -35,6 +35,9 @@ import {
   X,
   ChevronDown,
   ChevronUp,
+  BookOpen,
+  Clock,
+  User,
 } from "lucide-react";
 
 interface WAStatus {
@@ -148,6 +151,10 @@ export default function WhatsApp() {
   );
   const [broadcastMsg, setBroadcastMsg] = useState("");
   const [selectedVoice, setSelectedVoice] = useState("Aoede");
+
+  // ── Conversation log state ────────────────────────────────────────────────
+  const [logOpen, setLogOpen] = useState(false);
+  const [expandedJid, setExpandedJid] = useState<string | null>(null);
 
   // ── Phone number filter state ──────────────────────────────────────────────
   const [filterOpen, setFilterOpen] = useState(false);
@@ -443,6 +450,56 @@ export default function WhatsApp() {
     onError: (err: any) =>
       toast({ title: "خطأ", description: err.message, variant: "destructive" }),
   });
+
+  // ── Conversation log query & mutations ────────────────────────────────────
+  interface ConvEntry {
+    jid: string;
+    phone: string;
+    clientName: string | null;
+    language: string;
+    visitCount: number;
+    lastSeen: string | null;
+    history: { role: "user" | "model"; text: string }[];
+  }
+
+  const {
+    data: conversations,
+    refetch: refetchConvs,
+    isFetching: convsFetching,
+  } = useQuery<ConvEntry[]>({
+    queryKey: ["/api/whatsapp/bot-conversations"],
+    queryFn: () =>
+      apiRequest("GET", "/api/whatsapp/bot-conversations").then((r) => r.json()),
+    enabled: logOpen,
+    staleTime: 30_000,
+  });
+
+  const clearConvMutation = useMutation({
+    mutationFn: (jid: string) =>
+      apiRequest("DELETE", `/api/whatsapp/bot-conversations/${encodeURIComponent(jid)}`).then((r) => r.json()),
+    onSuccess: (_data, jid) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/whatsapp/bot-conversations"] });
+      if (expandedJid === jid) setExpandedJid(null);
+      toast({ title: "تم المسح ✓", description: "تم مسح سجل المحادثة" });
+    },
+    onError: (err: any) =>
+      toast({ title: "خطأ", description: err.message, variant: "destructive" }),
+  });
+
+  const formatRelativeTime = (iso: string | null): string => {
+    if (!iso) return "—";
+    const diff = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "الآن";
+    if (mins < 60) return `منذ ${mins} دقيقة`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `منذ ${hours} ساعة`;
+    const days = Math.floor(hours / 24);
+    return `منذ ${days} يوم`;
+  };
+
+  const langLabel = (lang: string) =>
+    lang === "arabic" ? "عربية" : lang === "french" ? "FR" : lang === "darija" ? "دارجة" : "—";
 
   const saveFilterMutation = useMutation({
     mutationFn: (payload: { mode: string; numbers: string[] }) =>
@@ -969,6 +1026,174 @@ export default function WhatsApp() {
           )}
           {saveVoiceMutation.isPending ? "جاري الحفظ…" : "حفظ الصوت"}
         </Button>
+      </div>
+
+      {/* ── CONVERSATION LOG ── */}
+      <div className="rounded-2xl border bg-card overflow-hidden">
+        {/* Header */}
+        <button
+          className="w-full flex items-center gap-3 p-5 text-left hover:bg-muted/30 transition-colors"
+          onClick={() => setLogOpen((o) => !o)}
+          data-testid="button-toggle-conv-log"
+        >
+          <BookOpen className="w-5 h-5 text-muted-foreground shrink-0" />
+          <div className="flex-1">
+            <span className="font-semibold">سجل محادثات لينا</span>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {conversations ? `${conversations.length} محادثة محفوظة` : "اضغط لعرض المحادثات"}
+            </p>
+          </div>
+          {convsFetching && <Loader2 className="w-4 h-4 text-muted-foreground animate-spin shrink-0" />}
+          {logOpen ? (
+            <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+          )}
+        </button>
+
+        {logOpen && (
+          <div className="border-t border-border/50">
+            {/* Toolbar */}
+            <div className="flex items-center justify-between px-5 py-3 bg-muted/20">
+              <span className="text-xs text-muted-foreground">
+                {conversations?.length ?? 0} محادثة — آخر 100
+              </span>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 text-xs gap-1.5"
+                onClick={() => refetchConvs()}
+                disabled={convsFetching}
+                data-testid="button-refresh-convs"
+              >
+                <RefreshCw className={`w-3 h-3 ${convsFetching ? "animate-spin" : ""}`} />
+                تحديث
+              </Button>
+            </div>
+
+            {/* List */}
+            {!conversations || conversations.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 py-10 text-muted-foreground">
+                <MessageCircle className="w-8 h-8 opacity-30" />
+                <p className="text-sm">لا توجد محادثات محفوظة بعد</p>
+                <p className="text-xs opacity-60">ستظهر هنا بعد أول رسالة يستلمها البوت</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-border/40 max-h-[600px] overflow-y-auto">
+                {conversations.map((conv) => {
+                  const isExpanded = expandedJid === conv.jid;
+                  const lastMsg = conv.history[conv.history.length - 1];
+                  return (
+                    <div key={conv.jid} className="transition-colors">
+                      {/* Conversation row */}
+                      <button
+                        className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-muted/20 transition-colors"
+                        onClick={() => setExpandedJid(isExpanded ? null : conv.jid)}
+                        data-testid={`button-conv-${conv.phone}`}
+                      >
+                        {/* Avatar */}
+                        <div className="w-9 h-9 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center shrink-0">
+                          <User className="w-4 h-4 text-emerald-500" />
+                        </div>
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm truncate" dir="ltr">
+                              {conv.clientName || conv.phone}
+                            </span>
+                            {conv.clientName && (
+                              <span className="text-[10px] font-mono text-muted-foreground" dir="ltr">
+                                {conv.phone}
+                              </span>
+                            )}
+                            <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0">
+                              {langLabel(conv.language)}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate mt-0.5" dir="rtl">
+                            {lastMsg?.role === "model" ? "لينا: " : ""}
+                            {lastMsg?.text?.replace(/^🎙️\s*/, "") ?? "—"}
+                          </p>
+                        </div>
+                        {/* Meta */}
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                            <Clock className="w-2.5 h-2.5" />
+                            <span>{formatRelativeTime(conv.lastSeen)}</span>
+                          </div>
+                          <Badge variant="secondary" className="text-[9px] px-1.5 py-0">
+                            {conv.history.length} رسالة
+                          </Badge>
+                        </div>
+                        <ChevronDown
+                          className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                        />
+                      </button>
+
+                      {/* Expanded chat bubble view */}
+                      {isExpanded && (
+                        <div className="px-5 pb-4 space-y-3 bg-muted/10">
+                          {/* Chat bubbles */}
+                          <div className="space-y-2 max-h-72 overflow-y-auto pt-2 pr-1">
+                            {conv.history.map((turn, i) => (
+                              <div
+                                key={i}
+                                className={`flex ${turn.role === "user" ? "justify-end" : "justify-start"}`}
+                              >
+                                <div
+                                  className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed ${
+                                    turn.role === "user"
+                                      ? "bg-emerald-500/20 text-foreground rounded-tr-sm"
+                                      : "bg-card border border-border text-foreground rounded-tl-sm"
+                                  }`}
+                                  dir="rtl"
+                                >
+                                  {turn.role === "model" && (
+                                    <span className="text-[10px] font-semibold text-emerald-400 block mb-0.5">لينا</span>
+                                  )}
+                                  <span className="whitespace-pre-wrap break-words">
+                                    {turn.text.replace(/^🎙️\s*/, "")}
+                                    {turn.text.startsWith("🎙️") && (
+                                      <span className="inline-flex items-center gap-0.5 ml-1 text-[10px] text-muted-foreground">
+                                        <Mic className="w-2.5 h-2.5" /> رسالة صوتية
+                                      </span>
+                                    )}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex items-center justify-between pt-1">
+                            <span className="text-xs text-muted-foreground">
+                              {Math.ceil(conv.history.length / 2)} رسالة ذهاب وإياب · {conv.visitCount} زيارة
+                            </span>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 text-xs gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => clearConvMutation.mutate(conv.jid)}
+                              disabled={clearConvMutation.isPending}
+                              data-testid={`button-clear-conv-${conv.phone}`}
+                            >
+                              {clearConvMutation.isPending ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-3 h-3" />
+                              )}
+                              مسح السجل
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ── PHONE NUMBER FILTER ── */}
