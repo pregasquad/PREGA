@@ -1253,6 +1253,19 @@ export async function registerRoutes(
     res.json(items);
   });
 
+  // Get appointments confirmed by the WhatsApp bot
+  app.get("/api/appointments/bot-confirmed", isPinAuthenticated, async (req, res) => {
+    const all = await storage.getAppointments();
+    const confirmed = all
+      .filter((a: any) => a.bookingStatus === "confirmed")
+      .sort((a: any, b: any) => {
+        const da = new Date(`${a.date}T${a.startTime || "00:00"}`).getTime();
+        const db = new Date(`${b.date}T${b.startTime || "00:00"}`).getTime();
+        return db - da;
+      });
+    res.json(confirmed);
+  });
+
   app.post(api.appointments.create.path, isPinAuthenticated, requirePermission("manage_appointments"), async (req, res) => {
     try {
       const input = api.appointments.create.input.parse(req.body);

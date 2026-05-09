@@ -156,6 +156,9 @@ export default function WhatsApp() {
   const [broadcastMsg, setBroadcastMsg] = useState("");
   const [selectedVoice, setSelectedVoice] = useState("Aoede");
 
+  // ── Bot-confirmed bookings state ──────────────────────────────────────────
+  const [botConfirmedOpen, setBotConfirmedOpen] = useState(false);
+
   // ── Conversation log state ────────────────────────────────────────────────
   const [logOpen, setLogOpen] = useState(false);
   const [expandedJid, setExpandedJid] = useState<string | null>(null);
@@ -511,6 +514,17 @@ export default function WhatsApp() {
     },
     onError: (err: any) =>
       toast({ title: "خطأ", description: err.message, variant: "destructive" }),
+  });
+
+  // ── Bot-confirmed appointments query ─────────────────────────────────────
+  const {
+    data: botConfirmedAppointments = [],
+    isFetching: botConfirmedFetching,
+  } = useQuery<any[]>({
+    queryKey: ["/api/appointments/bot-confirmed"],
+    queryFn: () => apiRequest("GET", "/api/appointments/bot-confirmed").then((r) => r.json()),
+    enabled: botConfirmedOpen,
+    staleTime: 30_000,
   });
 
   // ── Complaints queries & mutations ────────────────────────────────────────
@@ -1332,6 +1346,75 @@ export default function WhatsApp() {
           )}
           {saveVoiceMutation.isPending ? "جاري الحفظ…" : "حفظ الصوت"}
         </Button>
+      </div>
+
+      {/* ── BOT-CONFIRMED BOOKINGS ── */}
+      <div className="rounded-2xl border bg-card overflow-hidden">
+        <button
+          className="w-full flex items-center gap-3 p-5 text-left hover:bg-muted/30 transition-colors"
+          onClick={() => setBotConfirmedOpen((o) => !o)}
+          data-testid="button-toggle-bot-confirmed"
+        >
+          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+          <div className="flex-1">
+            <span className="font-semibold">حجوزات أكّدها البوت</span>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {botConfirmedOpen && botConfirmedAppointments.length > 0
+                ? `${botConfirmedAppointments.length} حجز مؤكّد عبر واتساب`
+                : "اضغط لعرض المواعيد التي أكّدها العملاء عبر واتساب"}
+            </p>
+          </div>
+          {botConfirmedFetching && <Loader2 className="w-4 h-4 text-muted-foreground animate-spin shrink-0" />}
+          {botConfirmedOpen ? (
+            <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+          )}
+        </button>
+
+        {botConfirmedOpen && (
+          <div className="border-t border-border/50">
+            {botConfirmedFetching ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : botConfirmedAppointments.length === 0 ? (
+              <div className="flex flex-col items-center gap-3 py-10 text-muted-foreground" dir="rtl">
+                <CheckCircle2 className="w-8 h-8 opacity-30" />
+                <p className="text-sm">لا توجد حجوزات مؤكّدة من البوت بعد</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-border/50" dir="rtl">
+                {botConfirmedAppointments.map((apt: any) => (
+                  <div
+                    key={apt.id}
+                    className="flex items-center gap-3 px-5 py-3 hover:bg-muted/20 transition-colors"
+                    data-testid={`row-bot-confirmed-${apt.id}`}
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center shrink-0">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{apt.client || "—"}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {apt.service || (apt.servicesJson ? JSON.parse(apt.servicesJson)?.[0]?.name : null) || "—"}
+                      </p>
+                    </div>
+                    <div className="text-left shrink-0">
+                      <p className="text-xs font-medium" dir="ltr">{apt.date}</p>
+                      <p className="text-xs text-muted-foreground" dir="ltr">{apt.startTime || ""}</p>
+                    </div>
+                    {apt.staff && (
+                      <Badge variant="secondary" className="text-[10px] shrink-0 hidden sm:inline-flex">
+                        {apt.staff}
+                      </Badge>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ── CONVERSATION LOG ── */}
