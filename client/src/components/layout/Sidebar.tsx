@@ -212,6 +212,38 @@ export function Sidebar() {
       setTimeout(() => setNewBookingFlash(false), 3000);
     });
 
+    socket.on("booking:updated", (apt: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments/all"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments/bot-confirmed"] });
+
+      const clientFirstName = (apt.client || "العميلة").split(" ")[0];
+
+      if (apt.bookingStatus === "confirmed") {
+        playNotificationSound();
+        toast({
+          title: `✅ ${clientFirstName} أكدات الموعد!`,
+          description: apt.service
+            ? `${apt.service}${apt.startTime ? ` — ${apt.startTime}` : ""}`
+            : "تأكيد عبر واتساب",
+          duration: 8000,
+        });
+      } else if (apt.bookingStatus === "cancelled") {
+        toast({
+          title: `❌ ${clientFirstName} ألغات الموعد`,
+          description: apt.service || "إلغاء عبر واتساب",
+          variant: "destructive",
+          duration: 6000,
+        });
+      } else if (apt.bookingStatus === "modify_requested") {
+        toast({
+          title: `🔄 ${clientFirstName} طلبات تغيير الموعد`,
+          description: apt.service || "طلب تعديل عبر واتساب",
+          duration: 6000,
+        });
+      }
+    });
+
     socket.on("whatsapp:disconnected", () => {
       setWaDisconnected(true);
       toast({
