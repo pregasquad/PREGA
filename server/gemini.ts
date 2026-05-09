@@ -968,7 +968,7 @@ export function extractBotConfirmedAppointment(
   todayDateStr: string // "YYYY-MM-DD"
 ): { date: string; time: string; service: string | null } | null {
   // ── 1. Is this reply a confirmation at all? ───────────────────────────────
-  const confirmRx = /مؤكد|مؤكدة|مسجل|مسجلة|ثابت|تسجيل|تم التأكيد|تم الحجز|تم التسجيل|حجزك جاهز|حجز مؤكد|راه حجوزة|راه مسجل|غادي نشوفوك|ننتظروك|ننتظروكِ|confirmé|confirmée|confirm|c'est noté|c'est enregistré|noté|enregistré|on vous attend|rendez-vous.*confirm|votre.*rendez-vous/i;
+  const confirmRx = /مؤكد|مؤكدة|مسجل|مسجلة|ثابت|تسجيل|تم التأكيد|تم الحجز|تم التسجيل|حجزك جاهز|حجز مؤكد|راه حجوزة|راه مسجل|غادي نشوفوك|ننتظروك|ننتظروكِ|موعدك مسجل|موعدك ثابت|موعدك محجوز|موعد مسجل|موعد محجوز|حجزناك|حجزناكِ|حجزتيك|شدينا ليك|شدينالك|كتبنا ليك|كتبناك|سجلنا ليك|سجلناك|ثبتنا ليك|ثبتناك|محجوزة ليك|محجوز ليك|موعدك كاين|نستناوك|كنستناوك|كنستناوكِ|هنا نستناوك|متنساش|واخا.*موعد|موعد.*واخا|confirmé|confirmée|confirm|c'est noté|c'est enregistré|c'est fait|c'est bon|c'est pris|c'est réservé|c'est validé|noté|enregistré|réservé|réservée|validé|on vous attend|on t'attend|on se voit|rendez-vous.*confirm|votre.*rendez-vous|rdv confirmé|rdv pris|rendez-vous pris|rendez-vous réservé|je vous inscris|je t'inscris|inscrit|je note|je l'ai noté|votre place/i;
   if (!confirmRx.test(botReply)) return null;
 
   // ── 2. Search sources: bot reply FIRST, then full history as fallback ────
@@ -1061,11 +1061,29 @@ export function extractBotConfirmedAppointment(
 
   // ── 5. Extract service (best-effort from full conversation) ───────────────
   const serviceKeywords = [
-    "balayage", "بالياج", "ombré", "كيراتين", "keratin", "couleur", "coloration", "صبغة",
-    "coupe", "قصة", "مكياج", "makeup", "مانيكور", "pédicure", "pedicure",
-    "مانيكير", "بيديكير", "soins", "صوان", "أظافر", "lissage", "تمليس",
-    "épilation", "soin visage", "وجه", "حواجب", "brushing", "brushing",
-    "gommage", "masque", "soin classique",
+    // Hair colour
+    "balayage", "بالياج", "ombré", "ombre", "couleur", "coloration", "صبغة", "صبغ",
+    "mèches", "meches", "highlights", "teinture",
+    // Smoothing / keratin
+    "كيراتين", "keratin", "lissage", "تمليس", "protéine", "proteine", "بروتين",
+    "lissage protéiné", "lissage proteine", "black caviar", "botox capillaire",
+    // Cut & style
+    "coupe", "قصة", "قص", "brushing", "brushin", "mise en plis", "coiffure",
+    // Makeup
+    "مكياج", "مكياج بسيط", "مكياج سيمبل", "makeup", "maquillage", "faux.cils", "faux cils",
+    "maquillage fiancée", "maquillage mariée", "maquillage soirée",
+    // Nails
+    "مانيكور", "مانيكير", "manucure", "pédicure", "pedicure", "بيديكير",
+    "vernis permanent", "semi.permanent", "nail art", "أظافر", "ونيس",
+    // Face & skin
+    "soins visage", "soin visage", "soin du visage", "facial", "وجه",
+    "gommage", "masque", "soin classique", "soin hydratant", "peeling",
+    // Brows & hair removal
+    "حواجب", "sourcils", "épilation", "عرو", "cire", "شمع",
+    // Body
+    "soins", "soin corps", "صوان", "massage", "hammam",
+    // General
+    "rendez-vous", "موعد", "خدمة",
   ];
   let service: string | null = null;
   for (const kw of serviceKeywords) {
