@@ -156,7 +156,10 @@ export default function WhatsApp() {
   const [broadcastMsg, setBroadcastMsg] = useState("");
   const [selectedVoice, setSelectedVoice] = useState("Aoede");
 
-  // ── Bot-confirmed bookings state ──────────────────────────────────────────
+  // ── Collapsible section states ────────────────────────────────────────────
+  const [testOpen, setTestOpen] = useState(false);
+  const [broadcastOpen, setBroadcastOpen] = useState(false);
+  const [voiceOpen, setVoiceOpen] = useState(false);
   const [botConfirmedOpen, setBotConfirmedOpen] = useState(false);
 
   // ── Conversation log state ────────────────────────────────────────────────
@@ -971,103 +974,126 @@ export default function WhatsApp() {
       )}
 
       {/* ── TEST MESSAGE ── */}
-      <div className="rounded-2xl border bg-card p-4 space-y-3">
-        <div className="flex items-center gap-2">
-          <Send className="w-5 h-5 text-muted-foreground" />
-          <span className="font-semibold">Test Message</span>
-        </div>
-        <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground uppercase tracking-wider">
-              Phone Number
-            </Label>
-            <Input
-              placeholder="0612345678 or +212612345678"
-              value={testPhone}
-              onChange={(e) => setTestPhone(e.target.value)}
-              dir="ltr"
-              data-testid="input-test-phone"
-            />
+      <div className="rounded-2xl border bg-card overflow-hidden">
+        <button
+          className="w-full flex items-center gap-3 p-5 text-left hover:bg-muted/30 transition-colors"
+          onClick={() => setTestOpen((o) => !o)}
+          data-testid="button-toggle-test"
+        >
+          <Send className="w-5 h-5 text-muted-foreground shrink-0" />
+          <div className="flex-1">
+            <span className="font-semibold">Test Message</span>
+            <p className="text-xs text-muted-foreground mt-0.5">أرسل رسالة تجريبية لأي رقم</p>
           </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground uppercase tracking-wider">
-              Message
-            </Label>
-            <Textarea
-              value={testMessage}
-              onChange={(e) => setTestMessage(e.target.value)}
-              rows={3}
-              dir="rtl"
-            />
+          {testOpen ? (
+            <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+          )}
+        </button>
+        {testOpen && (
+          <div className="border-t border-border/50 p-4 space-y-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wider">
+                Phone Number
+              </Label>
+              <Input
+                placeholder="0612345678 or +212612345678"
+                value={testPhone}
+                onChange={(e) => setTestPhone(e.target.value)}
+                dir="ltr"
+                data-testid="input-test-phone"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wider">
+                Message
+              </Label>
+              <Textarea
+                value={testMessage}
+                onChange={(e) => setTestMessage(e.target.value)}
+                rows={3}
+                dir="rtl"
+              />
+            </div>
+            <Button
+              className="w-full"
+              onClick={() => sendTestMutation.mutate()}
+              disabled={
+                !connected ||
+                !testPhone.trim() ||
+                !testMessage.trim() ||
+                sendTestMutation.isPending
+              }
+              data-testid="button-send-test"
+            >
+              {sendTestMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4 mr-2" />
+              )}
+              {!connected ? "Connect WhatsApp first" : "Send Test"}
+            </Button>
           </div>
-          <Button
-            className="w-full"
-            onClick={() => sendTestMutation.mutate()}
-            disabled={
-              !connected ||
-              !testPhone.trim() ||
-              !testMessage.trim() ||
-              sendTestMutation.isPending
-            }
-            data-testid="button-send-test"
-          >
-            {sendTestMutation.isPending ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <Send className="w-4 h-4 mr-2" />
-            )}
-            {!connected ? "Connect WhatsApp first" : "Send Test"}
-          </Button>
-        </div>
+        )}
       </div>
 
       {/* ── BROADCAST ── */}
-      <div className="rounded-2xl border bg-card p-4 space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-muted-foreground" />
+      <div className="rounded-2xl border bg-card overflow-hidden">
+        <button
+          className="w-full flex items-center gap-3 p-5 text-left hover:bg-muted/30 transition-colors"
+          onClick={() => setBroadcastOpen((o) => !o)}
+          data-testid="button-toggle-broadcast"
+        >
+          <Users className="w-5 h-5 text-muted-foreground shrink-0" />
+          <div className="flex-1">
             <span className="font-semibold">Broadcast</span>
+            <p className="text-xs text-muted-foreground mt-0.5">{clientsWithPhone.length} clients with phone</p>
           </div>
-          <Badge variant="secondary" className="text-xs">
-            {clientsWithPhone.length} clients with phone
-          </Badge>
-        </div>
-        <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground uppercase tracking-wider">
-              Message — use{" "}
-              <code className="bg-muted px-1 rounded text-[11px]">{"{name}"}</code> for client name
-            </Label>
-            <Textarea
-              placeholder={"مرحباً {name}! نذكركم بعروضنا الجديدة… 💅"}
-              value={broadcastMsg}
-              onChange={(e) => setBroadcastMsg(e.target.value)}
-              rows={4}
-              dir="rtl"
-            />
+          {broadcastOpen ? (
+            <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+          )}
+        </button>
+        {broadcastOpen && (
+          <div className="border-t border-border/50 p-4 space-y-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wider">
+                Message — use{" "}
+                <code className="bg-muted px-1 rounded text-[11px]">{"{name}"}</code> for client name
+              </Label>
+              <Textarea
+                placeholder={"مرحباً {name}! نذكركم بعروضنا الجديدة… 💅"}
+                value={broadcastMsg}
+                onChange={(e) => setBroadcastMsg(e.target.value)}
+                rows={4}
+                dir="rtl"
+              />
+            </div>
+            <Button
+              className="w-full liquid-gradient text-white"
+              onClick={() => broadcastMutation.mutate()}
+              disabled={
+                !connected ||
+                !broadcastMsg.trim() ||
+                clientsWithPhone.length === 0 ||
+                broadcastMutation.isPending
+              }
+            >
+              {broadcastMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <MessageCircle className="w-4 h-4 mr-2" />
+              )}
+              {!connected
+                ? "Connect WhatsApp first"
+                : broadcastMutation.isPending
+                ? "Sending…"
+                : `Broadcast to ${clientsWithPhone.length} clients`}
+            </Button>
           </div>
-          <Button
-            className="w-full liquid-gradient text-white"
-            onClick={() => broadcastMutation.mutate()}
-            disabled={
-              !connected ||
-              !broadcastMsg.trim() ||
-              clientsWithPhone.length === 0 ||
-              broadcastMutation.isPending
-            }
-          >
-            {broadcastMutation.isPending ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <MessageCircle className="w-4 h-4 mr-2" />
-            )}
-            {!connected
-              ? "Connect WhatsApp first"
-              : broadcastMutation.isPending
-              ? "Sending…"
-              : `Broadcast to ${clientsWithPhone.length} clients`}
-          </Button>
-        </div>
+        )}
       </div>
 
       {/* ── COMPLAINTS PANEL ── */}
@@ -1289,63 +1315,78 @@ export default function WhatsApp() {
       </div>
 
       {/* ── BOT VOICE SETTINGS ── */}
-      <div className="rounded-2xl border bg-card p-4 space-y-3">
-        <div className="flex items-center gap-2">
-          <Mic className="w-5 h-5 text-muted-foreground" />
-          <span className="font-semibold">صوت البوت (رسائل صوتية)</span>
-          <Badge variant="secondary" className="text-xs mr-auto">Gemini 2.5 Flash TTS</Badge>
-        </div>
-        <p className="text-xs text-muted-foreground leading-relaxed">
-          عندما يرسل العميل رسالة صوتية، يرد البوت بصوت — اختاري صوت لينا المناسب للصالون 💅
-        </p>
-        <div className="grid grid-cols-1 gap-2" dir="rtl">
-          {[
-            { id: "Aoede",  icon: "🌸", label: "آوڤي",   desc: "ناعمة ودافئة — مثالية للدارجة",  feminine: true  },
-            { id: "Kore",   icon: "✨", label: "كوري",   desc: "شبابية وحيوية — طاقة إيجابية",  feminine: true  },
-            { id: "Puck",   icon: "😄", label: "پاك",    desc: "مرحة وخفيفة — تلقائية",        feminine: false },
-            { id: "Charon", icon: "🎯", label: "شارون",  desc: "واثقة وهادئة — ثقة عالية",     feminine: false },
-            { id: "Fenrir", icon: "💪", label: "فنرير",  desc: "قوية ومقنعة — أسلوب حازم",    feminine: false },
-          ].map((v) => (
-            <button
-              key={v.id}
-              data-testid={`button-voice-${v.id}`}
-              onClick={() => setSelectedVoice(v.id)}
-              className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-right transition-all ${
-                selectedVoice === v.id
-                  ? "border-emerald-500/60 bg-emerald-500/10 ring-1 ring-emerald-500/40"
-                  : "border-border bg-muted/30 hover:bg-muted/60"
-              }`}
-            >
-              <span className="text-xl">{v.icon}</span>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-sm">{v.label}</span>
-                  <span className="text-[10px] font-mono text-muted-foreground">{v.id}</span>
-                  {v.feminine && (
-                    <Badge variant="outline" className="text-[9px] px-1 py-0 border-pink-500/40 text-pink-400">أنثوي</Badge>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground mt-0.5">{v.desc}</p>
-              </div>
-              {selectedVoice === v.id && (
-                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-              )}
-            </button>
-          ))}
-        </div>
-        <Button
-          className="w-full"
-          onClick={() => saveVoiceMutation.mutate(selectedVoice)}
-          disabled={saveVoiceMutation.isPending || selectedVoice === (bizSettings?.ttsVoice ?? "Aoede")}
-          data-testid="button-save-voice"
+      <div className="rounded-2xl border bg-card overflow-hidden">
+        <button
+          className="w-full flex items-center gap-3 p-5 text-left hover:bg-muted/30 transition-colors"
+          onClick={() => setVoiceOpen((o) => !o)}
+          data-testid="button-toggle-voice"
         >
-          {saveVoiceMutation.isPending ? (
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          <Mic className="w-5 h-5 text-muted-foreground shrink-0" />
+          <div className="flex-1">
+            <span className="font-semibold">صوت البوت (رسائل صوتية)</span>
+            <p className="text-xs text-muted-foreground mt-0.5">{bizSettings?.ttsVoice ?? "Aoede"} — Gemini TTS</p>
+          </div>
+          {voiceOpen ? (
+            <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" />
           ) : (
-            <Save className="w-4 h-4 mr-2" />
+            <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
           )}
-          {saveVoiceMutation.isPending ? "جاري الحفظ…" : "حفظ الصوت"}
-        </Button>
+        </button>
+        {voiceOpen && (
+          <div className="border-t border-border/50 p-4 space-y-3">
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              عندما يرسل العميل رسالة صوتية، يرد البوت بصوت — اختاري صوت لينا المناسب للصالون 💅
+            </p>
+            <div className="grid grid-cols-1 gap-2" dir="rtl">
+              {[
+                { id: "Aoede",  icon: "🌸", label: "آوڤي",   desc: "ناعمة ودافئة — مثالية للدارجة",  feminine: true  },
+                { id: "Kore",   icon: "✨", label: "كوري",   desc: "شبابية وحيوية — طاقة إيجابية",  feminine: true  },
+                { id: "Puck",   icon: "😄", label: "پاك",    desc: "مرحة وخفيفة — تلقائية",        feminine: false },
+                { id: "Charon", icon: "🎯", label: "شارون",  desc: "واثقة وهادئة — ثقة عالية",     feminine: false },
+                { id: "Fenrir", icon: "💪", label: "فنرير",  desc: "قوية ومقنعة — أسلوب حازم",    feminine: false },
+              ].map((v) => (
+                <button
+                  key={v.id}
+                  data-testid={`button-voice-${v.id}`}
+                  onClick={() => setSelectedVoice(v.id)}
+                  className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-right transition-all ${
+                    selectedVoice === v.id
+                      ? "border-emerald-500/60 bg-emerald-500/10 ring-1 ring-emerald-500/40"
+                      : "border-border bg-muted/30 hover:bg-muted/60"
+                  }`}
+                >
+                  <span className="text-xl">{v.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-sm">{v.label}</span>
+                      <span className="text-[10px] font-mono text-muted-foreground">{v.id}</span>
+                      {v.feminine && (
+                        <Badge variant="outline" className="text-[9px] px-1 py-0 border-pink-500/40 text-pink-400">أنثوي</Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">{v.desc}</p>
+                  </div>
+                  {selectedVoice === v.id && (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                  )}
+                </button>
+              ))}
+            </div>
+            <Button
+              className="w-full"
+              onClick={() => saveVoiceMutation.mutate(selectedVoice)}
+              disabled={saveVoiceMutation.isPending || selectedVoice === (bizSettings?.ttsVoice ?? "Aoede")}
+              data-testid="button-save-voice"
+            >
+              {saveVoiceMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4 mr-2" />
+              )}
+              {saveVoiceMutation.isPending ? "جاري الحفظ…" : "حفظ الصوت"}
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* ── BOT-CONFIRMED BOOKINGS ── */}
