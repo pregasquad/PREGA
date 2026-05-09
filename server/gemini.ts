@@ -638,6 +638,27 @@ ${conversationText}
         return JSON.parse(match[0]) as LearnedInsights;
       } catch { /* fall through */ }
     }
+    // Handle truncated JSON responses by attempting to repair them
+    // Find the start of the JSON object and try to close it gracefully
+    const startIdx = cleaned.indexOf('{');
+    if (startIdx !== -1) {
+      let partial = cleaned.slice(startIdx);
+      // Remove the last incomplete line (truncated mid-string)
+      const lastNewline = partial.lastIndexOf('\n');
+      if (lastNewline > 0) {
+        partial = partial.slice(0, lastNewline);
+      }
+      // Remove any trailing commas before closing
+      partial = partial.replace(/,\s*$/, '');
+      // Close any open arrays then close the object
+      const openArrays = (partial.match(/\[/g) || []).length - (partial.match(/\]/g) || []).length;
+      const openObjects = (partial.match(/\{/g) || []).length - (partial.match(/\}/g) || []).length;
+      for (let i = 0; i < openArrays; i++) partial += ']';
+      for (let i = 0; i < openObjects; i++) partial += '}';
+      try {
+        return JSON.parse(partial) as LearnedInsights;
+      } catch { /* fall through */ }
+    }
     console.warn("[BotLearn] Could not parse Gemini response as JSON:", cleaned.slice(0, 200));
     return null;
   };
@@ -655,7 +676,7 @@ ${conversationText}
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               contents: [{ role: "user", parts: [{ text: prompt }] }],
-              generationConfig: { maxOutputTokens: 2000, temperature: 0.2 },
+              generationConfig: { maxOutputTokens: 4096, temperature: 0.2 },
             }),
           }
         );

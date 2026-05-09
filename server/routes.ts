@@ -18,11 +18,14 @@ import fs from "fs";
 
 import path from "path";
 
-// Initialize Supabase client
+// Initialize Supabase client (only if URL is a valid HTTP/HTTPS URL)
 const supabaseUrl = process.env.SUPABASE_URL || "";
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || "";
 const supabaseBucket = process.env.SUPABASE_STORAGE_BUCKET || "avatars";
-const supabase = (supabaseUrl && supabaseServiceKey) ? createClient(supabaseUrl, supabaseServiceKey, {
+function isValidHttpUrl(s: string) {
+  try { const u = new URL(s); return u.protocol === "http:" || u.protocol === "https:"; } catch { return false; }
+}
+const supabase = (isValidHttpUrl(supabaseUrl) && supabaseServiceKey) ? createClient(supabaseUrl, supabaseServiceKey, {
   auth: {
     persistSession: false,
     autoRefreshToken: false,
@@ -4879,6 +4882,10 @@ function generateCSV(data: any[], columns: string[]): string {
 }
 
 async function seedDatabase() {
+  if (isDatabaseOffline()) {
+    console.log("Skipping seed — offline mode");
+    return;
+  }
   const staff = await storage.getStaff();
   if (staff.length === 0) {
     await storage.createStaff({ name: "Hayat", color: "#d63384" });
