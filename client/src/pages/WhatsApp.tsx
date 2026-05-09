@@ -39,6 +39,9 @@ import {
   BookOpen,
   Clock,
   User,
+  ShieldAlert,
+  ShieldCheck,
+  Pencil,
 } from "lucide-react";
 
 interface WAStatus {
@@ -156,6 +159,11 @@ export default function WhatsApp() {
   // ── Conversation log state ────────────────────────────────────────────────
   const [logOpen, setLogOpen] = useState(false);
   const [expandedJid, setExpandedJid] = useState<string | null>(null);
+
+  // ── Complaints panel state ────────────────────────────────────────────────
+  const [complaintsOpen, setComplaintsOpen] = useState(false);
+  const [fixingId, setFixingId] = useState<number | null>(null);
+  const [fixNote, setFixNote] = useState("");
 
   // ── Phone number filter state ──────────────────────────────────────────────
   const [filterOpen, setFilterOpen] = useState(false);
@@ -498,6 +506,55 @@ export default function WhatsApp() {
         title: vars.blocked ? "تم الإيقاف ✓" : "تم التفعيل ✓",
         description: vars.blocked ? "البوت لن يرد على هذا الرقم" : "البوت سيرد من جديد على هذا الرقم",
       });
+    },
+    onError: (err: any) =>
+      toast({ title: "خطأ", description: err.message, variant: "destructive" }),
+  });
+
+  // ── Complaints queries & mutations ────────────────────────────────────────
+  interface SalonComplaint {
+    id: number;
+    complaintText: string;
+    complaintType: "complaint" | "bot_error";
+    sourceJid: string;
+    sourcePhone?: string | null;
+    clientName?: string | null;
+    detectedAt: string;
+    isResolved: boolean;
+    fixNote?: string | null;
+    resolvedAt?: string | null;
+  }
+
+  const {
+    data: complaints,
+    refetch: refetchComplaints,
+    isFetching: complaintsFetching,
+  } = useQuery<SalonComplaint[]>({
+    queryKey: ["/api/bot/complaints"],
+    queryFn: () => apiRequest("GET", "/api/bot/complaints").then((r) => r.json()),
+    enabled: complaintsOpen,
+    staleTime: 30_000,
+  });
+
+  const resolveComplaintMutation = useMutation({
+    mutationFn: ({ id, fixNote: note }: { id: number; fixNote: string }) =>
+      apiRequest("PATCH", `/api/bot/complaints/${id}/resolve`, { fixNote: note }).then((r) => r.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/bot/complaints"] });
+      setFixingId(null);
+      setFixNote("");
+      toast({ title: "تم الحفظ ✓", description: "الحل سيُستخدم من طرف البوت مع عملاء آخرين" });
+    },
+    onError: (err: any) =>
+      toast({ title: "خطأ", description: err.message, variant: "destructive" }),
+  });
+
+  const deleteComplaintMutation = useMutation({
+    mutationFn: (id: number) =>
+      apiRequest("DELETE", `/api/bot/complaints/${id}`).then((r) => r.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/bot/complaints"] });
+      toast({ title: "تم الحذف ✓" });
     },
     onError: (err: any) =>
       toast({ title: "خطأ", description: err.message, variant: "destructive" }),
@@ -997,6 +1054,224 @@ export default function WhatsApp() {
         </div>
       </div>
 
+      {/* ── COMPLAINTS PANEL ── */}
+      <div className="rounded-2xl border bg-card overflow-hidden">
+        <button
+          className="w-full flex items-center gap-3 p-5 text-left hover:bg-muted/30 transition-colors"
+          onClick={() => setComplaintsOpen((o) => !o)}
+          data-testid="button-toggle-complaints"
+        >
+          <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0" />
+          <div className="flex-1">
+            <span className="font-semibold">شكاوى العملاء</span>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {complaintsOpen && complaints
+                ? `${complaints.length} شكوى — ${complaints.filter((c) => c.isResolved).length} محلولة`
+                : "اضغط لعرض الشكاوى المكتشفة من المحادثات"}
+            </p>
+          </div>
+          {complaintsFetching && <Loader2 className="w-4 h-4 text-muted-foreground animate-spin shrink-0" />}
+          {complaintsOpen ? (
+            <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+          )}
+        </button>
+
+        {complaintsOpen && (
+          <div className="border-t border-border/50">
+            {/* Toolbar */}
+            <div className="flex items-center justify-between px-5 py-3 bg-muted/20">
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <ShieldAlert className="w-3 h-3 text-amber-400" />
+                  {complaints?.filter(c => c.complaintType === "complaint").length ?? 0} شكوى
+                </span>
+                <span className="flex items-center gap-1">
+                  <Bot className="w-3 h-3 text-red-400" />
+                  {complaints?.filter(c => c.complaintType === "bot_error").length ?? 0} خطأ بوت
+                </span>
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 text-xs gap-1.5"
+                onClick={() => refetchComplaints()}
+                disabled={complaintsFetching}
+                data-testid="button-refresh-complaints"
+              >
+                <RefreshCw className={`w-3 h-3 ${complaintsFetching ? "animate-spin" : ""}`} />
+                تحديث
+              </Button>
+            </div>
+
+            {!complaints || complaints.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 py-10 text-muted-foreground">
+                <ShieldAlert className="w-8 h-8 opacity-30" />
+                <p className="text-sm">لا توجد شكاوى أو أخطاء مكتشفة بعد</p>
+                <p className="text-xs opacity-60 text-center px-6">
+                  ستظهر هنا تلقائياً عندما يذكر العملاء مشاكل أو يصوّبون أخطاء البوت
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-border/40 max-h-[600px] overflow-y-auto">
+                {complaints.map((c) => {
+                  const isBotError = c.complaintType === "bot_error";
+                  return (
+                    <div key={c.id} className={`px-5 py-4 space-y-2 ${isBotError ? "bg-red-500/3" : ""}`}>
+                      <div className="flex items-start gap-3">
+                        {/* Type icon */}
+                        <div className={`mt-0.5 p-1.5 rounded-lg shrink-0 ${
+                          isBotError
+                            ? "bg-red-500/10"
+                            : c.isResolved ? "bg-emerald-500/10" : "bg-amber-500/10"
+                        }`}>
+                          {isBotError
+                            ? <Bot className="w-4 h-4 text-red-400" />
+                            : c.isResolved
+                              ? <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                              : <ShieldAlert className="w-4 h-4 text-amber-400" />}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          {/* Complaint/Error text */}
+                          {isBotError ? (
+                            <div className="space-y-1.5">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[10px] font-semibold text-red-400 uppercase tracking-wide">خطأ قالته لينا</span>
+                              </div>
+                              <p className="text-sm leading-relaxed text-red-300/80 line-through" dir="rtl">{c.complaintText}</p>
+                              {c.fixNote && (
+                                <div className="flex items-start gap-1.5 mt-1">
+                                  <span className="text-[10px] font-semibold text-emerald-400 uppercase tracking-wide shrink-0 mt-0.5">الصحيح</span>
+                                  <p className="text-sm leading-relaxed text-emerald-300" dir="rtl">{c.fixNote}</p>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-sm leading-relaxed" dir="rtl">{c.complaintText}</p>
+                          )}
+
+                          {/* Meta row */}
+                          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                            {c.clientName && (
+                              <span className="text-[10px] text-muted-foreground">{c.clientName}</span>
+                            )}
+                            {c.sourcePhone && (
+                              <span className="text-[10px] font-mono text-muted-foreground" dir="ltr">{c.sourcePhone}</span>
+                            )}
+                            <span className="text-[10px] text-muted-foreground">
+                              {formatRelativeTime(c.detectedAt)}
+                            </span>
+                            {isBotError ? (
+                              <Badge className="text-[9px] px-1.5 py-0 bg-red-500/15 text-red-400 border-red-500/30">
+                                تصحيح تلقائي ✓
+                              </Badge>
+                            ) : c.isResolved ? (
+                              <Badge className="text-[9px] px-1.5 py-0 bg-emerald-500/15 text-emerald-400 border-emerald-500/30">
+                                محلولة
+                              </Badge>
+                            ) : (
+                              <Badge className="text-[9px] px-1.5 py-0 bg-amber-500/15 text-amber-400 border-amber-500/30">
+                                بانتظار الحل
+                              </Badge>
+                            )}
+                          </div>
+
+                          {/* Resolved fix note for complaints (not bot errors — they display inline above) */}
+                          {!isBotError && c.isResolved && c.fixNote && (
+                            <div className="mt-2 p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                              <p className="text-xs text-emerald-300 leading-relaxed" dir="rtl">
+                                <span className="font-semibold">الحل: </span>{c.fixNote}
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Inline fix input (for unresolved complaints and editing bot errors) */}
+                          {fixingId === c.id && (
+                            <div className="mt-2 space-y-2" dir="rtl">
+                              <Textarea
+                                value={fixNote}
+                                onChange={(e) => setFixNote(e.target.value)}
+                                placeholder={isBotError ? "صحّح المعلومة الخاطئة هنا…" : "اكتبي الحل أو الإجراء الذي اتخذتموه…"}
+                                rows={2}
+                                className="text-xs"
+                                data-testid={`textarea-fix-note-${c.id}`}
+                              />
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                                  disabled={!fixNote.trim() || resolveComplaintMutation.isPending}
+                                  onClick={() => resolveComplaintMutation.mutate({ id: c.id, fixNote })}
+                                  data-testid={`button-save-fix-${c.id}`}
+                                >
+                                  {resolveComplaintMutation.isPending
+                                    ? <Loader2 className="w-3 h-3 animate-spin" />
+                                    : <Save className="w-3 h-3" />}
+                                  حفظ
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 text-xs"
+                                  onClick={() => { setFixingId(null); setFixNote(""); }}
+                                >
+                                  إلغاء
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Action buttons */}
+                        <div className="flex flex-col gap-1 shrink-0">
+                          {(!c.isResolved || isBotError) && fixingId !== c.id && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className={`h-7 text-xs gap-1 ${isBotError ? "text-red-400 hover:bg-red-500/10" : "text-amber-400 hover:bg-amber-500/10"}`}
+                              onClick={() => { setFixingId(c.id); setFixNote(c.fixNote || ""); }}
+                              data-testid={`button-fix-complaint-${c.id}`}
+                            >
+                              <Pencil className="w-3 h-3" />
+                              {isBotError ? "تعديل" : "حل"}
+                            </Button>
+                          )}
+                          {!isBotError && c.isResolved && fixingId !== c.id && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 text-xs gap-1 text-muted-foreground hover:bg-muted/30"
+                              onClick={() => { setFixingId(c.id); setFixNote(c.fixNote || ""); }}
+                              data-testid={`button-edit-fix-${c.id}`}
+                            >
+                              <Pencil className="w-3 h-3" />
+                              تعديل
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 text-xs gap-1 text-destructive hover:bg-destructive/10"
+                            onClick={() => deleteComplaintMutation.mutate(c.id)}
+                            disabled={deleteComplaintMutation.isPending}
+                            data-testid={`button-delete-complaint-${c.id}`}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            حذف
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* ── BOT VOICE SETTINGS ── */}
       <div className="rounded-2xl border bg-card p-4 space-y-3">
         <div className="flex items-center gap-2">
@@ -1114,24 +1389,48 @@ export default function WhatsApp() {
                   const lastMsg = conv.history[conv.history.length - 1];
                   return (
                     <div key={conv.jid} className={`transition-colors ${conv.botBlocked ? "opacity-60" : ""}`}>
-                      {/* Conversation row */}
-                      <div className="flex items-center gap-0 px-5 py-3.5">
+                      {/* Conversation row — RTL layout */}
+                      <div className="flex items-center gap-0 px-5 py-3.5" dir="rtl">
+                        {/* Block toggle — rightmost in RTL = visual right */}
+                        <div
+                          className="flex flex-col items-center gap-0.5 shrink-0 ml-3"
+                          title={conv.botBlocked ? "تفعيل البوت" : "إيقاف البوت"}
+                        >
+                          <Switch
+                            checked={!conv.botBlocked}
+                            onCheckedChange={(val) =>
+                              blockConvMutation.mutate({ jid: conv.jid, blocked: !val })
+                            }
+                            disabled={blockConvMutation.isPending}
+                            data-testid={`switch-bot-block-${conv.phone}`}
+                            className="data-[state=checked]:bg-emerald-500"
+                          />
+                          <span className="text-[9px] text-muted-foreground">
+                            {conv.botBlocked ? "موقوف" : "نشط"}
+                          </span>
+                        </div>
                         <button
-                          className="flex items-center gap-3 flex-1 min-w-0 text-left hover:bg-muted/20 transition-colors rounded-lg pr-2"
+                          className="flex items-center gap-3 flex-1 min-w-0 text-right hover:bg-muted/20 transition-colors rounded-lg pl-2"
                           onClick={() => setExpandedJid(isExpanded ? null : conv.jid)}
                           data-testid={`button-conv-${conv.phone}`}
                         >
-                          {/* Avatar */}
-                          <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${conv.botBlocked ? "bg-destructive/10 border border-destructive/30" : "bg-emerald-500/15 border border-emerald-500/30"}`}>
-                            {conv.botBlocked ? (
-                              <BotOff className="w-4 h-4 text-destructive" />
-                            ) : (
-                              <User className="w-4 h-4 text-emerald-500" />
-                            )}
+                          {/* Expand chevron — first in RTL = visual right after toggle */}
+                          <ChevronDown
+                            className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                          />
+                          {/* Meta */}
+                          <div className="flex flex-col items-start gap-1 shrink-0">
+                            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                              <Clock className="w-2.5 h-2.5" />
+                              <span>{formatRelativeTime(conv.lastSeen)}</span>
+                            </div>
+                            <Badge variant="secondary" className="text-[9px] px-1.5 py-0">
+                              {conv.history.length} رسالة
+                            </Badge>
                           </div>
                           {/* Info */}
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <span className="font-medium text-sm truncate" dir="ltr">
                                 {conv.clientName || conv.phone}
                               </span>
@@ -1154,38 +1453,15 @@ export default function WhatsApp() {
                               {lastMsg?.text?.replace(/^🎙️\s*/, "") ?? "—"}
                             </p>
                           </div>
-                          {/* Meta */}
-                          <div className="flex flex-col items-end gap-1 shrink-0">
-                            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                              <Clock className="w-2.5 h-2.5" />
-                              <span>{formatRelativeTime(conv.lastSeen)}</span>
-                            </div>
-                            <Badge variant="secondary" className="text-[9px] px-1.5 py-0">
-                              {conv.history.length} رسالة
-                            </Badge>
+                          {/* Avatar */}
+                          <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${conv.botBlocked ? "bg-destructive/10 border border-destructive/30" : "bg-emerald-500/15 border border-emerald-500/30"}`}>
+                            {conv.botBlocked ? (
+                              <BotOff className="w-4 h-4 text-destructive" />
+                            ) : (
+                              <User className="w-4 h-4 text-emerald-500" />
+                            )}
                           </div>
-                          <ChevronDown
-                            className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform ${isExpanded ? "rotate-180" : ""}`}
-                          />
                         </button>
-                        {/* Block toggle */}
-                        <div
-                          className="flex flex-col items-center gap-0.5 shrink-0 ml-3"
-                          title={conv.botBlocked ? "تفعيل البوت" : "إيقاف البوت"}
-                        >
-                          <Switch
-                            checked={!conv.botBlocked}
-                            onCheckedChange={(val) =>
-                              blockConvMutation.mutate({ jid: conv.jid, blocked: !val })
-                            }
-                            disabled={blockConvMutation.isPending}
-                            data-testid={`switch-bot-block-${conv.phone}`}
-                            className="data-[state=checked]:bg-emerald-500"
-                          />
-                          <span className="text-[9px] text-muted-foreground">
-                            {conv.botBlocked ? "موقوف" : "نشط"}
-                          </span>
-                        </div>
                       </div>
 
                       {/* Expanded chat bubble view */}

@@ -2653,6 +2653,40 @@ export async function registerRoutes(
     }
   });
 
+  // ── Bot Complaints API ─────────────────────────────────────────────────────
+  app.get("/api/bot/complaints", isPinAuthenticated, async (_req, res) => {
+    try {
+      const { getSalonComplaints } = await import("./db");
+      const complaints = await getSalonComplaints();
+      res.json(complaints);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.patch("/api/bot/complaints/:id/resolve", isPinAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      const { fixNote } = z.object({ fixNote: z.string().min(1) }).parse(req.body);
+      const { resolveComplaint } = await import("./db");
+      await resolveComplaint(id, fixNote);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: err.message });
+    }
+  });
+
+  app.delete("/api/bot/complaints/:id", isPinAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      const { deleteSalonComplaint } = await import("./db");
+      await deleteSalonComplaint(id);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   // WhatsApp Notifications (Baileys) - protected routes
   app.post("/api/notifications/send", isPinAuthenticated, async (req, res) => {
     try {
@@ -4433,6 +4467,12 @@ export async function registerRoutes(
             isStartingPrice: !!s.isStartingPrice,
           }));
 
+          // Load resolved complaints + bot corrections so the bot can use them for all clients
+          const { getResolvedComplaints } = await import("./db");
+          const allResolved = await getResolvedComplaints().catch(() => []);
+          const resolvedComplaints = allResolved.filter((rc) => rc.complaintType !== "bot_error");
+          const botCorrections = allResolved.filter((rc) => rc.complaintType === "bot_error");
+
           const salonCtx = {
             name: bizSettings?.businessName || "PREGASQUAD",
             address: bizSettings?.address || undefined,
@@ -4450,6 +4490,14 @@ export async function registerRoutes(
               personalityNotes: mem.personalityNotes,
               visitCount: mem.visitCount,
             },
+            resolvedComplaints: resolvedComplaints.map((rc) => ({
+              complaint: rc.complaintText,
+              fix: rc.fixNote!,
+            })),
+            botCorrections: botCorrections.map((bc) => ({
+              wrongInfo: bc.complaintText,
+              correctInfo: bc.fixNote!,
+            })),
           };
 
           // Single AI call with merged context from all buffered messages
@@ -4497,7 +4545,7 @@ export async function registerRoutes(
             if (shouldLearn) {
               const serviceNames = serviceList.map((s: any) => s.name);
               learnFromConversation(newHistory, updatedMem, serviceNames)
-                .then((insights) => {
+                .then(async (insights) => {
                   if (!insights) return;
 
                   // Re-load from cache to get latest state (another message may have arrived)
@@ -4532,6 +4580,47 @@ export async function registerRoutes(
                   persistMemory(enriched).catch((err) =>
                     console.error("[BotLearn] Failed to persist enriched memory:", err)
                   );
+
+                  // Save any newly extracted complaints to the shared complaints table
+                  if (insights.complaints && insights.complaints.length > 0) {
+                    const { saveSalonComplaint } = await import("./db");
+                    for (const complaintText of insights.complaints) {
+                      if (complaintText.trim().length > 5) {
+                        saveSalonComplaint({
+                          complaintText: complaintText.trim(),
+                          complaintType: "complaint",
+                          sourceJid: remoteJid,
+                          sourcePhone: enriched.phone || null,
+                          clientName: enriched.clientName || null,
+                        }).catch((err) =>
+                          console.error("[BotLearn] Failed to save complaint:", err)
+                        );
+                      }
+                    }
+                    console.log(`[BotLearn] Saved ${insights.complaints.length} complaint(s) for ${remoteJid}`);
+                  }
+
+                  // Save bot errors as auto-resolved corrections — effective immediately for all clients
+                  if (insights.botErrors && insights.botErrors.length > 0) {
+                    const { saveSalonComplaint: _save } = await import("./db");
+                    for (const err of insights.botErrors) {
+                      if (err.wrongInfo?.trim().length > 3 && err.correctInfo?.trim().length > 3) {
+                        _save({
+                          complaintText: err.wrongInfo.trim(),
+                          complaintType: "bot_error",
+                          sourceJid: remoteJid,
+                          sourcePhone: enriched.phone || null,
+                          clientName: enriched.clientName || null,
+                          isResolved: true,
+                          fixNote: err.correctInfo.trim(),
+                        }).catch((e) =>
+                          console.error("[BotLearn] Failed to save bot error:", e)
+                        );
+                      }
+                    }
+                    console.log(`[BotLearn] Auto-saved ${insights.botErrors.length} bot error correction(s) for ${remoteJid}`);
+                  }
+
                   console.log(
                     `[BotLearn] Memory enriched for ${remoteJid}:`,
                     JSON.stringify({

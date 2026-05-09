@@ -1529,6 +1529,216 @@ export async function ensureCategoriesColorColumn(): Promise<void> {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SALON COMPLAINTS — shared across all clients
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface SalonComplaint {
+  id: number;
+  complaintText: string;
+  complaintType: "complaint" | "bot_error"; // complaint = salon issue; bot_error = bot gave wrong info
+  sourceJid: string;
+  sourcePhone?: string | null;
+  clientName?: string | null;
+  detectedAt: Date;
+  isResolved: boolean;
+  fixNote?: string | null;
+  resolvedAt?: Date | null;
+}
+
+export async function ensureSalonComplaintsTable(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS salon_complaints (
+          id            INT AUTO_INCREMENT PRIMARY KEY,
+          complaint_text TEXT NOT NULL,
+          source_jid    VARCHAR(100) NOT NULL,
+          source_phone  VARCHAR(30),
+          client_name   VARCHAR(255),
+          is_resolved   TINYINT(1) NOT NULL DEFAULT 0,
+          fix_note      TEXT,
+          resolved_at   TIMESTAMP NULL,
+          detected_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+        )
+      `);
+      connection.release();
+    } else {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS salon_complaints (
+          id            SERIAL PRIMARY KEY,
+          complaint_text TEXT NOT NULL,
+          source_jid    VARCHAR(100) NOT NULL,
+          source_phone  VARCHAR(30),
+          client_name   VARCHAR(255),
+          is_resolved   BOOLEAN NOT NULL DEFAULT FALSE,
+          fix_note      TEXT,
+          resolved_at   TIMESTAMP,
+          detected_at   TIMESTAMP DEFAULT NOW() NOT NULL
+        )
+      `);
+    }
+    console.log("Salon complaints table ready");
+  } catch (error) {
+    console.error("Failed to ensure salon_complaints table:", error);
+  }
+}
+
+export async function ensureComplaintTypeColumn(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      await connection.query(`
+        ALTER TABLE salon_complaints
+        ADD COLUMN IF NOT EXISTS complaint_type VARCHAR(20) NOT NULL DEFAULT 'complaint'
+      `).catch(() => { /* column may already exist */ });
+      connection.release();
+    } else {
+      await pool.query(`
+        ALTER TABLE salon_complaints
+        ADD COLUMN IF NOT EXISTS complaint_type VARCHAR(20) NOT NULL DEFAULT 'complaint'
+      `).catch(() => {});
+    }
+    console.log("Complaint type column ready");
+  } catch (error) {
+    console.error("Failed to ensure complaint_type column:", error);
+  }
+}
+
+export async function saveSalonComplaint(c: {
+  complaintText: string;
+  complaintType?: "complaint" | "bot_error";
+  sourceJid: string;
+  sourcePhone?: string | null;
+  clientName?: string | null;
+  isResolved?: boolean;
+  fixNote?: string | null;
+}): Promise<void> {
+  const type = c.complaintType || "complaint";
+  const resolved = c.isResolved ? 1 : 0;
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      await connection.query(
+        `INSERT INTO salon_complaints (complaint_text, complaint_type, source_jid, source_phone, client_name, is_resolved, fix_note, resolved_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          c.complaintText, type,
+          c.sourceJid, c.sourcePhone || null, c.clientName || null,
+          resolved, c.fixNote || null,
+          c.isResolved ? new Date() : null,
+        ]
+      );
+      connection.release();
+    } else {
+      await pool.query(
+        `INSERT INTO salon_complaints (complaint_text, complaint_type, source_jid, source_phone, client_name, is_resolved, fix_note, resolved_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [
+          c.complaintText, type,
+          c.sourceJid, c.sourcePhone || null, c.clientName || null,
+          c.isResolved || false, c.fixNote || null,
+          c.isResolved ? new Date() : null,
+        ]
+      );
+    }
+  } catch (err) {
+    console.error("[SalonComplaints] saveSalonComplaint failed:", err);
+  }
+}
+
+export async function getSalonComplaints(): Promise<SalonComplaint[]> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      const [rows] = await connection.query(
+        `SELECT * FROM salon_complaints ORDER BY detected_at DESC LIMIT 200`
+      );
+      connection.release();
+      return (rows as any[]).map(rowToComplaint);
+    } else {
+      const result = await pool.query(
+        `SELECT * FROM salon_complaints ORDER BY detected_at DESC LIMIT 200`
+      );
+      return result.rows.map(rowToComplaint);
+    }
+  } catch (err) {
+    console.error("[SalonComplaints] getSalonComplaints failed:", err);
+    return [];
+  }
+}
+
+export async function getResolvedComplaints(): Promise<SalonComplaint[]> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      const [rows] = await connection.query(
+        `SELECT * FROM salon_complaints WHERE is_resolved = 1 AND fix_note IS NOT NULL ORDER BY resolved_at DESC LIMIT 50`
+      );
+      connection.release();
+      return (rows as any[]).map(rowToComplaint);
+    } else {
+      const result = await pool.query(
+        `SELECT * FROM salon_complaints WHERE is_resolved = TRUE AND fix_note IS NOT NULL ORDER BY resolved_at DESC LIMIT 50`
+      );
+      return result.rows.map(rowToComplaint);
+    }
+  } catch (err) {
+    console.error("[SalonComplaints] getResolvedComplaints failed:", err);
+    return [];
+  }
+}
+
+export async function resolveComplaint(id: number, fixNote: string): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      await connection.query(
+        `UPDATE salon_complaints SET is_resolved = 1, fix_note = ?, resolved_at = NOW() WHERE id = ?`,
+        [fixNote, id]
+      );
+      connection.release();
+    } else {
+      await pool.query(
+        `UPDATE salon_complaints SET is_resolved = TRUE, fix_note = $1, resolved_at = NOW() WHERE id = $2`,
+        [fixNote, id]
+      );
+    }
+  } catch (err) {
+    console.error("[SalonComplaints] resolveComplaint failed:", err);
+  }
+}
+
+export async function deleteSalonComplaint(id: number): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      await connection.query(`DELETE FROM salon_complaints WHERE id = ?`, [id]);
+      connection.release();
+    } else {
+      await pool.query(`DELETE FROM salon_complaints WHERE id = $1`, [id]);
+    }
+  } catch (err) {
+    console.error("[SalonComplaints] deleteSalonComplaint failed:", err);
+  }
+}
+
+function rowToComplaint(row: any): SalonComplaint {
+  return {
+    id: row.id,
+    complaintText: row.complaint_text,
+    complaintType: (row.complaint_type === "bot_error" ? "bot_error" : "complaint") as "complaint" | "bot_error",
+    sourceJid: row.source_jid,
+    sourcePhone: row.source_phone ?? null,
+    clientName: row.client_name ?? null,
+    detectedAt: new Date(row.detected_at),
+    isResolved: row.is_resolved === 1 || row.is_resolved === true,
+    fixNote: row.fix_note ?? null,
+    resolvedAt: row.resolved_at ? new Date(row.resolved_at) : null,
+  };
+}
+
 export async function ensureOwnerWithdrawalsTable(): Promise<void> {
   try {
     if (dbDialect === 'mysql') {

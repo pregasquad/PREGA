@@ -49,6 +49,8 @@ export interface SalonContext {
   services: { name: string; price: number; duration: number; category: string; isStartingPrice?: boolean }[];
   clientMemory?: ClientMemory;
   isNewConversation?: boolean; // true = first message in this session / day
+  resolvedComplaints?: { complaint: string; fix: string }[]; // salon-level learnings
+  botCorrections?: { wrongInfo: string; correctInfo: string }[]; // bot's own past mistakes + correct answers
 }
 
 export interface ConversationTurn {
@@ -151,7 +153,12 @@ ${ctx.isNewConversation ? `⚡ هاد الرسالة هي أول تواصل في
 • لو العميلة مترددة → شجعيها بلطف: "والله تستاهل، هاد الخدمة كتفرق بزاف 💅"
 • لو العميلة قالت باغية تلغي أو ما قدرتش تجي → تفهمي عليها بشكل إنساني: "لا بأس حبيبتي، كلشي يتحل 💙"${clientFirstName ? `\n• اسم العميلة هو ${clientFirstName} — استعمليه بشكل طبيعي أحياناً، مش في كل جملة` : ""}
 
-━━━ الأسعار والخدمات ━━━
+${ctx.botCorrections && ctx.botCorrections.length > 0 ? `━━━ ⚠️ تصحيحات ذاتية — أخطاء قلتيها قبل ━━━
+هاذي معلومات غلطتي فيها من قبل وصوّبها العملاء — لا تكرري نفس الغلطة أبداً:
+${ctx.botCorrections.map(c => `• ❌ قلتي: "${c.wrongInfo}" → ✅ الصحيح: "${c.correctInfo}"`).join("\n")}
+` : ""}${ctx.resolvedComplaints && ctx.resolvedComplaints.length > 0 ? `━━━ مشاكل تم حلها — معلومات مهمة ━━━
+${ctx.resolvedComplaints.map(r => `• إذا سألت عميلة عن: "${r.complaint}" → الجواب: "${r.fix}"`).join("\n")}
+` : ""}━━━ الأسعار والخدمات ━━━
 • لو سألات "شنو الخدمات" أو "علاش كتقدمو" أو "services" → لا تذكري كل القائمة! قولي فقط الفئات الرئيسية (وجه، شعر، مكياج، أظافر، إزالة الشعر) وسأليها: "شنو اللي كيهمك أكثر؟" باش تفصلي فيه
 • لو سألات عن خدمة محددة → اذكري السعر مباشرة بشكل طبيعي، جملة وحدة أو جملتين
 • لا تقولي أبداً "تواصلي معنا للأسعار" — هي معاكِ الآن
@@ -549,6 +556,8 @@ export interface LearnedInsights {
   preferredServices?: string[];
   personalityNotes?: string | null;
   bookingIntent?: boolean;
+  complaints?: string[]; // new salon complaints extracted from this conversation
+  botErrors?: { wrongInfo: string; correctInfo: string }[]; // cases where the bot gave wrong info and was corrected
 }
 
 /**
@@ -598,8 +607,19 @@ ${conversationText}
   "language": "arabic أو french أو darija أو unknown — اختر حسب لغة العميلة",
   "preferredServices": ["قائمة الخدمات التي سألت عنها أو أبدت اهتماماً بها من قائمة الصالون فقط"],
   "personalityNotes": "ملاحظة قصيرة (جملة أو جملتين) عن: أسلوبها في التواصل، تفضيلاتها، ميزانيتها إذا ظهرت، أي شيء يساعد على التعامل معها بشكل أفضل في المستقبل. null إذا ما عندكش معلومات كافية",
-  "bookingIntent": true أو false — هل أبدت نية واضحة للحجز في هاد المحادثة
-}`;
+  "bookingIntent": true,
+  "complaints": ["قائمة الشكاوى أو المشاكل عن الصالون — جملة واحدة لكل شكوى. مصفوفة فارغة [] إذا ما كانتش شي شكوى"],
+  "botErrors": [
+    {
+      "wrongInfo": "المعلومة الخاطئة التي قالها البوت (لينا) — نص موجز",
+      "correctInfo": "المعلومة الصحيحة التي صوّبتها العميلة أو التي يجب استخدامها"
+    }
+  ]
+}
+
+ملاحظات مهمة:
+- botErrors: ابحث عن حالات قالت فيها العميلة "غلطتي", "هدا غلط", "معلومة خاطئة", "السعر غير صح", "لا هاد مو صحيح", "عندك غلط", "اللي قلتيه خاطئ", "non c'est pas ça", "c'est faux", "tu as tort", أو أي صياغة تشير إلى أن البوت أعطى معلومة خاطئة وصوّبتها العميلة.
+- إذا ما لقيتيش أي خطأ من البوت → "botErrors": []`;
 
   const tryParseJSON = (text: string): LearnedInsights | null => {
     try {
