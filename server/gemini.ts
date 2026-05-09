@@ -1069,16 +1069,31 @@ export function extractBotConfirmedAppointment(
   if (!dateStr) return null; // no recognisable date → skip
 
   // ── 5. Extract service (best-effort from full conversation) ───────────────
-  // Step 0: Direct extraction from Lina's confirmation sentence.
-  // With the updated system prompt, Lina always writes: "الموعد ديالك لـ [service] …"
-  // Capture what follows لـ (with optional quotes/guillemets) up to the next keyword.
+  // Step 0a: Multiple quoted services joined by و / et / +
+  // e.g. "Coloration" و "Cire complet"  OR  "Service1" et "Service2"
   let service: string | null = null;
-  const directServiceRx = /(?:لـ\s*[""«]?)([^""»\n،,]+?)(?:[""»]|\s+(?:يوم|مع|تأكد|مؤكد|غدا|اليوم|في\s+\d))/;
-  const directMatch = botReply.match(directServiceRx) ?? recentText.match(directServiceRx);
-  if (directMatch) {
-    const svcRaw = directMatch[1].trim();
-    if (svcRaw.length >= 2 && svcRaw.length <= 60) {
-      service = svcRaw;
+  const multiServiceRx = /[""«]([^""»\n]{2,50})[""»]\s*(?:و|et|\+)\s*[""«]([^""»\n]{2,50})[""»]/g;
+  const searchForMulti = botReply || recentText;
+  const multiMatches: string[] = [];
+  let mMatch: RegExpExecArray | null;
+  const rxCopy = new RegExp(multiServiceRx.source, multiServiceRx.flags);
+  while ((mMatch = rxCopy.exec(searchForMulti)) !== null) {
+    if (mMatch[1]) multiMatches.push(mMatch[1].trim());
+    if (mMatch[2]) multiMatches.push(mMatch[2].trim());
+  }
+  if (multiMatches.length >= 2) {
+    service = multiMatches.join(" + ");
+  }
+
+  // Step 0b: Single service after لـ — "الموعد ديالك لـ [service] …"
+  if (!service) {
+    const directServiceRx = /(?:لـ\s*[""«]?)([^""»\n،,+]+?)(?:[""»]|\s+(?:يوم|مع|تأكد|مؤكد|غدا|اليوم|في\s+\d|و\s*[""«]))/;
+    const directMatch = botReply.match(directServiceRx) ?? recentText.match(directServiceRx);
+    if (directMatch) {
+      const svcRaw = directMatch[1].trim();
+      if (svcRaw.length >= 2 && svcRaw.length <= 60) {
+        service = svcRaw;
+      }
     }
   }
 

@@ -1,4 +1,4 @@
-import { Home, Scissors, Users, Wallet, Package, CreditCard, BarChart3, User, Star, Briefcase, Gift, History, LayoutGrid } from "lucide-react";
+import { Home, Scissors, Users, Wallet, Package, CreditCard, BarChart3, User, Star, Briefcase, Gift, History, LayoutGrid, MessageCircle } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export interface ShortcutOption {
@@ -10,6 +10,7 @@ export interface ShortcutOption {
 
 export const SHORTCUT_OPTIONS: ShortcutOption[] = [
   { key: "home", route: "/home", icon: Home, labelKey: "nav.home" },
+  { key: "whatsapp", route: "/whatsapp", icon: MessageCircle, labelKey: "nav.whatsapp" },
   { key: "services", route: "/services", icon: Scissors, labelKey: "nav.services" },
   { key: "clients", route: "/clients", icon: Users, labelKey: "nav.clients" },
   { key: "salaries", route: "/salaries", icon: Wallet, labelKey: "nav.salaries" },
