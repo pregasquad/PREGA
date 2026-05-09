@@ -670,36 +670,38 @@ export default function WhatsApp() {
   }
 
   return (
-    <div className="page-wrapper p-3 sm:p-4 md:p-6 space-y-4 max-w-xl mx-auto w-full">
+    <div className="space-y-5 p-3 md:p-6 animate-fade-in max-w-xl mx-auto w-full">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-          <MessageCircle className="w-6 h-6 text-emerald-500" />
-        </div>
-        <div>
-          <h1 className="text-xl font-bold">WhatsApp</h1>
-          <p className="text-sm text-muted-foreground">Free messaging — no subscription needed</p>
-        </div>
-        <div className="ml-auto flex items-center gap-2">
-          <StatusBadge status={status} />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            onClick={() => refetch()}
-            data-testid="button-refresh-status"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-          </Button>
+      <div className="glass-elevated rounded-2xl px-5 py-5 glass-shine">
+        <div className="relative z-10 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl liquid-gradient flex items-center justify-center shadow-lg shrink-0">
+            <MessageCircle className="w-6 h-6 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl font-bold tracking-tight">واتساب</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">Free messaging — no subscription needed</p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <StatusBadge status={status} />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="glass-subtle rounded-xl h-9 w-9 hover:scale-105 transition-transform"
+              onClick={() => refetch()}
+              data-testid="button-refresh-status"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* ── BOT TOGGLE ── */}
-      <div className={`rounded-2xl border p-4 transition-all ${botEnabled ? "bg-emerald-500/5 border-emerald-500/30" : "bg-red-500/5 border-red-500/30"}`}>
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className={`p-2 rounded-xl border shrink-0 ${botEnabled ? "bg-emerald-500/10 border-emerald-500/20" : "bg-red-500/10 border-red-500/20"}`}>
-              {botEnabled ? <Bot className="w-4 h-4 text-emerald-400" /> : <BotOff className="w-4 h-4 text-red-400" />}
+      <div className={`glass-card rounded-2xl p-4 transition-all ${botEnabled ? "border-emerald-500/30" : "border-red-500/30"}`}>
+        <div className="relative z-10 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-md ${botEnabled ? "bg-emerald-500/15 border border-emerald-500/25" : "bg-red-500/15 border border-red-500/25"}`}>
+              {botEnabled ? <Bot className="w-5 h-5 text-emerald-400" /> : <BotOff className="w-5 h-5 text-red-400" />}
             </div>
             <div className="min-w-0">
               <p className="font-semibold text-sm">البوت (لينا)</p>
@@ -713,7 +715,7 @@ export default function WhatsApp() {
             size="sm"
             disabled={toggleBotMutation.isPending}
             onClick={() => toggleBotMutation.mutate(!botEnabled)}
-            className={`shrink-0 min-w-[80px] ${botEnabled ? "bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30" : "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"}`}
+            className={`shrink-0 min-w-[80px] rounded-xl ${botEnabled ? "bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30" : "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"}`}
             variant="ghost"
           >
             {toggleBotMutation.isPending ? (
@@ -729,9 +731,11 @@ export default function WhatsApp() {
 
       {/* ── DISCONNECTED ALERT ── */}
       {!connected && status === "disconnected" && !isWaitingForCode && (
-        <div className="flex items-start gap-3 p-4 rounded-2xl bg-red-500/10 border border-red-500/30">
-          <WifiOff className="w-5 h-5 text-red-400 mt-0.5 shrink-0" />
-          <div className="flex-1 min-w-0">
+        <div className="glass-card rounded-2xl border-red-500/30 flex items-start gap-3 p-4">
+          <div className="w-9 h-9 rounded-xl bg-red-500/15 border border-red-500/25 flex items-center justify-center shrink-0">
+            <WifiOff className="w-4 h-4 text-red-400" />
+          </div>
+          <div className="flex-1 min-w-0 relative z-10">
             <p className="text-sm font-semibold text-red-400">WhatsApp déconnecté</p>
             <p className="text-xs text-muted-foreground mt-0.5">
               Liez à nouveau votre téléphone pour rétablir la connexion.
@@ -740,7 +744,7 @@ export default function WhatsApp() {
           <Button
             variant="ghost"
             size="sm"
-            className="shrink-0 h-8 gap-1.5 text-xs text-red-400 hover:bg-red-500/10 hover:text-red-300"
+            className="shrink-0 h-8 gap-1.5 text-xs text-red-400 hover:bg-red-500/10 hover:text-red-300 rounded-xl"
             onClick={() => clearSessionMutation.mutate()}
             disabled={clearSessionMutation.isPending}
             data-testid="button-clear-session"
@@ -757,9 +761,11 @@ export default function WhatsApp() {
 
       {/* ── CONNECTED STATE ── */}
       {connected && (
-        <div className="rounded-2xl border bg-card p-5 space-y-4">
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-            <Wifi className="w-5 h-5 text-emerald-400 shrink-0" />
+        <div className="glass-card rounded-2xl p-5 space-y-4">
+          <div className="relative z-10 flex items-center gap-3 p-3 rounded-xl glass-subtle border-emerald-500/20">
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center shrink-0">
+              <Wifi className="w-4 h-4 text-emerald-400" />
+            </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-emerald-400">WhatsApp connected</p>
               {waData?.phone && (
@@ -769,7 +775,7 @@ export default function WhatsApp() {
           </div>
           <Button
             variant="outline"
-            className="w-full border-destructive/40 text-destructive hover:bg-destructive/10"
+            className="relative z-10 w-full border-destructive/40 text-destructive hover:bg-destructive/10 rounded-xl"
             onClick={() => disconnectMutation.mutate()}
             disabled={disconnectMutation.isPending}
             data-testid="button-disconnect"
@@ -786,14 +792,19 @@ export default function WhatsApp() {
 
       {/* ── CONNECTION CARD (not connected) ── */}
       {!connected && (
-        <div className="rounded-2xl border bg-card p-5 space-y-4">
-          <div className="flex items-center gap-2">
-            <Smartphone className="w-5 h-5 text-muted-foreground" />
-            <span className="font-semibold">Link your WhatsApp</span>
+        <div className="glass-card rounded-2xl overflow-hidden">
+          <div className="liquid-glass-header px-5 py-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl liquid-gradient flex items-center justify-center shrink-0 shadow-lg">
+              <Smartphone className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <span className="font-semibold text-sm">Link your WhatsApp</span>
+              <p className="text-xs text-muted-foreground mt-0.5">Connect your phone to get started</p>
+            </div>
           </div>
-
+          <div className="p-5 space-y-4">
           <Tabs defaultValue="phone">
-            <TabsList className="w-full rounded-xl">
+            <TabsList className="w-full rounded-xl glass-subtle">
               <TabsTrigger value="qr" className="flex-1 rounded-lg gap-2">
                 <QrCode className="w-3.5 h-3.5" />
                 QR code
@@ -970,19 +981,22 @@ export default function WhatsApp() {
               </div>
             </TabsContent>
           </Tabs>
+          </div>
         </div>
       )}
 
       {/* ── TEST MESSAGE ── */}
-      <div className="rounded-2xl border bg-card overflow-hidden">
+      <div className="glass-card rounded-2xl overflow-hidden">
         <button
-          className="w-full flex items-center gap-3 p-5 text-left hover:bg-muted/30 transition-colors"
+          className="liquid-glass-header w-full flex items-center gap-3 p-5 text-left hover:brightness-105 transition-all"
           onClick={() => setTestOpen((o) => !o)}
           data-testid="button-toggle-test"
         >
-          <Send className="w-5 h-5 text-muted-foreground shrink-0" />
+          <div className="w-10 h-10 rounded-xl liquid-gradient flex items-center justify-center shrink-0 shadow-lg">
+            <Send className="w-5 h-5 text-white" />
+          </div>
           <div className="flex-1">
-            <span className="font-semibold">Test Message</span>
+            <span className="font-semibold text-sm">Test Message</span>
             <p className="text-xs text-muted-foreground mt-0.5">أرسل رسالة تجريبية لأي رقم</p>
           </div>
           {testOpen ? (
@@ -992,7 +1006,7 @@ export default function WhatsApp() {
           )}
         </button>
         {testOpen && (
-          <div className="border-t border-border/50 p-4 space-y-3">
+          <div className="border-t border-border/30 p-5 space-y-3">
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground uppercase tracking-wider">
                 Phone Number
@@ -1039,15 +1053,17 @@ export default function WhatsApp() {
       </div>
 
       {/* ── BROADCAST ── */}
-      <div className="rounded-2xl border bg-card overflow-hidden">
+      <div className="glass-card rounded-2xl overflow-hidden">
         <button
-          className="w-full flex items-center gap-3 p-5 text-left hover:bg-muted/30 transition-colors"
+          className="liquid-glass-header w-full flex items-center gap-3 p-5 text-left hover:brightness-105 transition-all"
           onClick={() => setBroadcastOpen((o) => !o)}
           data-testid="button-toggle-broadcast"
         >
-          <Users className="w-5 h-5 text-muted-foreground shrink-0" />
+          <div className="w-10 h-10 rounded-xl liquid-gradient flex items-center justify-center shrink-0 shadow-lg">
+            <Users className="w-5 h-5 text-white" />
+          </div>
           <div className="flex-1">
-            <span className="font-semibold">Broadcast</span>
+            <span className="font-semibold text-sm">Broadcast</span>
             <p className="text-xs text-muted-foreground mt-0.5">{clientsWithPhone.length} clients with phone</p>
           </div>
           {broadcastOpen ? (
@@ -1057,7 +1073,7 @@ export default function WhatsApp() {
           )}
         </button>
         {broadcastOpen && (
-          <div className="border-t border-border/50 p-4 space-y-3">
+          <div className="border-t border-border/30 p-5 space-y-3">
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground uppercase tracking-wider">
                 Message — use{" "}
@@ -1097,15 +1113,17 @@ export default function WhatsApp() {
       </div>
 
       {/* ── COMPLAINTS PANEL ── */}
-      <div className="rounded-2xl border bg-card overflow-hidden">
+      <div className="glass-card rounded-2xl overflow-hidden">
         <button
-          className="w-full flex items-center gap-3 p-5 text-left hover:bg-muted/30 transition-colors"
+          className="liquid-glass-header w-full flex items-center gap-3 p-5 text-left hover:brightness-105 transition-all"
           onClick={() => setComplaintsOpen((o) => !o)}
           data-testid="button-toggle-complaints"
         >
-          <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0" />
+          <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/25 flex items-center justify-center shrink-0">
+            <ShieldAlert className="w-5 h-5 text-amber-400" />
+          </div>
           <div className="flex-1">
-            <span className="font-semibold">شكاوى العملاء</span>
+            <span className="font-semibold text-sm">شكاوى العملاء</span>
             <p className="text-xs text-muted-foreground mt-0.5">
               {complaintsOpen && complaints
                 ? `${complaints.length} شكوى — ${complaints.filter((c) => c.isResolved).length} محلولة`
@@ -1121,9 +1139,9 @@ export default function WhatsApp() {
         </button>
 
         {complaintsOpen && (
-          <div className="border-t border-border/50">
+          <div className="border-t border-border/30">
             {/* Toolbar */}
-            <div className="flex items-center justify-between px-5 py-3 bg-muted/20">
+            <div className="flex items-center justify-between px-5 py-3 glass-subtle">
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <ShieldAlert className="w-3 h-3 text-amber-400" />
@@ -1315,15 +1333,17 @@ export default function WhatsApp() {
       </div>
 
       {/* ── BOT VOICE SETTINGS ── */}
-      <div className="rounded-2xl border bg-card overflow-hidden">
+      <div className="glass-card rounded-2xl overflow-hidden">
         <button
-          className="w-full flex items-center gap-3 p-5 text-left hover:bg-muted/30 transition-colors"
+          className="liquid-glass-header w-full flex items-center gap-3 p-5 text-left hover:brightness-105 transition-all"
           onClick={() => setVoiceOpen((o) => !o)}
           data-testid="button-toggle-voice"
         >
-          <Mic className="w-5 h-5 text-muted-foreground shrink-0" />
+          <div className="w-10 h-10 rounded-xl liquid-gradient flex items-center justify-center shrink-0 shadow-lg">
+            <Mic className="w-5 h-5 text-white" />
+          </div>
           <div className="flex-1">
-            <span className="font-semibold">صوت البوت (رسائل صوتية)</span>
+            <span className="font-semibold text-sm">صوت البوت (رسائل صوتية)</span>
             <p className="text-xs text-muted-foreground mt-0.5">{bizSettings?.ttsVoice ?? "Aoede"} — Gemini TTS</p>
           </div>
           {voiceOpen ? (
@@ -1333,7 +1353,7 @@ export default function WhatsApp() {
           )}
         </button>
         {voiceOpen && (
-          <div className="border-t border-border/50 p-4 space-y-3">
+          <div className="border-t border-border/30 p-5 space-y-3">
             <p className="text-xs text-muted-foreground leading-relaxed">
               عندما يرسل العميل رسالة صوتية، يرد البوت بصوت — اختاري صوت لينا المناسب للصالون 💅
             </p>
@@ -1352,7 +1372,7 @@ export default function WhatsApp() {
                   className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-right transition-all ${
                     selectedVoice === v.id
                       ? "border-emerald-500/60 bg-emerald-500/10 ring-1 ring-emerald-500/40"
-                      : "border-border bg-muted/30 hover:bg-muted/60"
+                      : "glass-subtle hover:brightness-105"
                   }`}
                 >
                   <span className="text-xl">{v.icon}</span>
@@ -1390,15 +1410,17 @@ export default function WhatsApp() {
       </div>
 
       {/* ── BOT-CONFIRMED BOOKINGS ── */}
-      <div className="rounded-2xl border bg-card overflow-hidden">
+      <div className="glass-card rounded-2xl overflow-hidden">
         <button
-          className="w-full flex items-center gap-3 p-5 text-left hover:bg-muted/30 transition-colors"
+          className="liquid-glass-header w-full flex items-center gap-3 p-5 text-left hover:brightness-105 transition-all"
           onClick={() => setBotConfirmedOpen((o) => !o)}
           data-testid="button-toggle-bot-confirmed"
         >
-          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center shrink-0">
+            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+          </div>
           <div className="flex-1">
-            <span className="font-semibold">حجوزات أكّدها البوت</span>
+            <span className="font-semibold text-sm">حجوزات أكّدها البوت</span>
             <p className="text-xs text-muted-foreground mt-0.5">
               {botConfirmedOpen && botConfirmedAppointments.length > 0
                 ? `${botConfirmedAppointments.length} حجز مؤكّد عبر واتساب`
@@ -1414,9 +1436,9 @@ export default function WhatsApp() {
         </button>
 
         {botConfirmedOpen && (
-          <div className="border-t border-border/50">
+          <div className="border-t border-border/30">
             {/* Toolbar */}
-            <div className="flex items-center justify-between px-5 py-3 bg-muted/20">
+            <div className="flex items-center justify-between px-5 py-3 glass-subtle">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <CheckCircle2 className="w-3 h-3 text-emerald-400" />
                 <span>{botConfirmedAppointments.length} حجز مؤكّد</span>
@@ -1526,16 +1548,18 @@ export default function WhatsApp() {
       </div>
 
       {/* ── CONVERSATION LOG ── */}
-      <div className="rounded-2xl border bg-card overflow-hidden">
+      <div className="glass-card rounded-2xl overflow-hidden">
         {/* Header */}
         <button
-          className="w-full flex items-center gap-3 p-5 text-left hover:bg-muted/30 transition-colors"
+          className="liquid-glass-header w-full flex items-center gap-3 p-5 text-left hover:brightness-105 transition-all"
           onClick={() => setLogOpen((o) => !o)}
           data-testid="button-toggle-conv-log"
         >
-          <BookOpen className="w-5 h-5 text-muted-foreground shrink-0" />
+          <div className="w-10 h-10 rounded-xl liquid-gradient flex items-center justify-center shrink-0 shadow-lg">
+            <BookOpen className="w-5 h-5 text-white" />
+          </div>
           <div className="flex-1">
-            <span className="font-semibold">سجل محادثات لينا</span>
+            <span className="font-semibold text-sm">سجل محادثات لينا</span>
             <p className="text-xs text-muted-foreground mt-0.5">
               {conversations ? `${conversations.length} محادثة محفوظة` : "اضغط لعرض المحادثات"}
             </p>
@@ -1549,9 +1573,9 @@ export default function WhatsApp() {
         </button>
 
         {logOpen && (
-          <div className="border-t border-border/50">
+          <div className="border-t border-border/30">
             {/* Toolbar */}
-            <div className="flex items-center justify-between px-5 py-3 bg-muted/20">
+            <div className="flex items-center justify-between px-5 py-3 glass-subtle">
               <span className="text-xs text-muted-foreground">
                 {conversations?.length ?? 0} محادثة — آخر 100
               </span>
@@ -1753,16 +1777,18 @@ export default function WhatsApp() {
       </div>
 
       {/* ── PHONE NUMBER FILTER ── */}
-      <div className="rounded-2xl border bg-card overflow-hidden">
+      <div className="glass-card rounded-2xl overflow-hidden">
         {/* Header — click to expand/collapse */}
         <button
-          className="w-full flex items-center gap-3 p-5 text-left hover:bg-muted/30 transition-colors"
+          className="liquid-glass-header w-full flex items-center gap-3 p-5 text-left hover:brightness-105 transition-all"
           onClick={() => setFilterOpen((o) => !o)}
           data-testid="button-toggle-filter"
         >
-          <Filter className="w-5 h-5 text-muted-foreground shrink-0" />
+          <div className="w-10 h-10 rounded-xl liquid-gradient flex items-center justify-center shrink-0 shadow-lg">
+            <Filter className="w-5 h-5 text-white" />
+          </div>
           <div className="flex-1">
-            <span className="font-semibold">فلتر الأرقام</span>
+            <span className="font-semibold text-sm">فلتر الأرقام</span>
             <p className="text-xs text-muted-foreground mt-0.5">
               {filterMode === "all"
                 ? "البوت يرد على الجميع"
@@ -1773,7 +1799,7 @@ export default function WhatsApp() {
           </div>
           <Badge
             variant="secondary"
-            className={`text-xs shrink-0 ${
+            className={`text-xs shrink-0 liquid-glass-chip ${
               filterMode === "allowlist"
                 ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
                 : filterMode === "blocklist"
@@ -1792,7 +1818,7 @@ export default function WhatsApp() {
 
         {/* Collapsed body */}
         {filterOpen && (
-          <div className="px-4 pb-4 space-y-4 border-t border-border/50">
+          <div className="px-5 pb-5 space-y-4 border-t border-border/30">
             {/* Mode selector */}
             <div className="space-y-2 pt-4">
               <Label className="text-xs text-muted-foreground uppercase tracking-wider">وضع الفلتر</Label>
@@ -1813,7 +1839,7 @@ export default function WhatsApp() {
                           : opt.color === "emerald"
                           ? "border-emerald-500/60 bg-emerald-500/10 ring-1 ring-emerald-500/40 text-emerald-400"
                           : "border-red-500/60 bg-red-500/10 ring-1 ring-red-500/40 text-red-400"
-                        : "border-border bg-muted/30 hover:bg-muted/60 text-muted-foreground"
+                        : "glass-subtle hover:brightness-105 text-muted-foreground"
                     }`}
                   >
                     <span className="font-semibold text-[11px]">{opt.label}</span>
@@ -1854,7 +1880,7 @@ export default function WhatsApp() {
 
                 {/* Number chips */}
                 {filterNumbers.length === 0 ? (
-                  <p className="text-xs text-muted-foreground text-center py-3 border rounded-xl border-dashed">
+                  <p className="text-xs text-muted-foreground text-center py-3 border rounded-xl border-dashed border-border/40">
                     لم تُضَف أي أرقام بعد
                   </p>
                 ) : (
@@ -1862,7 +1888,7 @@ export default function WhatsApp() {
                     {filterNumbers.map((num) => (
                       <div
                         key={num}
-                        className="flex items-center gap-1.5 rounded-full border bg-muted/50 px-3 py-1 text-xs font-mono"
+                        className="liquid-glass-chip flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-mono"
                         data-testid={`chip-filter-number-${num}`}
                       >
                         <span dir="ltr">{num}</span>
