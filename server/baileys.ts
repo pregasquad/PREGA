@@ -724,6 +724,27 @@ export async function sendWhatsAppImage(
   }
 }
 
+export async function sendWhatsAppImageBuffer(
+  to: string,
+  base64: string,
+  mimeType: string,
+  caption?: string
+): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  if (!sock || status !== "open") return { success: false, error: "WhatsApp not connected" };
+  try {
+    const jid = formatJid(to);
+    const buffer = Buffer.from(base64, "base64");
+    const result = await sock.sendMessage(jid, {
+      image: buffer,
+      mimetype: mimeType,
+      caption: caption || "",
+    });
+    return { success: true, messageId: result?.key?.id };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
 export async function disconnect(): Promise<void> {
   shouldReconnect = false;
   if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }

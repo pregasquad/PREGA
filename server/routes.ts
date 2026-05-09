@@ -4395,6 +4395,38 @@ export async function registerRoutes(
             // No appointment found — fall through so AI can respond naturally
           }
 
+          // ── Image generation: client asked for a photo ───────────────────
+          {
+            const { detectImageRequest, generateImage } = await import("./gemini");
+            if (detectImageRequest(mergedText) && !mergedImageBase64) {
+              const { sendTypingPresence, stopTypingPresence, sendWhatsAppImageBuffer, sendWhatsAppMessage } = await import("./baileys");
+              await sendTypingPresence(remoteJid);
+              console.log(`[Bot] Image request detected from ${remoteJid}: "${mergedText.slice(0, 60)}"`);
+              try {
+                const bizSettingsForImg = await storage.getBusinessSettings().catch(() => undefined);
+                const salonName = (bizSettingsForImg as any)?.businessName || "PREGASQUAD";
+                const imgResult = await generateImage(mergedText, salonName);
+                await stopTypingPresence(remoteJid);
+                if (imgResult) {
+                  const caption = "هذا مثال على ما تقصدينه 🌸\nراسليني إذا أعجبك الشكل ونحددوا موعدك 💖";
+                  await sendWhatsAppImageBuffer(remoteJid, imgResult.base64, imgResult.mimeType, caption);
+                  console.log(`[Bot] Generated image sent to ${remoteJid}`);
+                } else {
+                  // No API key or model failed — fall through to AI text reply
+                  await sendWhatsAppMessage(
+                    remoteJid,
+                    "معلباليا ما قدرتش نبعث صورة دابا 🌸\nراسليني بالكلام وغادي نوضحلك أكثر 💖"
+                  );
+                }
+                return;
+              } catch (imgErr: any) {
+                await stopTypingPresence(remoteJid);
+                console.error(`[Bot] Image gen error: ${imgErr.message}`);
+                // Fall through to normal AI reply on error
+              }
+            }
+          }
+
           // ── Short-reply fast-path: merci/شكرا/bye/بسلامة only ───────────
           {
             const t = mergedText.trim().toLowerCase();

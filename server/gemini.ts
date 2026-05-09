@@ -823,3 +823,82 @@ export async function askGemini(
   console.error("[AI] All models exhausted — fallback reply");
   return { reply: FALLBACK_REPLY, newHistory: history };
 }
+
+// ── Image Generation ───────────────────────────────────────────────────────────
+
+const IMAGE_GEN_MODEL = "gemini-2.0-flash-preview-image-generation";
+
+/**
+ * Generate a beauty/salon related image based on the client's request.
+ * Uses Gemini 2.0 Flash image generation model.
+ * Returns { base64, mimeType } or null on failure.
+ */
+export async function generateImage(
+  userRequest: string,
+  salonName: string = "PREGASQUAD"
+): Promise<{ base64: string; mimeType: string } | null> {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (!apiKey) {
+    console.warn("[ImageGen] No Gemini API key — skipping image generation");
+    return null;
+  }
+
+  // Build a beauty-focused prompt from the user request
+  const prompt = [
+    `Professional beauty salon photo for ${salonName}.`,
+    `Client requested: "${userRequest}".`,
+    `Generate a high-quality, realistic, elegant beauty image:`,
+    `- If haircut/hairstyle: show the finished look on a model, soft studio lighting`,
+    `- If nail art/nails: close-up of beautifully done nails, elegant background`,
+    `- If makeup: professional makeup look, glowing skin, clean aesthetic`,
+    `- If color/highlights/balayage: show the hair color result clearly`,
+    `- General: luxurious beauty salon aesthetic, warm tones, professional quality`,
+    `No text overlays. No watermarks. Photorealistic. Elegant and aspirational.`,
+  ].join(" ");
+
+  try {
+    const url = `${GEMINI_BASE}/${IMAGE_GEN_MODEL}:generateContent?key=${apiKey}`;
+    const body = {
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
+    };
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.warn(`[ImageGen] ${IMAGE_GEN_MODEL} error ${res.status}: ${errText.slice(0, 200)}`);
+      return null;
+    }
+
+    const data = await res.json() as any;
+    const parts: any[] = data?.candidates?.[0]?.content?.parts || [];
+    const imagePart = parts.find((p: any) => p.inlineData?.data);
+    if (!imagePart) {
+      console.warn("[ImageGen] No image part in response");
+      return null;
+    }
+
+    console.log(`[ImageGen] Image generated successfully (mimeType: ${imagePart.inlineData.mimeType})`);
+    return {
+      base64: imagePart.inlineData.data,
+      mimeType: imagePart.inlineData.mimeType || "image/png",
+    };
+  } catch (err: any) {
+    console.error(`[ImageGen] Error: ${err.message}`);
+    return null;
+  }
+}
+
+/**
+ * Detect if the client is asking for an image/photo of a beauty service.
+ * Returns true for Arabic, Darija, and French image requests.
+ */
+export function detectImageRequest(text: string): boolean {
+  const t = text.toLowerCase().trim();
+  return /أريني|اريني|أرسلي|ارسلي|أرسل|ارسل صورة|صورة|صور|وريني|ورني|كيف يبدو|كيف تبدو|شكل|مثال|أمثلة|show me|photo|image|picture|exemple|exemple photo|montre|envoie|résultat|montrez|résultats|send photo|voir\b|بالصورة|بالصور|صورة.*قصة|صورة.*شعر|صورة.*مكياج|صورة.*أظافر|صورة.*ألوان|صورة.*بالياج|صورة.*نقش|صورة.*سباحة|صورة.*سبا/i.test(t);
+}
