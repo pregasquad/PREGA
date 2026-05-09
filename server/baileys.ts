@@ -65,24 +65,25 @@ async function loadBaileysUtils() {
   }
 }
 
+// Returns the live pool object (pool export is a getter function)
+function getDbPool(): any {
+  return (pool as any)();
+}
+
 async function dbGet(id: string): Promise<any | null> {
   await loadBaileysUtils();
   try {
+    const p = getDbPool();
     if (dbDialect === "mysql") {
-      const conn = await (pool as any).getConnection();
-      try {
-        const [rows]: any = await conn.query(
-          "SELECT data FROM baileys_sessions WHERE id = ? LIMIT 1",
-          [id]
-        );
-        if (Array.isArray(rows) && rows.length > 0 && rows[0].data) {
-          return JSON.parse(rows[0].data, BufferJSON.reviver);
-        }
-      } finally {
-        conn.release();
+      const [rows]: any = await p.query(
+        "SELECT data FROM baileys_sessions WHERE id = ? LIMIT 1",
+        [id]
+      );
+      if (Array.isArray(rows) && rows.length > 0 && rows[0].data) {
+        return JSON.parse(rows[0].data, BufferJSON.reviver);
       }
     } else {
-      const r = await (pool as any).query(
+      const r = await p.query(
         "SELECT data FROM baileys_sessions WHERE id = $1 LIMIT 1",
         [id]
       );
@@ -100,20 +101,16 @@ async function dbSet(id: string, value: any): Promise<void> {
   await loadBaileysUtils();
   const data = JSON.stringify(value, BufferJSON.replacer);
   try {
+    const p = getDbPool();
     if (dbDialect === "mysql") {
-      const conn = await (pool as any).getConnection();
-      try {
-        await conn.query(
-          `INSERT INTO baileys_sessions (id, data)
-           VALUES (?, ?)
-           ON DUPLICATE KEY UPDATE data = VALUES(data), updated_at = CURRENT_TIMESTAMP`,
-          [id, data]
-        );
-      } finally {
-        conn.release();
-      }
+      await p.query(
+        `INSERT INTO baileys_sessions (id, data)
+         VALUES (?, ?)
+         ON DUPLICATE KEY UPDATE data = VALUES(data), updated_at = CURRENT_TIMESTAMP`,
+        [id, data]
+      );
     } else {
-      await (pool as any).query(
+      await p.query(
         `INSERT INTO baileys_sessions (id, data) VALUES ($1, $2)
          ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
         [id, data]
@@ -126,15 +123,11 @@ async function dbSet(id: string, value: any): Promise<void> {
 
 async function dbDel(id: string): Promise<void> {
   try {
+    const p = getDbPool();
     if (dbDialect === "mysql") {
-      const conn = await (pool as any).getConnection();
-      try {
-        await conn.query("DELETE FROM baileys_sessions WHERE id = ?", [id]);
-      } finally {
-        conn.release();
-      }
+      await p.query("DELETE FROM baileys_sessions WHERE id = ?", [id]);
     } else {
-      await (pool as any).query("DELETE FROM baileys_sessions WHERE id = $1", [id]);
+      await p.query("DELETE FROM baileys_sessions WHERE id = $1", [id]);
     }
   } catch (e: any) {
     log(`DB del error (${id}): ${e.message}`);
@@ -143,15 +136,11 @@ async function dbDel(id: string): Promise<void> {
 
 async function dbDelAll(): Promise<void> {
   try {
+    const p = getDbPool();
     if (dbDialect === "mysql") {
-      const conn = await (pool as any).getConnection();
-      try {
-        await conn.query("DELETE FROM baileys_sessions");
-      } finally {
-        conn.release();
-      }
+      await p.query("DELETE FROM baileys_sessions");
     } else {
-      await (pool as any).query("DELETE FROM baileys_sessions");
+      await p.query("DELETE FROM baileys_sessions");
     }
   } catch (e: any) {
     log(`DB delAll error: ${e.message}`);
@@ -160,18 +149,14 @@ async function dbDelAll(): Promise<void> {
 
 async function dbHasSession(): Promise<boolean> {
   try {
+    const p = getDbPool();
     if (dbDialect === "mysql") {
-      const conn = await (pool as any).getConnection();
-      try {
-        const [rows]: any = await conn.query(
-          "SELECT id FROM baileys_sessions WHERE id = 'creds' LIMIT 1"
-        );
-        return Array.isArray(rows) && rows.length > 0;
-      } finally {
-        conn.release();
-      }
+      const [rows]: any = await p.query(
+        "SELECT id FROM baileys_sessions WHERE id = 'creds' LIMIT 1"
+      );
+      return Array.isArray(rows) && rows.length > 0;
     } else {
-      const r = await (pool as any).query(
+      const r = await p.query(
         "SELECT id FROM baileys_sessions WHERE id = 'creds' LIMIT 1"
       );
       return r.rows && r.rows.length > 0;
