@@ -164,8 +164,8 @@ ${ctx.resolvedComplaints.map(r => `• إذا سألت عميلة عن: "${r.com
 • لا تقولي أبداً "تواصلي معنا للأسعار" — هي معاكِ الآن
 • لو السعر "à partir de X" → قولي "كيبدأ من X درهم حسب الطول"
 • لو السعر ثابت → هو ثابت فقط
-• للحجز → لو العميلة بغات تحجز، اتفقي معاها على التاريخ والساعة بشكل واضح، وبعد ما يتأكد كل شي قولي جملة فيها التاريخ والساعة بوضوح مثل: "تمام، الموعد ديالك يوم غدا مع 14:00 مؤكد عندنا 🌸" — لا تعطي رقم هاتف
-• مهم جداً: لما تأكدي موعد محدد → لازم تذكري التاريخ والساعة بوضوح في الرسالة نفسها باش يتسجل في النظام
+• للحجز → لو العميلة بغات تحجز، اتفقي معاها على التاريخ والساعة بشكل واضح، وبعد ما يتأكد كل شي قولي جملة فيها: اسم العميلة + اسم الخدمة + التاريخ + الساعة — مثال: "تمام يا سارة، الموعد ديالك لـ إزالة الشعر يوم غدا مع 14:00 مؤكد عندنا 🌸" — لا تعطي رقم هاتف
+• مهم جداً: لما تأكدي موعد محدد → لازم تذكري في نفس الرسالة: اسم العميلة + اسم الخدمة بوضوح + التاريخ (اليوم/غدا/اسم اليوم) + الساعة — هاد المعلومات ضرورية باش يتسجل الموعد في النظام تلقائياً
 
 ━━━ حالات خاصة ━━━
 • صورة جاتك → حلليها بثقة: "من الصورة شايفة إن شعرك…" أو "هاد اللوك زوين، كنقدرو…"
@@ -1069,6 +1069,19 @@ export function extractBotConfirmedAppointment(
   if (!dateStr) return null; // no recognisable date → skip
 
   // ── 5. Extract service (best-effort from full conversation) ───────────────
+  // Step 0: Direct extraction from Lina's confirmation sentence.
+  // With the updated system prompt, Lina always writes: "الموعد ديالك لـ [service] …"
+  // Capture what follows لـ (with optional quotes/guillemets) up to the next keyword.
+  let service: string | null = null;
+  const directServiceRx = /(?:لـ\s*[""«]?)([^""»\n،,]+?)(?:[""»]|\s+(?:يوم|مع|تأكد|مؤكد|غدا|اليوم|في\s+\d))/;
+  const directMatch = botReply.match(directServiceRx) ?? recentText.match(directServiceRx);
+  if (directMatch) {
+    const svcRaw = directMatch[1].trim();
+    if (svcRaw.length >= 2 && svcRaw.length <= 60) {
+      service = svcRaw;
+    }
+  }
+
   const serviceKeywords = [
     // Hair colour
     "balayage", "بالياج", "ombré", "ombre", "couleur", "coloration", "صبغة", "صبغ",
@@ -1094,16 +1107,16 @@ export function extractBotConfirmedAppointment(
     // General
     "rendez-vous", "موعد", "خدمة",
   ];
-  // Service priority: botReply alone → recentText (last 4 msgs) → full history
-  // This ensures the CURRENT service beats any old mention in earlier messages.
-  let service: string | null = null;
-  const searchSources = [botReply, recentText, allText];
-  outer:
-  for (const src of searchSources) {
-    for (const kw of serviceKeywords) {
-      if (new RegExp(kw, "i").test(src)) {
-        service = kw;
-        break outer;
+  // Keyword fallback: only runs when direct لـ extraction didn't find a service
+  if (!service) {
+    const searchSources = [botReply, recentText, allText];
+    outer:
+    for (const src of searchSources) {
+      for (const kw of serviceKeywords) {
+        if (new RegExp(kw, "i").test(src)) {
+          service = kw;
+          break outer;
+        }
       }
     }
   }
