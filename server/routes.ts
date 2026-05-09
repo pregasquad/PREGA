@@ -2677,7 +2677,7 @@ export async function registerRoutes(
     try {
       const jid = decodeURIComponent(req.params.jid);
       const { getBotMemory, saveBotMemory } = await import("./db");
-      const { learnFromConversation } = await import("./gemini");
+      const { learnFromConversation, sanitizeClientName } = await import("./gemini");
       const mem = await getBotMemory(jid);
       if (!mem || mem.convHistory.length < 2) {
         return res.json({ success: false, reason: "not_enough_history" });
@@ -2692,7 +2692,7 @@ export async function registerRoutes(
       if (!insights) return res.json({ success: false, reason: "no_insights" });
       const updated = {
         ...mem,
-        clientName: insights.clientName !== undefined ? insights.clientName : mem.clientName,
+        clientName: sanitizeClientName(insights.clientName) ?? mem.clientName,
         language: insights.language || mem.language,
         preferredServices: insights.preferredServices?.length ? insights.preferredServices : mem.preferredServices,
         personalityNotes: insights.personalityNotes !== undefined ? insights.personalityNotes : mem.personalityNotes,
@@ -4509,7 +4509,7 @@ export async function registerRoutes(
           }
 
           // ── AI assistant reply ───────────────────────────────────────────
-          const { askGemini, FALLBACK_REPLY, learnFromConversation } = await import("./gemini");
+          const { askGemini, FALLBACK_REPLY, learnFromConversation, sanitizeClientName } = await import("./gemini");
           const { sendWhatsAppMessage, sendTypingPresence, stopTypingPresence } = await import("./baileys");
 
           // Show typing immediately — client sees we're working on a reply
@@ -4648,7 +4648,7 @@ export async function registerRoutes(
 
                   const enriched: BotClientMemory = {
                     ...latest,
-                    clientName: insights.clientName || latest.clientName,
+                    clientName: sanitizeClientName(insights.clientName) || latest.clientName,
                     language:
                       insights.language && insights.language !== "unknown"
                         ? insights.language
@@ -4848,6 +4848,7 @@ export async function registerRoutes(
                   const endMinutes = (sh * 60 + sm + 60) % (24 * 60);
                   const endTime = `${String(Math.floor(endMinutes / 60)).padStart(2, "0")}:${String(endMinutes % 60).padStart(2, "0")}`;
 
+                  const aptPrice = extracted.price ?? 0;
                   const newApt = await storage.createAppointment({
                     client: clientName,
                     phone: clientPhone,
@@ -4857,16 +4858,17 @@ export async function registerRoutes(
                     startTime: extracted.time,
                     endTime,
                     duration: 60,
-                    price: 0,
-                    total: 0,
+                    price: aptPrice,
+                    total: aptPrice,
                     paid: false,
                     bookingStatus: "bot_confirmed",
                   } as any);
 
                   io.emit("booking:created", newApt);
+                  const priceLabel = aptPrice > 0 ? ` — ${aptPrice} DH` : "";
                   sendPushNotification(
                     "حجز مؤكّد من البوت 🤖",
-                    `${clientName} — ${extracted.service || "خدمة"} — ${extracted.date} ${extracted.time}`,
+                    `${clientName} — ${extracted.service || "خدمة"} — ${extracted.date} ${extracted.time}${priceLabel}`,
                     "/whatsapp"
                   ).catch(() => {});
                   console.log(`[Bot] ✅ Auto-saved bot-confirmed appointment #${newApt.id} for ${clientLabel} on ${extracted.date} at ${extracted.time}`);

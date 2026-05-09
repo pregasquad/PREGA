@@ -966,7 +966,7 @@ export function extractBotConfirmedAppointment(
   botReply: string,
   conversationHistory: ConversationTurn[],
   todayDateStr: string // "YYYY-MM-DD"
-): { date: string; time: string; service: string | null } | null {
+): { date: string; time: string; service: string | null; price: number | null } | null {
   // ── 1. Is this reply a confirmation at all? ───────────────────────────────
   const confirmRx = /مؤكد|مؤكدة|مسجل|مسجلة|ثابت|تسجيل|تم التأكيد|تم الحجز|تم التسجيل|حجزك جاهز|حجز مؤكد|راه حجوزة|راه مسجل|غادي نشوفوك|ننتظروك|ننتظروكِ|موعدك مسجل|موعدك ثابت|موعدك محجوز|موعد مسجل|موعد محجوز|حجزناك|حجزناكِ|حجزتيك|شدينا ليك|شدينالك|كتبنا ليك|كتبناك|سجلنا ليك|سجلناك|ثبتنا ليك|ثبتناك|محجوزة ليك|محجوز ليك|موعدك كاين|نستناوك|كنستناوك|كنستناوكِ|هنا نستناوك|متنساش|واخا.*موعد|موعد.*واخا|confirmé|confirmée|confirm|c'est noté|c'est enregistré|c'est fait|c'est bon|c'est pris|c'est réservé|c'est validé|noté|enregistré|réservé|réservée|validé|on vous attend|on t'attend|on se voit|rendez-vous.*confirm|votre.*rendez-vous|rdv confirmé|rdv pris|rendez-vous pris|rendez-vous réservé|je vous inscris|je t'inscris|inscrit|je note|je l'ai noté|votre place/i;
   if (!confirmRx.test(botReply)) return null;
@@ -976,6 +976,13 @@ export function extractBotConfirmedAppointment(
   // (e.g. "10h was unavailable → confirmed for 14h30" would wrongly extract 10h).
   const allText = [
     ...conversationHistory.map((t) => t.text),
+    botReply,
+  ].join(" ");
+
+  // "Recent text" = bot reply + last 4 messages — used to prioritise service
+  // detection so old mentions of a different service don't override the current one.
+  const recentText = [
+    ...conversationHistory.slice(-4).map((t) => t.text),
     botReply,
   ].join(" ");
 
@@ -1087,15 +1094,100 @@ export function extractBotConfirmedAppointment(
     // General
     "rendez-vous", "موعد", "خدمة",
   ];
+  // Service priority: botReply alone → recentText (last 4 msgs) → full history
+  // This ensures the CURRENT service beats any old mention in earlier messages.
   let service: string | null = null;
-  for (const kw of serviceKeywords) {
-    if (new RegExp(kw, "i").test(allText)) {
-      service = kw;
-      break;
+  const searchSources = [botReply, recentText, allText];
+  outer:
+  for (const src of searchSources) {
+    for (const kw of serviceKeywords) {
+      if (new RegExp(kw, "i").test(src)) {
+        service = kw;
+        break outer;
+      }
     }
   }
 
-  return { date: dateStr, time: timeStr, service };
+  // Normalise service label: prefer prettier casing / Arabic label where possible
+  const serviceLabels: Record<string, string> = {
+    "balayage": "Balayage", "بالياج": "Balayage",
+    "coloration": "Coloration", "صبغة": "Coloration", "صبغ": "Coloration",
+    "couleur": "Coloration", "teinture": "Coloration",
+    "كيراتين": "Kératine", "keratin": "Kératine", "lissage": "Lissage",
+    "coupe": "Coupe", "قصة": "Coupe", "قص": "Coupe",
+    "brushing": "Brushing",
+    "makeup": "Maquillage", "maquillage": "Maquillage", "مكياج": "Maquillage",
+    "manucure": "Manucure", "مانيكور": "Manucure", "مانيكير": "Manucure",
+    "pédicure": "Pédicure", "pedicure": "Pédicure", "بيديكير": "Pédicure",
+    "sourcils": "Sourcils", "حواجب": "Sourcils",
+    "épilation": "Épilation", "عرو": "Épilation",
+    "massage": "Massage", "hammam": "Hammam",
+    "ombré": "Ombré", "ombre": "Ombré",
+    "mèches": "Mèches", "meches": "Mèches", "highlights": "Mèches",
+    "protéine": "Soin Protéiné", "proteine": "Soin Protéiné", "بروتين": "Soin Protéiné",
+    "botox capillaire": "Botox Capillaire",
+    "soins visage": "Soin Visage", "soin visage": "Soin Visage", "soin du visage": "Soin Visage",
+    "gommage": "Gommage", "peeling": "Peeling",
+  };
+  if (service) service = serviceLabels[service.toLowerCase()] ?? service;
+
+  // ── 6. Extract price from recent messages (best-effort) ──────────────────
+  // Looks for patterns like "300 DH", "350 درهم", "prix: 250", "coûte 400 MAD"
+  let price: number | null = null;
+  const pricePatterns = [
+    // "300 DH", "300 dh", "300 MAD", "300 mad"
+    /(\d{2,5})\s*(?:dh|DH|MAD|mad|dirhams?)\b/,
+    // "300 درهم", "300درهم"
+    /(\d{2,5})\s*درهم/,
+    // "prix.*?(\d{2,5})", "coûte.*?(\d{2,5})", "السعر.*?(\d{2,5})"
+    /(?:prix|coûte|coute|السعر|سعر|ثمنه?|يكلف)[^0-9]{0,15}(\d{2,5})/i,
+    // "(\d{2,5}) DH" with optional suffix label
+    /(\d{2,5})\s*(?:دراهم|درهم|DH|dh|MAD)/,
+  ];
+  for (const rx of pricePatterns) {
+    const m = recentText.match(rx);
+    if (m) {
+      const val = parseInt(m[1] ?? m[2] ?? "0", 10);
+      if (val >= 10 && val <= 50000) { price = val; break; }
+    }
+  }
+
+  return { date: dateStr, time: timeStr, service, price };
+}
+
+/**
+ * Sanitize a client name extracted by BotLearn.
+ * Rejects strings that are clearly not names (greetings, price words, single chars, etc.)
+ * Returns null if the value should be discarded.
+ */
+export function sanitizeClientName(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const v = raw.trim();
+  if (v.length < 2 || v.length > 50) return null;
+
+  // Reject if it contains obvious non-name words
+  const badWords = [
+    // French non-names
+    "prix", "salam", "salqm", "bonjour", "bonsoir", "salut", "merci",
+    "oui", "non", "bien", "ok", "okay", "votre", "voici", "demain",
+    "aujourd", "rendez", "rdv", "service", "coloration", "balayage",
+    "keratin", "coupe", "brushing", "maquillage",
+    // Arabic non-names
+    "مرحبا", "السلام", "شكراً", "شكرا", "واخا", "البوت", "الموعد",
+    "الخدمة", "السعر", "عميل",
+    // English
+    "hello", "hi", "yes", "no", "thanks",
+  ];
+  const lower = v.toLowerCase();
+  for (const w of badWords) {
+    if (lower.includes(w)) return null;
+  }
+
+  // Reject if it's mostly digits or punctuation
+  const alphaCount = (v.match(/[\p{L}]/gu) || []).length;
+  if (alphaCount < 2) return null;
+
+  return v;
 }
 
 /**
