@@ -269,6 +269,7 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
     fetchLatestBaileysVersion,
     makeCacheableSignalKeyStore,
     initAuthCreds,
+    Browsers,
   } = await import("@whiskeysockets/baileys");
   const pino = (await import("pino")).default;
 
@@ -293,6 +294,7 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
 
   sock = makeWASocket({
     version,
+    browser: Browsers.macOS("Chrome"),
     auth: {
       creds: state.creds,
       keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" })),
@@ -304,6 +306,7 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
     connectTimeoutMs: 60_000,
     keepAliveIntervalMs: 30_000,
     retryRequestDelayMs: 5_000,
+    mobile: false,
   });
 
   sock.ev.on("creds.update", saveCreds);
@@ -349,17 +352,17 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
       }
     };
 
-    // Request code as soon as the WS connection to WhatsApp is established.
-    // Baileys emits connection:"connecting" right after the WebSocket handshake
-    // which is the earliest safe moment to call requestPairingCode.
+    // Request code after the WS handshake with WhatsApp is established.
+    // Add a 1.5s delay after "connecting" fires to let the handshake fully
+    // settle before calling requestPairingCode — prevents premature 401s.
     sock.ev.on("connection.update", (update: any) => {
       if (update.connection === "connecting" && !pairingCodeRequested) {
-        requestCode();
+        setTimeout(() => { if (!pairingCodeRequested) requestCode(); }, 1_500);
       }
     });
 
     // Safety net in case connection.update fires before we attach the listener
-    setTimeout(() => { if (!pairingCodeRequested) requestCode(); }, 3_000);
+    setTimeout(() => { if (!pairingCodeRequested) requestCode(); }, 5_000);
   }
 
   sock.ev.on("connection.update", async (update: any) => {
