@@ -1,506 +1,290 @@
-import path from "path";
-import fs from "fs";
+/**
+ * server/baileys.ts
+ *
+ * WhatsApp integration via @whiskeysockets/baileys (free, open-source).
+ *
+ * Key design decisions:
+ *  - Sessions are stored in the `baileys_sessions` DB table (not filesystem)
+ *    so they survive Koyeb's ephemeral container restarts.
+ *  - 401/403/405 are treated as PERMANENT failures — session is cleared and
+ *    no further reconnect attempts are made (prevents the infinite 401 loop).
+ *  - Auto-connect is skipped on Replit dev (routes.ts guards with REPL_ID).
+ *  - Socket.IO is used to push QR/pairing/status events to the frontend.
+ */
 
-const AUTH_FOLDER = path.join(process.cwd(), "baileys_auth");
-const CREDS_FILE = path.join(AUTH_FOLDER, "creds.json");
-const SESSION_DB_ID = "default";
+import { Server as SocketIOServer } from "socket.io";
+import { pool, dbDialect } from "./db";
 
-// ── DB session persistence (survives Koyeb / ephemeral FS restarts) ─────────
+// ── Status codes that mean the session is permanently revoked ────────────────
+const PERMANENT_FAILURE_CODES = new Set([401, 403, 405]);
+const MAX_RECONNECT_ATTEMPTS = 5;
 
-async function getDbPool(): Promise<any | null> {
-  try {
-    const { getPool } = await import("./db");
-    return getPool();
-  } catch {
-    return null;
-  }
-}
-
-async function saveAuthToDb(): Promise<void> {
-  try {
-    if (!fs.existsSync(AUTH_FOLDER)) return;
-    const files = fs.readdirSync(AUTH_FOLDER);
-    if (files.length === 0) return;
-
-    const snapshot: Record<string, string> = {};
-    for (const file of files) {
-      const filePath = path.join(AUTH_FOLDER, file);
-      try { snapshot[file] = fs.readFileSync(filePath, "utf8"); } catch {}
-    }
-
-    const pool = await getDbPool();
-    if (!pool) return;
-
-    const json = JSON.stringify(snapshot);
-    const { dbDialect } = await import("./db");
-    if (dbDialect === "mysql") {
-      const conn = await pool.getConnection();
-      await conn.query(
-        `INSERT INTO baileys_sessions (id, data) VALUES (?, ?) ON DUPLICATE KEY UPDATE data = VALUES(data), updated_at = CURRENT_TIMESTAMP`,
-        [SESSION_DB_ID, json]
-      );
-      conn.release();
-    } else {
-      await pool.query(
-        `INSERT INTO baileys_sessions (id, data) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET data = $2, updated_at = NOW()`,
-        [SESSION_DB_ID, json]
-      );
-    }
-    log("Session snapshot saved to DB");
-  } catch (err: any) {
-    log(`saveAuthToDb error: ${err.message}`);
-  }
-}
-
-async function loadAuthFromDb(): Promise<boolean> {
-  try {
-    const pool = await getDbPool();
-    if (!pool) return false;
-
-    const { dbDialect } = await import("./db");
-    let rows: any[];
-    if (dbDialect === "mysql") {
-      const conn = await pool.getConnection();
-      const [result] = await conn.query(`SELECT data FROM baileys_sessions WHERE id = ?`, [SESSION_DB_ID]);
-      conn.release();
-      rows = result as any[];
-    } else {
-      const result = await pool.query(`SELECT data FROM baileys_sessions WHERE id = $1`, [SESSION_DB_ID]);
-      rows = result.rows;
-    }
-
-    if (!rows || rows.length === 0) return false;
-
-    const snapshot: Record<string, string> = JSON.parse(rows[0].data);
-    if (!fs.existsSync(AUTH_FOLDER)) fs.mkdirSync(AUTH_FOLDER, { recursive: true });
-    for (const [file, content] of Object.entries(snapshot)) {
-      fs.writeFileSync(path.join(AUTH_FOLDER, file), content, "utf8");
-    }
-    log("Session restored from DB");
-    return true;
-  } catch (err: any) {
-    log(`loadAuthFromDb error: ${err.message}`);
-    return false;
-  }
-}
-
-async function clearAuthFromDb(): Promise<void> {
-  try {
-    const pool = await getDbPool();
-    if (!pool) return;
-    const { dbDialect } = await import("./db");
-    if (dbDialect === "mysql") {
-      const conn = await pool.getConnection();
-      await conn.query(`DELETE FROM baileys_sessions WHERE id = ?`, [SESSION_DB_ID]);
-      conn.release();
-    } else {
-      await pool.query(`DELETE FROM baileys_sessions WHERE id = $1`, [SESSION_DB_ID]);
-    }
-    log("Session cleared from DB");
-  } catch (err: any) {
-    log(`clearAuthFromDb error: ${err.message}`);
-  }
-}
-
-type Status = "disconnected" | "connecting" | "qr" | "pairing" | "open";
-
+// ── Module-level state ───────────────────────────────────────────────────────
 let sock: any = null;
 let currentQRDataUrl: string | null = null;
 let currentPairingCode: string | null = null;
-let currentPairingCodeExpiresAt: number | null = null;
+let pairingCodeExpiresAt: number | null = null;
 let lastPairingError: string | null = null;
-let status: Status = "disconnected";
+let status: "disconnected" | "connecting" | "qr" | "pairing" | "open" = "disconnected";
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let shouldReconnect = false;
-let reconnectAttempts = 0; // exponential backoff counter — resets on successful open
-let isConnecting = false;  // lock — prevents concurrent connectSocket() calls
-let socketIO: any = null;
-let pendingPairingPhone: string | null = null;
-
-// Deduplication: Map<msgId, processedAt ms> — per-entry TTL, never wipe the whole set
-// so a reconnect near the clear boundary can't replay already-processed messages.
-const processedMessageIds = new Map<string, number>();
-const MSG_DEDUP_TTL = 10 * 60 * 1000;
-setInterval(() => {
-  const cutoff = Date.now() - MSG_DEDUP_TTL;
-  for (const [id, ts] of processedMessageIds) {
-    if (ts < cutoff) processedMessageIds.delete(id);
-  }
-}, 2 * 60 * 1000);
-
-export function setSocketIO(io: any): void {
-  socketIO = io;
-}
-
-// remoteJid = full JID (e.g. "212713446214@s.whatsapp.net" or "85715031466043@lid")
-// phone     = best-effort numeric phone extracted from JID (may not match for LID accounts)
-// imageBase64 / imageMimeType = set when the message contains a photo
-// isVoice = true when the message originated from a WhatsApp voice note
-type IncomingMessageHandler = (
-  remoteJid: string,
-  phone: string,
-  text: string,
-  imageBase64?: string,
-  imageMimeType?: string,
-  isVoice?: boolean
-) => Promise<void>;
-let incomingMessageHandler: IncomingMessageHandler | null = null;
-
-export function setIncomingMessageHandler(handler: IncomingMessageHandler): void {
-  incomingMessageHandler = handler;
-}
+let reconnectAttempt = 0;
+let ioInstance: SocketIOServer | null = null;
+let incomingMessageHandler: ((jid: string, phone: string, text: string, imageBase64?: string, imageMimeType?: string, isVoice?: boolean) => Promise<void>) | null = null;
 
 function log(msg: string) {
   console.log(`[Baileys] ${msg}`);
 }
 
-function hasExistingSession(): boolean {
-  return fs.existsSync(CREDS_FILE);
+function emitStatus() {
+  if (ioInstance) {
+    ioInstance.emit("whatsapp:status", {
+      status,
+      connected: status === "open",
+      phone: sock?.user?.id?.split(":")[0] ?? undefined,
+      qr: currentQRDataUrl,
+      pairingCode: currentPairingCode,
+      pairingCodeExpiresAt,
+      pairingError: lastPairingError,
+    });
+  }
 }
 
-function wipeAuth() {
-  try { fs.rmSync(AUTH_FOLDER, { recursive: true, force: true }); } catch {}
-  fs.mkdirSync(AUTH_FOLDER, { recursive: true });
-  clearAuthFromDb().catch(() => {}); // also wipe from DB (non-blocking)
+// ── DB-backed auth state ─────────────────────────────────────────────────────
+
+async function dbGet(id: string): Promise<any | null> {
+  try {
+    if (dbDialect === "mysql") {
+      const conn = await pool.getConnection();
+      const [rows]: any = await conn.query(
+        "SELECT data FROM baileys_sessions WHERE id = ? LIMIT 1",
+        [id]
+      );
+      conn.release();
+      if (Array.isArray(rows) && rows.length > 0) return JSON.parse(rows[0].data);
+    } else {
+      const r = await pool.query("SELECT data FROM baileys_sessions WHERE id = $1 LIMIT 1", [id]);
+      if (r.rows && r.rows.length > 0) return JSON.parse(r.rows[0].data);
+    }
+  } catch {}
+  return null;
 }
 
-// Exponential backoff: 5s → 10s → 20s → 40s → 60s (capped — retries forever).
-// NEVER wipes session automatically — only manual disconnect() does that.
-// Only pulls from DB if the local FS has NO creds (fresh/restarted dyno).
-// If creds already exist on disk (from a previous creds.update), we use them
-// as-is — they are fresher than whatever is in the DB snapshot.
-async function scheduleReconnect(delayMs?: number) {
+async function dbSet(id: string, value: any): Promise<void> {
+  const data = JSON.stringify(value);
+  try {
+    if (dbDialect === "mysql") {
+      const conn = await pool.getConnection();
+      await conn.query(
+        "INSERT INTO baileys_sessions (id, data) VALUES (?, ?) ON DUPLICATE KEY UPDATE data = VALUES(data), updated_at = CURRENT_TIMESTAMP",
+        [id, data]
+      );
+      conn.release();
+    } else {
+      await pool.query(
+        `INSERT INTO baileys_sessions (id, data) VALUES ($1, $2)
+         ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+        [id, data]
+      );
+    }
+  } catch (e: any) {
+    log(`DB set error (${id}): ${e.message}`);
+  }
+}
+
+async function dbDel(id: string): Promise<void> {
+  try {
+    if (dbDialect === "mysql") {
+      const conn = await pool.getConnection();
+      await conn.query("DELETE FROM baileys_sessions WHERE id = ?", [id]);
+      conn.release();
+    } else {
+      await pool.query("DELETE FROM baileys_sessions WHERE id = $1", [id]);
+    }
+  } catch {}
+}
+
+async function dbDelAll(): Promise<void> {
+  try {
+    if (dbDialect === "mysql") {
+      const conn = await pool.getConnection();
+      await conn.query("DELETE FROM baileys_sessions");
+      conn.release();
+    } else {
+      await pool.query("DELETE FROM baileys_sessions");
+    }
+  } catch {}
+}
+
+async function dbHasSession(): Promise<boolean> {
+  try {
+    if (dbDialect === "mysql") {
+      const conn = await pool.getConnection();
+      const [rows]: any = await conn.query(
+        "SELECT id FROM baileys_sessions WHERE id = 'creds' LIMIT 1"
+      );
+      conn.release();
+      return Array.isArray(rows) && rows.length > 0;
+    } else {
+      const r = await pool.query(
+        "SELECT id FROM baileys_sessions WHERE id = 'creds' LIMIT 1"
+      );
+      return r.rows && r.rows.length > 0;
+    }
+  } catch {}
+  return false;
+}
+
+/** Custom DB-backed auth state (replaces useMultiFileAuthState) */
+async function useDatabaseAuthState() {
+  const { initAuthCreds, BufferJSON, proto } = await import("@whiskeysockets/baileys");
+
+  let creds = await dbGet("creds");
+  if (!creds) creds = initAuthCreds();
+
+  const keys: any = {};
+
+  const state = {
+    creds,
+    keys: {
+      get: async (type: string, ids: string[]) => {
+        const data: any = {};
+        for (const id of ids) {
+          let value = keys[`${type}-${id}`] ?? (await dbGet(`key-${type}-${id}`));
+          if (type === "app-state-sync-key" && value) {
+            value = proto.Message.AppStateSyncKeyData.fromObject(value);
+          }
+          data[id] = value;
+        }
+        return data;
+      },
+      set: async (dataMap: any) => {
+        const writes: Promise<void>[] = [];
+        for (const [type, ids] of Object.entries(dataMap)) {
+          for (const [id, value] of Object.entries(ids as any)) {
+            const k = `key-${type}-${id}`;
+            keys[`${type}-${id}`] = value;
+            if (value) {
+              writes.push(dbSet(k, value));
+            } else {
+              writes.push(dbDel(k));
+            }
+          }
+        }
+        await Promise.all(writes);
+      },
+    },
+  };
+
+  const saveCreds = async () => {
+    await dbSet("creds", state.creds);
+  };
+
+  return { state, saveCreds };
+}
+
+// ── Session management ───────────────────────────────────────────────────────
+
+async function clearSession() {
+  currentQRDataUrl = null;
+  currentPairingCode = null;
+  pairingCodeExpiresAt = null;
+  lastPairingError = null;
+  await dbDelAll();
+  log("Session cleared from DB");
+}
+
+function scheduleReconnect() {
   if (reconnectTimer) clearTimeout(reconnectTimer);
   if (!shouldReconnect) return;
 
-  // Only restore from DB if there are no local creds at all.
-  // NEVER overwrite existing local creds from DB — the local copy is always
-  // the freshest (Baileys writes to it on every creds.update event).
-  if (!hasExistingSession()) {
-    log(`No local creds — pulling session from DB before reconnect (attempt ${reconnectAttempts + 1})…`);
-    const restored = await loadAuthFromDb();
-    if (restored) {
-      log("Session pulled from DB — proceeding to reconnect");
-    } else {
-      log("No DB session found — will retry again after backoff");
-    }
-  } else {
-    log(`Local creds exist — using them as-is (attempt ${reconnectAttempts + 1})`);
+  reconnectAttempt++;
+  if (reconnectAttempt > MAX_RECONNECT_ATTEMPTS) {
+    log(`Max reconnect attempts (${MAX_RECONNECT_ATTEMPTS}) reached — giving up. Re-link via the WhatsApp page.`);
+    shouldReconnect = false;
+    status = "disconnected";
+    emitStatus();
+    return;
   }
 
-  const backoffMs = delayMs ?? Math.min(5000 * Math.pow(2, reconnectAttempts), 60000);
-  reconnectAttempts++;
-  log(`Reconnecting in ${Math.round(backoffMs / 1000)}s (attempt ${reconnectAttempts})…`);
+  const delayMs = Math.min(10_000 * Math.pow(2, reconnectAttempt - 1), 180_000);
+  log(`Reconnect attempt ${reconnectAttempt}/${MAX_RECONNECT_ATTEMPTS} in ${delayMs / 1000}s…`);
+
   reconnectTimer = setTimeout(() => {
-    connectSocket().catch((err) => {
-      log(`Reconnect error: ${err.message} — will retry`);
-      scheduleReconnect();
-    });
-  }, backoffMs);
-}
-
-async function fetchVersionWithFallback() {
-  // Updated regularly — use latest verified working version if fetch fails
-  const FALLBACK_VERSION: [number, number, number] = [2, 3000, 1023505673];
-  try {
-    const { fetchLatestBaileysVersion } = await import("@whiskeysockets/baileys");
-    const result = await Promise.race([
-      fetchLatestBaileysVersion(),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("timeout")), 15000)
-      ),
-    ]);
-    log(`WA version: ${result.version.join(".")} (latest: ${result.isLatest})`);
-    return result;
-  } catch (err: any) {
-    log(`Using fallback WA version ${FALLBACK_VERSION.join(".")} (${err.message})`);
-    return { version: FALLBACK_VERSION, isLatest: false };
-  }
+    connectSocket().catch(err => log(`Reconnect failed: ${err.message}`));
+  }, delayMs);
 }
 
 async function connectSocket(pairingPhone?: string): Promise<void> {
-  if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+  if (sock) { try { sock.end(); } catch {} sock = null; }
 
-  // Guard: prevent two concurrent connectSocket() calls racing each other.
-  // This can happen if scheduleReconnect fires while a previous attempt is still
-  // mid-handshake, causing WA to see two sessions and kick both with "device_removed".
-  if (isConnecting) {
-    log("connectSocket called while already connecting — ignoring duplicate call");
-    return;
-  }
-  isConnecting = true;
+  const {
+    makeWASocket,
+    DisconnectReason,
+    fetchLatestBaileysVersion,
+    makeCacheableSignalKeyStore,
+  } = await import("@whiskeysockets/baileys");
+  const pino = (await import("pino")).default;
 
-  // Hoist saveCreds to function scope so it's accessible in the creds.update listener below.
-  let saveCreds: (() => Promise<void>) | null = null;
+  const { state, saveCreds } = await useDatabaseAuthState();
+  const { version, isLatest } = await fetchLatestBaileysVersion();
 
-  try {
-    if (sock) {
-      try { sock.end(); } catch {}
-      sock = null;
-      // Short grace period so the WS close frame reaches WhatsApp before we
-      // open a new connection with the same credentials.  Without this, WA can
-      // see two simultaneous sessions and kick both with "device_removed".
-      await new Promise((r) => setTimeout(r, 800));
-    }
+  log(`Connecting… WA version: ${version} (latest: ${isLatest})`);
+  status = "connecting";
+  currentQRDataUrl = null;
+  currentPairingCode = null;
+  pairingCodeExpiresAt = null;
+  lastPairingError = null;
+  emitStatus();
 
-    // Always start with a clean slate when pairing.
-    // Leftover partial credentials from a previous failed attempt will cause the
-    // socket to try logging in as an already-linked device, which fails silently.
-    if (pairingPhone) {
-      log("Pairing requested — clearing auth for fresh start");
-      wipeAuth();
-      pendingPairingPhone = pairingPhone;
-      lastPairingError = null;
-    } else {
-      if (!fs.existsSync(AUTH_FOLDER)) fs.mkdirSync(AUTH_FOLDER, { recursive: true });
-    }
-
-    const {
-      useMultiFileAuthState,
-      makeWASocket,
-      makeCacheableSignalKeyStore,
-      Browsers,
-    } = await import("@whiskeysockets/baileys");
-    const pino = (await import("pino")).default;
-
-    const auth = await useMultiFileAuthState(AUTH_FOLDER);
-    saveCreds = auth.saveCreds;
-    const { version } = await fetchVersionWithFallback();
-
-    status = "connecting";
-    currentQRDataUrl = null;
-    currentPairingCode = null;
-    currentPairingCodeExpiresAt = null;
-
-    sock = makeWASocket({
-      version,
-      auth: {
-        creds: auth.state.creds,
-        keys: makeCacheableSignalKeyStore(auth.state.keys, pino({ level: "silent" })),
-      },
-      logger: pino({ level: "warn" }),
-      browser: Browsers.ubuntu("Chrome"),
-      printQRInTerminal: false,
-      syncFullHistory: false,
-      markOnlineOnConnect: false,
-      keepAliveIntervalMs: 8_000,
-      connectTimeoutMs: 90_000,
-      defaultQueryTimeoutMs: undefined,
-      getMessage: async () => ({ conversation: "" }),
-    });
-
-    // Socket created — release the lock. From here, everything runs via async events.
-    isConnecting = false;
-  } catch (err: any) {
-    isConnecting = false;
-    log(`connectSocket setup error: ${err.message}`);
-    throw err;
-  }
-
-  sock.ev.on("creds.update", async () => {
-    if (saveCreds) await saveCreds();
-    saveAuthToDb().catch(() => {}); // persist to DB so session survives restarts
+  sock = makeWASocket({
+    version,
+    auth: {
+      creds: state.creds,
+      keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" })),
+    },
+    logger: pino({ level: "silent" }),
+    printQRInTerminal: false,
+    syncFullHistory: false,
+    markOnlineOnConnect: false,
+    connectTimeoutMs: 30_000,
+    keepAliveIntervalMs: 30_000,
+    retryRequestDelayMs: 5_000,
   });
 
-  // ── Incoming message handler (bot replies) ──────────────────────────────
-  sock.ev.on("messages.upsert", async ({ messages: msgs, type }: any) => {
-    if (type !== "notify") return;
-    for (const msg of msgs) {
-      // Skip own messages, groups, broadcasts, and status updates
-      if (msg.key.fromMe) continue;
-      if (!msg.key.remoteJid) continue;
-      if (msg.key.remoteJid.endsWith("@g.us")) continue;
-      if (msg.key.remoteJid.includes("broadcast")) continue;
-      if (msg.key.remoteJid === "status@broadcast") continue;
+  sock.ev.on("creds.update", saveCreds);
 
-      // Deduplicate — per-entry TTL prevents replay on reconnect
-      const msgId = msg.key.id;
-      if (msgId && processedMessageIds.has(msgId)) {
-        log(`Skipping duplicate message ${msgId}`);
-        continue;
-      }
-      if (msgId) processedMessageIds.set(msgId, Date.now());
-
-      // ── Filter non-conversational message types ──────────────────────────
-      const msgType = Object.keys(msg.message || {})[0] || "";
-      // Stickers
-      if (msgType === "stickerMessage") continue;
-      // Reactions (👍❤️ etc.)
-      if (msgType === "reactionMessage") continue;
-      // Protocol / ephemeral / key-distribution (internal WA housekeeping)
-      if (msgType === "protocolMessage") continue;
-      if (msgType === "ephemeralMessage") continue;
-      if (msgType === "senderKeyDistributionMessage") continue;
-      // Status updates from others
-      if (msgType === "statusJidList") continue;
-
-      const remoteJid = msg.key.remoteJid;
-      // Best-effort numeric phone (works for @s.whatsapp.net; won't be a real phone for @lid)
-      const rawPhone = remoteJid.replace(/@(s\.whatsapp\.net|lid|c\.us)$/, "");
-
-      const isImageMsg = !!msg.message?.imageMessage;
-      const isAudioMsg = !!(msg.message?.audioMessage?.url || msg.message?.audioMessage?.directPath);
-
-      const text = (
-        msg.message?.conversation ||
-        msg.message?.extendedTextMessage?.text ||
-        msg.message?.imageMessage?.caption ||
-        msg.message?.ephemeralMessage?.message?.conversation ||
-        msg.message?.ephemeralMessage?.message?.extendedTextMessage?.text ||
-        ""
-      ).trim();
-
-      // Skip if there is no text, no image, and no audio — truly empty message
-      if (!rawPhone || (!text && !isImageMsg && !isAudioMsg)) continue;
-
-      // Download image if present — pass as base64 to the handler for vision analysis
-      let imageBase64: string | undefined;
-      let imageMimeType: string | undefined;
-      if (isImageMsg) {
-        try {
-          const { downloadMediaMessage } = await import("@whiskeysockets/baileys");
-          const buffer = await downloadMediaMessage(msg, "buffer", {}) as Buffer;
-          imageBase64 = buffer.toString("base64");
-          imageMimeType = msg.message?.imageMessage?.mimetype || "image/jpeg";
-          log(`Image downloaded (${Math.round(buffer.length / 1024)} KB, ${imageMimeType})`);
-        } catch (imgErr: any) {
-          log(`Image download failed: ${imgErr.message} — continuing with text only`);
-        }
-      }
-
-      // Transcribe voice note if present — result is added to the text context
-      let effectiveText = text;
-      if (isAudioMsg) {
-        try {
-          const { downloadMediaMessage } = await import("@whiskeysockets/baileys");
-          const buffer = await downloadMediaMessage(msg, "buffer", {}) as Buffer;
-          const audioMime = msg.message?.audioMessage?.mimetype || "audio/ogg; codecs=opus";
-          log(`Voice note received (${Math.round(buffer.length / 1024)} KB) — transcribing…`);
-          const { transcribeAudio } = await import("./gemini");
-          const transcription = await transcribeAudio(buffer.toString("base64"), audioMime);
-          if (transcription) {
-            // Wrap so the AI knows it came from a voice message
-            effectiveText = text
-              ? `${text}\n🎙️ رسالة صوتية: "${transcription}"`
-              : `🎙️ رسالة صوتية: "${transcription}"`;
-            log(`Voice transcribed: "${transcription.slice(0, 80)}"`);
-          } else {
-            // Transcription failed — tell AI there was a voice note it couldn't hear
-            effectiveText = text || "🎙️ (رسالة صوتية — لم أتمكن من سماعها)";
-            log("Voice transcription failed — passing fallback text");
-          }
-        } catch (audioErr: any) {
-          log(`Voice note error: ${audioErr.message}`);
-          effectiveText = text || "🎙️ (رسالة صوتية — خطأ في التحويل)";
-        }
-      }
-
-      // Skip if still nothing usable after all processing
-      if (!effectiveText && !imageBase64) continue;
-
-      log(`Incoming from ${remoteJid}: "${effectiveText.slice(0, 60)}"${isImageMsg ? " [+image]" : ""}${isAudioMsg ? " [+voice]" : ""}`);
-
-      if (incomingMessageHandler) {
-        try {
-          await incomingMessageHandler(remoteJid, rawPhone, effectiveText, imageBase64, imageMimeType, isAudioMsg);
-        } catch (err: any) {
-          log(`Incoming handler error: ${err.message}`);
-        }
-      }
-    }
-  });
-
-  // ── Pairing code flow ───────────────────────────────────────────────────
-  if (pairingPhone) {
+  // Pairing code mode
+  if (pairingPhone && !state.creds.registered) {
     status = "pairing";
-    let cleanPhone = pairingPhone.replace(/[^0-9]/g, "");
-    // Normalise to international format (handles Moroccan local numbers)
-    if (cleanPhone.startsWith("00")) cleanPhone = cleanPhone.slice(2);
-    if (cleanPhone.startsWith("0") && cleanPhone.length === 10) cleanPhone = "212" + cleanPhone.slice(1);
-    if (cleanPhone.length === 9) cleanPhone = "212" + cleanPhone;
-
-    let codeRequested = false;
-
-    const CODE_EXPIRY_MS = 90_000; // WhatsApp codes are valid ~60-90s
-    let codeExpiryTimer: ReturnType<typeof setTimeout> | null = null;
-
-    const doRequestCode = async () => {
-      if (codeRequested) return;
-      if (!sock || pendingPairingPhone !== pairingPhone) return;
-      codeRequested = true;
-      log(`Requesting pairing code for ${cleanPhone}…`);
+    emitStatus();
+    setTimeout(async () => {
       try {
-        const code = await sock.requestPairingCode(cleanPhone);
+        const cleanPhone = pairingPhone.replace(/[^0-9]/g, "");
+        const code: string = await sock.requestPairingCode(cleanPhone);
         currentPairingCode = code;
-        currentPairingCodeExpiresAt = Date.now() + CODE_EXPIRY_MS;
+        pairingCodeExpiresAt = Date.now() + 60_000; // codes expire in ~60 s
         lastPairingError = null;
-        log(`Pairing code obtained: ${code} (expires in ${CODE_EXPIRY_MS / 1000}s)`);
-        if (socketIO) socketIO.emit("whatsapp:pairing_code", { code, expiresAt: currentPairingCodeExpiresAt });
-
-        // Auto-expire: clear code on server after expiry so polling reflects reality
-        if (codeExpiryTimer) clearTimeout(codeExpiryTimer);
-        codeExpiryTimer = setTimeout(() => {
-          if (currentPairingCode === code && pendingPairingPhone === pairingPhone) {
-            log(`Pairing code ${code} expired — resetting state`);
-            currentPairingCode = null;
-            currentPairingCodeExpiresAt = null;
-            lastPairingError = "Code expired — please request a new one";
-            status = "disconnected";
-            pendingPairingPhone = null;
-            wipeAuth();
-            if (socketIO) socketIO.emit("whatsapp:pairing_code_expired", {});
-          }
-        }, CODE_EXPIRY_MS);
+        log(`Pairing code issued: ${code}`);
+        emitStatus();
       } catch (err: any) {
-        log(`requestPairingCode failed: ${err.message}`);
         lastPairingError = err.message;
-        currentPairingCode = null;
-        currentPairingCodeExpiresAt = null;
-        status = "disconnected";
-        pendingPairingPhone = null;
-        wipeAuth();
-        if (socketIO) socketIO.emit("whatsapp:pairing_error", { error: err.message });
+        log(`Pairing code error: ${err.message}`);
+        emitStatus();
       }
-    };
-
-    // Fire as soon as the noise handshake finishes ("connecting" event).
-    // Give the frame layer 1 second to be ready, then a 5s failsafe in case
-    // the event fires late or the listener races with it.
-    const onConnectingForPairing = (update: any) => {
-      if (update.connection === "connecting") {
-        sock?.ev?.off("connection.update", onConnectingForPairing);
-        log(`Noise handshake done — requesting pairing code in 1s for ${cleanPhone}`);
-        setTimeout(doRequestCode, 1000);
-      }
-    };
-    sock.ev.on("connection.update", onConnectingForPairing);
-    setTimeout(doRequestCode, 5000); // failsafe if "connecting" event was already emitted
-
-    // Hard timeout: if no code in 25s, give up cleanly.
-    setTimeout(() => {
-      if (!codeRequested && pendingPairingPhone === pairingPhone) {
-        const error = lastPairingError ?? "Timed out — please try again";
-        log(`Pairing timed out: ${error}`);
-        lastPairingError = error;
-        currentPairingCode = null;
-        status = "disconnected";
-        pendingPairingPhone = null;
-        wipeAuth();
-        if (socketIO) socketIO.emit("whatsapp:pairing_error", { error });
-      }
-    }, 25000);
+    }, 3_000);
   }
 
-  // ── Connection event handler ─────────────────────────────────────────────
   sock.ev.on("connection.update", async (update: any) => {
     const { connection, lastDisconnect, qr } = update;
 
-    if (qr && !pendingPairingPhone) {
+    if (qr && !pairingPhone) {
       status = "qr";
       try {
         const QRCode = await import("qrcode");
         currentQRDataUrl = await QRCode.default.toDataURL(qr, { width: 280, margin: 2 });
-        log("QR code ready");
+        log("QR code ready for scanning");
+        emitStatus();
       } catch (err: any) {
         log(`QR error: ${err.message}`);
       }
@@ -510,269 +294,213 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
       status = "open";
       currentQRDataUrl = null;
       currentPairingCode = null;
-      currentPairingCodeExpiresAt = null;
-      pendingPairingPhone = null;
-      lastPairingError = null;
+      pairingCodeExpiresAt = null;
+      reconnectAttempt = 0;
       shouldReconnect = true;
-      reconnectAttempts = 0; // reset backoff — connection is healthy
-      const phone = sock?.user?.id?.split(":")[0] ?? "?";
-      log(`Connected as +${phone}`);
-      if (socketIO) socketIO.emit("whatsapp:connected", { phone });
-      // Persist session to DB immediately so any restart can restore it
-      saveAuthToDb().catch(() => {});
+      log(`Connected as +${sock?.user?.id?.split(":")[0] ?? "?"}`);
+      emitStatus();
     }
 
     if (connection === "close") {
-      const reason = (lastDisconnect?.error as any)?.output?.statusCode;
-      const errorMsg = (lastDisconnect?.error as any)?.message ?? "";
-      const { DisconnectReason: DR } = await import("@whiskeysockets/baileys");
-      const loggedOut  = reason === DR.loggedOut;       // 401
-      const restartReq = reason === DR.restartRequired; // 515
-      const wasPairing = !!pendingPairingPhone;
-      const hadCode    = currentPairingCode !== null; // captured before clearing
+      const raw = lastDisconnect?.error;
+      const code: number =
+        (raw as any)?.output?.statusCode ?? (raw as any)?.statusCode ?? 0;
+      const message: string =
+        (raw as any)?.output?.payload?.message ??
+        (raw as any)?.message ??
+        String(raw ?? "unknown");
 
-      log(`Connection closed. Code: ${reason}. WasPairing: ${wasPairing}. HadCode: ${hadCode}. Error: "${errorMsg}"`);
+      log(`Connection closed. Code: ${code}. Message: "${message}"`);
       status = "disconnected";
       sock = null;
-      pendingPairingPhone = null;
-      currentPairingCode = null;
-      currentPairingCodeExpiresAt = null;
+      emitStatus();
 
-      // ─────────────────────────────────────────────────────────────────────────
-      // PAIRING FLOW drops — these are expected handshake events, handle separately
-      // ─────────────────────────────────────────────────────────────────────────
-      if (wasPairing) {
-        if (restartReq) {
-          // 515: WA confirmed the code and pushed credentials → reconnect to finalise
-          status = "connecting";
-          shouldReconnect = true;
-          reconnectAttempts = 0;
-          log("Pairing: WA restart (515) — finalising link in 2s…");
-          if (reconnectTimer) clearTimeout(reconnectTimer);
-          reconnectTimer = setTimeout(() => connectSocket().catch((e) => log(`Reconnect: ${e.message}`)), 2000);
-        } else if (loggedOut) {
-          // 401 during pairing = wrong code / expired / rate-limited → wipe partial creds
-          wipeAuth();
-          log("Pairing: rejected by WA (401) — please try again");
-          if (socketIO) socketIO.emit("whatsapp:pairing_error", { error: "WhatsApp rejected the pairing. Please wait a moment and try again." });
-        } else if (hadCode) {
-          // Socket dropped after sending the IQ (normal WA behaviour) — stay alive waiting
-          // for the user to enter the code; DO NOT wipe auth, partial creds still needed
-          status = "connecting";
-          shouldReconnect = true;
-          log("Pairing: socket dropped after code sent (expected) — reconnecting in 2s…");
-          if (reconnectTimer) clearTimeout(reconnectTimer);
-          reconnectTimer = setTimeout(() => connectSocket().catch((e) => log(`Reconnect: ${e.message}`)), 2000);
-        } else {
-          // Drop before code was even obtained — partial creds are useless, wipe cleanly
-          wipeAuth();
-          log(`Pairing: failed before code obtained (code ${reason ?? "unknown"}): ${errorMsg}`);
-          if (socketIO) socketIO.emit("whatsapp:pairing_error", { error: "Connection lost during pairing — please try again." });
-        }
-        return;
-      }
-
-      // ─────────────────────────────────────────────────────────────────────────
-      // NORMAL SESSION drops — NEVER wipe automatically, always reconnect
-      // ─────────────────────────────────────────────────────────────────────────
-
-      if (restartReq) {
-        // 515: WA-initiated credential refresh — reconnect immediately, no backoff
-        status = "connecting";
-        log("WA restart required (515) — reconnecting in 2s…");
-        if (reconnectTimer) clearTimeout(reconnectTimer);
-        reconnectTimer = setTimeout(() => connectSocket().catch((e) => log(`Reconnect: ${e.message}`)), 2000);
-        return;
-      }
-
-      // For ANY other close reason (including 401 "Connection Failure", network drops,
-      // stream errors, etc.) — notify UI and schedule reconnect with exponential backoff.
-      // Session is NEVER wiped here. Only the user pressing "Disconnect & log out" does that.
-      if (shouldReconnect) {
-        if (socketIO) socketIO.emit("whatsapp:disconnected", { reason, error: errorMsg });
-        log(`Disconnected (code ${reason ?? "unknown"}, "${errorMsg}") — scheduling reconnect…`);
-        await scheduleReconnect();
+      if (PERMANENT_FAILURE_CODES.has(code)) {
+        log(`Permanent auth failure (${code}) — clearing session. Please re-link via the WhatsApp page.`);
+        shouldReconnect = false;
+        if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+        await clearSession();
+        emitStatus();
+      } else if (shouldReconnect) {
+        scheduleReconnect();
       } else {
-        log(`Disconnected (shouldReconnect=false) — staying idle.`);
+        log("Not reconnecting (shouldReconnect=false)");
+      }
+    }
+  });
+
+  // Incoming message handler
+  sock.ev.on("messages.upsert", async ({ messages, type }: any) => {
+    if (type !== "notify") return;
+    if (!incomingMessageHandler) return;
+
+    for (const msg of messages) {
+      if (msg.key?.fromMe) continue;
+      const remoteJid: string = msg.key?.remoteJid ?? "";
+      if (!remoteJid) continue;
+
+      // Extract phone number from JID
+      const phone = remoteJid.replace(/@.*$/, "").replace(/[^0-9]/g, "");
+
+      let text = "";
+      let imageBase64: string | undefined;
+      let imageMimeType: string | undefined;
+      let isVoice = false;
+
+      const m = msg.message;
+      if (!m) continue;
+
+      if (m.conversation) {
+        text = m.conversation;
+      } else if (m.extendedTextMessage?.text) {
+        text = m.extendedTextMessage.text;
+      } else if (m.imageMessage) {
+        text = m.imageMessage.caption || "";
+        try {
+          const { downloadMediaMessage } = await import("@whiskeysockets/baileys");
+          const buffer = await downloadMediaMessage(msg, "buffer", {});
+          imageBase64 = (buffer as Buffer).toString("base64");
+          imageMimeType = m.imageMessage.mimetype || "image/jpeg";
+        } catch (e: any) {
+          log(`Image download error: ${e.message}`);
+        }
+      } else if (m.audioMessage) {
+        isVoice = m.audioMessage.ptt === true;
+        text = "[voice message]";
+      } else if (m.documentMessage) {
+        text = m.documentMessage.caption || m.documentMessage.fileName || "[document]";
+      } else if (m.stickerMessage) {
+        text = "[sticker]";
+      }
+
+      try {
+        await incomingMessageHandler(remoteJid, phone, text, imageBase64, imageMimeType, isVoice);
+      } catch (e: any) {
+        log(`Incoming handler error: ${e.message}`);
       }
     }
   });
 }
 
-/** Called at server start — restores session from DB then connects.
- *  Retries DB restore up to 5 times with a 3s gap (handles slow DB cold-start on Koyeb).
- *  If DB has no session either, keeps retrying in background until one appears. */
-export async function initBaileys(): Promise<void> {
-  // Step 1: pull session from DB if not already on disk
-  if (!hasExistingSession()) {
-    let restored = false;
-    for (let attempt = 1; attempt <= 5; attempt++) {
-      log(`DB session restore attempt ${attempt}/5…`);
-      restored = await loadAuthFromDb();
-      if (restored) {
-        log(`Session restored from DB on attempt ${attempt} — will connect`);
-        break;
-      }
-      if (attempt < 5) {
-        log(`DB restore attempt ${attempt} returned nothing — retrying in 3s…`);
-        await new Promise((r) => setTimeout(r, 3000));
-      }
-    }
-    if (!restored) {
-      log("No session in DB after 5 attempts — waiting for user to link manually");
-    }
-  }
+// ── Public API ───────────────────────────────────────────────────────────────
 
-  // Step 2: connect if we have creds, otherwise just wait
-  if (hasExistingSession()) {
-    log("Session found — connecting…");
+/** Receives the Socket.IO server instance for real-time frontend updates */
+export function setSocketIO(io: SocketIOServer): void {
+  ioInstance = io;
+}
+
+/** Registers the handler called for every incoming WhatsApp message */
+export function setIncomingMessageHandler(
+  handler: (jid: string, phone: string, text: string, imageBase64?: string, imageMimeType?: string, isVoice?: boolean) => Promise<void>
+): void {
+  incomingMessageHandler = handler;
+}
+
+/** Called at server start — only connects if a saved DB session exists */
+export async function initBaileys(): Promise<void> {
+  const hasSession = await dbHasSession();
+  if (hasSession) {
+    log("Saved session found in DB — reconnecting…");
     shouldReconnect = true;
-    reconnectAttempts = 0;
+    reconnectAttempt = 0;
     await connectSocket();
   } else {
-    log("No saved session — waiting for manual link");
+    log("No saved session — waiting for user to connect via QR or pairing code");
   }
 }
 
-/** Wipe saved session when no phone is paired (safe to call when disconnected) */
-export function clearSessionIfDisconnected(): void {
-  if (status === "open") return; // never wipe an active connection
-  log("Clearing old session (no paired phone)");
-  wipeAuth();
+/** Start a fresh QR-code connection */
+export async function startQR(): Promise<void> {
+  shouldReconnect = false;
+  reconnectAttempt = 0;
+  connectSocket().catch(err => log(`startQR error: ${err.message}`));
 }
 
-/** Start QR flow — non-blocking. Wipes stale auth so QR always starts fresh. */
-export function startQR(): void {
+/** Start a pairing-code connection for the given phone number (non-blocking) */
+export async function startPairingCode(phone: string): Promise<void> {
   shouldReconnect = false;
-  pendingPairingPhone = null;
-  if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
-  log("QR flow requested — clearing auth for fresh start");
-  wipeAuth();
-  connectSocket().catch((err) => log(`startQR error: ${err.message}`));
-}
-
-/** Start pairing code flow — fully non-blocking. Code appears via Socket.IO whatsapp:pairing_code. */
-export function startPairingCode(phone: string): void {
-  shouldReconnect = false;
-  if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
-  connectSocket(phone).catch((err) => log(`startPairingCode error: ${err.message}`));
+  reconnectAttempt = 0;
+  lastPairingError = null;
+  connectSocket(phone).catch(err => log(`startPairingCode error: ${err.message}`));
 }
 
 export function getQRDataUrl(): string | null { return currentQRDataUrl; }
 export function getPairingCode(): string | null { return currentPairingCode; }
-export function getPairingCodeExpiresAt(): number | null { return currentPairingCodeExpiresAt; }
+export function getPairingCodeExpiresAt(): number | null { return pairingCodeExpiresAt; }
 export function getLastPairingError(): string | null { return lastPairingError; }
 
-export function getStatus(): {
-  status: Status;
-  connected: boolean;
-  phone?: string;
-  pairingCode?: string;
-  pairingError?: string;
-} {
+export function getStatus(): { status: string; connected: boolean; phone?: string } {
   return {
     status,
     connected: status === "open",
     phone: sock?.user?.id?.split(":")[0] ?? undefined,
-    pairingCode: currentPairingCode ?? undefined,
-    pairingError: lastPairingError ?? undefined,
   };
 }
 
+export async function reconnect(): Promise<void> {
+  shouldReconnect = true;
+  reconnectAttempt = 0;
+  await connectSocket();
+}
+
+export async function disconnect(): Promise<void> {
+  shouldReconnect = false;
+  if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+  if (sock) {
+    try { await sock.logout(); } catch {}
+    try { sock.end(); } catch {}
+    sock = null;
+  }
+  await clearSession();
+  status = "disconnected";
+  emitStatus();
+  log("Disconnected and session cleared");
+}
+
+/** Clears the session only when not currently connected (safe for the UI reset button) */
+export function clearSessionIfDisconnected(): void {
+  if (status !== "open") {
+    clearSession().catch(err => log(`clearSession error: ${err.message}`));
+    status = "disconnected";
+    emitStatus();
+    log("Session cleared (was not connected)");
+  } else {
+    log("clearSessionIfDisconnected: skipped — currently connected");
+  }
+}
+
+// ── JID / phone helpers ──────────────────────────────────────────────────────
+
 function formatJid(phone: string): string {
-  // If it's already a full JID (contains @), use it as-is — never reconstruct a LID
-  if (phone.includes("@")) return phone;
-  let cleaned = phone.replace(/[^0-9]/g, "");
-  if (cleaned.startsWith("00")) cleaned = cleaned.slice(2);
-  if (cleaned.startsWith("0") && cleaned.length === 10) cleaned = "212" + cleaned.slice(1);
-  if (cleaned.length === 9) cleaned = "212" + cleaned;
-  return cleaned + "@s.whatsapp.net";
+  let n = phone.replace(/[^0-9]/g, "");
+  if (n.startsWith("00")) n = n.slice(2);
+  if (n.startsWith("0") && n.length === 10) n = "212" + n.slice(1);
+  if (n.length === 9) n = "212" + n;
+  return n + "@s.whatsapp.net";
 }
 
-/**
- * Convert raw PCM audio (from Gemini TTS) to OGG/Opus via ffmpeg,
- * then send as a WhatsApp voice note (ptt=true).
- * pcmBase64 = base64-encoded signed 16-bit little-endian PCM
- * sampleRate = sample rate in Hz (typically 24000 from Gemini TTS)
- */
-export async function sendWhatsAppVoiceNote(
-  to: string,
-  pcmBase64: string,
-  sampleRate: number = 24000
-): Promise<{ success: boolean; error?: string }> {
-  if (!sock || status !== "open") {
-    return { success: false, error: "WhatsApp not connected" };
-  }
-  try {
-    const pcmBuffer = Buffer.from(pcmBase64, "base64");
+// ── Presence helpers ─────────────────────────────────────────────────────────
 
-    // Convert raw PCM → OGG/Opus using ffmpeg (required by WhatsApp for voice notes)
-    const oggBuffer = await new Promise<Buffer>((resolve, reject) => {
-      const { spawn } = require("child_process") as typeof import("child_process");
-
-      // ffmpeg-static bundles a pre-built ffmpeg binary — works on any platform/deployment
-      const bundledFfmpeg: string | null = require("ffmpeg-static");
-      const ffmpegBin = process.env.FFMPEG_PATH || bundledFfmpeg || "ffmpeg";
-
-      const proc = spawn(ffmpegBin, [
-        "-f", "s16le",          // input format: signed 16-bit little-endian PCM
-        "-ar", String(sampleRate), // sample rate
-        "-ac", "1",             // mono
-        "-i", "pipe:0",         // read from stdin
-        "-c:a", "libopus",      // encode as Opus
-        "-b:a", "32k",          // 32 kbps — good quality for voice
-        "-vbr", "on",
-        "-compression_level", "10",
-        "-f", "ogg",            // OGG container
-        "pipe:1",               // write to stdout
-      ]);
-      const chunks: Buffer[] = [];
-      proc.stdout.on("data", (c: Buffer) => chunks.push(c));
-      proc.stderr.on("data", () => {}); // suppress ffmpeg output
-      proc.on("close", (code: number) => {
-        if (code === 0) resolve(Buffer.concat(chunks));
-        else reject(new Error(`ffmpeg exited with code ${code}`));
-      });
-      proc.on("error", reject);
-      proc.stdin.write(pcmBuffer);
-      proc.stdin.end();
-    });
-
-    const jid = formatJid(to);
-    const result = await sock.sendMessage(jid, {
-      audio: oggBuffer,
-      mimetype: "audio/ogg; codecs=opus",
-      ptt: true, // sends as voice note, not regular audio file
-    });
-    log(`Voice note sent to ${to} (${Math.round(oggBuffer.length / 1024)} KB OGG)`);
-    return { success: true };
-  } catch (err: any) {
-    log(`sendWhatsAppVoiceNote error: ${err.message}`);
-    return { success: false, error: err.message };
-  }
-}
-
-/** Show "typing…" indicator to the client — call before sending a reply */
 export async function sendTypingPresence(jid: string): Promise<void> {
   if (!sock || status !== "open") return;
   try { await sock.sendPresenceUpdate("composing", jid); } catch {}
 }
 
-/** Clear typing indicator */
 export async function stopTypingPresence(jid: string): Promise<void> {
   if (!sock || status !== "open") return;
   try { await sock.sendPresenceUpdate("paused", jid); } catch {}
 }
 
+// ── Message senders ──────────────────────────────────────────────────────────
+
 export async function sendWhatsAppMessage(
-  to: string,
-  message: string
+  to: string, message: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  if (!sock || status !== "open") {
+  if (!sock || status !== "open")
     return { success: false, error: "WhatsApp not connected. Please link your phone first." };
-  }
   try {
-    const jid = formatJid(to);
+    // Accept both raw phone numbers and full JIDs (jid already contains @)
+    const jid = to.includes("@") ? to : formatJid(to);
     const result = await sock.sendMessage(jid, { text: message });
     return { success: true, messageId: result?.key?.id };
   } catch (err: any) {
@@ -782,13 +510,11 @@ export async function sendWhatsAppMessage(
 }
 
 export async function sendWhatsAppImage(
-  to: string,
-  imageUrl: string,
-  caption?: string
+  to: string, imageUrl: string, caption?: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   if (!sock || status !== "open") return { success: false, error: "WhatsApp not connected" };
   try {
-    const jid = formatJid(to);
+    const jid = to.includes("@") ? to : formatJid(to);
     const result = await sock.sendMessage(jid, { image: { url: imageUrl }, caption: caption || "" });
     return { success: true, messageId: result?.key?.id };
   } catch (err: any) {
@@ -797,14 +523,11 @@ export async function sendWhatsAppImage(
 }
 
 export async function sendWhatsAppImageBuffer(
-  to: string,
-  base64: string,
-  mimeType: string,
-  caption?: string
+  to: string, base64: string, mimeType: string, caption?: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   if (!sock || status !== "open") return { success: false, error: "WhatsApp not connected" };
   try {
-    const jid = formatJid(to);
+    const jid = to.includes("@") ? to : formatJid(to);
     const buffer = Buffer.from(base64, "base64");
     const result = await sock.sendMessage(jid, {
       image: buffer,
@@ -817,72 +540,71 @@ export async function sendWhatsAppImageBuffer(
   }
 }
 
-export async function disconnect(): Promise<void> {
-  shouldReconnect = false;
-  reconnectAttempts = 0;
-  if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
-  if (sock) {
-    try { await sock.logout(); } catch {}
-    try { sock.end(); } catch {}
-    sock = null;
-  }
-  wipeAuth(); // ONLY place session is ever wiped — explicit user action
-  status = "disconnected";
-  currentQRDataUrl = null;
-  currentPairingCode = null;
-  currentPairingCodeExpiresAt = null;
-  pendingPairingPhone = null;
-  lastPairingError = null;
-  log("Disconnected and session cleared (manual)");
+// ── Bot quick-reply functions ─────────────────────────────────────────────────
+// These are called from routes.ts when the client replies 1/2/3 to a booking.
+
+export async function sendBotConfirmed(jid: string): Promise<void> {
+  await sendTypingPresence(jid);
+  await new Promise(r => setTimeout(r, 800 + Math.random() * 600));
+  await stopTypingPresence(jid);
+  await sendWhatsAppMessage(
+    jid,
+    "شكراً لتأكيدك! 🌸\nموعدك مؤكد ✅\nنتطلع لرؤيتك. أي سؤال راسليني هنا 💖"
+  );
 }
 
-export async function reconnect(): Promise<void> {
-  shouldReconnect = true;
-  await connectSocket();
+export async function sendBotCancelled(jid: string): Promise<void> {
+  await sendTypingPresence(jid);
+  await new Promise(r => setTimeout(r, 800 + Math.random() * 600));
+  await stopTypingPresence(jid);
+  await sendWhatsAppMessage(
+    jid,
+    "تم إلغاء موعدك ✅\nإذا أردتِ حجز وقت آخر، أخبريني وسيتواصل معكِ الفريق 🌸\nنتمنى نراكِ قريباً 💖"
+  );
 }
+
+export async function sendBotModify(jid: string): Promise<void> {
+  await sendTypingPresence(jid);
+  await new Promise(r => setTimeout(r, 800 + Math.random() * 600));
+  await stopTypingPresence(jid);
+  await sendWhatsAppMessage(
+    jid,
+    "تم استلام طلب التعديل ✅\nسيتواصل معكِ أحد الفريق قريباً لتحديد الوقت المناسب 🌸\nشكراً لتفهمك 💖"
+  );
+}
+
+export async function sendBotError(jid: string): Promise<void> {
+  await sendTypingPresence(jid);
+  await new Promise(r => setTimeout(r, 600));
+  await stopTypingPresence(jid);
+  await sendWhatsAppMessage(
+    jid,
+    "عذراً، حدث خطأ مؤقت 🙏\nسيتواصل معكِ الفريق في أقرب وقت 🌸"
+  );
+}
+
+// ── Notification helpers ──────────────────────────────────────────────────────
 
 export async function sendAppointmentReminder(
-  clientPhone: string, _clientName: string, _appointmentDate: string,
-  appointmentTime: string, serviceName: string, _salonName?: string
+  clientPhone: string, clientName: string, appointmentDate: string,
+  appointmentTime: string, serviceName: string, salonName?: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  const msg = `Petit rappel ⏰\n\nVotre rendez-vous approche :\n\n✨ ${serviceName}\n🕒 ${appointmentTime}\n\nNous avons hâte de vous recevoir 💖\nÀ très bientôt au salon 🌸`;
-  return sendWhatsAppMessage(clientPhone, msg);
+  const salon = salonName || "PREGASQUAD";
+  return sendWhatsAppMessage(
+    clientPhone,
+    `مرحباً ${clientName}! 💇‍♀️\n\n⏳ تذكير: موعدك بعد قليل!\n\n📅 ${appointmentDate}\n⏰ ${appointmentTime}\n💅 ${serviceName}\n\nنتطلع لرؤيتك في ${salon}! 🌸`
+  );
 }
 
 export async function sendBookingConfirmation(
-  clientPhone: string, _clientName: string, _appointmentDate: string,
-  appointmentTime: string, serviceName: string, _salonName?: string
+  clientPhone: string, clientName: string, appointmentDate: string,
+  appointmentTime: string, serviceName: string, salonName?: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  const msg = `PREGASQUAD, BONJOUR! 💖\n\nNous vous confirmons votre rendez-vous au salon :\n\n✨ Service : ${serviceName}\n🕒 Heure : ${appointmentTime}\n\nMerci de confirmer votre présence en répondant :\n\n1️⃣ Confirmer\n2️⃣ Annuler\n3️⃣ Modifier\n\nNous restons à votre disposition 🌸`;
-  return sendWhatsAppMessage(clientPhone, msg);
-}
-
-export async function sendBotConfirmed(
-  clientPhone: string
-): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  const msg = `Merci pour votre confirmation 💖\n\nVotre rendez-vous est bien confirmé ✅\nNous avons hâte de vous accueillir au salon 🌸`;
-  return sendWhatsAppMessage(clientPhone, msg);
-}
-
-export async function sendBotCancelled(
-  clientPhone: string
-): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  const msg = `Votre rendez-vous a été annulé ✅\n\nN'hésitez pas à nous contacter pour réserver un nouveau créneau 🌸\nNous serons ravis de vous accueillir à nouveau 💖`;
-  return sendWhatsAppMessage(clientPhone, msg);
-}
-
-export async function sendBotModify(
-  clientPhone: string
-): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  const msg = `Parfait ✨\n\nMerci de nous indiquer l'horaire qui vous convient le mieux 🕒\nNous ferons le nécessaire pour vous proposer une nouvelle disponibilité 💖`;
-  return sendWhatsAppMessage(clientPhone, msg);
-}
-
-export async function sendBotError(
-  clientPhone: string
-): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  const msg = `Nous n'avons pas bien compris votre réponse 😊\n\nMerci de répondre avec :\n\n1️⃣ Confirmer\n2️⃣ Annuler\n3️⃣ Modifier`;
-  return sendWhatsAppMessage(clientPhone, msg);
+  const salon = salonName || "PREGASQUAD";
+  return sendWhatsAppMessage(
+    clientPhone,
+    `مرحباً ${clientName}! ✨\n\nتم تأكيد حجزك:\n📅 ${appointmentDate}\n⏰ ${appointmentTime}\n💅 ${serviceName}\n\nشكراً لاختيارك ${salon}! 💕`
+  );
 }
 
 export async function sendWaitlistNotification(
@@ -890,8 +612,10 @@ export async function sendWaitlistNotification(
   availableTime: string, salonName?: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const salon = salonName || "PREGASQUAD";
-  const msg = `مرحباً ${clientName}! 🎉\n\nأخبار سارة! أصبح لدينا موعد متاح:\n📅 التاريخ: ${availableDate}\n⏰ الوقت: ${availableTime}\n\n${salon} 💕`;
-  return sendWhatsAppMessage(clientPhone, msg);
+  return sendWhatsAppMessage(
+    clientPhone,
+    `مرحباً ${clientName}! 🎉\n\nموعد متاح:\n📅 ${availableDate}\n⏰ ${availableTime}\n\n${salon} 💕`
+  );
 }
 
 export async function sendGiftCardNotification(
@@ -899,8 +623,10 @@ export async function sendGiftCardNotification(
   amount: number, senderName?: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const from = senderName ? `من ${senderName}` : "";
-  const msg = `مرحباً ${recipientName}! 🎁\n\nلقد تلقيت بطاقة هدية ${from}!\n💳 رمز البطاقة: ${giftCardCode}\n💰 القيمة: ${amount} درهم\n\nيمكنك استخدام هذه البطاقة في موعدك القادم. 💕`;
-  return sendWhatsAppMessage(recipientPhone, msg);
+  return sendWhatsAppMessage(
+    recipientPhone,
+    `مرحباً ${recipientName}! 🎁\n\nبطاقة هدية ${from}!\n💳 ${giftCardCode}\n💰 ${amount} درهم\n\nاستخدمها في موعدك القادم 💕`
+  );
 }
 
 export async function getConnectionStatus(): Promise<{ connected: boolean; status?: string; error?: string }> {
