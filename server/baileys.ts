@@ -268,8 +268,17 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
     DisconnectReason,
     fetchLatestBaileysVersion,
     makeCacheableSignalKeyStore,
+    initAuthCreds,
   } = await import("@whiskeysockets/baileys");
   const pino = (await import("pino")).default;
+
+  // When starting a pairing-code flow, always wipe any stale session first.
+  // If creds.registered is true from a previous attempt Baileys silently skips
+  // requestPairingCode — clearing ensures we always start fresh.
+  if (pairingPhone) {
+    await dbDelAll();
+    log("Pairing flow — cleared stale session from DB");
+  }
 
   const { state, saveCreds } = await useDatabaseAuthState();
   const { version, isLatest } = await fetchLatestBaileysVersion();
@@ -292,31 +301,37 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
     printQRInTerminal: false,
     syncFullHistory: false,
     markOnlineOnConnect: false,
-    connectTimeoutMs: 30_000,
+    connectTimeoutMs: 60_000,
     keepAliveIntervalMs: 30_000,
     retryRequestDelayMs: 5_000,
   });
 
   sock.ev.on("creds.update", saveCreds);
 
-  // Pairing code mode
-  if (pairingPhone && !state.creds.registered) {
+  // Pairing code mode — request code after WS handshake with WhatsApp servers
+  if (pairingPhone) {
     status = "pairing";
     emitStatus();
-    setTimeout(async () => {
+
+    let pairingCodeRequested = false;
+
+    const requestCode = async () => {
+      if (pairingCodeRequested) return;
+      pairingCodeRequested = true;
       try {
+        // Strip everything except digits — WhatsApp expects raw international number
         const cleanPhone = pairingPhone.replace(/[^0-9]/g, "");
+        log(`Requesting pairing code for +${cleanPhone}…`);
         const code: string = await sock.requestPairingCode(cleanPhone);
         currentPairingCode = code;
-        pairingCodeExpiresAt = Date.now() + 60_000; // codes expire in ~60 s
+        pairingCodeExpiresAt = Date.now() + 60_000;
         lastPairingError = null;
         log(`Pairing code issued: ${code}`);
         emitStatus();
-        // Instant delivery — frontend listens for this event specifically
         if (ioInstance) {
           ioInstance.emit("whatsapp:pairing_code", { code, expiresAt: pairingCodeExpiresAt });
         }
-        // Emit expiry notification after 60s
+        // Notify frontend when code expires
         setTimeout(() => {
           if (currentPairingCode === code && ioInstance) {
             currentPairingCode = null;
@@ -332,7 +347,19 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
           ioInstance.emit("whatsapp:pairing_error", { error: err.message });
         }
       }
-    }, 3_000);
+    };
+
+    // Request code as soon as the WS connection to WhatsApp is established.
+    // Baileys emits connection:"connecting" right after the WebSocket handshake
+    // which is the earliest safe moment to call requestPairingCode.
+    sock.ev.on("connection.update", (update: any) => {
+      if (update.connection === "connecting" && !pairingCodeRequested) {
+        requestCode();
+      }
+    });
+
+    // Safety net in case connection.update fires before we attach the listener
+    setTimeout(() => { if (!pairingCodeRequested) requestCode(); }, 3_000);
   }
 
   sock.ev.on("connection.update", async (update: any) => {
