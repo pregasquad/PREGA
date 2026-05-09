@@ -42,6 +42,7 @@ import {
   ShieldAlert,
   ShieldCheck,
   Pencil,
+  Calendar,
 } from "lucide-react";
 
 interface WAStatus {

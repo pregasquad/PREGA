@@ -113,6 +113,7 @@ let status: Status = "disconnected";
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let shouldReconnect = false;
 let reconnectAttempts = 0; // exponential backoff counter — resets on successful open
+let isConnecting = false;  // lock — prevents concurrent connectSocket() calls
 let socketIO: any = null;
 let pendingPairingPhone: string | null = null;
 
@@ -165,14 +166,16 @@ function wipeAuth() {
 
 // Exponential backoff: 5s → 10s → 20s → 40s → 60s (capped — retries forever).
 // NEVER wipes session automatically — only manual disconnect() does that.
-// Before each retry, re-syncs session from DB so a fresh Koyeb dyno always
-// picks up the latest credentials written by any previous dyno.
+// Only pulls from DB if the local FS has NO creds (fresh/restarted dyno).
+// If creds already exist on disk (from a previous creds.update), we use them
+// as-is — they are fresher than whatever is in the DB snapshot.
 async function scheduleReconnect(delayMs?: number) {
   if (reconnectTimer) clearTimeout(reconnectTimer);
   if (!shouldReconnect) return;
 
-  // Always try to pull the latest session from DB before reconnecting.
-  // This ensures a restarted dyno (ephemeral FS wiped) can still reconnect.
+  // Only restore from DB if there are no local creds at all.
+  // NEVER overwrite existing local creds from DB — the local copy is always
+  // the freshest (Baileys writes to it on every creds.update event).
   if (!hasExistingSession()) {
     log(`No local creds — pulling session from DB before reconnect (attempt ${reconnectAttempts + 1})…`);
     const restored = await loadAuthFromDb();
@@ -181,6 +184,8 @@ async function scheduleReconnect(delayMs?: number) {
     } else {
       log("No DB session found — will retry again after backoff");
     }
+  } else {
+    log(`Local creds exist — using them as-is (attempt ${reconnectAttempts + 1})`);
   }
 
   const backoffMs = delayMs ?? Math.min(5000 * Math.pow(2, reconnectAttempts), 60000);
@@ -189,7 +194,7 @@ async function scheduleReconnect(delayMs?: number) {
   reconnectTimer = setTimeout(() => {
     connectSocket().catch((err) => {
       log(`Reconnect error: ${err.message} — will retry`);
-      scheduleReconnect(); // keep going even if connectSocket itself throws
+      scheduleReconnect();
     });
   }, backoffMs);
 }
@@ -216,63 +221,84 @@ async function fetchVersionWithFallback() {
 async function connectSocket(pairingPhone?: string): Promise<void> {
   if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
 
-  if (sock) {
-    try { sock.end(); } catch {}
-    sock = null;
-    // Short grace period so the WS close frame reaches WhatsApp before we
-    // open a new connection with the same credentials.  Without this, WA can
-    // see two simultaneous sessions and kick both with "device_removed".
-    await new Promise((r) => setTimeout(r, 800));
+  // Guard: prevent two concurrent connectSocket() calls racing each other.
+  // This can happen if scheduleReconnect fires while a previous attempt is still
+  // mid-handshake, causing WA to see two sessions and kick both with "device_removed".
+  if (isConnecting) {
+    log("connectSocket called while already connecting — ignoring duplicate call");
+    return;
   }
+  isConnecting = true;
 
-  // Always start with a clean slate when pairing.
-  // Leftover partial credentials from a previous failed attempt will cause the
-  // socket to try logging in as an already-linked device, which fails silently.
-  if (pairingPhone) {
-    log("Pairing requested — clearing auth for fresh start");
-    wipeAuth();
-    pendingPairingPhone = pairingPhone;
-    lastPairingError = null;
-  } else {
-    if (!fs.existsSync(AUTH_FOLDER)) fs.mkdirSync(AUTH_FOLDER, { recursive: true });
+  // Hoist saveCreds to function scope so it's accessible in the creds.update listener below.
+  let saveCreds: (() => Promise<void>) | null = null;
+
+  try {
+    if (sock) {
+      try { sock.end(); } catch {}
+      sock = null;
+      // Short grace period so the WS close frame reaches WhatsApp before we
+      // open a new connection with the same credentials.  Without this, WA can
+      // see two simultaneous sessions and kick both with "device_removed".
+      await new Promise((r) => setTimeout(r, 800));
+    }
+
+    // Always start with a clean slate when pairing.
+    // Leftover partial credentials from a previous failed attempt will cause the
+    // socket to try logging in as an already-linked device, which fails silently.
+    if (pairingPhone) {
+      log("Pairing requested — clearing auth for fresh start");
+      wipeAuth();
+      pendingPairingPhone = pairingPhone;
+      lastPairingError = null;
+    } else {
+      if (!fs.existsSync(AUTH_FOLDER)) fs.mkdirSync(AUTH_FOLDER, { recursive: true });
+    }
+
+    const {
+      useMultiFileAuthState,
+      makeWASocket,
+      makeCacheableSignalKeyStore,
+      Browsers,
+    } = await import("@whiskeysockets/baileys");
+    const pino = (await import("pino")).default;
+
+    const auth = await useMultiFileAuthState(AUTH_FOLDER);
+    saveCreds = auth.saveCreds;
+    const { version } = await fetchVersionWithFallback();
+
+    status = "connecting";
+    currentQRDataUrl = null;
+    currentPairingCode = null;
+    currentPairingCodeExpiresAt = null;
+
+    sock = makeWASocket({
+      version,
+      auth: {
+        creds: auth.state.creds,
+        keys: makeCacheableSignalKeyStore(auth.state.keys, pino({ level: "silent" })),
+      },
+      logger: pino({ level: "warn" }),
+      browser: Browsers.ubuntu("Chrome"),
+      printQRInTerminal: false,
+      syncFullHistory: false,
+      markOnlineOnConnect: false,
+      keepAliveIntervalMs: 8_000,
+      connectTimeoutMs: 90_000,
+      defaultQueryTimeoutMs: undefined,
+      getMessage: async () => ({ conversation: "" }),
+    });
+
+    // Socket created — release the lock. From here, everything runs via async events.
+    isConnecting = false;
+  } catch (err: any) {
+    isConnecting = false;
+    log(`connectSocket setup error: ${err.message}`);
+    throw err;
   }
-
-  const {
-    useMultiFileAuthState,
-    makeWASocket,
-    makeCacheableSignalKeyStore,
-    Browsers,
-  } = await import("@whiskeysockets/baileys");
-  const pino = (await import("pino")).default;
-
-  const { state, saveCreds } = await useMultiFileAuthState(AUTH_FOLDER);
-  const { version } = await fetchVersionWithFallback();
-
-  status = "connecting";
-  currentQRDataUrl = null;
-  currentPairingCode = null;
-  currentPairingCodeExpiresAt = null;
-
-  const pinoLogger = pino({ level: "warn" });
-  sock = makeWASocket({
-    version,
-    auth: {
-      creds: state.creds,
-      keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" })),
-    },
-    logger: pinoLogger,
-    browser: Browsers.ubuntu("Chrome"),
-    printQRInTerminal: false,
-    syncFullHistory: false,
-    markOnlineOnConnect: false,
-    keepAliveIntervalMs: 8_000,   // more frequent pings — Replit proxy drops idle WS fast
-    connectTimeoutMs: 90_000,
-    defaultQueryTimeoutMs: undefined,
-    getMessage: async () => ({ conversation: "" }),
-  });
 
   sock.ev.on("creds.update", async () => {
-    await saveCreds();
+    if (saveCreds) await saveCreds();
     saveAuthToDb().catch(() => {}); // persist to DB so session survives restarts
   });
 
