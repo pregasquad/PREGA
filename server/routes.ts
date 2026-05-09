@@ -4746,7 +4746,8 @@ export async function registerRoutes(
 
           // ── Auto-save bot-confirmed appointments ─────────────────────────
           // If the AI just verbally confirmed a specific date+time appointment,
-          // create a real DB record so it shows in "حجوزات أكّدها البوت".
+          // either update the existing pending appointment OR create a new DB
+          // record so it shows in "حجوزات أكّدها البوت".
           try {
             const { extractBotConfirmedAppointment } = await import("./gemini");
             const todayStr = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD in local TZ
@@ -4755,46 +4756,86 @@ export async function registerRoutes(
               const clientName = mem.clientName || "عميل واتساب";
               const clientPhone = mem.phone || normalized || null;
 
-              // Avoid duplicate: check if a bot_confirmed appointment already exists
-              // for this phone + date + time (within the last 2 minutes of creation)
+              // Helper: normalise a raw phone string to digits-only international format
+              const normPhone = (p: string) => {
+                let d = (p || "").replace(/[^0-9]/g, "");
+                if (d.startsWith("00")) d = d.slice(2);
+                if (d.startsWith("0") && d.length === 10) d = "212" + d.slice(1);
+                if (d.length === 9) d = "212" + d;
+                return d;
+              };
+              const clientPhoneNorm = normPhone(clientPhone || "");
+
               const existingApts = await storage.getAppointments();
-              const duplicate = existingApts.find((a: any) => {
-                let ap = (a.phone || "").replace(/[^0-9]/g, "");
-                if (ap.startsWith("00")) ap = ap.slice(2);
-                if (ap.startsWith("0") && ap.length === 10) ap = "212" + ap.slice(1);
-                if (ap.length === 9) ap = "212" + ap;
-                return (
-                  ap === (clientPhone || "").replace(/[^0-9]/g, "") &&
-                  a.date === extracted.date &&
-                  a.startTime === extracted.time &&
-                  a.bookingStatus === "bot_confirmed"
-                );
+
+              // ── Priority 1: Update an existing pending/unconfirmed appointment ──
+              // When the client confirms via natural language, their real appointment
+              // already exists in the DB with a "pending" (or no) status. We should
+              // mark it "confirmed" instead of creating a ghost duplicate.
+              const existingPending = existingApts.find((a: any) => {
+                if (!a.phone) return false;
+                const ap = normPhone(a.phone);
+                if (clientPhoneNorm && ap !== clientPhoneNorm) return false;
+                const statusOk = !a.bookingStatus || a.bookingStatus === "pending" || a.bookingStatus === "modify_requested";
+                // Match by date+time if both are known, otherwise just match by phone
+                const dateMatch = !extracted.date || a.date === extracted.date;
+                const timeMatch = !extracted.time || a.startTime === extracted.time;
+                return statusOk && dateMatch && timeMatch;
               });
 
-              if (!duplicate) {
-                const newApt = await storage.createAppointment({
-                  client: clientName,
-                  phone: clientPhone,
-                  service: extracted.service || "خدمة واتساب",
-                  staff: "À assigner",
-                  date: extracted.date,
-                  startTime: extracted.time,
-                  duration: 60,
-                  price: 0,
-                  total: 0,
-                  paid: false,
-                  bookingStatus: "bot_confirmed",
-                } as any);
-
-                io.emit("booking:created", newApt);
+              if (existingPending) {
+                await storage.updateAppointment(existingPending.id, { bookingStatus: "confirmed" } as any);
+                io.emit("booking:updated", { ...existingPending, bookingStatus: "confirmed" });
                 sendPushNotification(
                   "حجز مؤكّد من البوت 🤖",
-                  `${clientName} — ${extracted.service || "خدمة"} — ${extracted.date} ${extracted.time}`,
+                  `${existingPending.client} — ${existingPending.service || "خدمة"} — ${existingPending.date} ${existingPending.startTime}`,
                   "/whatsapp"
                 ).catch(() => {});
-                console.log(`[Bot] ✅ Auto-saved bot-confirmed appointment #${newApt.id} for ${clientLabel} on ${extracted.date} at ${extracted.time}`);
+                console.log(`[Bot] ✅ Updated existing appointment #${existingPending.id} to "confirmed" for ${clientLabel}`);
               } else {
-                console.log(`[Bot] Duplicate bot_confirmed appointment skipped for ${clientLabel}`);
+                // ── Priority 2: No existing appointment → create a new bot_confirmed one ──
+                // Check for an already-saved bot_confirmed appointment to avoid duplicates
+                const duplicate = existingApts.find((a: any) => {
+                  const ap = normPhone(a.phone || "");
+                  return (
+                    (!clientPhoneNorm || ap === clientPhoneNorm) &&
+                    a.date === extracted.date &&
+                    a.startTime === extracted.time &&
+                    (a.bookingStatus === "bot_confirmed" || a.bookingStatus === "confirmed")
+                  );
+                });
+
+                if (!duplicate) {
+                  // Calculate endTime (startTime + 60 min) — required NOT NULL field in schema
+                  const [sh, sm] = extracted.time.split(":").map(Number);
+                  const endMinutes = (sh * 60 + sm + 60) % (24 * 60);
+                  const endTime = `${String(Math.floor(endMinutes / 60)).padStart(2, "0")}:${String(endMinutes % 60).padStart(2, "0")}`;
+
+                  const newApt = await storage.createAppointment({
+                    client: clientName,
+                    phone: clientPhone,
+                    service: extracted.service || "خدمة واتساب",
+                    staff: "À assigner",
+                    date: extracted.date,
+                    startTime: extracted.time,
+                    endTime,
+                    duration: 60,
+                    price: 0,
+                    total: 0,
+                    paid: false,
+                    bookingStatus: "bot_confirmed",
+                  } as any);
+
+                  io.emit("booking:created", newApt);
+                  sendPushNotification(
+                    "حجز مؤكّد من البوت 🤖",
+                    `${clientName} — ${extracted.service || "خدمة"} — ${extracted.date} ${extracted.time}`,
+                    "/whatsapp"
+                  ).catch(() => {});
+                  console.log(`[Bot] ✅ Auto-saved bot-confirmed appointment #${newApt.id} for ${clientLabel} on ${extracted.date} at ${extracted.time}`);
+                } else {
+                  console.log(`[Bot] Duplicate bot_confirmed appointment skipped for ${clientLabel}`);
+                }
               }
             }
           } catch (aptErr: any) {
