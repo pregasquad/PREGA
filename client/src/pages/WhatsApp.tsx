@@ -162,6 +162,7 @@ export default function WhatsApp() {
   const [broadcastOpen, setBroadcastOpen] = useState(false);
   const [voiceOpen, setVoiceOpen] = useState(false);
   const [botConfirmedOpen, setBotConfirmedOpen] = useState(false);
+  const [relearnLoadingJids, setRelearnLoadingJids] = useState<Set<string>>(new Set());
 
   // ── Conversation log state ────────────────────────────────────────────────
   const [logOpen, setLogOpen] = useState(false);
@@ -1699,32 +1700,66 @@ export default function WhatsApp() {
                         <div className="px-5 pb-4 space-y-3 bg-muted/10">
 
                           {/* ── Bot Memory Card ── */}
-                          {(conv.personalityNotes || (conv.preferredServices && conv.preferredServices.length > 0)) && (
-                            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 space-y-2">
+                          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 space-y-2">
+                            <div className="flex items-center justify-between gap-2">
                               <div className="flex items-center gap-1.5">
                                 <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                                 <span className="text-[11px] font-semibold text-emerald-400">ما تعلمه البوت عن هاد العميلة</span>
                               </div>
-                              {conv.preferredServices && conv.preferredServices.length > 0 && (
-                                <div className="flex flex-wrap gap-1">
-                                  {conv.preferredServices.map((svc, si) => (
-                                    <Badge
-                                      key={si}
-                                      variant="secondary"
-                                      className="text-[10px] px-2 py-0 bg-emerald-500/10 text-emerald-300 border border-emerald-500/20"
-                                    >
-                                      {svc}
-                                    </Badge>
-                                  ))}
-                                </div>
-                              )}
-                              {conv.personalityNotes && (
-                                <p className="text-[11px] text-muted-foreground leading-relaxed" dir="rtl">
-                                  {conv.personalityNotes}
-                                </p>
-                              )}
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 text-[10px] gap-1 px-2 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
+                                disabled={relearnLoadingJids.has(conv.jid)}
+                                data-testid={`button-relearn-${conv.phone}`}
+                                onClick={async () => {
+                                  setRelearnLoadingJids((s) => new Set(s).add(conv.jid));
+                                  try {
+                                    await apiRequest("POST", `/api/whatsapp/relearn/${encodeURIComponent(conv.jid)}`);
+                                    await queryClient.invalidateQueries({ queryKey: ["/api/whatsapp/bot-conversations"] });
+                                    toast({ title: "تم التعلم ✓", description: `تم تحديث ذاكرة البوت لـ ${conv.clientName || conv.phone}` });
+                                  } catch {
+                                    toast({ title: "خطأ", description: "فشل التعلم — تحقق من مفتاح Gemini", variant: "destructive" });
+                                  } finally {
+                                    setRelearnLoadingJids((s) => { const n = new Set(s); n.delete(conv.jid); return n; });
+                                  }
+                                }}
+                              >
+                                {relearnLoadingJids.has(conv.jid) ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <RefreshCw className="w-3 h-3" />
+                                )}
+                                {relearnLoadingJids.has(conv.jid) ? "جاري التعلم…" : "إعادة التعلم"}
+                              </Button>
                             </div>
-                          )}
+                            {conv.preferredServices && conv.preferredServices.length > 0 ? (
+                              <div className="flex flex-wrap gap-1">
+                                {conv.preferredServices.map((svc, si) => (
+                                  <Badge
+                                    key={si}
+                                    variant="secondary"
+                                    className="text-[10px] px-2 py-0 bg-emerald-500/10 text-emerald-300 border border-emerald-500/20"
+                                  >
+                                    {svc}
+                                  </Badge>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-[10px] text-muted-foreground/60 italic" dir="rtl">
+                                لا توجد خدمات مسجلة بعد — اضغط "إعادة التعلم" لتحليل المحادثة
+                              </p>
+                            )}
+                            {conv.personalityNotes ? (
+                              <p className="text-[11px] text-muted-foreground leading-relaxed" dir="rtl">
+                                {conv.personalityNotes}
+                              </p>
+                            ) : (
+                              <p className="text-[10px] text-muted-foreground/60 italic" dir="rtl">
+                                لا توجد ملاحظات شخصية بعد
+                              </p>
+                            )}
+                          </div>
 
                           {/* Chat bubbles */}
                           <div className="space-y-2 max-h-72 overflow-y-auto pt-2 pr-1">

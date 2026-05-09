@@ -2672,6 +2672,38 @@ export async function registerRoutes(
     }
   });
 
+  // ── Re-trigger BotLearn for a specific JID ───────────────────────────────
+  app.post("/api/whatsapp/relearn/:jid", isPinAuthenticated, async (req, res) => {
+    try {
+      const jid = decodeURIComponent(req.params.jid);
+      const { getBotMemory, saveBotMemory } = await import("./db");
+      const { learnFromConversation } = await import("./gemini");
+      const mem = await getBotMemory(jid);
+      if (!mem || mem.convHistory.length < 2) {
+        return res.json({ success: false, reason: "not_enough_history" });
+      }
+      const services = await storage.getServices();
+      const serviceNames = services.map((s: any) => s.name);
+      const insights = await learnFromConversation(
+        mem.convHistory,
+        { clientName: mem.clientName, language: mem.language, preferredServices: mem.preferredServices, personalityNotes: mem.personalityNotes },
+        serviceNames
+      );
+      if (!insights) return res.json({ success: false, reason: "no_insights" });
+      const updated = {
+        ...mem,
+        clientName: insights.clientName !== undefined ? insights.clientName : mem.clientName,
+        language: insights.language || mem.language,
+        preferredServices: insights.preferredServices?.length ? insights.preferredServices : mem.preferredServices,
+        personalityNotes: insights.personalityNotes !== undefined ? insights.personalityNotes : mem.personalityNotes,
+      };
+      await saveBotMemory(updated);
+      res.json({ success: true, insights });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   // ── Bot Complaints API ─────────────────────────────────────────────────────
   app.get("/api/bot/complaints", isPinAuthenticated, async (_req, res) => {
     try {
