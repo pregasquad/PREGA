@@ -312,10 +312,25 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
         lastPairingError = null;
         log(`Pairing code issued: ${code}`);
         emitStatus();
+        // Instant delivery — frontend listens for this event specifically
+        if (ioInstance) {
+          ioInstance.emit("whatsapp:pairing_code", { code, expiresAt: pairingCodeExpiresAt });
+        }
+        // Emit expiry notification after 60s
+        setTimeout(() => {
+          if (currentPairingCode === code && ioInstance) {
+            currentPairingCode = null;
+            pairingCodeExpiresAt = null;
+            ioInstance.emit("whatsapp:pairing_code_expired");
+          }
+        }, 60_000);
       } catch (err: any) {
         lastPairingError = err.message;
         log(`Pairing code error: ${err.message}`);
         emitStatus();
+        if (ioInstance) {
+          ioInstance.emit("whatsapp:pairing_error", { error: err.message });
+        }
       }
     }, 3_000);
   }
@@ -344,6 +359,7 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
       shouldReconnect = true;
       log(`Connected as +${sock?.user?.id?.split(":")[0] ?? "?"}`);
       emitStatus();
+      if (ioInstance) ioInstance.emit("whatsapp:connected");
     }
 
     if (connection === "close") {
@@ -366,10 +382,14 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
         if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
         await clearSession();
         emitStatus();
+        // Notify frontend — permanent logout (device removed / session revoked)
+        if (ioInstance) ioInstance.emit("whatsapp:logged_out", { reason: "device_removed" });
       } else if (shouldReconnect) {
         scheduleReconnect();
+        if (ioInstance) ioInstance.emit("whatsapp:disconnected");
       } else {
         log("Not reconnecting (shouldReconnect=false)");
+        if (ioInstance) ioInstance.emit("whatsapp:disconnected");
       }
     }
   });
