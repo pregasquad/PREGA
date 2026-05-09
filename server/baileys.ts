@@ -51,37 +51,69 @@ function emitStatus() {
 }
 
 // ── DB-backed auth state ─────────────────────────────────────────────────────
+// Baileys credentials contain Buffer objects (binary keys, nonces, etc.).
+// Plain JSON.stringify/parse silently corrupts them — always use BufferJSON.
+
+let BufferJSON: any = null;
+let proto: any = null;
+
+async function loadBaileysUtils() {
+  if (!BufferJSON || !proto) {
+    const mod = await import("@whiskeysockets/baileys");
+    BufferJSON = mod.BufferJSON;
+    proto = mod.proto;
+  }
+}
 
 async function dbGet(id: string): Promise<any | null> {
+  await loadBaileysUtils();
   try {
     if (dbDialect === "mysql") {
-      const conn = await pool.getConnection();
-      const [rows]: any = await conn.query(
-        "SELECT data FROM baileys_sessions WHERE id = ? LIMIT 1",
+      const conn = await (pool as any).getConnection();
+      try {
+        const [rows]: any = await conn.query(
+          "SELECT data FROM baileys_sessions WHERE id = ? LIMIT 1",
+          [id]
+        );
+        if (Array.isArray(rows) && rows.length > 0 && rows[0].data) {
+          return JSON.parse(rows[0].data, BufferJSON.reviver);
+        }
+      } finally {
+        conn.release();
+      }
+    } else {
+      const r = await (pool as any).query(
+        "SELECT data FROM baileys_sessions WHERE id = $1 LIMIT 1",
         [id]
       );
-      conn.release();
-      if (Array.isArray(rows) && rows.length > 0) return JSON.parse(rows[0].data);
-    } else {
-      const r = await pool.query("SELECT data FROM baileys_sessions WHERE id = $1 LIMIT 1", [id]);
-      if (r.rows && r.rows.length > 0) return JSON.parse(r.rows[0].data);
+      if (r.rows && r.rows.length > 0 && r.rows[0].data) {
+        return JSON.parse(r.rows[0].data, BufferJSON.reviver);
+      }
     }
-  } catch {}
+  } catch (e: any) {
+    log(`DB get error (${id}): ${e.message}`);
+  }
   return null;
 }
 
 async function dbSet(id: string, value: any): Promise<void> {
-  const data = JSON.stringify(value);
+  await loadBaileysUtils();
+  const data = JSON.stringify(value, BufferJSON.replacer);
   try {
     if (dbDialect === "mysql") {
-      const conn = await pool.getConnection();
-      await conn.query(
-        "INSERT INTO baileys_sessions (id, data) VALUES (?, ?) ON DUPLICATE KEY UPDATE data = VALUES(data), updated_at = CURRENT_TIMESTAMP",
-        [id, data]
-      );
-      conn.release();
+      const conn = await (pool as any).getConnection();
+      try {
+        await conn.query(
+          `INSERT INTO baileys_sessions (id, data)
+           VALUES (?, ?)
+           ON DUPLICATE KEY UPDATE data = VALUES(data), updated_at = CURRENT_TIMESTAMP`,
+          [id, data]
+        );
+      } finally {
+        conn.release();
+      }
     } else {
-      await pool.query(
+      await (pool as any).query(
         `INSERT INTO baileys_sessions (id, data) VALUES ($1, $2)
          ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
         [id, data]
@@ -95,79 +127,102 @@ async function dbSet(id: string, value: any): Promise<void> {
 async function dbDel(id: string): Promise<void> {
   try {
     if (dbDialect === "mysql") {
-      const conn = await pool.getConnection();
-      await conn.query("DELETE FROM baileys_sessions WHERE id = ?", [id]);
-      conn.release();
+      const conn = await (pool as any).getConnection();
+      try {
+        await conn.query("DELETE FROM baileys_sessions WHERE id = ?", [id]);
+      } finally {
+        conn.release();
+      }
     } else {
-      await pool.query("DELETE FROM baileys_sessions WHERE id = $1", [id]);
+      await (pool as any).query("DELETE FROM baileys_sessions WHERE id = $1", [id]);
     }
-  } catch {}
+  } catch (e: any) {
+    log(`DB del error (${id}): ${e.message}`);
+  }
 }
 
 async function dbDelAll(): Promise<void> {
   try {
     if (dbDialect === "mysql") {
-      const conn = await pool.getConnection();
-      await conn.query("DELETE FROM baileys_sessions");
-      conn.release();
+      const conn = await (pool as any).getConnection();
+      try {
+        await conn.query("DELETE FROM baileys_sessions");
+      } finally {
+        conn.release();
+      }
     } else {
-      await pool.query("DELETE FROM baileys_sessions");
+      await (pool as any).query("DELETE FROM baileys_sessions");
     }
-  } catch {}
+  } catch (e: any) {
+    log(`DB delAll error: ${e.message}`);
+  }
 }
 
 async function dbHasSession(): Promise<boolean> {
   try {
     if (dbDialect === "mysql") {
-      const conn = await pool.getConnection();
-      const [rows]: any = await conn.query(
-        "SELECT id FROM baileys_sessions WHERE id = 'creds' LIMIT 1"
-      );
-      conn.release();
-      return Array.isArray(rows) && rows.length > 0;
+      const conn = await (pool as any).getConnection();
+      try {
+        const [rows]: any = await conn.query(
+          "SELECT id FROM baileys_sessions WHERE id = 'creds' LIMIT 1"
+        );
+        return Array.isArray(rows) && rows.length > 0;
+      } finally {
+        conn.release();
+      }
     } else {
-      const r = await pool.query(
+      const r = await (pool as any).query(
         "SELECT id FROM baileys_sessions WHERE id = 'creds' LIMIT 1"
       );
       return r.rows && r.rows.length > 0;
     }
-  } catch {}
+  } catch (e: any) {
+    log(`dbHasSession error: ${e.message}`);
+  }
   return false;
 }
 
-/** Custom DB-backed auth state (replaces useMultiFileAuthState) */
+/**
+ * DB-backed drop-in replacement for useMultiFileAuthState.
+ *
+ * Every credential and signal key is serialised with Baileys' own BufferJSON
+ * (which round-trips Buffer objects correctly) and stored in the
+ * `baileys_sessions` table.  This survives ephemeral-filesystem restarts
+ * (Koyeb, Railway, Heroku, etc.).
+ */
 async function useDatabaseAuthState() {
-  const { initAuthCreds, BufferJSON, proto } = await import("@whiskeysockets/baileys");
+  const { initAuthCreds } = await import("@whiskeysockets/baileys");
+  await loadBaileysUtils();
 
+  // Load persisted creds from DB, or start fresh
   let creds = await dbGet("creds");
   if (!creds) creds = initAuthCreds();
-
-  const keys: any = {};
 
   const state = {
     creds,
     keys: {
       get: async (type: string, ids: string[]) => {
         const data: any = {};
-        for (const id of ids) {
-          let value = keys[`${type}-${id}`] ?? (await dbGet(`key-${type}-${id}`));
-          if (type === "app-state-sync-key" && value) {
-            value = proto.Message.AppStateSyncKeyData.fromObject(value);
-          }
-          data[id] = value;
-        }
+        await Promise.all(
+          ids.map(async (id) => {
+            let value = await dbGet(`key-${type}-${id}`);
+            // app-state-sync-key entries must be decoded from proto
+            if (type === "app-state-sync-key" && value) {
+              value = proto.Message.AppStateSyncKeyData.fromObject(value);
+            }
+            data[id] = value;
+          })
+        );
         return data;
       },
       set: async (dataMap: any) => {
         const writes: Promise<void>[] = [];
         for (const [type, ids] of Object.entries(dataMap)) {
           for (const [id, value] of Object.entries(ids as any)) {
-            const k = `key-${type}-${id}`;
-            keys[`${type}-${id}`] = value;
             if (value) {
-              writes.push(dbSet(k, value));
+              writes.push(dbSet(`key-${type}-${id}`, value));
             } else {
-              writes.push(dbDel(k));
+              writes.push(dbDel(`key-${type}-${id}`));
             }
           }
         }
@@ -176,6 +231,7 @@ async function useDatabaseAuthState() {
     },
   };
 
+  // saveCreds is called by Baileys whenever creds change
   const saveCreds = async () => {
     await dbSet("creds", state.creds);
   };
