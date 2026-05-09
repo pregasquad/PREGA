@@ -826,7 +826,7 @@ export async function askGemini(
 
 // ── Image Generation (Hugging Face FLUX cascade) ─────────────────────────────
 
-const HF_BASE = "https://api-inference.huggingface.co/models";
+const HF_BASE = "https://router.huggingface.co/hf-inference/models";
 
 // Cascade: best quality first → fallback automatically on rate limit or error
 const HF_IMAGE_CASCADE = [
