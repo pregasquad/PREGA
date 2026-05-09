@@ -42,9 +42,8 @@ build = ["npm", "run", "build"]
 [userenv]
 
 [userenv.shared]
+DB_DIALECT = "postgres"
 
 [userenv.development]
-DB_DIALECT = "mysql"
 
 [userenv.production]
-DB_DIALECT = "mysql"
