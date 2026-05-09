@@ -644,7 +644,7 @@ ${conversationText}
 
   // Try Gemini with lightest model first
   if (apiKey) {
-    const learningModels = ["gemini-2.5-flash-lite", "gemini-1.5-flash"];
+    const learningModels = ["gemini-2.5-flash-lite", "gemini-2.5-flash"];
     for (const model of learningModels) {
       if (modelCooldowns[model] && Date.now() < modelCooldowns[model]) continue;
       try {
@@ -655,7 +655,7 @@ ${conversationText}
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               contents: [{ role: "user", parts: [{ text: prompt }] }],
-              generationConfig: { maxOutputTokens: 500, temperature: 0.2 },
+              generationConfig: { maxOutputTokens: 2000, temperature: 0.2 },
             }),
           }
         );
@@ -947,45 +947,45 @@ export function extractBotConfirmedAppointment(
   todayDateStr: string // "YYYY-MM-DD"
 ): { date: string; time: string; service: string | null } | null {
   // ── 1. Is this reply a confirmation at all? ───────────────────────────────
-  const confirmRx = /مؤكد|مسجل|ثابت|تسجيل|confirmé|confirmée|confirm|راه حجوزة|تم الحجز|تم التسجيل|غادي نشوفوك|ننتظروكِ/i;
+  const confirmRx = /مؤكد|مؤكدة|مسجل|مسجلة|ثابت|تسجيل|تم التأكيد|تم الحجز|تم التسجيل|حجزك جاهز|حجز مؤكد|راه حجوزة|راه مسجل|غادي نشوفوك|ننتظروك|ننتظروكِ|confirmé|confirmée|confirm|c'est noté|c'est enregistré|noté|enregistré|on vous attend|rendez-vous.*confirm|votre.*rendez-vous/i;
   if (!confirmRx.test(botReply)) return null;
 
-  // ── 2. Collect all text (history + bot reply) to search for date/time ───
+  // ── 2. Search sources: bot reply FIRST, then full history as fallback ────
+  // This prevents picking up times/dates from earlier turns of the conversation
+  // (e.g. "10h was unavailable → confirmed for 14h30" would wrongly extract 10h).
   const allText = [
     ...conversationHistory.map((t) => t.text),
     botReply,
   ].join(" ");
 
-  // ── 3. Extract time ───────────────────────────────────────────────────────
-  // Matches: "12:00", "12h00", "الساعة 12", "ساعة 12", "في 12:00", "à 12h", "2:30 pm"
+  // ── 3. Extract time — search bot reply first, then full history ───────────
+  // Matches: "14:30", "14h30", "14h", "الساعة 14", "à 14h30"
   const timePatterns = [
-    /\b(\d{1,2}):(\d{2})\b/,               // 12:00 / 2:30
-    /\b(\d{1,2})h(\d{2})?\b/i,             // 12h / 12h30
+    /\b(\d{1,2}):(\d{2})\b/,
+    /\b(\d{1,2})h(\d{2})?\b/i,
     /(?:الساعة|ساعة|في الساعة|à|at)\s+(\d{1,2})(?::(\d{2}))?/i,
   ];
 
-  let hour = -1;
-  let minute = 0;
-
-  for (const rx of timePatterns) {
-    const m = allText.match(rx);
-    if (m) {
-      // Different capture groups depending on pattern
-      const h = parseInt(m[1] ?? m[2] ?? "0", 10);
-      const mn = parseInt(m[2] ?? m[3] ?? "0", 10);
-      if (!isNaN(h) && h >= 6 && h <= 23) {
-        hour = h;
-        minute = isNaN(mn) ? 0 : mn;
-        break;
+  function extractTime(src: string): { hour: number; minute: number } | null {
+    for (const rx of timePatterns) {
+      const m = src.match(rx);
+      if (m) {
+        const h = parseInt(m[1] ?? "0", 10);
+        const mn = parseInt(m[2] ?? "0", 10);
+        if (!isNaN(h) && h >= 6 && h <= 23) {
+          return { hour: h, minute: isNaN(mn) ? 0 : mn };
+        }
       }
     }
+    return null;
   }
 
-  if (hour < 0) return null; // no recognisable time → don't create ghost appointment
+  const timeResult = extractTime(botReply) ?? extractTime(allText);
+  if (!timeResult) return null; // no recognisable time → don't create ghost appointment
 
-  const timeStr = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+  const timeStr = `${String(timeResult.hour).padStart(2, "0")}:${String(timeResult.minute).padStart(2, "0")}`;
 
-  // ── 4. Extract date ───────────────────────────────────────────────────────
+  // ── 4. Extract date — search bot reply first, then full history ───────────
   const today = new Date(todayDateStr);
   const addDays = (n: number) => {
     const d = new Date(today);
@@ -996,60 +996,55 @@ export function extractBotConfirmedAppointment(
   const arabicMonths: Record<string, number> = {
     يناير: 1, فبراير: 2, مارس: 3, أبريل: 4, مايو: 5, يونيو: 6,
     يوليو: 7, أغسطس: 8, سبتمبر: 9, أكتوبر: 10, نوفمبر: 11, دسمبر: 12,
+    ماي: 5, // Darija/French
     janvier: 1, février: 2, mars: 3, avril: 4, mai: 5, juin: 6,
     juillet: 7, août: 8, septembre: 9, octobre: 10, novembre: 11, décembre: 12,
   };
 
-  let dateStr: string | null = null;
+  function extractDate(src: string): string | null {
+    // Relative: "غدا" / "demain" / "tomorrow"
+    if (/\b(غدا|غداً|غد|باكر|بكرا|demain|tomorrow)\b/i.test(src)) return addDays(1);
+    // Relative: "بعد غدا" / "après-demain"
+    if (/\b(بعد غدا|بعد غداً|après.demain|day after tomorrow)\b/i.test(src)) return addDays(2);
+    // Relative: "اليوم" / "aujourd'hui" / "today"
+    if (/\b(اليوم|دابا|aujourd'hui|today)\b/i.test(src)) return todayDateStr;
 
-  // "غدا" / "غداً" / "باكر" / "demain" / "tomorrow"
-  if (/\b(غدا|غداً|غد|باكر|بكرا|demain|tomorrow)\b/i.test(allText)) {
-    dateStr = addDays(1);
-  }
-  // "بعد غدا" / "après-demain" / "day after tomorrow"
-  else if (/\b(بعد غدا|بعد غداً|après.demain|day after tomorrow)\b/i.test(allText)) {
-    dateStr = addDays(2);
-  }
-  // "اليوم" / "aujourd'hui" / "today"
-  else if (/\b(اليوم|دابا|aujourd'hui|today)\b/i.test(allText)) {
-    dateStr = todayDateStr;
-  }
-  // Numeric date "15/5" or "15-05" or "15.05"
-  else {
-    const numDate = allText.match(/\b(\d{1,2})[\/\-\.](\d{1,2})(?:[\/\-\.](\d{2,4}))?\b/);
+    // Named month "15 mai" / "15 مايو" / "15 ماي"
+    for (const [mName, mNum] of Object.entries(arabicMonths)) {
+      const rx = new RegExp(`(\\d{1,2})\\s+${mName}(?:\\b|\\s|$)`, "i");
+      const m = src.match(rx);
+      if (m) {
+        const day = parseInt(m[1], 10);
+        if (day >= 1 && day <= 31) {
+          const yr = today.getFullYear();
+          return `${yr}-${String(mNum).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+        }
+      }
+    }
+
+    // Numeric: "15/05" or "15-05" or "15.05"
+    const numDate = src.match(/\b(\d{1,2})[\/\-\.](\d{1,2})(?:[\/\-\.](\d{2,4}))?\b/);
     if (numDate) {
       const day = parseInt(numDate[1], 10);
       const mon = parseInt(numDate[2], 10);
       const yr = numDate[3] ? parseInt(numDate[3].length === 2 ? "20" + numDate[3] : numDate[3], 10) : today.getFullYear();
       if (day >= 1 && day <= 31 && mon >= 1 && mon <= 12) {
-        dateStr = `${yr}-${String(mon).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+        return `${yr}-${String(mon).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
       }
     }
-    // Named month "15 مايو" / "15 mai"
-    if (!dateStr) {
-      for (const [mName, mNum] of Object.entries(arabicMonths)) {
-        const rx = new RegExp(`(\\d{1,2})\\s+${mName}`, "i");
-        const m = allText.match(rx);
-        if (m) {
-          const day = parseInt(m[1], 10);
-          if (day >= 1 && day <= 31) {
-            const yr = today.getFullYear();
-            dateStr = `${yr}-${String(mNum).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-            break;
-          }
-        }
-      }
-    }
+    return null;
   }
 
+  const dateStr = extractDate(botReply) ?? extractDate(allText);
   if (!dateStr) return null; // no recognisable date → skip
 
-  // ── 5. Extract service (best-effort from conversation) ───────────────────
+  // ── 5. Extract service (best-effort from full conversation) ───────────────
   const serviceKeywords = [
-    "balayage", "بالياج", "ombré", "كيراتين", "keratin", "couleur", "صبغة",
+    "balayage", "بالياج", "ombré", "كيراتين", "keratin", "couleur", "coloration", "صبغة",
     "coupe", "قصة", "مكياج", "makeup", "مانيكور", "pédicure", "pedicure",
     "مانيكير", "بيديكير", "soins", "صوان", "أظافر", "lissage", "تمليس",
-    "épilation", "ébauche", "إبداع", "soin visage", "وجه", "حواجب",
+    "épilation", "soin visage", "وجه", "حواجب", "brushing", "brushing",
+    "gommage", "masque", "soin classique",
   ];
   let service: string | null = null;
   for (const kw of serviceKeywords) {
