@@ -1502,6 +1502,11 @@ export default function WhatsApp() {
                           </div>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
+                          {apt.bookingStatus === "bot_confirmed" && (
+                            <Badge className="text-[10px] px-2 py-0 bg-violet-500/15 text-violet-400 border-violet-500/30">
+                              🤖 بوت
+                            </Badge>
+                          )}
                           <Badge
                             className={`text-[10px] px-2 py-0 ${apt.paid ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" : "bg-amber-500/15 text-amber-400 border-amber-500/30"}`}
                           >

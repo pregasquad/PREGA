@@ -1254,10 +1254,11 @@ export async function registerRoutes(
   });
 
   // Get appointments confirmed by the WhatsApp bot
+  // Includes: "confirmed" (client replied "1") + "bot_confirmed" (auto-saved by AI)
   app.get("/api/appointments/bot-confirmed", isPinAuthenticated, async (req, res) => {
     const all = await storage.getAppointments();
     const confirmed = all
-      .filter((a: any) => a.bookingStatus === "confirmed")
+      .filter((a: any) => a.bookingStatus === "confirmed" || a.bookingStatus === "bot_confirmed")
       .sort((a: any, b: any) => {
         const da = new Date(`${a.date}T${a.startTime || "00:00"}`).getTime();
         const db = new Date(`${b.date}T${b.startTime || "00:00"}`).getTime();
@@ -4742,6 +4743,63 @@ export async function registerRoutes(
           const imgNote = mergedImageBase64 ? " [+image]" : "";
           const replyMode = repliedWithVoice ? " [🎙️ voice reply]" : "";
           console.log(`[Bot] ${hasHistory ? "↩ returning" : "★ new"} client ${clientLabel} — turn ${turnNum}${batchNote}${imgNote}${replyMode}`);
+
+          // ── Auto-save bot-confirmed appointments ─────────────────────────
+          // If the AI just verbally confirmed a specific date+time appointment,
+          // create a real DB record so it shows in "حجوزات أكّدها البوت".
+          try {
+            const { extractBotConfirmedAppointment } = await import("./gemini");
+            const todayStr = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD in local TZ
+            const extracted = extractBotConfirmedAppointment(finalReply, newHistory, todayStr);
+            if (extracted) {
+              const clientName = mem.clientName || "عميل واتساب";
+              const clientPhone = mem.phone || normalized || null;
+
+              // Avoid duplicate: check if a bot_confirmed appointment already exists
+              // for this phone + date + time (within the last 2 minutes of creation)
+              const existingApts = await storage.getAppointments();
+              const duplicate = existingApts.find((a: any) => {
+                let ap = (a.phone || "").replace(/[^0-9]/g, "");
+                if (ap.startsWith("00")) ap = ap.slice(2);
+                if (ap.startsWith("0") && ap.length === 10) ap = "212" + ap.slice(1);
+                if (ap.length === 9) ap = "212" + ap;
+                return (
+                  ap === (clientPhone || "").replace(/[^0-9]/g, "") &&
+                  a.date === extracted.date &&
+                  a.startTime === extracted.time &&
+                  a.bookingStatus === "bot_confirmed"
+                );
+              });
+
+              if (!duplicate) {
+                const newApt = await storage.createAppointment({
+                  client: clientName,
+                  phone: clientPhone,
+                  service: extracted.service || "خدمة واتساب",
+                  staff: "À assigner",
+                  date: extracted.date,
+                  startTime: extracted.time,
+                  duration: 60,
+                  price: 0,
+                  total: 0,
+                  paid: false,
+                  bookingStatus: "bot_confirmed",
+                } as any);
+
+                io.emit("booking:created", newApt);
+                sendPushNotification(
+                  "حجز مؤكّد من البوت 🤖",
+                  `${clientName} — ${extracted.service || "خدمة"} — ${extracted.date} ${extracted.time}`,
+                  "/whatsapp"
+                ).catch(() => {});
+                console.log(`[Bot] ✅ Auto-saved bot-confirmed appointment #${newApt.id} for ${clientLabel} on ${extracted.date} at ${extracted.time}`);
+              } else {
+                console.log(`[Bot] Duplicate bot_confirmed appointment skipped for ${clientLabel}`);
+              }
+            }
+          } catch (aptErr: any) {
+            console.error("[Bot] Failed to auto-save bot appointment:", aptErr.message);
+          }
 
         } catch (err: any) {
           console.error("[Bot] Error handling buffered batch:", err.message);

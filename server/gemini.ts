@@ -164,7 +164,8 @@ ${ctx.resolvedComplaints.map(r => `• إذا سألت عميلة عن: "${r.com
 • لا تقولي أبداً "تواصلي معنا للأسعار" — هي معاكِ الآن
 • لو السعر "à partir de X" → قولي "كيبدأ من X درهم حسب الطول"
 • لو السعر ثابت → هو ثابت فقط
-• للحجز → قولي "راسليني هنا وغادي يتواصلو معاكِ الفريق باش يحجزو ليك" — ما تعطيش رقم هاتف
+• للحجز → لو العميلة بغات تحجز، اتفقي معاها على التاريخ والساعة بشكل واضح، وبعد ما يتأكد كل شي قولي جملة فيها التاريخ والساعة بوضوح مثل: "تمام، الموعد ديالك يوم غدا مع 14:00 مؤكد عندنا 🌸" — لا تعطي رقم هاتف
+• مهم جداً: لما تأكدي موعد محدد → لازم تذكري التاريخ والساعة بوضوح في الرسالة نفسها باش يتسجل في النظام
 
 ━━━ حالات خاصة ━━━
 • صورة جاتك → حلليها بثقة: "من الصورة شايفة إن شعرك…" أو "هاد اللوك زوين، كنقدرو…"
@@ -918,6 +919,135 @@ export async function generateImage(
 
   console.error("[ImageGen] All HF models in cascade failed");
   return null;
+}
+
+/**
+ * After the bot sends a reply, check whether it just verbally confirmed a specific
+ * appointment (date + time). If yes, extract those details so the server can create
+ * a real DB record instead of just saying "مسجل عندنا" with nothing saved.
+ *
+ * Uses purely deterministic regex — no extra AI call, no quota cost.
+ * Returns { date: "YYYY-MM-DD", time: "HH:MM", service: string|null } or null.
+ */
+export function extractBotConfirmedAppointment(
+  botReply: string,
+  conversationHistory: ConversationTurn[],
+  todayDateStr: string // "YYYY-MM-DD"
+): { date: string; time: string; service: string | null } | null {
+  // ── 1. Is this reply a confirmation at all? ───────────────────────────────
+  const confirmRx = /مؤكد|مسجل|ثابت|تسجيل|confirmé|confirmée|confirm|راه حجوزة|تم الحجز|تم التسجيل|غادي نشوفوك|ننتظروكِ/i;
+  if (!confirmRx.test(botReply)) return null;
+
+  // ── 2. Collect all text (history + bot reply) to search for date/time ───
+  const allText = [
+    ...conversationHistory.map((t) => t.text),
+    botReply,
+  ].join(" ");
+
+  // ── 3. Extract time ───────────────────────────────────────────────────────
+  // Matches: "12:00", "12h00", "الساعة 12", "ساعة 12", "في 12:00", "à 12h", "2:30 pm"
+  const timePatterns = [
+    /\b(\d{1,2}):(\d{2})\b/,               // 12:00 / 2:30
+    /\b(\d{1,2})h(\d{2})?\b/i,             // 12h / 12h30
+    /(?:الساعة|ساعة|في الساعة|à|at)\s+(\d{1,2})(?::(\d{2}))?/i,
+  ];
+
+  let hour = -1;
+  let minute = 0;
+
+  for (const rx of timePatterns) {
+    const m = allText.match(rx);
+    if (m) {
+      // Different capture groups depending on pattern
+      const h = parseInt(m[1] ?? m[2] ?? "0", 10);
+      const mn = parseInt(m[2] ?? m[3] ?? "0", 10);
+      if (!isNaN(h) && h >= 6 && h <= 23) {
+        hour = h;
+        minute = isNaN(mn) ? 0 : mn;
+        break;
+      }
+    }
+  }
+
+  if (hour < 0) return null; // no recognisable time → don't create ghost appointment
+
+  const timeStr = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+
+  // ── 4. Extract date ───────────────────────────────────────────────────────
+  const today = new Date(todayDateStr);
+  const addDays = (n: number) => {
+    const d = new Date(today);
+    d.setDate(d.getDate() + n);
+    return d.toISOString().split("T")[0];
+  };
+
+  const arabicMonths: Record<string, number> = {
+    يناير: 1, فبراير: 2, مارس: 3, أبريل: 4, مايو: 5, يونيو: 6,
+    يوليو: 7, أغسطس: 8, سبتمبر: 9, أكتوبر: 10, نوفمبر: 11, دسمبر: 12,
+    janvier: 1, février: 2, mars: 3, avril: 4, mai: 5, juin: 6,
+    juillet: 7, août: 8, septembre: 9, octobre: 10, novembre: 11, décembre: 12,
+  };
+
+  let dateStr: string | null = null;
+
+  // "غدا" / "غداً" / "باكر" / "demain" / "tomorrow"
+  if (/\b(غدا|غداً|غد|باكر|بكرا|demain|tomorrow)\b/i.test(allText)) {
+    dateStr = addDays(1);
+  }
+  // "بعد غدا" / "après-demain" / "day after tomorrow"
+  else if (/\b(بعد غدا|بعد غداً|après.demain|day after tomorrow)\b/i.test(allText)) {
+    dateStr = addDays(2);
+  }
+  // "اليوم" / "aujourd'hui" / "today"
+  else if (/\b(اليوم|دابا|aujourd'hui|today)\b/i.test(allText)) {
+    dateStr = todayDateStr;
+  }
+  // Numeric date "15/5" or "15-05" or "15.05"
+  else {
+    const numDate = allText.match(/\b(\d{1,2})[\/\-\.](\d{1,2})(?:[\/\-\.](\d{2,4}))?\b/);
+    if (numDate) {
+      const day = parseInt(numDate[1], 10);
+      const mon = parseInt(numDate[2], 10);
+      const yr = numDate[3] ? parseInt(numDate[3].length === 2 ? "20" + numDate[3] : numDate[3], 10) : today.getFullYear();
+      if (day >= 1 && day <= 31 && mon >= 1 && mon <= 12) {
+        dateStr = `${yr}-${String(mon).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      }
+    }
+    // Named month "15 مايو" / "15 mai"
+    if (!dateStr) {
+      for (const [mName, mNum] of Object.entries(arabicMonths)) {
+        const rx = new RegExp(`(\\d{1,2})\\s+${mName}`, "i");
+        const m = allText.match(rx);
+        if (m) {
+          const day = parseInt(m[1], 10);
+          if (day >= 1 && day <= 31) {
+            const yr = today.getFullYear();
+            dateStr = `${yr}-${String(mNum).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  if (!dateStr) return null; // no recognisable date → skip
+
+  // ── 5. Extract service (best-effort from conversation) ───────────────────
+  const serviceKeywords = [
+    "balayage", "بالياج", "ombré", "كيراتين", "keratin", "couleur", "صبغة",
+    "coupe", "قصة", "مكياج", "makeup", "مانيكور", "pédicure", "pedicure",
+    "مانيكير", "بيديكير", "soins", "صوان", "أظافر", "lissage", "تمليس",
+    "épilation", "ébauche", "إبداع", "soin visage", "وجه", "حواجب",
+  ];
+  let service: string | null = null;
+  for (const kw of serviceKeywords) {
+    if (new RegExp(kw, "i").test(allText)) {
+      service = kw;
+      break;
+    }
+  }
+
+  return { date: dateStr, time: timeStr, service };
 }
 
 /**
