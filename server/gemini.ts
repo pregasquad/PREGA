@@ -1023,12 +1023,14 @@ export function extractBotConfirmedAppointment(
   };
 
   function extractDate(src: string): string | null {
-    // Relative: "غدا" / "demain" / "tomorrow"
-    if (/\b(غدا|غداً|غد|باكر|بكرا|demain|tomorrow)\b/i.test(src)) return addDays(1);
-    // Relative: "بعد غدا" / "après-demain"
-    if (/\b(بعد غدا|بعد غداً|après.demain|day after tomorrow)\b/i.test(src)) return addDays(2);
-    // Relative: "اليوم" / "aujourd'hui" / "today"
-    if (/\b(اليوم|دابا|aujourd'hui|today)\b/i.test(src)) return todayDateStr;
+    // Note: \b does not work with Arabic — use whitespace/punctuation boundaries instead
+    // Check longer patterns FIRST to avoid "غدا" inside "بعد غدا" matching prematurely
+    // Relative: "بعد غدا" / "après-demain" (+2 days)
+    if (/(^|[\s،,])(بعد غدا|بعد غداً|بعد غد)([\s،,]|$)|après.demain|\bday after tomorrow\b/i.test(src)) return addDays(2);
+    // Relative: "غدا" / "demain" / "tomorrow" (+1 day)
+    if (/(^|[\s،,،.!؟?])(غدا|غداً|غد|باكر|بكرا)([\s،,،.!؟?]|$)|\bdemain\b|\btomorrow\b/i.test(src)) return addDays(1);
+    // Relative: "اليوم" / "aujourd'hui" / "today" (0 days)
+    if (/(^|[\s،,،.!؟?])(اليوم|دابا)([\s،,،.!؟?]|$)|\baujourd'hui\b|\btoday\b/i.test(src)) return todayDateStr;
 
     // Named month "15 mai" / "15 مايو" / "15 ماي"
     for (const [mName, mNum] of Object.entries(arabicMonths)) {
