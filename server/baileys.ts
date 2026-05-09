@@ -568,14 +568,33 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
         if (reconnectTimer) clearTimeout(reconnectTimer);
         reconnectTimer = setTimeout(() => connectSocket().catch((err) => log(`Reconnect failed: ${err.message}`)), 2000);
       } else if (loggedOut) {
-        // ── Genuine logout or device removed ────────────────────────────
-        shouldReconnect = false;
-        sessionRestoreAttempts = 0;
-        reconnectAttempts = 0;
-        wipeAuth();
-        const isDeviceRemoved = errorMsg.toLowerCase().includes("conflict") || errorMsg.toLowerCase().includes("device_removed");
-        log(isDeviceRemoved ? "Device removed by WhatsApp — session cleared" : "Logged out — session cleared");
-        if (socketIO) socketIO.emit("whatsapp:logged_out", { reason: isDeviceRemoved ? "device_removed" : "logged_out" });
+        // ── 401 — distinguish genuine logout from transient auth failure ────────
+        // Genuine logout signals: the user physically logged out, device was removed,
+        // or another session took over. These messages come from WA server directly.
+        const errLower = errorMsg.toLowerCase();
+        const isGenuineLogout =
+          errLower.includes("logged out") ||
+          errLower.includes("device_removed") ||
+          errLower.includes("device removed") ||
+          errLower.includes("conflict") ||
+          errLower.includes("replaced") ||
+          errLower.includes("banned");
+
+        if (isGenuineLogout) {
+          // Real logout — wipe session and stop
+          shouldReconnect = false;
+          sessionRestoreAttempts = 0;
+          reconnectAttempts = 0;
+          wipeAuth();
+          const isDeviceRemoved = errLower.includes("conflict") || errLower.includes("device_removed") || errLower.includes("replaced");
+          log(isDeviceRemoved ? "Device removed by WhatsApp — session cleared" : "Logged out — session cleared");
+          if (socketIO) socketIO.emit("whatsapp:logged_out", { reason: isDeviceRemoved ? "device_removed" : "logged_out" });
+        } else {
+          // Transient 401 (e.g. "Connection Failure", server hiccup) — retry from DB
+          log(`Transient 401 ("${errorMsg}") — will retry from DB session (attempt ${sessionRestoreAttempts + 1}/${MAX_SESSION_RESTORE})`);
+          if (socketIO) socketIO.emit("whatsapp:disconnected", { reason });
+          if (shouldReconnect) await scheduleReconnect(5000); // 5s first retry
+        }
       } else {
         // ── Other disconnect — session may be bad, count against restore budget ──
         // This covers network drops, WA server errors, etc.
