@@ -268,6 +268,13 @@ export default function WhatsApp() {
       });
       setTimeout(() => refetch(), 500);
     });
+    socket.on("booking:updated", () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments/bot-confirmed"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+    });
+    socket.on("booking:created", () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments/bot-confirmed"] });
+    });
     return () => { socket.disconnect(); };
   }, []);
 

@@ -641,17 +641,46 @@ export async function sendWhatsAppImageBuffer(
   }
 }
 
+// ── Date helper ───────────────────────────────────────────────────────────────
+
+function formatRelativeDate(dateStr: string): string {
+  const today = new Date();
+  const target = new Date(dateStr);
+  today.setHours(0, 0, 0, 0);
+  target.setHours(0, 0, 0, 0);
+  const diffDays = Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return "اليوم";
+  if (diffDays === 1) return "غدا";
+  const dayNames = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+  return dayNames[target.getDay()];
+}
+
 // ── Bot quick-reply functions ─────────────────────────────────────────────────
 // These are called from routes.ts when the client replies 1/2/3 to a booking.
 
-export async function sendBotConfirmed(jid: string): Promise<void> {
+export async function sendBotConfirmed(
+  jid: string,
+  clientName?: string,
+  serviceName?: string,
+  date?: string,
+  time?: string
+): Promise<void> {
   await sendTypingPresence(jid);
   await new Promise(r => setTimeout(r, 800 + Math.random() * 600));
   await stopTypingPresence(jid);
-  await sendWhatsAppMessage(
-    jid,
-    "شكراً لتأكيدك! 🌸\nموعدك مؤكد ✅\nنتطلع لرؤيتك. أي سؤال راسليني هنا 💖"
-  );
+  if (clientName && serviceName && date && time) {
+    const firstName = clientName.split(" ")[0];
+    const relativeDate = formatRelativeDate(date);
+    await sendWhatsAppMessage(
+      jid,
+      `العفو يا ${firstName}، هانية حبيبتي! 🌸\n\nصافي، الموعد ديالك لـ "${serviceName}" تأكد ${relativeDate} إن شاء الله مع ${time}. نتسناوك تنورينا في الصالون، ومرحبا بيك 🌸✨`
+    );
+  } else {
+    await sendWhatsAppMessage(
+      jid,
+      "شكراً لتأكيدك! 🌸\nموعدك مؤكد ✅\nنتطلع لرؤيتك. أي سؤال راسليني هنا 💖"
+    );
+  }
 }
 
 export async function sendBotCancelled(jid: string): Promise<void> {
@@ -699,12 +728,13 @@ export async function sendAppointmentReminder(
 
 export async function sendBookingConfirmation(
   clientPhone: string, clientName: string, appointmentDate: string,
-  appointmentTime: string, serviceName: string, salonName?: string
+  appointmentTime: string, serviceName: string, _salonName?: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  const salon = salonName || "PREGASQUAD";
+  const firstName = clientName.split(" ")[0];
+  const relativeDate = formatRelativeDate(appointmentDate);
   return sendWhatsAppMessage(
     clientPhone,
-    `مرحباً ${clientName}! ✨\n\nتم تأكيد حجزك:\n📅 ${appointmentDate}\n⏰ ${appointmentTime}\n💅 ${serviceName}\n\nشكراً لاختيارك ${salon}! 💕`
+    `العفو يا ${firstName}، هانية حبيبتي! 🌸\n\nصافي، الموعد ديالك لـ "${serviceName}" تأكد ${relativeDate} إن شاء الله مع ${appointmentTime}. نتسناوك تنورينا في الصالون، ومرحبا بيك 🌸✨`
   );
 }
 

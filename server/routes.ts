@@ -4402,18 +4402,24 @@ export async function registerRoutes(
 
           if (apt && mergedText === "1") {
             await storage.updateAppointment(apt.id, { bookingStatus: "confirmed" } as any);
-            await sendBotConfirmed(remoteJid);
+            io.emit("booking:updated", { ...apt, bookingStatus: "confirmed" });
+            io.emit("appointment:updated", { id: apt.id, bookingStatus: "confirmed" });
+            await sendBotConfirmed(remoteJid, apt.client, apt.service, apt.date, apt.startTime);
             console.log(`[Bot] Appointment ${apt.id} confirmed by client (${remoteJid})`);
             return;
           }
           if (apt && mergedText === "2") {
             await storage.updateAppointment(apt.id, { bookingStatus: "cancelled" } as any);
+            io.emit("booking:updated", { ...apt, bookingStatus: "cancelled" });
+            io.emit("appointment:updated", { id: apt.id, bookingStatus: "cancelled" });
             await sendBotCancelled(remoteJid);
             console.log(`[Bot] Appointment ${apt.id} cancelled by client (${remoteJid})`);
             return;
           }
           if (apt && mergedText === "3") {
             await storage.updateAppointment(apt.id, { bookingStatus: "modify_requested" } as any);
+            io.emit("booking:updated", { ...apt, bookingStatus: "modify_requested" });
+            io.emit("appointment:updated", { id: apt.id, bookingStatus: "modify_requested" });
             await sendBotModify(remoteJid);
             console.log(`[Bot] Appointment ${apt.id} modify requested by client (${remoteJid})`);
             return;
