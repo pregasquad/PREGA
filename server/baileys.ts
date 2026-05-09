@@ -200,13 +200,17 @@ function scheduleReconnect() {
 
   reconnectAttempt++;
   if (reconnectAttempt > MAX_RECONNECT_ATTEMPTS) {
-    log(`Max reconnect attempts (${MAX_RECONNECT_ATTEMPTS}) reached — giving up. Re-link via the WhatsApp page.`);
+    log(`Max reconnect attempts (${MAX_RECONNECT_ATTEMPTS}) reached — clearing session. Re-link via the WhatsApp page.`);
     shouldReconnect = false;
     status = "disconnected";
+    // Clear the stale session so the user gets a clean re-link prompt
+    // (same behaviour as a permanent 401 failure — don't keep a broken session)
+    clearSession().catch(err => log(`clearSession after max retries failed: ${err.message}`));
     emitStatus();
     return;
   }
 
+  // Exponential back-off: 10s → 20s → 40s → 80s → 160s (capped at 3 min)
   const delayMs = Math.min(10_000 * Math.pow(2, reconnectAttempt - 1), 180_000);
   log(`Reconnect attempt ${reconnectAttempt}/${MAX_RECONNECT_ATTEMPTS} in ${delayMs / 1000}s…`);
 
