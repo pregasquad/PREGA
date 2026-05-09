@@ -623,15 +623,23 @@ ${conversationText}
 - إذا ما لقيتيش أي خطأ من البوت → "botErrors": []`;
 
   const tryParseJSON = (text: string): LearnedInsights | null => {
+    const cleaned = text
+      .replace(/```json\s*/gi, "")
+      .replace(/```\s*/gi, "")
+      .trim();
+    // Try direct parse first
     try {
-      const cleaned = text
-        .replace(/```json\s*/gi, "")
-        .replace(/```\s*/gi, "")
-        .trim();
       return JSON.parse(cleaned) as LearnedInsights;
-    } catch {
-      return null;
+    } catch { /* fall through */ }
+    // If Gemini added text before/after the JSON, extract the object
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (match) {
+      try {
+        return JSON.parse(match[0]) as LearnedInsights;
+      } catch { /* fall through */ }
     }
+    console.warn("[BotLearn] Could not parse Gemini response as JSON:", cleaned.slice(0, 200));
+    return null;
   };
 
   // Try Gemini with lightest model first
@@ -660,8 +668,12 @@ ${conversationText}
             console.log(`[BotLearn] Gemini ${model} extracted insights`);
             return parsed;
           }
+          console.warn(`[BotLearn] Gemini ${model} returned unparseable response`);
         } else if (res.status === 429) {
           modelCooldowns[model] = Date.now() + QUOTA_COOLDOWN_MS;
+          console.warn(`[BotLearn] Gemini ${model} quota exceeded — cooling down`);
+        } else {
+          console.warn(`[BotLearn] Gemini ${model} returned HTTP ${res.status}`);
         }
       } catch (err: any) {
         console.warn(`[BotLearn] Gemini ${model} failed: ${err.message}`);

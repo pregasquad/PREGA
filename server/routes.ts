@@ -4587,9 +4587,11 @@ export async function registerRoutes(
             await persistMemory(updatedMem);
 
             // ── Background AI learning — runs after reply is sent ─────────
-            // Fires after every 2nd turn (every other message) to avoid
-            // quota pressure while still keeping the profile up to date.
-            const shouldLearn = newHistory.length >= 2 && newHistory.length % 2 === 0;
+            // Fires every OTHER turn (turn 2, 4, 6…) to avoid quota pressure.
+            // newHistory grows by 2 per turn so it's always even — use turn
+            // number (half of length) to get true every-other-turn behaviour.
+            const learnTurnNum = Math.floor(newHistory.length / 2);
+            const shouldLearn = newHistory.length >= 2 && learnTurnNum % 2 === 0;
             if (shouldLearn) {
               const serviceNames = serviceList.map((s: any) => s.name);
               learnFromConversation(newHistory, updatedMem, serviceNames)

@@ -1226,33 +1226,36 @@ export async function saveBotMemory(mem: BotClientMemory): Promise<void> {
     const botBlocked   = mem.botBlocked ? 1 : 0;
     if (dbDialect === 'mysql') {
       const connection = await pool.getConnection();
-      await connection.query(
-        `INSERT INTO bot_client_memory
-           (jid, phone, client_name, language, preferred_services, personality_notes, conv_history, visit_count, last_seen, bot_blocked)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)
-         ON DUPLICATE KEY UPDATE
-           phone              = COALESCE(VALUES(phone), phone),
-           client_name        = COALESCE(VALUES(client_name), client_name),
-           language           = VALUES(language),
-           preferred_services = VALUES(preferred_services),
-           personality_notes  = COALESCE(VALUES(personality_notes), personality_notes),
-           conv_history       = VALUES(conv_history),
-           visit_count        = VALUES(visit_count),
-           bot_blocked        = VALUES(bot_blocked),
-           last_seen          = NOW()`,
-        [
-          mem.jid,
-          mem.phone || null,
-          mem.clientName || null,
-          mem.language,
-          servicesJson,
-          mem.personalityNotes || null,
-          historyJson,
-          mem.visitCount,
-          botBlocked,
-        ]
-      );
-      connection.release();
+      try {
+        await connection.query(
+          `INSERT INTO bot_client_memory
+             (jid, phone, client_name, language, preferred_services, personality_notes, conv_history, visit_count, last_seen, bot_blocked)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)
+           ON DUPLICATE KEY UPDATE
+             phone              = COALESCE(VALUES(phone), phone),
+             client_name        = COALESCE(VALUES(client_name), client_name),
+             language           = VALUES(language),
+             preferred_services = VALUES(preferred_services),
+             personality_notes  = COALESCE(VALUES(personality_notes), personality_notes),
+             conv_history       = VALUES(conv_history),
+             visit_count        = VALUES(visit_count),
+             bot_blocked        = VALUES(bot_blocked),
+             last_seen          = NOW()`,
+          [
+            mem.jid,
+            mem.phone || null,
+            mem.clientName || null,
+            mem.language,
+            servicesJson,
+            mem.personalityNotes || null,
+            historyJson,
+            mem.visitCount,
+            botBlocked,
+          ]
+        );
+      } finally {
+        connection.release();
+      }
     } else {
       await pool.query(
         `INSERT INTO bot_client_memory
@@ -1620,17 +1623,20 @@ export async function saveSalonComplaint(c: {
   try {
     if (dbDialect === 'mysql') {
       const connection = await pool.getConnection();
-      await connection.query(
-        `INSERT INTO salon_complaints (complaint_text, complaint_type, source_jid, source_phone, client_name, is_resolved, fix_note, resolved_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          c.complaintText, type,
-          c.sourceJid, c.sourcePhone || null, c.clientName || null,
-          resolved, c.fixNote || null,
-          c.isResolved ? new Date() : null,
-        ]
-      );
-      connection.release();
+      try {
+        await connection.query(
+          `INSERT INTO salon_complaints (complaint_text, complaint_type, source_jid, source_phone, client_name, is_resolved, fix_note, resolved_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            c.complaintText, type,
+            c.sourceJid, c.sourcePhone || null, c.clientName || null,
+            resolved, c.fixNote || null,
+            c.isResolved ? new Date() : null,
+          ]
+        );
+      } finally {
+        connection.release();
+      }
     } else {
       await pool.query(
         `INSERT INTO salon_complaints (complaint_text, complaint_type, source_jid, source_phone, client_name, is_resolved, fix_note, resolved_at)
