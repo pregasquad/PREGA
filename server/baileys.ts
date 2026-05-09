@@ -112,9 +112,7 @@ let lastPairingError: string | null = null;
 let status: Status = "disconnected";
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let shouldReconnect = false;
-let reconnectAttempts = 0;       // exponential backoff counter (resets on open)
-let sessionRestoreAttempts = 0;  // how many times we've tried to reconnect via saved DB session
-const MAX_SESSION_RESTORE = 3;   // give up and clear session after this many consecutive failures
+let reconnectAttempts = 0; // exponential backoff counter — resets on successful open
 let socketIO: any = null;
 let pendingPairingPhone: string | null = null;
 
@@ -165,43 +163,34 @@ function wipeAuth() {
   clearAuthFromDb().catch(() => {}); // also wipe from DB (non-blocking)
 }
 
-// Exponential backoff: 5s → 10s → 20s → 40s → 60s (cap)
-// Each call also increments sessionRestoreAttempts.
-// After MAX_SESSION_RESTORE consecutive failures the session is cleared and we stop.
+// Exponential backoff: 5s → 10s → 20s → 40s → 60s (capped — retries forever).
+// NEVER wipes session automatically — only manual disconnect() does that.
+// Before each retry, re-syncs session from DB so a fresh Koyeb dyno always
+// picks up the latest credentials written by any previous dyno.
 async function scheduleReconnect(delayMs?: number) {
   if (reconnectTimer) clearTimeout(reconnectTimer);
   if (!shouldReconnect) return;
 
-  sessionRestoreAttempts++;
-
-  if (sessionRestoreAttempts > MAX_SESSION_RESTORE) {
-    log(`Session restore failed after ${MAX_SESSION_RESTORE} attempts — clearing session and waiting for user re-link`);
-    shouldReconnect = false;
-    wipeAuth();
-    status = "disconnected";
-    sessionRestoreAttempts = 0;
-    reconnectAttempts = 0;
-    if (socketIO) socketIO.emit("whatsapp:session_expired", {
-      reason: `Automatic reconnect failed ${MAX_SESSION_RESTORE} times. Please re-link your WhatsApp.`
-    });
-    return;
-  }
-
-  // Before reconnecting, re-sync session from DB in case it was updated elsewhere
-  // (e.g. a Koyeb dyno was replaced while another was already connected)
+  // Always try to pull the latest session from DB before reconnecting.
+  // This ensures a restarted dyno (ephemeral FS wiped) can still reconnect.
   if (!hasExistingSession()) {
-    log(`No local session — attempting DB restore (attempt ${sessionRestoreAttempts}/${MAX_SESSION_RESTORE})…`);
+    log(`No local creds — pulling session from DB before reconnect (attempt ${reconnectAttempts + 1})…`);
     const restored = await loadAuthFromDb();
-    if (!restored) {
-      log("DB restore returned nothing — scheduling next retry");
+    if (restored) {
+      log("Session pulled from DB — proceeding to reconnect");
+    } else {
+      log("No DB session found — will retry again after backoff");
     }
   }
 
   const backoffMs = delayMs ?? Math.min(5000 * Math.pow(2, reconnectAttempts), 60000);
   reconnectAttempts++;
-  log(`Reconnecting in ${Math.round(backoffMs / 1000)}s (session attempt ${sessionRestoreAttempts}/${MAX_SESSION_RESTORE}, backoff attempt ${reconnectAttempts})…`);
+  log(`Reconnecting in ${Math.round(backoffMs / 1000)}s (attempt ${reconnectAttempts})…`);
   reconnectTimer = setTimeout(() => {
-    connectSocket().catch((err) => log(`Reconnect failed: ${err.message}`));
+    connectSocket().catch((err) => {
+      log(`Reconnect error: ${err.message} — will retry`);
+      scheduleReconnect(); // keep going even if connectSocket itself throws
+    });
   }, backoffMs);
 }
 
@@ -499,8 +488,7 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
       pendingPairingPhone = null;
       lastPairingError = null;
       shouldReconnect = true;
-      reconnectAttempts = 0;       // reset backoff on successful connect
-      sessionRestoreAttempts = 0;  // reset restore counter — session is healthy
+      reconnectAttempts = 0; // reset backoff — connection is healthy
       const phone = sock?.user?.id?.split(":")[0] ?? "?";
       log(`Connected as +${phone}`);
       if (socketIO) socketIO.emit("whatsapp:connected", { phone });
@@ -512,11 +500,10 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
       const reason = (lastDisconnect?.error as any)?.output?.statusCode;
       const errorMsg = (lastDisconnect?.error as any)?.message ?? "";
       const { DisconnectReason: DR } = await import("@whiskeysockets/baileys");
-      const loggedOut    = reason === DR.loggedOut;       // 401
-      const restartReq   = reason === DR.restartRequired; // 515
-      const wasPairing   = !!pendingPairingPhone;
-      // Capture BEFORE clearing — code being set means we showed it to the user
-      const hadCode      = currentPairingCode !== null;
+      const loggedOut  = reason === DR.loggedOut;       // 401
+      const restartReq = reason === DR.restartRequired; // 515
+      const wasPairing = !!pendingPairingPhone;
+      const hadCode    = currentPairingCode !== null; // captured before clearing
 
       log(`Connection closed. Code: ${reason}. WasPairing: ${wasPairing}. HadCode: ${hadCode}. Error: "${errorMsg}"`);
       status = "disconnected";
@@ -525,116 +512,99 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
       currentPairingCode = null;
       currentPairingCodeExpiresAt = null;
 
+      // ─────────────────────────────────────────────────────────────────────────
+      // PAIRING FLOW drops — these are expected handshake events, handle separately
+      // ─────────────────────────────────────────────────────────────────────────
       if (wasPairing) {
-        // ── Drop during pairing ──────────────────────────────────────────
-        // Pairing reconnects are NOT counted against sessionRestoreAttempts —
-        // they are expected/transient drops during the linking handshake.
         if (restartReq) {
-          // 515 = WhatsApp confirmed the code and pushed credentials — reconnect now
-          // with saved creds to complete the link (goes to "open").
+          // 515: WA confirmed the code and pushed credentials → reconnect to finalise
           status = "connecting";
           shouldReconnect = true;
-          sessionRestoreAttempts = 0; // fresh link — reset the counter
-          log("Pairing code accepted — WhatsApp restart (515). Reconnecting in 2s…");
-          // Schedule directly (bypassing sessionRestoreAttempts accounting — this is a known-good path)
+          reconnectAttempts = 0;
+          log("Pairing: WA restart (515) — finalising link in 2s…");
           if (reconnectTimer) clearTimeout(reconnectTimer);
-          reconnectTimer = setTimeout(() => connectSocket().catch((err) => log(`Reconnect failed: ${err.message}`)), 2000);
+          reconnectTimer = setTimeout(() => connectSocket().catch((e) => log(`Reconnect: ${e.message}`)), 2000);
         } else if (loggedOut) {
-          // 401 = WhatsApp rejected the pairing attempt (wrong code, expired, rate-limited)
+          // 401 during pairing = wrong code / expired / rate-limited → wipe partial creds
           wipeAuth();
-          log("Pairing rejected by WhatsApp (401) — please try again");
+          log("Pairing: rejected by WA (401) — please try again");
           if (socketIO) socketIO.emit("whatsapp:pairing_error", { error: "WhatsApp rejected the pairing. Please wait a moment and try again." });
         } else if (hadCode) {
-          // Expected: socket drops after the pairing IQ is sent (normal WA behaviour).
-          // The user still has the code on screen — reconnect silently so WhatsApp
-          // can push the full credentials once the user enters the code on their phone.
-          // Do NOT wipe auth here; the partial creds on disk are still needed.
+          // Socket dropped after sending the IQ (normal WA behaviour) — stay alive waiting
+          // for the user to enter the code; DO NOT wipe auth, partial creds still needed
           status = "connecting";
           shouldReconnect = true;
-          log("Code sent — socket dropped (expected). Reconnecting in 2s to await user entering code…");
+          log("Pairing: socket dropped after code sent (expected) — reconnecting in 2s…");
           if (reconnectTimer) clearTimeout(reconnectTimer);
-          reconnectTimer = setTimeout(() => connectSocket().catch((err) => log(`Reconnect failed: ${err.message}`)), 2000);
+          reconnectTimer = setTimeout(() => connectSocket().catch((e) => log(`Reconnect: ${e.message}`)), 2000);
         } else {
-          // No code was obtained before the drop — nothing useful was saved, wipe cleanly.
+          // Drop before code was even obtained — partial creds are useless, wipe cleanly
           wipeAuth();
-          log(`Pairing failed before code obtained (code ${reason ?? "unknown"}): ${errorMsg}`);
+          log(`Pairing: failed before code obtained (code ${reason ?? "unknown"}): ${errorMsg}`);
           if (socketIO) socketIO.emit("whatsapp:pairing_error", { error: "Connection lost during pairing — please try again." });
         }
-      } else if (restartReq && shouldReconnect) {
-        // ── 515 after a normal connected session (QR link or periodic WA push) ──
-        // 515 is a WhatsApp-initiated refresh — not a real failure, don't count it
-        status = "connecting";
-        log("WhatsApp restart required (515) — reconnecting in 2s with saved session");
-        if (reconnectTimer) clearTimeout(reconnectTimer);
-        reconnectTimer = setTimeout(() => connectSocket().catch((err) => log(`Reconnect failed: ${err.message}`)), 2000);
-      } else if (loggedOut) {
-        // ── 401 — distinguish genuine logout from transient auth failure ────────
-        // Genuine logout signals: the user physically logged out, device was removed,
-        // or another session took over. These messages come from WA server directly.
-        const errLower = errorMsg.toLowerCase();
-        const isGenuineLogout =
-          errLower.includes("logged out") ||
-          errLower.includes("device_removed") ||
-          errLower.includes("device removed") ||
-          errLower.includes("conflict") ||
-          errLower.includes("replaced") ||
-          errLower.includes("banned");
+        return;
+      }
 
-        if (isGenuineLogout) {
-          // Real logout — wipe session and stop
-          shouldReconnect = false;
-          sessionRestoreAttempts = 0;
-          reconnectAttempts = 0;
-          wipeAuth();
-          const isDeviceRemoved = errLower.includes("conflict") || errLower.includes("device_removed") || errLower.includes("replaced");
-          log(isDeviceRemoved ? "Device removed by WhatsApp — session cleared" : "Logged out — session cleared");
-          if (socketIO) socketIO.emit("whatsapp:logged_out", { reason: isDeviceRemoved ? "device_removed" : "logged_out" });
-        } else {
-          // Transient 401 (e.g. "Connection Failure", server hiccup) — retry from DB
-          log(`Transient 401 ("${errorMsg}") — will retry from DB session (attempt ${sessionRestoreAttempts + 1}/${MAX_SESSION_RESTORE})`);
-          if (socketIO) socketIO.emit("whatsapp:disconnected", { reason });
-          if (shouldReconnect) await scheduleReconnect(5000); // 5s first retry
-        }
+      // ─────────────────────────────────────────────────────────────────────────
+      // NORMAL SESSION drops — NEVER wipe automatically, always reconnect
+      // ─────────────────────────────────────────────────────────────────────────
+
+      if (restartReq) {
+        // 515: WA-initiated credential refresh — reconnect immediately, no backoff
+        status = "connecting";
+        log("WA restart required (515) — reconnecting in 2s…");
+        if (reconnectTimer) clearTimeout(reconnectTimer);
+        reconnectTimer = setTimeout(() => connectSocket().catch((e) => log(`Reconnect: ${e.message}`)), 2000);
+        return;
+      }
+
+      // For ANY other close reason (including 401 "Connection Failure", network drops,
+      // stream errors, etc.) — notify UI and schedule reconnect with exponential backoff.
+      // Session is NEVER wiped here. Only the user pressing "Disconnect & log out" does that.
+      if (shouldReconnect) {
+        if (socketIO) socketIO.emit("whatsapp:disconnected", { reason, error: errorMsg });
+        log(`Disconnected (code ${reason ?? "unknown"}, "${errorMsg}") — scheduling reconnect…`);
+        await scheduleReconnect();
       } else {
-        // ── Other disconnect — session may be bad, count against restore budget ──
-        // This covers network drops, WA server errors, etc.
-        if (socketIO) socketIO.emit("whatsapp:disconnected", { reason });
-        if (shouldReconnect) await scheduleReconnect(); // increments sessionRestoreAttempts; wipes after 3 failures
+        log(`Disconnected (shouldReconnect=false) — staying idle.`);
       }
     }
   });
 }
 
-/** Called at server start — restores session from DB (survives ephemeral FS), then connects.
- *  Retries DB restore up to MAX_SESSION_RESTORE times with a 3s pause between attempts
- *  so transient DB connection delays at boot don't prevent reconnection. */
+/** Called at server start — restores session from DB then connects.
+ *  Retries DB restore up to 5 times with a 3s gap (handles slow DB cold-start on Koyeb).
+ *  If DB has no session either, keeps retrying in background until one appears. */
 export async function initBaileys(): Promise<void> {
+  // Step 1: pull session from DB if not already on disk
   if (!hasExistingSession()) {
     let restored = false;
-    for (let attempt = 1; attempt <= MAX_SESSION_RESTORE; attempt++) {
-      log(`DB session restore attempt ${attempt}/${MAX_SESSION_RESTORE}…`);
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      log(`DB session restore attempt ${attempt}/5…`);
       restored = await loadAuthFromDb();
       if (restored) {
-        log(`Session restored from DB on attempt ${attempt} — connecting…`);
+        log(`Session restored from DB on attempt ${attempt} — will connect`);
         break;
       }
-      if (attempt < MAX_SESSION_RESTORE) {
-        log(`DB restore failed (attempt ${attempt}) — retrying in 3s…`);
+      if (attempt < 5) {
+        log(`DB restore attempt ${attempt} returned nothing — retrying in 3s…`);
         await new Promise((r) => setTimeout(r, 3000));
       }
     }
     if (!restored) {
-      log("DB restore failed after all attempts — waiting for user to connect");
+      log("No session in DB after 5 attempts — waiting for user to link manually");
     }
   }
 
+  // Step 2: connect if we have creds, otherwise just wait
   if (hasExistingSession()) {
-    log("Existing session found — connecting…");
+    log("Session found — connecting…");
     shouldReconnect = true;
-    sessionRestoreAttempts = 0;
+    reconnectAttempts = 0;
     await connectSocket();
   } else {
-    log("No saved session — waiting for user to connect manually");
+    log("No saved session — waiting for manual link");
   }
 }
 
@@ -823,20 +793,21 @@ export async function sendWhatsAppImageBuffer(
 
 export async function disconnect(): Promise<void> {
   shouldReconnect = false;
+  reconnectAttempts = 0;
   if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
   if (sock) {
     try { await sock.logout(); } catch {}
     try { sock.end(); } catch {}
     sock = null;
   }
-  wipeAuth();
+  wipeAuth(); // ONLY place session is ever wiped — explicit user action
   status = "disconnected";
   currentQRDataUrl = null;
   currentPairingCode = null;
   currentPairingCodeExpiresAt = null;
   pendingPairingPhone = null;
   lastPairingError = null;
-  log("Disconnected and session cleared");
+  log("Disconnected and session cleared (manual)");
 }
 
 export async function reconnect(): Promise<void> {

@@ -243,32 +243,26 @@ export default function WhatsApp() {
       if (codeExpiryRef.current) clearInterval(codeExpiryRef.current);
       setTimeout(() => refetch(), 500);
     });
-    socket.on("whatsapp:disconnected", () => refetch());
+    socket.on("whatsapp:disconnected", () => {
+      toast({
+        title: "واتساب: انقطع الاتصال",
+        description: "جارٍ إعادة الاتصال تلقائياً…",
+        duration: 5000,
+      });
+      setTimeout(() => refetch(), 500);
+    });
     socket.on("whatsapp:logged_out", ({ reason }: { reason?: string }) => {
       setPairingCode(null);
       setIsWaitingForCode(false);
       if (countdownRef.current) clearInterval(countdownRef.current);
       const isDeviceRemoved = reason === "device_removed";
       toast({
-        title: isDeviceRemoved ? "WhatsApp removed this device" : "WhatsApp logged out",
+        title: isDeviceRemoved ? "واتساب: تمت إزالة الجهاز" : "واتساب: تم قطع الاتصال",
         description: isDeviceRemoved
-          ? "WhatsApp disconnected this session (likely a duplicate connection). Please re-link your phone."
-          : "Your WhatsApp session ended. Please re-link your phone.",
+          ? "قطع واتساب هذه الجلسة (ربما اتصال مكرر) — يرجى ربط الهاتف من جديد."
+          : "انتهت جلسة واتساب — يرجى ربط الهاتف من جديد.",
         variant: "destructive",
         duration: 12000,
-      });
-      setTimeout(() => refetch(), 500);
-    });
-    socket.on("whatsapp:session_expired", ({ reason }: { reason?: string }) => {
-      setPairingCode(null);
-      setIsWaitingForCode(false);
-      if (countdownRef.current) clearInterval(countdownRef.current);
-      if (codeExpiryRef.current) clearInterval(codeExpiryRef.current);
-      toast({
-        title: "فشل الاتصال التلقائي بواتساب",
-        description: reason ?? "فشل استعادة الجلسة 3 مرات متتالية — يرجى ربط واتساب من جديد.",
-        variant: "destructive",
-        duration: 15000,
       });
       setTimeout(() => refetch(), 500);
     });
