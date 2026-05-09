@@ -824,45 +824,47 @@ export async function askGemini(
   return { reply: FALLBACK_REPLY, newHistory: history };
 }
 
-// ── Image Generation ───────────────────────────────────────────────────────────
+// ── Image Generation (Hugging Face FLUX cascade) ─────────────────────────────
 
-// Cascade: newest/best model first → fallback to older ones automatically
-const IMAGE_GEN_CASCADE = [
-  "gemini-3.1-flash-image-preview",         // best quality + speed (latest, 2026)
-  "gemini-2.5-flash-image",                 // high quality, fast
-  "gemini-2.0-flash-preview-image-generation", // legacy fallback
+const HF_BASE = "https://api-inference.huggingface.co/models";
+
+// Cascade: best quality first → fallback automatically on rate limit or error
+const HF_IMAGE_CASCADE = [
+  "black-forest-labs/FLUX.1-schnell",          // fastest, great quality (free)
+  "black-forest-labs/FLUX.1-dev",              // highest quality (free, slower)
+  "stabilityai/stable-diffusion-xl-base-1.0",  // reliable fallback
 ];
 
 /**
- * Generate a beauty/salon related image based on the client's request.
- * Tries IMAGE_GEN_CASCADE in order — newest model first, falls back automatically.
+ * Generate a beauty/salon related image via Hugging Face Inference API.
+ * Uses FLUX.1-schnell → FLUX.1-dev → SDXL cascade.
  * Returns { base64, mimeType, model } or null if all models fail.
  */
 export async function generateImage(
   userRequest: string,
   salonName: string = "PREGASQUAD"
 ): Promise<{ base64: string; mimeType: string; model: string } | null> {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-  if (!apiKey) {
-    console.warn("[ImageGen] No Gemini API key — skipping image generation");
+  const hfToken = process.env.HF_TOKEN;
+  if (!hfToken) {
+    console.warn("[ImageGen] No HF_TOKEN — skipping image generation");
     return null;
   }
 
-  // Build a beauty-focused prompt from the user request
+  // Build a beauty-focused English prompt (FLUX works best in English)
   const prompt = [
-    `Professional beauty salon photo for ${salonName}.`,
-    `Client requested: "${userRequest}".`,
-    `Generate a high-quality, realistic, elegant beauty image:`,
-    `- If haircut/hairstyle: show the finished look on a model, soft studio lighting`,
-    `- If nail art/nails: close-up of beautifully done nails, elegant background`,
-    `- If makeup: professional makeup look, glowing skin, clean aesthetic`,
-    `- If color/highlights/balayage: show the hair color result clearly`,
-    `- General: luxurious beauty salon aesthetic, warm tones, professional quality`,
-    `No text overlays. No watermarks. Photorealistic. Elegant and aspirational.`,
+    `Professional beauty salon photo, high quality, photorealistic, elegant.`,
+    `Subject: "${userRequest}".`,
+    `Style guidelines:`,
+    `hairstyle or haircut: finished look on a model, soft studio lighting, sharp detail;`,
+    `nail art: close-up of beautifully done nails, clean elegant background;`,
+    `makeup: glowing skin, professional makeup look, clean aesthetic;`,
+    `balayage or hair color: finished color result clearly visible, warm salon lighting;`,
+    `general: luxurious beauty salon aesthetic, warm tones, aspirational.`,
+    `No text overlays. No watermarks. Elegant and aspirational.`,
   ].join(" ");
 
-  for (const model of IMAGE_GEN_CASCADE) {
-    // Skip if model is in cooldown (quota hit)
+  for (const model of HF_IMAGE_CASCADE) {
+    // Per-model cooldown for 429s
     if (modelCooldowns[model] && Date.now() < modelCooldowns[model]) {
       const secs = Math.ceil((modelCooldowns[model] - Date.now()) / 1000);
       console.warn(`[ImageGen] ${model} in cooldown (${secs}s) — trying next`);
@@ -870,21 +872,21 @@ export async function generateImage(
     }
 
     try {
-      const url = `${GEMINI_BASE}/${model}:generateContent?key=${apiKey}`;
-      const body = {
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
-      };
-
-      const res = await fetch(url, {
+      const res = await fetch(`${HF_BASE}/${model}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        headers: {
+          Authorization: `Bearer ${hfToken}`,
+          "Content-Type": "application/json",
+          "x-use-cache": "0", // always generate a fresh image
+        },
+        body: JSON.stringify({ inputs: prompt }),
       });
 
-      if (res.status === 429) {
-        modelCooldowns[model] = Date.now() + QUOTA_COOLDOWN_MS;
-        console.warn(`[ImageGen] ${model} quota hit — cooldown, trying next model`);
+      if (res.status === 429 || res.status === 503) {
+        // 503 = model loading (cold start) — treat like quota
+        modelCooldowns[model] = Date.now() + 30_000; // 30s cooldown
+        const msg = res.status === 503 ? "model loading (cold start)" : "rate limited";
+        console.warn(`[ImageGen] ${model} ${msg} — trying next`);
         continue;
       }
 
@@ -894,27 +896,27 @@ export async function generateImage(
         continue;
       }
 
-      const data = await res.json() as any;
-      const parts: any[] = data?.candidates?.[0]?.content?.parts || [];
-      const imagePart = parts.find((p: any) => p.inlineData?.data);
-
-      if (!imagePart) {
-        console.warn(`[ImageGen] ${model} returned no image part — trying next`);
+      // HF returns raw binary image bytes (not JSON)
+      const arrayBuffer = await res.arrayBuffer();
+      if (!arrayBuffer || arrayBuffer.byteLength < 1000) {
+        console.warn(`[ImageGen] ${model} returned empty/tiny response — trying next`);
         continue;
       }
 
-      console.log(`[ImageGen] ✓ ${model} generated image (${imagePart.inlineData.mimeType})`);
-      return {
-        base64: imagePart.inlineData.data,
-        mimeType: imagePart.inlineData.mimeType || "image/png",
-        model,
-      };
+      const base64 = Buffer.from(arrayBuffer).toString("base64");
+      // Detect mime type from response Content-Type header
+      const ct = res.headers.get("content-type") || "image/png";
+      const mimeType = ct.split(";")[0].trim();
+
+      console.log(`[ImageGen] ✓ ${model} generated image (${mimeType}, ${Math.round(arrayBuffer.byteLength / 1024)}KB)`);
+      return { base64, mimeType, model };
+
     } catch (err: any) {
       console.warn(`[ImageGen] ${model} threw: ${err.message} — trying next`);
     }
   }
 
-  console.error("[ImageGen] All models in cascade failed");
+  console.error("[ImageGen] All HF models in cascade failed");
   return null;
 }
 

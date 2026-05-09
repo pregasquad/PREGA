@@ -8,7 +8,7 @@ A comprehensive beauty salon management system for scheduling appointments, mana
 - `npm run start` — Production server (node dist/index.cjs)
 - `npm run db:push` — Push schema changes to database
 - **Required env vars**: `DB_DIALECT`, `MYSQL_URL` (or `DATABASE_URL` for Postgres), `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SESSION_SECRET`
-- **Optional env vars**: `GEMINI_API_KEY` (AI recommendations), `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` (push notifications)
+- **Optional env vars**: `GEMINI_API_KEY` (AI text bot + TTS), `HF_TOKEN` (Hugging Face — WhatsApp bot image generation via FLUX), `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` (push notifications)
 
 ## Stack
 - **Frontend**: React 18, Vite 7, TypeScript, TailwindCSS 3, shadcn/ui (Radix), TanStack Query, Wouter, PWA (Workbox)
