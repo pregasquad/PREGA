@@ -4392,7 +4392,7 @@ export async function registerRoutes(
           }
 
           // ── AI assistant reply ───────────────────────────────────────────
-          const { askGemini, FALLBACK_REPLY } = await import("./gemini");
+          const { askGemini, FALLBACK_REPLY, learnFromConversation } = await import("./gemini");
           const { sendWhatsAppMessage, sendTypingPresence, stopTypingPresence } = await import("./baileys");
 
           // Show typing immediately — client sees we're working on a reply
@@ -4489,6 +4489,63 @@ export async function registerRoutes(
             );
 
             await persistMemory(updatedMem);
+
+            // ── Background AI learning — runs after reply is sent ─────────
+            // Fires after every 2nd turn (every other message) to avoid
+            // quota pressure while still keeping the profile up to date.
+            const shouldLearn = newHistory.length >= 2 && newHistory.length % 2 === 0;
+            if (shouldLearn) {
+              const serviceNames = serviceList.map((s: any) => s.name);
+              learnFromConversation(newHistory, updatedMem, serviceNames)
+                .then((insights) => {
+                  if (!insights) return;
+
+                  // Re-load from cache to get latest state (another message may have arrived)
+                  const latest = memCache.get(remoteJid) || updatedMem;
+
+                  const mergedNotes = (() => {
+                    if (!insights.personalityNotes) return latest.personalityNotes;
+                    if (!latest.personalityNotes) return insights.personalityNotes;
+                    // Append new notes only if they add new information
+                    if (latest.personalityNotes.includes(insights.personalityNotes.slice(0, 20))) {
+                      return latest.personalityNotes;
+                    }
+                    return `${latest.personalityNotes} | ${insights.personalityNotes}`;
+                  })();
+
+                  const enriched: BotClientMemory = {
+                    ...latest,
+                    clientName: insights.clientName || latest.clientName,
+                    language:
+                      insights.language && insights.language !== "unknown"
+                        ? insights.language
+                        : latest.language,
+                    preferredServices: Array.from(
+                      new Set([
+                        ...(latest.preferredServices || []),
+                        ...(insights.preferredServices || []),
+                      ])
+                    ).slice(0, 20),
+                    personalityNotes: mergedNotes || null,
+                  };
+
+                  persistMemory(enriched).catch((err) =>
+                    console.error("[BotLearn] Failed to persist enriched memory:", err)
+                  );
+                  console.log(
+                    `[BotLearn] Memory enriched for ${remoteJid}:`,
+                    JSON.stringify({
+                      name: enriched.clientName,
+                      lang: enriched.language,
+                      services: enriched.preferredServices,
+                      notes: enriched.personalityNotes?.slice(0, 60),
+                    })
+                  );
+                })
+                .catch((err) =>
+                  console.error("[BotLearn] Background learning failed:", err)
+                );
+            }
 
             // Cache first-contact text-only replies
             if (!hasHistory && !mergedImageBase64) {

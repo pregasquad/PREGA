@@ -543,6 +543,146 @@ export async function textToSpeech(
   return null;
 }
 
+export interface LearnedInsights {
+  clientName?: string | null;
+  language?: string;
+  preferredServices?: string[];
+  personalityNotes?: string | null;
+  bookingIntent?: boolean;
+}
+
+/**
+ * After each bot reply, analyze the full conversation in the background and
+ * extract structured client insights to enrich persistent memory.
+ * Uses the lightest/fastest available model to avoid quota pressure.
+ */
+export async function learnFromConversation(
+  history: ConversationTurn[],
+  currentMemory: {
+    clientName?: string | null;
+    language?: string;
+    preferredServices?: string[];
+    personalityNotes?: string | null;
+  },
+  availableServices: string[]
+): Promise<LearnedInsights | null> {
+  // Need at least one full exchange (user + model) to learn from
+  if (history.length < 2) return null;
+
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  const groqKey = process.env.XAI_API_KEY;
+  if (!apiKey && !groqKey) return null;
+
+  const conversationText = history
+    .map((t) => `${t.role === "user" ? "العميلة" : "لينا"}: ${t.text}`)
+    .join("\n");
+
+  const servicesStr = availableServices.join("، ") || "غير محددة";
+
+  const prompt = `أنت نظام تحليل ذكي لصالون تجميل. حلل هاد المحادثة بدقة واستخرج معلومات مفيدة عن العميلة.
+
+المحادثة:
+${conversationText}
+
+الخدمات المتاحة في الصالون: ${servicesStr}
+
+المعلومات المحفوظة حالياً:
+- الاسم: ${currentMemory.clientName || "غير معروف"}
+- اللغة: ${currentMemory.language || "unknown"}
+- الخدمات المهتمة بها: ${(currentMemory.preferredServices || []).join("، ") || "لا شيء"}
+- ملاحظات سابقة: ${currentMemory.personalityNotes || "لا شيء"}
+
+استخرج المعلومات التالية وأجب بـ JSON فقط بدون أي تفسير أو نص خارج الـ JSON:
+{
+  "clientName": "الاسم إذا ذُكر في المحادثة، وإلا null",
+  "language": "arabic أو french أو darija أو unknown — اختر حسب لغة العميلة",
+  "preferredServices": ["قائمة الخدمات التي سألت عنها أو أبدت اهتماماً بها من قائمة الصالون فقط"],
+  "personalityNotes": "ملاحظة قصيرة (جملة أو جملتين) عن: أسلوبها في التواصل، تفضيلاتها، ميزانيتها إذا ظهرت، أي شيء يساعد على التعامل معها بشكل أفضل في المستقبل. null إذا ما عندكش معلومات كافية",
+  "bookingIntent": true أو false — هل أبدت نية واضحة للحجز في هاد المحادثة
+}`;
+
+  const tryParseJSON = (text: string): LearnedInsights | null => {
+    try {
+      const cleaned = text
+        .replace(/```json\s*/gi, "")
+        .replace(/```\s*/gi, "")
+        .trim();
+      return JSON.parse(cleaned) as LearnedInsights;
+    } catch {
+      return null;
+    }
+  };
+
+  // Try Gemini with lightest model first
+  if (apiKey) {
+    const learningModels = ["gemini-2.5-flash-lite", "gemini-1.5-flash"];
+    for (const model of learningModels) {
+      if (modelCooldowns[model] && Date.now() < modelCooldowns[model]) continue;
+      try {
+        const res = await fetch(
+          `${GEMINI_BASE}/${model}:generateContent?key=${apiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ role: "user", parts: [{ text: prompt }] }],
+              generationConfig: { maxOutputTokens: 500, temperature: 0.2 },
+            }),
+          }
+        );
+        if (res.ok) {
+          const data = (await res.json()) as any;
+          const text: string =
+            data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? "";
+          const parsed = tryParseJSON(text);
+          if (parsed) {
+            console.log(`[BotLearn] Gemini ${model} extracted insights`);
+            return parsed;
+          }
+        } else if (res.status === 429) {
+          modelCooldowns[model] = Date.now() + QUOTA_COOLDOWN_MS;
+        }
+      } catch (err: any) {
+        console.warn(`[BotLearn] Gemini ${model} failed: ${err.message}`);
+      }
+    }
+  }
+
+  // Groq fallback — fast small model
+  if (groqKey) {
+    try {
+      const res = await fetch(`${GROQ_BASE}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${groqKey}`,
+        },
+        body: JSON.stringify({
+          model: "llama-3.1-8b-instant",
+          messages: [{ role: "user", content: prompt }],
+          max_tokens: 500,
+          temperature: 0.2,
+        }),
+      });
+      if (res.ok) {
+        const data = (await res.json()) as any;
+        let text: string =
+          data?.choices?.[0]?.message?.content?.trim() ?? "";
+        text = text.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+        const parsed = tryParseJSON(text);
+        if (parsed) {
+          console.log("[BotLearn] Groq llama-3.1-8b extracted insights");
+          return parsed;
+        }
+      }
+    } catch (err: any) {
+      console.warn(`[BotLearn] Groq failed: ${err.message}`);
+    }
+  }
+
+  return null;
+}
+
 /**
  * Ask Gemini with multi-turn history, optional client memory, and optional image.
  * Falls back through all free-tier Groq models if all Gemini models are exhausted.
