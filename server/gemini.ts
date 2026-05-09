@@ -826,17 +826,22 @@ export async function askGemini(
 
 // ── Image Generation ───────────────────────────────────────────────────────────
 
-const IMAGE_GEN_MODEL = "gemini-2.0-flash-preview-image-generation";
+// Cascade: newest/best model first → fallback to older ones automatically
+const IMAGE_GEN_CASCADE = [
+  "gemini-3.1-flash-image-preview",         // best quality + speed (latest, 2026)
+  "gemini-2.5-flash-image",                 // high quality, fast
+  "gemini-2.0-flash-preview-image-generation", // legacy fallback
+];
 
 /**
  * Generate a beauty/salon related image based on the client's request.
- * Uses Gemini 2.0 Flash image generation model.
- * Returns { base64, mimeType } or null on failure.
+ * Tries IMAGE_GEN_CASCADE in order — newest model first, falls back automatically.
+ * Returns { base64, mimeType, model } or null if all models fail.
  */
 export async function generateImage(
   userRequest: string,
   salonName: string = "PREGASQUAD"
-): Promise<{ base64: string; mimeType: string } | null> {
+): Promise<{ base64: string; mimeType: string; model: string } | null> {
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
   if (!apiKey) {
     console.warn("[ImageGen] No Gemini API key — skipping image generation");
@@ -856,42 +861,61 @@ export async function generateImage(
     `No text overlays. No watermarks. Photorealistic. Elegant and aspirational.`,
   ].join(" ");
 
-  try {
-    const url = `${GEMINI_BASE}/${IMAGE_GEN_MODEL}:generateContent?key=${apiKey}`;
-    const body = {
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
-    };
-
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-
-    if (!res.ok) {
-      const errText = await res.text();
-      console.warn(`[ImageGen] ${IMAGE_GEN_MODEL} error ${res.status}: ${errText.slice(0, 200)}`);
-      return null;
+  for (const model of IMAGE_GEN_CASCADE) {
+    // Skip if model is in cooldown (quota hit)
+    if (modelCooldowns[model] && Date.now() < modelCooldowns[model]) {
+      const secs = Math.ceil((modelCooldowns[model] - Date.now()) / 1000);
+      console.warn(`[ImageGen] ${model} in cooldown (${secs}s) — trying next`);
+      continue;
     }
 
-    const data = await res.json() as any;
-    const parts: any[] = data?.candidates?.[0]?.content?.parts || [];
-    const imagePart = parts.find((p: any) => p.inlineData?.data);
-    if (!imagePart) {
-      console.warn("[ImageGen] No image part in response");
-      return null;
-    }
+    try {
+      const url = `${GEMINI_BASE}/${model}:generateContent?key=${apiKey}`;
+      const body = {
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
+      };
 
-    console.log(`[ImageGen] Image generated successfully (mimeType: ${imagePart.inlineData.mimeType})`);
-    return {
-      base64: imagePart.inlineData.data,
-      mimeType: imagePart.inlineData.mimeType || "image/png",
-    };
-  } catch (err: any) {
-    console.error(`[ImageGen] Error: ${err.message}`);
-    return null;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (res.status === 429) {
+        modelCooldowns[model] = Date.now() + QUOTA_COOLDOWN_MS;
+        console.warn(`[ImageGen] ${model} quota hit — cooldown, trying next model`);
+        continue;
+      }
+
+      if (!res.ok) {
+        const errText = await res.text();
+        console.warn(`[ImageGen] ${model} error ${res.status}: ${errText.slice(0, 200)} — trying next`);
+        continue;
+      }
+
+      const data = await res.json() as any;
+      const parts: any[] = data?.candidates?.[0]?.content?.parts || [];
+      const imagePart = parts.find((p: any) => p.inlineData?.data);
+
+      if (!imagePart) {
+        console.warn(`[ImageGen] ${model} returned no image part — trying next`);
+        continue;
+      }
+
+      console.log(`[ImageGen] ✓ ${model} generated image (${imagePart.inlineData.mimeType})`);
+      return {
+        base64: imagePart.inlineData.data,
+        mimeType: imagePart.inlineData.mimeType || "image/png",
+        model,
+      };
+    } catch (err: any) {
+      console.warn(`[ImageGen] ${model} threw: ${err.message} — trying next`);
+    }
   }
+
+  console.error("[ImageGen] All models in cascade failed");
+  return null;
 }
 
 /**

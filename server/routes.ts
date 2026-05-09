@@ -4412,7 +4412,7 @@ export async function registerRoutes(
                 if (imgResult) {
                   const caption = "هذا مثال على ما تقصدينه 🌸\nراسليني إذا أعجبك الشكل ونحددوا موعدك 💖";
                   await sendWhatsAppImageBuffer(remoteJid, imgResult.base64, imgResult.mimeType, caption);
-                  console.log(`[Bot] Generated image sent to ${remoteJid}`);
+                  console.log(`[Bot] Generated image sent to ${remoteJid} via ${imgResult.model}`);
                 } else {
                   // No API key or model failed — fall through to AI text reply
                   await sendWhatsAppMessage(
