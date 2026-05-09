@@ -1403,9 +1403,9 @@ export default function WhatsApp() {
                             }
                             disabled={blockConvMutation.isPending}
                             data-testid={`switch-bot-block-${conv.phone}`}
-                            className="data-[state=checked]:bg-emerald-500"
+                            className="data-[state=checked]:bg-emerald-500 data-[state=unchecked]:bg-red-500"
                           />
-                          <span className="text-[9px] text-muted-foreground">
+                          <span className={`text-[9px] font-semibold ${conv.botBlocked ? "text-red-500" : "text-emerald-500"}`}>
                             {conv.botBlocked ? "موقوف" : "نشط"}
                           </span>
                         </div>
