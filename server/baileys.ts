@@ -303,9 +303,9 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
     printQRInTerminal: false,
     syncFullHistory: false,
     markOnlineOnConnect: false,
-    connectTimeoutMs: 60_000,
-    keepAliveIntervalMs: 30_000,
-    retryRequestDelayMs: 5_000,
+    connectTimeoutMs: 120_000,
+    keepAliveIntervalMs: 25_000,
+    retryRequestDelayMs: 3_000,
     mobile: false,
   });
 
@@ -330,6 +330,9 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
         pairingCodeExpiresAt = Date.now() + 60_000;
         lastPairingError = null;
         log(`Pairing code issued: ${code}`);
+        // Enable reconnect NOW — if the WS drops while the user is entering the
+        // code, the saved creds will allow the session to resume automatically.
+        shouldReconnect = true;
         emitStatus();
         if (ioInstance) {
           ioInstance.emit("whatsapp:pairing_code", { code, expiresAt: pairingCodeExpiresAt });
@@ -367,6 +370,9 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
 
   sock.ev.on("connection.update", async (update: any) => {
     const { connection, lastDisconnect, qr } = update;
+
+    // Verbose logging to track pairing handshake progress
+    if (connection) log(`Connection state → ${connection}`);
 
     if (qr && !pairingPhone) {
       status = "qr";
