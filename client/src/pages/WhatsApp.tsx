@@ -259,6 +259,19 @@ export default function WhatsApp() {
       });
       setTimeout(() => refetch(), 500);
     });
+    socket.on("whatsapp:session_expired", ({ reason }: { reason?: string }) => {
+      setPairingCode(null);
+      setIsWaitingForCode(false);
+      if (countdownRef.current) clearInterval(countdownRef.current);
+      if (codeExpiryRef.current) clearInterval(codeExpiryRef.current);
+      toast({
+        title: "فشل الاتصال التلقائي بواتساب",
+        description: reason ?? "فشل استعادة الجلسة 3 مرات متتالية — يرجى ربط واتساب من جديد.",
+        variant: "destructive",
+        duration: 15000,
+      });
+      setTimeout(() => refetch(), 500);
+    });
     return () => { socket.disconnect(); };
   }, []);
 
