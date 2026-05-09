@@ -2594,6 +2594,8 @@ export async function registerRoutes(
           lastSeen: m.lastSeen ? m.lastSeen.toISOString() : null,
           history: m.convHistory,
           botBlocked: m.botBlocked ?? false,
+          preferredServices: m.preferredServices ?? [],
+          personalityNotes: m.personalityNotes ?? null,
         }));
       res.json(result);
     } catch (err: any) {

@@ -471,6 +471,8 @@ export default function WhatsApp() {
     lastSeen: string | null;
     history: { role: "user" | "model"; text: string }[];
     botBlocked: boolean;
+    preferredServices: string[];
+    personalityNotes: string | null;
   }
 
   const {
@@ -1467,6 +1469,35 @@ export default function WhatsApp() {
                       {/* Expanded chat bubble view */}
                       {isExpanded && (
                         <div className="px-5 pb-4 space-y-3 bg-muted/10">
+
+                          {/* ── Bot Memory Card ── */}
+                          {(conv.personalityNotes || (conv.preferredServices && conv.preferredServices.length > 0)) && (
+                            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 space-y-2">
+                              <div className="flex items-center gap-1.5">
+                                <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                                <span className="text-[11px] font-semibold text-emerald-400">ما تعلمه البوت عن هاد العميلة</span>
+                              </div>
+                              {conv.preferredServices && conv.preferredServices.length > 0 && (
+                                <div className="flex flex-wrap gap-1">
+                                  {conv.preferredServices.map((svc, si) => (
+                                    <Badge
+                                      key={si}
+                                      variant="secondary"
+                                      className="text-[10px] px-2 py-0 bg-emerald-500/10 text-emerald-300 border border-emerald-500/20"
+                                    >
+                                      {svc}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              )}
+                              {conv.personalityNotes && (
+                                <p className="text-[11px] text-muted-foreground leading-relaxed" dir="rtl">
+                                  {conv.personalityNotes}
+                                </p>
+                              )}
+                            </div>
+                          )}
+
                           {/* Chat bubbles */}
                           <div className="space-y-2 max-h-72 overflow-y-auto pt-2 pr-1">
                             {conv.history.map((turn, i) => (
