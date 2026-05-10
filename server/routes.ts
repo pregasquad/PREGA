@@ -4192,6 +4192,16 @@ export async function registerRoutes(
   // Wait this long after the LAST message before replying (reset on every new message)
   const BUFFER_DELAY_MS = 10_000;
 
+  // Shared bot phone normalizer — hoisted here so it's never in a TDZ when
+  // referenced from both the outer handler and the inner addToBuffer callback.
+  function normalizeBotPhone(n: string): string {
+    let d = (n || "").replace(/[^0-9]/g, "");
+    if (d.startsWith("00")) d = d.slice(2);
+    if (d.startsWith("0") && d.length === 10) d = "212" + d.slice(1);
+    if (d.length === 9) d = "212" + d;
+    return d;
+  }
+
   function detectCancellationIntent(text: string): boolean {
     const t = text.toLowerCase().trim();
     return (
@@ -4293,28 +4303,21 @@ export async function registerRoutes(
 
       // ── Phone number filter (allowlist / blocklist) ────────────────────────
       const filterMode: string = (botSettings as any).botFilterMode || "all";
-      const normalizeNum = (n: string) => {
-        let d = n.replace(/[^0-9]/g, "");
-        if (d.startsWith("00")) d = d.slice(2);
-        if (d.startsWith("0") && d.length === 10) d = "212" + d.slice(1);
-        if (d.length === 9) d = "212" + d;
-        return d;
-      };
       if (filterMode !== "all") {
         const rawNums: string = (botSettings as any).botFilterNumbers || "[]";
         let filterList: string[] = [];
         try { filterList = JSON.parse(rawNums); } catch { filterList = []; }
-        const normalizedList = filterList.map(normalizeNum).filter(Boolean);
+        const normalizedList = filterList.map(normalizePhone).filter(Boolean);
 
         // For @lid JIDs the "phone" extracted from the JID is a numeric LID, not a real phone.
         // Resolve the real phone from the bot_client_memory table (stored on first @s.whatsapp.net message).
-        let resolvedPhone = normalizeNum(phone);
+        let resolvedPhone = normalizeBotPhone(phone);
         if (remoteJid.endsWith("@lid")) {
           try {
             const { getBotMemory: _getBotMem } = await import("./db");
             const memEntry = await _getBotMem(remoteJid);
             if (memEntry?.phone) {
-              resolvedPhone = normalizeNum(memEntry.phone);
+              resolvedPhone = normalizeBotPhone(memEntry.phone);
               console.log(`[Bot] @lid resolved phone from memory: ${resolvedPhone}`);
             } else {
               console.log(`[Bot] @lid JID — no phone in memory yet, lidRaw=${phone}`);
@@ -4340,20 +4343,13 @@ export async function registerRoutes(
             const rawNums2: string = (freshSettings as any).botFilterNumbers || "[]";
             let freshList: string[] = [];
             try { freshList = JSON.parse(rawNums2); } catch { freshList = []; }
-            const normalizeNum2 = (n: string) => {
-              let d = n.replace(/[^0-9]/g, "");
-              if (d.startsWith("00")) d = d.slice(2);
-              if (d.startsWith("0") && d.length === 10) d = "212" + d.slice(1);
-              if (d.length === 9) d = "212" + d;
-              return d;
-            };
-            const freshNormalizedList = freshList.map(normalizeNum2).filter(Boolean);
-            let freshPhone = normalizeNum2(phone);
+            const freshNormalizedList = freshList.map(normalizePhone).filter(Boolean);
+            let freshPhone = normalizeBotPhone(phone);
             if (remoteJid.endsWith("@lid")) {
               try {
                 const { getBotMemory: _bm } = await import("./db");
                 const me = await _bm(remoteJid);
-                if (me?.phone) freshPhone = normalizeNum2(me.phone);
+                if (me?.phone) freshPhone = normalizeBotPhone(me.phone);
               } catch { /* ignore */ }
             }
             const freshInList = freshNormalizedList.includes(freshPhone);
@@ -4403,21 +4399,6 @@ export async function registerRoutes(
             .join("\n")
             .trim();
 
-          // ── Detect language from the current message batch ───────────────
-          // Use this immediately for the current reply so first-time clients
-          // (whose stored mem.language is still "unknown") also get the right
-          // language — especially important for voice notes.
-          const rawDetectedLang = detectLanguage(mergedText);
-          const currentLang: string =
-            rawDetectedLang !== "unknown"
-              ? rawDetectedLang
-              : mem.language !== "unknown"
-              ? mem.language
-              : "unknown";
-          if (rawDetectedLang !== "unknown" && rawDetectedLang !== mem.language) {
-            console.log(`[Bot] Language detected from message: ${rawDetectedLang} (was: ${mem.language}) for ${remoteJid}`);
-          }
-
           // Use the last image in the batch (most recent photo sent)
           const imgMsg = [...msgs].reverse().find((m) => m.imageBase64);
           const mergedImageBase64 = imgMsg?.imageBase64;
@@ -4455,7 +4436,7 @@ export async function registerRoutes(
             await storage.updateAppointment(apt.id, { bookingStatus: "confirmed" } as any);
             io.emit("booking:updated", { ...apt, bookingStatus: "confirmed" });
             io.emit("appointment:updated", { id: apt.id, bookingStatus: "confirmed" });
-            await sendBotConfirmed(remoteJid, apt.client, apt.service, apt.date, apt.startTime);
+            await sendBotConfirmed(remoteJid, apt.client ?? undefined, apt.service ?? undefined, apt.date ?? undefined, apt.startTime ?? undefined);
             console.log(`[Bot] Appointment ${apt.id} confirmed by client (${remoteJid})`);
             return;
           }
@@ -4577,6 +4558,19 @@ export async function registerRoutes(
           const history = getActiveHistory(mem);
           const hasHistory = history.length > 0;
 
+          // ── Detect language from the current message batch ───────────────
+          // Placed here (after loadMemory) so mem.language is always defined.
+          const rawDetectedLang = detectLanguage(mergedText);
+          const currentLang: string =
+            rawDetectedLang !== "unknown"
+              ? rawDetectedLang
+              : mem.language !== "unknown"
+              ? mem.language
+              : "unknown";
+          if (rawDetectedLang !== "unknown" && rawDetectedLang !== mem.language) {
+            console.log(`[Bot] Language detected from message: ${rawDetectedLang} (was: ${mem.language}) for ${remoteJid}`);
+          }
+
           // New conversation = no history OR last seen > 20h (triggers welcome greeting)
           const lastSeenMs = mem.lastSeen ? new Date(mem.lastSeen).getTime() : 0;
           const isNewConversation = !hasHistory || (Date.now() - lastSeenMs > 20 * 60 * 60 * 1000);
@@ -4663,7 +4657,7 @@ export async function registerRoutes(
 
             // Store the real phone in memory so @lid JIDs can be resolved for filtering later
             // For @s.whatsapp.net JIDs the phone is the real number; for @lid it's a LID (skip)
-            const realPhone = remoteJid.endsWith("@s.whatsapp.net") ? normalizeNum(phone) : (mem.phone || null);
+            const realPhone = remoteJid.endsWith("@s.whatsapp.net") ? normalizeBotPhone(phone) : (mem.phone || null);
 
             const updatedMem: BotClientMemory = mergeHistory(
               {

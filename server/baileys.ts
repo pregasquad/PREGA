@@ -634,6 +634,45 @@ export async function sendWhatsAppImage(
   }
 }
 
+export async function sendWhatsAppVoiceNote(
+  to: string, pcmBase64: string, sampleRate: number
+): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  if (!sock || status !== "open") return { success: false, error: "WhatsApp not connected" };
+  try {
+    const jid = to.includes("@") ? to : formatJid(to);
+    // Convert raw PCM (L16) to a minimal WAV by prepending a 44-byte header
+    const pcmBuffer = Buffer.from(pcmBase64, "base64");
+    const numChannels = 1;
+    const bitsPerSample = 16;
+    const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+    const blockAlign = numChannels * (bitsPerSample / 8);
+    const wavHeader = Buffer.alloc(44);
+    wavHeader.write("RIFF", 0);
+    wavHeader.writeUInt32LE(36 + pcmBuffer.length, 4);
+    wavHeader.write("WAVE", 8);
+    wavHeader.write("fmt ", 12);
+    wavHeader.writeUInt32LE(16, 16);
+    wavHeader.writeUInt16LE(1, 20);
+    wavHeader.writeUInt16LE(numChannels, 22);
+    wavHeader.writeUInt32LE(sampleRate, 24);
+    wavHeader.writeUInt32LE(byteRate, 28);
+    wavHeader.writeUInt16LE(blockAlign, 32);
+    wavHeader.writeUInt16LE(bitsPerSample, 34);
+    wavHeader.write("data", 36);
+    wavHeader.writeUInt32LE(pcmBuffer.length, 40);
+    const wavBuffer = Buffer.concat([wavHeader, pcmBuffer]);
+    const result = await sock.sendMessage(jid, {
+      audio: wavBuffer,
+      mimetype: "audio/ogg; codecs=opus",
+      ptt: true,
+    });
+    return { success: true, messageId: result?.key?.id };
+  } catch (err: any) {
+    log(`Voice note send error: ${err.message}`);
+    return { success: false, error: err.message };
+  }
+}
+
 export async function sendWhatsAppImageBuffer(
   to: string, base64: string, mimeType: string, caption?: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
