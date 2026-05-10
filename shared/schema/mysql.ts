@@ -99,6 +99,7 @@ export const appointments = mysqlTable("appointments", {
   createdBy: text("created_by"),
   createdAt: timestamp("created_at").defaultNow(),
   bookingStatus: varchar("booking_status", { length: 20 }).default("pending"),
+  privateRoom: boolean("private_room").default(false).notNull(),
 });
 
 export const services = mysqlTable("services", {

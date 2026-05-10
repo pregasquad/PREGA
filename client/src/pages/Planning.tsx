@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { CalendarIcon, ChevronLeft, ChevronRight, Plus, Trash2, Check, X, Search, Star, RefreshCw, Sparkles, CreditCard, Settings2, Scissors, Clock, User, ChevronsUpDown, ListTodo, Bell, UserCheck, Gift, AlertCircle, AlertTriangle, Wallet, Users, Package, Lock } from "lucide-react";
+import { CalendarIcon, ChevronLeft, ChevronRight, Plus, Trash2, Check, X, Search, Star, RefreshCw, Sparkles, CreditCard, Settings2, Scissors, Clock, User, ChevronsUpDown, ListTodo, Bell, UserCheck, Gift, AlertCircle, AlertTriangle, Wallet, Users, Package, Lock, ShieldCheck } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
 import { cn } from "@/lib/utils";
@@ -66,6 +66,7 @@ const formSchema = insertAppointmentSchema.extend({
   price: z.coerce.number().min(0),
   duration: z.coerce.number().min(1),
   total: z.coerce.number().min(0),
+  privateRoom: z.boolean().optional(),
 });
 
 type AppointmentFormValues = z.infer<typeof formSchema>;
@@ -728,6 +729,7 @@ export default function Planning() {
       price: 0,
       total: 0,
       paid: false,
+      privateRoom: false,
     },
   });
 
@@ -882,6 +884,7 @@ export default function Planning() {
       price: app.price,
       total: app.total,
       paid: app.paid,
+      privateRoom: app.privateRoom || false,
     });
     setTotalInputValue(String(app.total));
     setEditingAppointment(app);
@@ -1017,6 +1020,7 @@ export default function Planning() {
       loyaltyDiscountAmount: appliedLoyaltyPoints?.discountAmount || 0,
       loyaltyPointsRedeemed: appliedLoyaltyPoints?.points || 0,
       giftCardDiscountAmount: appliedGiftCardBalance?.discountAmount || 0,
+      privateRoom: data.privateRoom || false,
     };
 
     if (editingAppointment) {
@@ -2205,6 +2209,13 @@ export default function Planning() {
                             </div>
                           </div>
                         )}
+                        {booking.privateRoom && (
+                          <div className="absolute top-0.5 left-0.5 z-20 pointer-events-none">
+                            <div className="bg-violet-500 rounded-full p-0.5 shadow-md">
+                              <ShieldCheck className="w-2.5 h-2.5 text-white" strokeWidth={2.5} />
+                            </div>
+                          </div>
+                        )}
                         {(() => {
                           let servicesList: Array<{name: string, price: number, duration: number}> = [];
                           if (booking.servicesJson) {
@@ -2688,6 +2699,34 @@ export default function Planning() {
                     </div>
                   );
                 })()}
+
+                {/* Private Room toggle */}
+                <FormField
+                  control={form.control}
+                  name="privateRoom"
+                  render={({ field }) => (
+                    <FormItem className="space-y-0">
+                      <FormControl>
+                        <button
+                          type="button"
+                          data-testid="toggle-private-room"
+                          onClick={() => field.onChange(!field.value)}
+                          className={cn(
+                            "w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[12px] font-semibold transition-all border",
+                            field.value
+                              ? "bg-violet-500/15 border-violet-500/40 text-violet-700 dark:text-violet-300"
+                              : "bg-secondary/50 border-transparent text-muted-foreground hover:bg-violet-500/10 hover:border-violet-500/20"
+                          )}
+                        >
+                          <ShieldCheck className={cn("w-4 h-4 shrink-0", field.value ? "text-violet-500" : "text-muted-foreground")} />
+                          <span className="flex-1 text-start">غرفة خاصة — نساء فقط</span>
+                          <span className="text-[10px] opacity-70">Private Room</span>
+                          {field.value && <Check className="w-3.5 h-3.5 text-violet-500 shrink-0" />}
+                        </button>
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
 
                 {/* Services section - compact */}
                 <div className="space-y-1.5">

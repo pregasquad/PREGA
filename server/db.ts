@@ -1776,6 +1776,25 @@ function rowToComplaint(row: any): SalonComplaint {
   };
 }
 
+export async function ensurePrivateRoomColumn(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      try {
+        await connection.query(`ALTER TABLE appointments ADD COLUMN private_room TINYINT(1) NOT NULL DEFAULT 0`);
+      } catch (e: any) {
+        if (!e.message?.includes('Duplicate column')) throw e;
+      }
+      connection.release();
+    } else {
+      await pool.query(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS private_room BOOLEAN NOT NULL DEFAULT FALSE`);
+    }
+    console.log("Private room column ready");
+  } catch (error) {
+    console.error("Failed to ensure private_room column:", error);
+  }
+}
+
 export async function ensureOwnerWithdrawalsTable(): Promise<void> {
   try {
     if (dbDialect === 'mysql') {

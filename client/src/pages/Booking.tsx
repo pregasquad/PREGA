@@ -125,6 +125,7 @@ export default function Booking() {
   const [bookingResult, setBookingResult] = useState<BookingResult | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [confirmedTotal, setConfirmedTotal] = useState<number>(0);
+  const [privateRoom, setPrivateRoom] = useState<boolean>(false);
 
   useEffect(() => {
     i18n.changeLanguage("fr");
@@ -343,6 +344,7 @@ export default function Booking() {
       startTime: selectedTime,
       phone: data.phone || undefined,
       servicesJson: selectedServices,
+      privateRoom,
     };
     
     try {
@@ -1140,7 +1142,41 @@ export default function Booking() {
                 </div>
               </div>
 
-              <div className="border-t border-border/50 pt-6">
+              <div className="border-t border-border/50 pt-6 space-y-4">
+                {/* Private Room toggle */}
+                <button
+                  type="button"
+                  data-testid="toggle-private-room-booking"
+                  onClick={() => setPrivateRoom(prev => !prev)}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all border-2",
+                    privateRoom
+                      ? "bg-violet-500/15 border-violet-500/50 text-violet-700 dark:text-violet-300"
+                      : "bg-muted/40 border-border/50 text-muted-foreground hover:border-violet-300 hover:bg-violet-50 dark:hover:bg-violet-950/20"
+                  )}
+                >
+                  <div className={cn(
+                    "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
+                    privateRoom ? "bg-violet-500 text-white" : "bg-muted text-muted-foreground"
+                  )}>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                      <polyline points="9,12 11,14 15,10"/>
+                    </svg>
+                  </div>
+                  <div className="flex-1 text-start">
+                    <p className="font-semibold text-sm">Salle Privée — Femmes uniquement</p>
+                    <p className="text-xs opacity-70 font-normal mt-0.5">غرفة خاصة مخصصة للسيدات فقط — للمحجبات 🌸</p>
+                  </div>
+                  {privateRoom && (
+                    <div className="w-5 h-5 rounded-full bg-violet-500 flex items-center justify-center shrink-0">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20,6 9,17 4,12"/>
+                      </svg>
+                    </div>
+                  )}
+                </button>
+
                 <Button
                   type="submit"
                   className="w-full h-14 text-lg rounded-2xl font-semibold shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all"
