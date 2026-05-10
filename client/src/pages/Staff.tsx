@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, Edit2, User, Phone, Mail, DollarSign, Palette, Tag, Calendar, Coffee, CalendarOff, Upload, Camera, Loader2, Share2, Check, Venus, Mars } from "lucide-react";
+import { Plus, Trash2, Edit2, User, Phone, Mail, DollarSign, Palette, Tag, Calendar, Coffee, CalendarOff, Upload, Camera, Loader2, Share2, Check } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormMessage, FormLabel } from "@/components/ui/form";
@@ -488,7 +488,7 @@ export default function Staff() {
                           : "border-border/50 text-muted-foreground hover:border-pink-300"
                       }`}
                     >
-                      <Venus className="h-4 w-4" />
+                      <span className="text-base leading-none">♀</span>
                       بنت / Femme
                     </button>
                     <button
@@ -501,7 +501,7 @@ export default function Staff() {
                           : "border-border/50 text-muted-foreground hover:border-blue-300"
                       }`}
                     >
-                      <Mars className="h-4 w-4" />
+                      <span className="text-base leading-none">♂</span>
                       راجل / Homme
                     </button>
                   </div>
@@ -654,13 +654,11 @@ export default function Staff() {
                         <CardTitle className="text-lg truncate">{staff.name}</CardTitle>
                         {(staff as any).gender === "male" ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300 shrink-0">
-                            <Mars className="h-2.5 w-2.5" />
-                            Homme
+                            ♂ Homme
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-pink-100 text-pink-600 dark:bg-pink-900/40 dark:text-pink-300 shrink-0">
-                            <Venus className="h-2.5 w-2.5" />
-                            Femme
+                            ♀ Femme
                           </span>
                         )}
                       </div>

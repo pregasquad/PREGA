@@ -5029,9 +5029,9 @@ async function seedDatabase() {
   }
   const staff = await storage.getStaff();
   if (staff.length === 0) {
-    await storage.createStaff({ name: "Hayat", color: "#d63384" });
-    await storage.createStaff({ name: "Mehdi", color: "#20c997" });
-    await storage.createStaff({ name: "Nofl", color: "#0d6efd" });
+    await storage.createStaff({ name: "Hayat", color: "#d63384", gender: "female" });
+    await storage.createStaff({ name: "Mehdi", color: "#20c997", gender: "male" });
+    await storage.createStaff({ name: "Nofl", color: "#0d6efd", gender: "female" });
   }
 
   const categories = await storage.getCategories();
