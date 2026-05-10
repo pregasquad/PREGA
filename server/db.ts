@@ -1795,6 +1795,24 @@ export async function ensureStaffGenderColumn(): Promise<void> {
   }
 }
 
+export async function ensureStaffGenderDefaults(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      try {
+        await connection.query(`UPDATE staff SET gender = 'male' WHERE LOWER(name) IN ('mehdi','mohammed','karim','youssef','omar','hassan','adam','amine') AND gender = 'female'`);
+      } finally {
+        connection.release();
+      }
+    } else {
+      await pool.query(`UPDATE staff SET gender = 'male' WHERE LOWER(name) IN ('mehdi','mohammed','karim','youssef','omar','hassan','adam','amine') AND gender = 'female'`);
+    }
+    console.log("Staff gender defaults applied");
+  } catch (error) {
+    console.error("Failed to apply staff gender defaults:", error);
+  }
+}
+
 export async function ensurePrivateRoomColumn(): Promise<void> {
   try {
     if (dbDialect === 'mysql') {

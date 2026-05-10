@@ -416,7 +416,8 @@ export async function registerRoutes(
       name: s.name,
       color: s.color,
       photoUrl: s.photoUrl,
-      categories: s.categories || null
+      categories: s.categories || null,
+      gender: (s as any).gender ?? "female"
     }));
     res.json(sanitizedItems);
   });
