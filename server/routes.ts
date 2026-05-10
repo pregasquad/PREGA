@@ -4544,7 +4544,7 @@ export async function registerRoutes(
                 "هيا بالله 💖 ننتظروك!",
                 "والله سعداء بيك 🌸",
               ]],
-              [/^(بسلامة|بالسلامة|مع السلامة|au revoir|bye|byee|bbye|سلام|تصبح على خير|تصبحي على خير|lila sa3ida|bonne nuit|bonne journée|👋)$/i, [
+              [/^(بسلامة|بالسلامة|مع السلامة|au revoir|bye|byee|bbye|تصبح على خير|تصبحي على خير|lila sa3ida|bonne nuit|bonne journée|👋)$/i, [
                 "بسلامة 🌸 ننتظروك دايما!",
                 "مع السلامة 💖 تصبحي على خير!",
                 "يسلمك ربي 🌸 أي وقت راسليني!",
