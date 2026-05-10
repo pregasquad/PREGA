@@ -4390,7 +4390,34 @@ export async function registerRoutes(
           }
 
           // ── Merge all buffered messages into one context ─────────────────
-          const mergedText = msgs.map((m) => m.text).filter(Boolean).join("\n").trim();
+          // Voice note transcripts are tagged with the 🎙️ prefix so the system
+          // prompt's special-case rule ("جاوبي مباشرة على المحتوى بدون ما تذكري إنها صوتية")
+          // fires correctly, and the AI doesn't confuse transcripts with typed text.
+          const mergedText = msgs
+            .map((m) => {
+              if (!m.text) return null;
+              const wasVoice = m.isVoice && m.text !== "[voice message]";
+              return wasVoice ? `🎙️ رسالة صوتية: "${m.text}"` : m.text;
+            })
+            .filter(Boolean)
+            .join("\n")
+            .trim();
+
+          // ── Detect language from the current message batch ───────────────
+          // Use this immediately for the current reply so first-time clients
+          // (whose stored mem.language is still "unknown") also get the right
+          // language — especially important for voice notes.
+          const rawDetectedLang = detectLanguage(mergedText);
+          const currentLang: string =
+            rawDetectedLang !== "unknown"
+              ? rawDetectedLang
+              : mem.language !== "unknown"
+              ? mem.language
+              : "unknown";
+          if (rawDetectedLang !== "unknown" && rawDetectedLang !== mem.language) {
+            console.log(`[Bot] Language detected from message: ${rawDetectedLang} (was: ${mem.language}) for ${remoteJid}`);
+          }
+
           // Use the last image in the batch (most recent photo sent)
           const imgMsg = [...msgs].reverse().find((m) => m.imageBase64);
           const mergedImageBase64 = imgMsg?.imageBase64;
@@ -4598,7 +4625,10 @@ export async function registerRoutes(
             isNewConversation,
             clientMemory: {
               clientName: mem.clientName,
-              language: mem.language !== "unknown" ? mem.language : undefined,
+              // Use the language detected from the CURRENT message batch (not just
+              // what was stored last time) so voice notes / first messages get the
+              // right language on the very first reply.
+              language: currentLang !== "unknown" ? currentLang : undefined,
               preferredServices: mem.preferredServices,
               personalityNotes: mem.personalityNotes,
               visitCount: mem.visitCount,
@@ -4626,7 +4656,8 @@ export async function registerRoutes(
 
           // Update client memory on genuine AI replies (not fallback)
           if (aiReply !== FALLBACK_REPLY) {
-            const detectedLang = detectLanguage(mergedText);
+            // Re-use currentLang already computed above — no need to call detectLanguage again
+            const detectedLang = currentLang;
             const detectedName = extractName(mergedText);
             const mentionedSvcs = extractMentionedServices(mergedText + " " + aiReply, serviceList);
 
