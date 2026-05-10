@@ -4177,7 +4177,9 @@ export async function registerRoutes(
     text: string;
     imageBase64?: string;
     imageMimeType?: string;
-    isVoice?: boolean; // true if the message came from a WhatsApp voice note
+    isVoice?: boolean;    // true if the message came from a WhatsApp voice note
+    audioBase64?: string; // raw audio buffer as base64 (voice notes only)
+    audioMimeType?: string;
   }
 
   interface JidSession {
@@ -4236,6 +4238,8 @@ export async function registerRoutes(
     imageBase64: string | undefined,
     imageMimeType: string | undefined,
     isVoice: boolean | undefined,
+    audioBase64: string | undefined,
+    audioMimeType: string | undefined,
     flush: (msgs: BufferedMsg[]) => Promise<void>
   ): void {
     let sess = jidSessions.get(remoteJid);
@@ -4244,7 +4248,7 @@ export async function registerRoutes(
       jidSessions.set(remoteJid, sess);
     }
 
-    sess.buffer.push({ text, imageBase64, imageMimeType, isVoice });
+    sess.buffer.push({ text, imageBase64, imageMimeType, isVoice, audioBase64, audioMimeType });
     console.log(`[Bot] Buffered msg ${sess.buffer.length} for ${remoteJid} — waiting ${BUFFER_DELAY_MS / 1000}s after last message`);
 
     // Reset debounce timer on every new message
@@ -4272,7 +4276,7 @@ export async function registerRoutes(
     // (text + images sent in quick succession) are collected and answered as ONE reply.
     // remoteJid = full WhatsApp JID (may be @s.whatsapp.net OR @lid for newer accounts)
     // phone     = numeric digits extracted from JID — used ONLY for DB matching
-    setIncomingMessageHandler(async (remoteJid: string, phone: string, text: string, imageBase64?: string, imageMimeType?: string, isVoice?: boolean) => {
+    setIncomingMessageHandler(async (remoteJid: string, phone: string, text: string, imageBase64?: string, imageMimeType?: string, isVoice?: boolean, audioBase64?: string, audioMimeType?: string) => {
       // Ignore empty messages, groups, and broadcasts
       if ((!text || !text.trim()) && !imageBase64) return;
       if (remoteJid.endsWith("@g.us")) return;
@@ -4324,7 +4328,7 @@ export async function registerRoutes(
         if (filterMode === "blocklist" && isInList) return;   // in blocklist → ignore
       }
 
-      addToBuffer(remoteJid, text, imageBase64, imageMimeType, isVoice, async (msgs: BufferedMsg[]) => {
+      addToBuffer(remoteJid, text, imageBase64, imageMimeType, isVoice, audioBase64, audioMimeType, async (msgs: BufferedMsg[]) => {
         try {
           // ── Re-check blocklist inside buffer callback ──────────────────────
           // Handles the case where the number was added to the blocklist while
@@ -4363,6 +4367,26 @@ export async function registerRoutes(
           if (memCheck?.botBlocked) {
             console.log(`[Bot] ${remoteJid} is individually bot-blocked — skipping reply`);
             return;
+          }
+
+          // ── Transcribe any voice notes in the batch ──────────────────────
+          // Do this BEFORE merging so the transcription replaces "[voice message]"
+          const { transcribeAudio } = await import("./gemini");
+          for (const msg of msgs) {
+            if (msg.isVoice && msg.audioBase64 && msg.audioMimeType) {
+              console.log(`[Bot] Transcribing voice note (${Math.round(msg.audioBase64.length * 0.75 / 1024)} KB) for ${remoteJid}`);
+              try {
+                const transcript = await transcribeAudio(msg.audioBase64, msg.audioMimeType);
+                if (transcript && transcript.trim()) {
+                  console.log(`[Bot] Voice transcript: "${transcript.slice(0, 100)}"`);
+                  msg.text = transcript;
+                } else {
+                  console.warn(`[Bot] Transcription returned empty — keeping "[voice message]" placeholder`);
+                }
+              } catch (err: any) {
+                console.warn(`[Bot] Transcription error: ${err.message}`);
+              }
+            }
           }
 
           // ── Merge all buffered messages into one context ─────────────────
