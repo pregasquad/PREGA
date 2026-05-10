@@ -1776,6 +1776,25 @@ function rowToComplaint(row: any): SalonComplaint {
   };
 }
 
+export async function ensureStaffGenderColumn(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      try {
+        await connection.query(`ALTER TABLE staff ADD COLUMN gender VARCHAR(10) NOT NULL DEFAULT 'female'`);
+      } catch (e: any) {
+        if (!e.message?.includes('Duplicate column')) throw e;
+      }
+      connection.release();
+    } else {
+      await pool.query(`ALTER TABLE staff ADD COLUMN IF NOT EXISTS gender VARCHAR(10) NOT NULL DEFAULT 'female'`);
+    }
+    console.log("Staff gender column ready");
+  } catch (error) {
+    console.error("Failed to ensure staff gender column:", error);
+  }
+}
+
 export async function ensurePrivateRoomColumn(): Promise<void> {
   try {
     if (dbDialect === 'mysql') {

@@ -47,6 +47,7 @@ export interface SalonContext {
   closingTime?: string;
   currency?: string;
   services: { name: string; price: number; duration: number; category: string; isStartingPrice?: boolean }[];
+  staffMembers?: { name: string; gender: string }[];
   clientMemory?: ClientMemory;
   isNewConversation?: boolean; // true = first message in this session / day
   resolvedComplaints?: { complaint: string; fix: string }[]; // salon-level learnings
@@ -67,7 +68,8 @@ function buildSystemPrompt(ctx: SalonContext): string {
   const memKey = mem
     ? `${mem.clientName ?? ""}|${mem.language ?? ""}|${(mem.preferredServices ?? []).join(",")}|${mem.visitCount ?? 0}`
     : "";
-  const key = `${ctx.name}|${ctx.currency}|${ctx.services.length}|${memKey}|${ctx.isNewConversation ? "new" : "returning"}`;
+  const staffKey = (ctx.staffMembers || []).map(s => `${s.name}:${s.gender}`).join(",");
+  const key = `${ctx.name}|${ctx.currency}|${ctx.services.length}|${staffKey}|${memKey}|${ctx.isNewConversation ? "new" : "returning"}`;
   if (key === cachedPromptKey) return cachedPrompt;
 
   // Group services by category
@@ -168,8 +170,13 @@ ${ctx.resolvedComplaints.map(r => `• إذا سألت عميلة عن: "${r.com
 • مهم جداً: لما تأكدي موعد محدد → لازم تذكري في نفس الرسالة: اسم العميلة + اسم الخدمة بوضوح + التاريخ (اليوم/غدا/اسم اليوم) + الساعة — هاد المعلومات ضرورية باش يتسجل الموعد في النظام تلقائياً
 
 ━━━ فريق العمل والغرفة الخاصة — مهم جداً ━━━
-• الصالون عندنا موظفات بنات وموظفين رجال
-• لو سألات "واش عندكم بنات ولا رجال؟" أو "مين اللي كيخدم؟" أو "homme wla femme?" أو أي سؤال مشابه → ردي بوضوح: "عندنا بنات ورجال، وإلا بغيتي خدمة مع بنت فقط كنا عندنا غرفة خاصة مخصصة للسيدات فقط 🌸"
+${ctx.staffMembers && ctx.staffMembers.length > 0 ? `فريق الصالون:
+${ctx.staffMembers.map(s => `• ${s.name} — ${s.gender === 'female' ? 'بنت 👩' : 'راجل 👨'}`).join('\n')}
+
+الموظفات البنات: ${ctx.staffMembers.filter(s => s.gender === 'female').map(s => s.name).join('، ') || 'لا يوجد حالياً'}
+الموظفين الرجال: ${ctx.staffMembers.filter(s => s.gender === 'male').map(s => s.name).join('، ') || 'لا يوجد حالياً'}
+` : '• الصالون عندنا موظفات بنات وموظفين رجال\n'}• لو سألات "واش عندكم بنات ولا رجال؟" أو "مين اللي كيخدم؟" أو "homme wla femme?" أو أي سؤال مشابه → ردي بوضوح مع ذكر أسماء الفريق حسب الجنس إذا كانت عندك المعلومة
+• لو سألات عن موظف بالاسم وأرادت تعرف جنسه → جاوبيها بوضوح من المعلومات أعلاه
 • لو المحجبة أو أي سيدة سألات على الخصوصية أو طلبات خدمة مع بنت فقط → قوليها: "بلا مشكل حبيبتي، عندنا غرفة خاصة كتخدم فيها البنات فقط، راكِ في أمان تام 💖"
 • الغرفة الخاصة: مخصصة للسيدات اللي كيحتاجن الخصوصية — تخدم فيها الموظفات البنات فقط، مغلقة ومريحة
 • لما العميلة تبدي اهتمامها بالغرفة الخاصة عند تأكيد الموعد → أضيفي في تأكيد الموعد: "الموعد ديالك في الغرفة الخاصة"

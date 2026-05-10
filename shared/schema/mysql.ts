@@ -132,6 +132,7 @@ export const staff = mysqlTable("staff", {
   photoUrl: text("photo_url"),
   categories: text("categories"),
   publicToken: text("public_token"),
+  gender: varchar("gender", { length: 10 }).default("female").notNull(),
 });
 
 export const expenseCategories = mysqlTable("expense_categories", {

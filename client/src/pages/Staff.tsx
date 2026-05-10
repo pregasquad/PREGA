@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, Edit2, User, Phone, Mail, DollarSign, Palette, Tag, Calendar, Coffee, CalendarOff, Upload, Camera, Loader2, Share2, Check } from "lucide-react";
+import { Plus, Trash2, Edit2, User, Phone, Mail, DollarSign, Palette, Tag, Calendar, Coffee, CalendarOff, Upload, Camera, Loader2, Share2, Check, Venus, Mars } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormMessage, FormLabel } from "@/components/ui/form";
@@ -27,6 +27,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 
 const staffFormSchema = insertStaffSchema.extend({
   baseSalary: z.coerce.number().min(0).optional(),
+  gender: z.enum(["female", "male"]).optional().default("female"),
 });
 
 const STAFF_COLORS = [
@@ -99,7 +100,8 @@ export default function Staff() {
       email: "", 
       photoUrl: "",
       baseSalary: 0,
-      categories: ""
+      categories: "",
+      gender: "female" as "female" | "male",
     }
   });
 
@@ -112,7 +114,8 @@ export default function Staff() {
       email: "", 
       photoUrl: "",
       baseSalary: 0,
-      categories: ""
+      categories: "",
+      gender: "female" as "female" | "male",
     }
   });
 
@@ -138,7 +141,8 @@ export default function Staff() {
       email: staff.email || "",
       photoUrl: staff.photoUrl || "",
       baseSalary: staff.baseSalary || 0,
-      categories: staff.categories || ""
+      categories: staff.categories || "",
+      gender: (staff.gender as "female" | "male") || "female",
     });
   };
 
@@ -463,6 +467,50 @@ export default function Staff() {
             )}
           />
 
+          <FormField
+            control={formInstance.control}
+            name="gender"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  {t("staff.gender", { defaultValue: "الجنس / Genre" })}
+                </FormLabel>
+                <FormControl>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      data-testid="gender-female"
+                      onClick={() => field.onChange("female")}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl border-2 text-sm font-semibold transition-all ${
+                        field.value === "female"
+                          ? "bg-pink-500/15 border-pink-400 text-pink-600 dark:text-pink-300"
+                          : "border-border/50 text-muted-foreground hover:border-pink-300"
+                      }`}
+                    >
+                      <Venus className="h-4 w-4" />
+                      بنت / Femme
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="gender-male"
+                      onClick={() => field.onChange("male")}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl border-2 text-sm font-semibold transition-all ${
+                        field.value === "male"
+                          ? "bg-blue-500/15 border-blue-400 text-blue-600 dark:text-blue-300"
+                          : "border-border/50 text-muted-foreground hover:border-blue-300"
+                      }`}
+                    >
+                      <Mars className="h-4 w-4" />
+                      راجل / Homme
+                    </button>
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
               <Tag className="h-4 w-4" />
@@ -602,7 +650,20 @@ export default function Staff() {
                       </div>
                     )}
                     <div className="min-w-0 flex-1">
-                      <CardTitle className="text-lg truncate">{staff.name}</CardTitle>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <CardTitle className="text-lg truncate">{staff.name}</CardTitle>
+                        {(staff as any).gender === "male" ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300 shrink-0">
+                            <Mars className="h-2.5 w-2.5" />
+                            Homme
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-pink-100 text-pink-600 dark:bg-pink-900/40 dark:text-pink-300 shrink-0">
+                            <Venus className="h-2.5 w-2.5" />
+                            Femme
+                          </span>
+                        )}
+                      </div>
                       {staff.baseSalary ? (
                         <CardDescription className="flex items-center gap-1">
                           <DollarSign className="h-3 w-3" />

@@ -4632,10 +4632,11 @@ export async function registerRoutes(
             }
           }
 
-          // Fetch salon context (settings + services list)
-          const [bizSettings, allServices] = await Promise.all([
+          // Fetch salon context (settings + services + staff list)
+          const [bizSettings, allServices, allStaff] = await Promise.all([
             storage.getBusinessSettings().catch(() => undefined),
             storage.getServices().catch(() => []),
+            storage.getStaff().catch(() => []),
           ]);
 
           const serviceList = (allServices || []).map((s: any) => ({
@@ -4652,6 +4653,11 @@ export async function registerRoutes(
           const resolvedComplaints = allResolved.filter((rc) => rc.complaintType !== "bot_error");
           const botCorrections = allResolved.filter((rc) => rc.complaintType === "bot_error");
 
+          const staffMemberList = (allStaff || []).map((s: any) => ({
+            name: s.name,
+            gender: s.gender || 'female',
+          }));
+
           const salonCtx = {
             name: bizSettings?.businessName || "PREGASQUAD",
             address: bizSettings?.address || undefined,
@@ -4661,6 +4667,7 @@ export async function registerRoutes(
             closingTime: bizSettings?.closingTime || undefined,
             currency: bizSettings?.currencySymbol || "DH",
             services: serviceList,
+            staffMembers: staffMemberList,
             isNewConversation,
             clientMemory: {
               clientName: mem.clientName,

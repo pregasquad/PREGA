@@ -133,6 +133,7 @@ export const staff = pgTable("staff", {
   photoUrl: text("photo_url"),
   categories: text("categories"),
   publicToken: text("public_token"),
+  gender: varchar("gender", { length: 10 }).default("female").notNull(),
 });
 
 export const expenseCategories = pgTable("expense_categories", {
@@ -228,6 +229,7 @@ export const insertStaffSchema = createInsertSchema(staff).omit({ id: true }).ex
   photoUrl: z.string().optional().or(z.literal("")).nullable(),
   baseSalary: z.number().min(0).optional(),
   categories: z.string().optional(),
+  gender: z.enum(["female", "male"]).optional().default("female"),
 });
 
 export type Appointment = typeof appointments.$inferSelect;
