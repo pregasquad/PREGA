@@ -1069,29 +1069,45 @@ export function extractBotConfirmedAppointment(
   if (!dateStr) return null; // no recognisable date → skip
 
   // ── 5. Extract service (best-effort from full conversation) ───────────────
-  // Step 0a: Multiple quoted services joined by و / et / +
-  // e.g. "Coloration" و "Cire complet"  OR  "Service1" et "Service2"
+  // Strategy: scan ALL text (bot reply + full history) for quoted service names.
+  // Handles: "Service1" و "Service2" و "Service3", single services, and 3+ services.
+  // Uses explicit Unicode escapes so straight " and curly " " quotes all match.
   let service: string | null = null;
-  const multiServiceRx = /[""«]([^""»\n]{2,50})[""»]\s*(?:و|et|\+)\s*[""«]([^""»\n]{2,50})[""»]/g;
-  const searchForMulti = botReply || recentText;
-  const multiMatches: string[] = [];
-  let mMatch: RegExpExecArray | null;
-  const rxCopy = new RegExp(multiServiceRx.source, multiServiceRx.flags);
-  while ((mMatch = rxCopy.exec(searchForMulti)) !== null) {
-    if (mMatch[1]) multiMatches.push(mMatch[1].trim());
-    if (mMatch[2]) multiMatches.push(mMatch[2].trim());
-  }
-  if (multiMatches.length >= 2) {
-    service = multiMatches.join(" + ");
+
+  const OPEN_Q  = "[\u0022\u201C\u00AB]"; // " " «
+  const CLOSE_Q = "[\u0022\u201D\u00BB]"; // " " »
+  const INSIDE  = "[^\u0022\u201C\u201D\u00AB\u00BB\n]{2,45}";
+
+  // Search bot reply first, then fall back to recent + full text
+  const searchSources2 = [botReply, recentText, allText];
+  const quotedRx = new RegExp(`${OPEN_Q}(${INSIDE})${CLOSE_Q}`, "g");
+
+  // Words that are definitely NOT service names
+  const notService = /^(ok|merci|شكرا|واخا|تمام|مزيان|صحة|سلامة|demain|today|اليوم|غدا|باكر|سارة|anji|yousra|fatima|nadia|prix|salqm|\d+)$/i;
+
+  for (const src of searchSources2) {
+    quotedRx.lastIndex = 0;
+    const found: string[] = [];
+    let qm: RegExpExecArray | null;
+    while ((qm = quotedRx.exec(src)) !== null) {
+      const s = qm[1].trim();
+      if (s.length >= 2 && s.length <= 45 && !notService.test(s) && !found.includes(s)) {
+        found.push(s);
+      }
+    }
+    if (found.length >= 1) {
+      service = found.join(" + ");
+      break; // stop at the first source that gives results
+    }
   }
 
-  // Step 0b: Single service after لـ — "الموعد ديالك لـ [service] …"
+  // Fallback: single service after لـ (unquoted) — "الموعد ديالك لـ Maillot complet …"
   if (!service) {
-    const directServiceRx = /(?:لـ\s*[""«]?)([^""»\n،,+]+?)(?:[""»]|\s+(?:يوم|مع|تأكد|مؤكد|غدا|اليوم|في\s+\d|و\s*[""«]))/;
+    const directServiceRx = /لـ\s*[\u0022\u201C\u00AB]?([^\u0022\u201C\u201D\u00AB\u00BB\n،,+]{2,45}?)(?:[\u0022\u201D\u00BB]|\s+(?:يوم|مع|تأكد|مؤكد|غدا|اليوم|في\s+\d))/;
     const directMatch = botReply.match(directServiceRx) ?? recentText.match(directServiceRx);
     if (directMatch) {
       const svcRaw = directMatch[1].trim();
-      if (svcRaw.length >= 2 && svcRaw.length <= 60) {
+      if (svcRaw.length >= 2 && svcRaw.length <= 45 && !notService.test(svcRaw)) {
         service = svcRaw;
       }
     }
