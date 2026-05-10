@@ -849,8 +849,9 @@ export async function registerRoutes(
             allServiceNames
           );
 
-          // Silence the bot for this client after the confirmation — no follow-up replies
-          try {
+          // Silence the bot for this client after the confirmation — only if setting is enabled
+          const silenceEnabled = (await storage.getBusinessSettings() as any)?.botSilenceAfterBooking !== false;
+          if (silenceEnabled) try {
             const { getBotMemory, saveBotMemory } = await import("./db");
             const jid = formatJid(input.phone);
             let mem = await getBotMemory(jid);

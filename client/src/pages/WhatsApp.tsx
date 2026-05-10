@@ -43,6 +43,8 @@ import {
   ShieldCheck,
   Pencil,
   Calendar,
+  VolumeX,
+  Volume2,
 } from "lucide-react";
 
 interface WAStatus {
@@ -483,6 +485,22 @@ export default function WhatsApp() {
       toast({ title: "خطأ", description: err.message, variant: "destructive" }),
   });
 
+  const toggleSilenceMutation = useMutation({
+    mutationFn: (enable: boolean) =>
+      apiRequest("PATCH", "/api/business-settings", { botSilenceAfterBooking: enable }).then((r) => r.json()),
+    onSuccess: (_data, enable) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/business-settings"] });
+      toast({
+        title: enable ? "الصمت مفعّل ✓" : "الصمت ملغى ✓",
+        description: enable
+          ? "لينا ما غاديش تجاوب بعد تأكيد الحجز 🔇"
+          : "لينا غاتكمل تجاوب بعد الحجز 💬",
+      });
+    },
+    onError: (err: any) =>
+      toast({ title: "خطأ", description: err.message, variant: "destructive" }),
+  });
+
   // ── Conversation log query & mutations ────────────────────────────────────
   interface ConvEntry {
     jid: string;
@@ -740,6 +758,45 @@ export default function WhatsApp() {
               <><BotOff className="w-4 h-4 mr-1" />إيقاف</>
             ) : (
               <><Bot className="w-4 h-4 mr-1" />تفعيل</>
+            )}
+          </Button>
+        </div>
+      </div>
+
+      {/* ── SILENCE AFTER BOOKING TOGGLE ── */}
+      <div className="glass-card rounded-2xl p-4">
+        <div className="relative z-10 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-500/25 flex items-center justify-center shrink-0">
+              <VolumeX className="w-5 h-5 text-blue-400" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-semibold text-sm">صمت بعد الحجز</p>
+              <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                {bizSettings?.botSilenceAfterBooking !== false
+                  ? "لينا ما كترد حتى بعد تأكيد الحجز 🔇"
+                  : "لينا كتكمل تجاوب بعد الحجز 💬"}
+              </p>
+            </div>
+          </div>
+          <Button
+            data-testid="button-toggle-silence-after-booking"
+            size="sm"
+            disabled={toggleSilenceMutation.isPending}
+            onClick={() => toggleSilenceMutation.mutate(bizSettings?.botSilenceAfterBooking === false)}
+            className={`shrink-0 min-w-[80px] rounded-xl ${
+              bizSettings?.botSilenceAfterBooking !== false
+                ? "bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                : "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+            }`}
+            variant="ghost"
+          >
+            {toggleSilenceMutation.isPending ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : bizSettings?.botSilenceAfterBooking !== false ? (
+              <><Volume2 className="w-4 h-4 mr-1" />إلغاء</>
+            ) : (
+              <><VolumeX className="w-4 h-4 mr-1" />تفعيل</>
             )}
           </Button>
         </div>

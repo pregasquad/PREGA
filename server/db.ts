@@ -1443,6 +1443,37 @@ export async function ensureBotFilterColumns(): Promise<void> {
   }
 }
 
+export async function ensureBotSilenceAfterBookingColumn(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      const [rows] = await connection.query(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = 'business_settings'
+          AND COLUMN_NAME = 'bot_silence_after_booking'
+      `);
+      if ((rows as any[]).length === 0) {
+        await connection.query(`ALTER TABLE business_settings ADD COLUMN bot_silence_after_booking BOOLEAN NOT NULL DEFAULT TRUE`);
+        console.log("Added bot_silence_after_booking column to business_settings");
+      }
+      connection.release();
+    } else {
+      await pool.query(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'business_settings' AND column_name = 'bot_silence_after_booking') THEN
+            ALTER TABLE business_settings ADD COLUMN bot_silence_after_booking BOOLEAN NOT NULL DEFAULT TRUE;
+          END IF;
+        END $$;
+      `);
+    }
+    console.log("Bot silence after booking column ready");
+  } catch (error) {
+    console.error("Failed to ensure bot_silence_after_booking column:", error);
+  }
+}
+
 export async function ensureOwnerWithdrawalsNotesColumn(): Promise<void> {
   try {
     if (dbDialect === 'mysql') {
