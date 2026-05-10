@@ -584,7 +584,7 @@ export function clearSessionIfDisconnected(): void {
 
 // ── JID / phone helpers ──────────────────────────────────────────────────────
 
-function formatJid(phone: string): string {
+export function formatJid(phone: string): string {
   let n = phone.replace(/[^0-9]/g, "");
   if (n.startsWith("00")) n = n.slice(2);
   if (n.startsWith("0") && n.length === 10) n = "212" + n.slice(1);
@@ -808,7 +808,7 @@ export async function sendBookingConfirmation(
   const relativeDate = formatRelativeDate(appointmentDate);
   return sendWhatsAppMessage(
     clientPhone,
-    `العفو يا ${firstName}، هانية حبيبتي! 🌸\n\nصافي، الموعد ديالك لـ "${serviceName}" تأكد ${relativeDate} إن شاء الله مع ${appointmentTime}. نتسناوك تنورينا في الصالون، ومرحبا بيك 🌸✨`
+    `مرحبا ${firstName} 🌸\n\nتم تأكيد موعدك بنجاح ✅\n\n📋 الخدمة: ${serviceName}\n📅 التاريخ: ${relativeDate}\n⏰ الوقت: ${appointmentTime}\n\nنتطلع لاستقبالك 💕`
   );
 }
 

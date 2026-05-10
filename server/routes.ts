@@ -838,9 +838,9 @@ export async function registerRoutes(
       // Send WhatsApp confirmation for the overall booking (if phone provided)
       if (input.phone && createdAppointments.length > 0) {
         try {
-          const { sendBookingConfirmation } = await import("./baileys");
+          const { sendBookingConfirmation, formatJid } = await import("./baileys");
           const allServiceNames = createdAppointments.map(a => a.service).join(" + ");
-          
+
           await sendBookingConfirmation(
             input.phone,
             input.client.split(" (")[0],
@@ -848,6 +848,32 @@ export async function registerRoutes(
             input.startTime,
             allServiceNames
           );
+
+          // Silence the bot for this client after the confirmation — no follow-up replies
+          try {
+            const { getBotMemory, saveBotMemory } = await import("./db");
+            const jid = formatJid(input.phone);
+            let mem = await getBotMemory(jid);
+            if (!mem) {
+              mem = {
+                jid,
+                phone: input.phone,
+                clientName: input.client.split(" (")[0],
+                language: "arabic",
+                preferredServices: [],
+                personalityNotes: null,
+                convHistory: [],
+                visitCount: 1,
+                lastSeen: null,
+                botBlocked: true,
+              };
+            } else {
+              mem = { ...mem, botBlocked: true };
+            }
+            await saveBotMemory(mem);
+          } catch (blockErr) {
+            console.log("Failed to silence bot after booking confirmation:", blockErr);
+          }
         } catch (err) {
           console.log("WhatsApp notification failed:", err);
         }
