@@ -4307,7 +4307,7 @@ export async function registerRoutes(
         const rawNums: string = (botSettings as any).botFilterNumbers || "[]";
         let filterList: string[] = [];
         try { filterList = JSON.parse(rawNums); } catch { filterList = []; }
-        const normalizedList = filterList.map(normalizePhone).filter(Boolean);
+        const normalizedList = filterList.map(normalizeBotPhone).filter(Boolean);
 
         // For @lid JIDs the "phone" extracted from the JID is a numeric LID, not a real phone.
         // Resolve the real phone from the bot_client_memory table (stored on first @s.whatsapp.net message).
@@ -4343,7 +4343,7 @@ export async function registerRoutes(
             const rawNums2: string = (freshSettings as any).botFilterNumbers || "[]";
             let freshList: string[] = [];
             try { freshList = JSON.parse(rawNums2); } catch { freshList = []; }
-            const freshNormalizedList = freshList.map(normalizePhone).filter(Boolean);
+            const freshNormalizedList = freshList.map(normalizeBotPhone).filter(Boolean);
             let freshPhone = normalizeBotPhone(phone);
             if (remoteJid.endsWith("@lid")) {
               try {
@@ -4369,31 +4369,43 @@ export async function registerRoutes(
           // Do this BEFORE merging so the transcription replaces "[voice message]"
           const { transcribeAudio } = await import("./gemini");
           for (const msg of msgs) {
-            if (msg.isVoice && msg.audioBase64 && msg.audioMimeType) {
-              console.log(`[Bot] Transcribing voice note (${Math.round(msg.audioBase64.length * 0.75 / 1024)} KB) for ${remoteJid}`);
-              try {
-                const transcript = await transcribeAudio(msg.audioBase64, msg.audioMimeType);
-                if (transcript && transcript.trim()) {
-                  console.log(`[Bot] Voice transcript: "${transcript.slice(0, 100)}"`);
-                  msg.text = transcript;
-                } else {
-                  console.warn(`[Bot] Transcription returned empty — keeping "[voice message]" placeholder`);
+            if (msg.isVoice) {
+              if (msg.audioBase64 && msg.audioMimeType) {
+                console.log(`[Bot] Transcribing voice note (${Math.round(msg.audioBase64.length * 0.75 / 1024)} KB) for ${remoteJid}`);
+                try {
+                  const transcript = await transcribeAudio(msg.audioBase64, msg.audioMimeType);
+                  if (transcript && transcript.trim()) {
+                    console.log(`[Bot] Voice transcript: "${transcript.slice(0, 100)}"`);
+                    msg.text = transcript;
+                  } else {
+                    // Transcription returned empty — use Arabic placeholder so AI understands context
+                    console.warn(`[Bot] Transcription returned empty — using Arabic placeholder`);
+                    msg.text = "🎙️ [رسالة صوتية — لم يتمكن النظام من تحويلها إلى نص]";
+                    msg.isVoice = false; // Don't reply with TTS if we couldn't understand the audio
+                  }
+                } catch (err: any) {
+                  console.warn(`[Bot] Transcription error: ${err.message}`);
+                  msg.text = "🎙️ [رسالة صوتية — لم يتمكن النظام من تحويلها إلى نص]";
+                  msg.isVoice = false;
                 }
-              } catch (err: any) {
-                console.warn(`[Bot] Transcription error: ${err.message}`);
+              } else {
+                // Audio download failed entirely — inform AI with Arabic placeholder
+                console.warn(`[Bot] Voice note download failed for ${remoteJid} — using Arabic placeholder`);
+                msg.text = "🎙️ [رسالة صوتية — لم يتمكن النظام من تحويلها إلى نص]";
+                msg.isVoice = false;
               }
             }
           }
 
           // ── Merge all buffered messages into one context ─────────────────
-          // Voice note transcripts are tagged with the 🎙️ prefix so the system
-          // prompt's special-case rule ("جاوبي مباشرة على المحتوى بدون ما تذكري إنها صوتية")
-          // fires correctly, and the AI doesn't confuse transcripts with typed text.
+          // Successfully transcribed voice notes are tagged with the 🎙️ prefix so the
+          // system prompt's special-case rule fires correctly. Failed transcriptions
+          // already have isVoice=false and carry an Arabic placeholder text.
           const mergedText = msgs
             .map((m) => {
               if (!m.text) return null;
-              const wasVoice = m.isVoice && m.text !== "[voice message]";
-              return wasVoice ? `🎙️ رسالة صوتية: "${m.text}"` : m.text;
+              // Tag only successfully transcribed voice notes (isVoice stays true only on success)
+              return m.isVoice ? `🎙️ رسالة صوتية: "${m.text}"` : m.text;
             })
             .filter(Boolean)
             .join("\n")
@@ -4404,6 +4416,12 @@ export async function registerRoutes(
           const mergedImageBase64 = imgMsg?.imageBase64;
           const mergedImageMimeType = imgMsg?.imageMimeType;
           const batchSize = msgs.length;
+
+          // Guard: skip silently if there's nothing meaningful to process
+          if (!mergedText && !mergedImageBase64) {
+            console.warn(`[Bot] Empty merged batch for ${remoteJid} — skipping`);
+            return;
+          }
 
           if (batchSize > 1) {
             console.log(`[Bot] Merged batch of ${batchSize} message(s) for ${remoteJid}: "${mergedText.slice(0, 60)}"`);
