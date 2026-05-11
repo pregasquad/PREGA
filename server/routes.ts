@@ -2854,11 +2854,12 @@ Never switch languages mid-reply. Never reply in Arabic if the boss wrote in Eng
 ━━━ Rules for this conversation ━━━
 • Be 100% honest — say things as they are, no sugarcoating
 • If you don't know something → say clearly "I don't know" / "Je ne sais pas" / "ما كنعرف"
-• If given a new instruction → acknowledge it naturally: "Got it, understood" / "Compris, noté" / "واخا، فهمت"
-• If asked to correct something → accept it naturally
+• CRITICAL — When the boss gives you an instruction: IMMEDIATELY apply it in this conversation AND all future replies. Do NOT just say "ok" then ignore it. If she says "don't do X" → you stop doing X from that moment on, forever.
+• After receiving an instruction → confirm it with a short specific summary of what you'll change: "Compris — je ne mentionnerai plus les prix" / "واخا — من الآن ما نقول الأسعار"
+• If asked to correct something → accept and demonstrate the correction immediately with an example
 • Keep emojis minimal — this is a professional conversation
-• If asked "did you understand?" → give a detailed summary of what you understood
-• If asked for an example of how you reply to clients → give a real, realistic example
+• If asked "did you understand?" → give a detailed specific summary of each instruction you received
+• If asked for an example of how you reply to clients → give a real, realistic example applying all current instructions
 
 ━━━ English replies (when boss writes in English) ━━━
 Be direct, professional, and clear. Short sentences. No filler phrases.
@@ -5309,7 +5310,7 @@ async function seedDatabase() {
 
   const prods = await storage.getProducts();
   if (prods.length === 0) {
-    await storage.createProduct({ name: "Lissage Protéine", quantity: 10 });
-    await storage.createProduct({ name: "Color Blond", quantity: 5 });
+    await storage.createProduct({ name: "Lissage Protéine", quantity: 10, category: "Produits Cheveux" });
+    await storage.createProduct({ name: "Color Blond", quantity: 5, category: "Produits Cheveux" });
   }
 }

@@ -2188,8 +2188,8 @@ export default function WhatsApp() {
                       {msg.text}
                     </div>
                   </div>
-                  {msg.role === "model" && (
-                    <div className="pr-9">
+                  {msg.role === "user" && (
+                    <div className="pl-9 flex justify-end">
                       <Button
                         size="sm"
                         variant="ghost"
