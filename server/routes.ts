@@ -4387,7 +4387,11 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
 
   const jidSessions = new Map<string, JidSession>();
   // Wait this long after the LAST message before replying (reset on every new message)
-  const BUFFER_DELAY_MS = 10_000;
+  // 15s gives enough room for image + caption to arrive as separate Baileys events
+  const BUFFER_DELAY_MS = 15_000;
+  // Minimum gap between two bot replies to the same JID — prevents double-send
+  const MIN_REPLY_GAP_MS = 8_000;
+  const lastReplyAt = new Map<string, number>();
 
   // Shared bot phone normalizer — hoisted here so it's never in a TDZ when
   // referenced from both the outer handler and the inner addToBuffer callback.
@@ -5055,8 +5059,17 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
           }
 
           // Send text reply if: not a voice batch, or voice send failed
+          // Double-send guard: skip if a reply was already sent within MIN_REPLY_GAP_MS
+          const lastSent = lastReplyAt.get(remoteJid) ?? 0;
           if (!repliedWithVoice) {
-            await sendWhatsAppMessage(remoteJid, finalReply);
+            if (Date.now() - lastSent < MIN_REPLY_GAP_MS) {
+              console.warn(`[Bot] Double-send guard triggered for ${remoteJid} — skipping duplicate reply`);
+            } else {
+              lastReplyAt.set(remoteJid, Date.now());
+              await sendWhatsAppMessage(remoteJid, finalReply);
+            }
+          } else {
+            lastReplyAt.set(remoteJid, Date.now());
           }
 
           const turnNum = Math.floor(newHistory.length / 2);
