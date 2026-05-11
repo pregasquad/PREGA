@@ -52,6 +52,7 @@ export interface SalonContext {
   isNewConversation?: boolean; // true = first message in this session / day
   resolvedComplaints?: { complaint: string; fix: string }[]; // salon-level learnings
   botCorrections?: { wrongInfo: string; correctInfo: string }[]; // bot's own past mistakes + correct answers
+  bossInstructions?: string[]; // permanent instructions from the salon owner/boss
 }
 
 export interface ConversationTurn {
@@ -69,7 +70,8 @@ function buildSystemPrompt(ctx: SalonContext): string {
     ? `${mem.clientName ?? ""}|${mem.language ?? ""}|${(mem.preferredServices ?? []).join(",")}|${mem.visitCount ?? 0}`
     : "";
   const staffKey = (ctx.staffMembers || []).map(s => `${s.name}:${s.gender}`).join(",");
-  const key = `${ctx.name}|${ctx.currency}|${ctx.services.length}|${staffKey}|${memKey}|${ctx.isNewConversation ? "new" : "returning"}`;
+  const bossKey = (ctx.bossInstructions || []).join("|");
+  const key = `${ctx.name}|${ctx.currency}|${ctx.services.length}|${staffKey}|${memKey}|${ctx.isNewConversation ? "new" : "returning"}|${bossKey}`;
   if (key === cachedPromptKey) return cachedPrompt;
 
   // Group services by category
@@ -214,7 +216,11 @@ ${ctx.staffMembers.map(s => `• ${s.name} — ${s.gender === 'female' ? 'بنت
 • لا تستعملي أقواس نجمة **كهاد** أو رؤوس قسم — الرسالة واتساب مش ورقة رسمية
 • إيموجيات بالقدر اللازم: 💖 🌸 ✨ 💅 😊 — مش في كل كلمة
 • أكملي جملتك دائماً حتى النهاية
-• اختمي بجملة دافئة قصيرة تشجع على الزيارة — بأسلوب مختلف في كل مرة`;
+• اختمي بجملة دافئة قصيرة تشجع على الزيارة — بأسلوب مختلف في كل مرة${ctx.bossInstructions && ctx.bossInstructions.length > 0 ? `
+
+━━━ 👑 تعليمات مباشرة من المدير — أولوية قصوى ━━━
+هاذي تعليمات صادرة مباشرة من صاحب/ة الصالون. طبقيها دائماً وبدون استثناء:
+${ctx.bossInstructions.map((inst, i) => `${i + 1}. ${inst}`).join("\n")}` : ""}`;
 
   cachedPromptKey = key;
   cachedPrompt = prompt;

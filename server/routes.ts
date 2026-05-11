@@ -2766,6 +2766,145 @@ export async function registerRoutes(
     }
   });
 
+  // ── Boss Mode: Chat with Lina as the salon owner ─────────────────────────
+  app.get("/api/whatsapp/boss-instructions", isPinAuthenticated, async (_req, res) => {
+    try {
+      const { getBossInstructions } = await import("./db");
+      const instructions = await getBossInstructions();
+      res.json({ instructions });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/whatsapp/boss-instructions", isPinAuthenticated, async (req, res) => {
+    try {
+      const { instruction } = z.object({ instruction: z.string().min(1) }).parse(req.body);
+      const { getBossInstructions, saveBossInstructions } = await import("./db");
+      const existing = await getBossInstructions();
+      const updated = [...existing, instruction];
+      await saveBossInstructions(updated);
+      res.json({ instructions: updated });
+    } catch (err: any) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  app.delete("/api/whatsapp/boss-instructions/:index", isPinAuthenticated, async (req, res) => {
+    try {
+      const idx = parseInt(req.params.index, 10);
+      const { getBossInstructions, saveBossInstructions } = await import("./db");
+      const existing = await getBossInstructions();
+      if (idx < 0 || idx >= existing.length) {
+        return res.status(404).json({ error: "Instruction not found" });
+      }
+      const updated = existing.filter((_, i) => i !== idx);
+      await saveBossInstructions(updated);
+      res.json({ instructions: updated });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/whatsapp/boss-chat", isPinAuthenticated, async (req, res) => {
+    try {
+      const { message, history } = z.object({
+        message: z.string().min(1),
+        history: z.array(z.object({
+          role: z.enum(["user", "model"]),
+          text: z.string(),
+        })).default([]),
+      }).parse(req.body);
+
+      const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+      const groqKey = process.env.XAI_API_KEY;
+
+      if (!geminiKey && !groqKey) {
+        return res.status(503).json({ error: "No AI API key configured" });
+      }
+
+      const bizSettings = await storage.getBusinessSettings().catch(() => undefined);
+      const salonName = bizSettings?.businessName || "الصالون";
+
+      const bossModePrompt = `أنتِ لينا — موظفة في صالون ${salonName}.
+
+الشخص اللي يتحدث معاكِ الآن هو المديرة/صاحبة الصالون — مش عميلة.
+
+القواعد في هاد المحادثة:
+• كوني صادقة 100% — قولي الحقيقة كما هي بدون تجميل
+• إذا سألتك عن شي ما تعرفيهوش → قولي بصراحة "ما كنعرف"
+• إذا أعطتك تعليمة جديدة → ردي بـ "واخا، فهمت" أو "تمام، ودرت في بالي"
+• إذا طلبت منك تصحيح شي → قبليه بشكل طبيعي
+• ما تستعمليش إيموجيات كثيرة — المحادثة مهنية
+• كلمي بالدارجة المغربية — طبيعية ومباشرة
+• إذا سألتك "واش فاهمتي؟" أو "واش واضح؟" → ردي بشكل مفصل على اللي فهمتيه
+• لو طلبت منك تجيبي مثال على كيفاش كتردي على العملاء → أعطيها مثالاً حقيقياً
+
+أنتِ لينا — موظفة حقيقية تتحدث مع مديرتها.`;
+
+      // Try Gemini first
+      if (geminiKey) {
+        const BOSS_MODELS = [
+          "gemini-2.5-flash-lite",
+          "gemini-2.5-flash",
+          "gemini-1.5-flash",
+        ];
+
+        for (const model of BOSS_MODELS) {
+          try {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
+            const contents = [
+              ...history.map(t => ({ role: t.role, parts: [{ text: t.text }] })),
+              { role: "user", parts: [{ text: message }] },
+            ];
+            const body = JSON.stringify({
+              systemInstruction: { parts: [{ text: bossModePrompt }] },
+              contents,
+              generationConfig: { maxOutputTokens: 400, temperature: 0.7 },
+            });
+            const gemRes = await fetch(url, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body,
+            });
+            if (gemRes.ok) {
+              const data = (await gemRes.json()) as any;
+              const reply: string = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? "";
+              if (reply) return res.json({ reply });
+            } else if (gemRes.status === 429) {
+              continue;
+            }
+          } catch { continue; }
+        }
+      }
+
+      // Groq fallback
+      if (groqKey) {
+        try {
+          const messages = [
+            { role: "system", content: bossModePrompt },
+            ...history.map(t => ({ role: t.role === "model" ? "assistant" : "user", content: t.text })),
+            { role: "user", content: message },
+          ];
+          const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${groqKey}` },
+            body: JSON.stringify({ model: "llama-3.1-8b-instant", messages, max_tokens: 400, temperature: 0.7 }),
+          });
+          if (groqRes.ok) {
+            const data = (await groqRes.json()) as any;
+            const reply: string = data?.choices?.[0]?.message?.content?.trim() ?? "";
+            if (reply) return res.json({ reply });
+          }
+        } catch { /* fall through */ }
+      }
+
+      res.status(503).json({ error: "فشل الاتصال بلينا — حاول مجدداً" });
+    } catch (err: any) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
   // WhatsApp Notifications (Baileys) - protected routes
   app.post("/api/notifications/send", isPinAuthenticated, async (req, res) => {
     try {
@@ -4649,8 +4788,11 @@ export async function registerRoutes(
           }));
 
           // Load resolved complaints + bot corrections so the bot can use them for all clients
-          const { getResolvedComplaints } = await import("./db");
-          const allResolved = await getResolvedComplaints().catch(() => []);
+          const { getResolvedComplaints, getBossInstructions } = await import("./db");
+          const [allResolved, bossInstructions] = await Promise.all([
+            getResolvedComplaints().catch(() => []),
+            getBossInstructions().catch(() => []),
+          ]);
           const resolvedComplaints = allResolved.filter((rc) => rc.complaintType !== "bot_error");
           const botCorrections = allResolved.filter((rc) => rc.complaintType === "bot_error");
 
@@ -4688,6 +4830,7 @@ export async function registerRoutes(
               wrongInfo: bc.complaintText,
               correctInfo: bc.fixNote!,
             })),
+            bossInstructions: bossInstructions.length > 0 ? bossInstructions : undefined,
           };
 
           // Single AI call with merged context from all buffered messages

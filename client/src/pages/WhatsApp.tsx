@@ -45,6 +45,9 @@ import {
   Calendar,
   VolumeX,
   Volume2,
+  Crown,
+  Settings2,
+  BookMarked,
 } from "lucide-react";
 
 interface WAStatus {
@@ -181,6 +184,13 @@ export default function WhatsApp() {
   const [filterMode, setFilterMode] = useState<"all" | "allowlist" | "blocklist">("all");
   const [filterNumbers, setFilterNumbers] = useState<string[]>([]);
   const [filterInput, setFilterInput] = useState("");
+
+  // ── Boss Mode state ────────────────────────────────────────────────────────
+  interface BossMessage { role: "user" | "model"; text: string; }
+  const [bossMessages, setBossMessages] = useState<BossMessage[]>([]);
+  const [bossInput, setBossInput] = useState("");
+  const bossChatEndRef = useRef<HTMLDivElement>(null);
+  const bossInputRef = useRef<HTMLTextAreaElement>(null);
 
   const { data: waData, refetch } = useQuery<WAStatus>({
     queryKey: ["/api/whatsapp/qr"],
@@ -643,6 +653,61 @@ export default function WhatsApp() {
       toast({ title: "خطأ في الحفظ", description: err.message, variant: "destructive" }),
   });
 
+  // ── Boss Mode queries & mutations ─────────────────────────────────────────
+  const { data: bossInstructionsData } = useQuery<{ instructions: string[] }>({
+    queryKey: ["/api/whatsapp/boss-instructions"],
+    queryFn: () => apiRequest("GET", "/api/whatsapp/boss-instructions").then((r) => r.json()),
+    staleTime: 30_000,
+  });
+  const bossInstructions = bossInstructionsData?.instructions ?? [];
+
+  const bossChatMutation = useMutation({
+    mutationFn: (msg: string) =>
+      apiRequest("POST", "/api/whatsapp/boss-chat", {
+        message: msg,
+        history: bossMessages,
+      }).then((r) => r.json()),
+    onSuccess: (data) => {
+      if (data.reply) {
+        setBossMessages((prev) => [...prev, { role: "model", text: data.reply }]);
+        setTimeout(() => bossChatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+      }
+    },
+    onError: (err: any) =>
+      toast({ title: "خطأ", description: err.message, variant: "destructive" }),
+  });
+
+  const saveInstructionMutation = useMutation({
+    mutationFn: (instruction: string) =>
+      apiRequest("POST", "/api/whatsapp/boss-instructions", { instruction }).then((r) => r.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/whatsapp/boss-instructions"] });
+      toast({ title: "✓ حُفظت التعليمة", description: "لينا غادي تطبق هاد التعليمة مع العملاء" });
+    },
+    onError: (err: any) =>
+      toast({ title: "خطأ في الحفظ", description: err.message, variant: "destructive" }),
+  });
+
+  const deleteInstructionMutation = useMutation({
+    mutationFn: (index: number) =>
+      apiRequest("DELETE", `/api/whatsapp/boss-instructions/${index}`).then((r) => r.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/whatsapp/boss-instructions"] });
+      toast({ title: "تم الحذف" });
+    },
+    onError: (err: any) =>
+      toast({ title: "خطأ", description: err.message, variant: "destructive" }),
+  });
+
+  const sendBossMessage = () => {
+    const msg = bossInput.trim();
+    if (!msg || bossChatMutation.isPending) return;
+    setBossMessages((prev) => [...prev, { role: "user", text: msg }]);
+    setBossInput("");
+    setTimeout(() => bossChatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+    bossChatMutation.mutate(msg);
+  };
+
   const normalizeFilterNumber = (n: string) => {
     let d = n.replace(/[^0-9]/g, "");
     if (d.startsWith("00")) d = d.slice(2);
@@ -729,6 +794,22 @@ export default function WhatsApp() {
           </div>
         </div>
       </div>
+
+      {/* ── TOP-LEVEL TABS ── */}
+      <Tabs defaultValue="bot" className="w-full">
+        <TabsList className="w-full rounded-xl glass-subtle mb-5">
+          <TabsTrigger value="bot" className="flex-1 rounded-lg gap-2" data-testid="tab-bot-settings">
+            <Settings2 className="w-4 h-4" />
+            إعدادات البوت
+          </TabsTrigger>
+          <TabsTrigger value="boss" className="flex-1 rounded-lg gap-2" data-testid="tab-boss-mode">
+            <Crown className="w-4 h-4" />
+            كلم لينا
+          </TabsTrigger>
+        </TabsList>
+
+        {/* ══ BOT SETTINGS TAB ══ */}
+        <TabsContent value="bot" className="space-y-5 mt-0">
 
       {/* ── BOT TOGGLE ── */}
       <div className={`glass-card rounded-2xl p-4 transition-all ${botEnabled ? "border-emerald-500/30" : "border-red-500/30"}`}>
@@ -2048,6 +2129,237 @@ export default function WhatsApp() {
           </div>
         )}
       </div>
+
+        </TabsContent>
+
+        {/* ══ BOSS MODE TAB ══ */}
+        <TabsContent value="boss" className="mt-0 space-y-4">
+
+          {/* Boss Mode Header */}
+          <div className="glass-elevated rounded-2xl px-5 py-4 glass-shine">
+            <div className="relative z-10 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0">
+                <Crown className="w-5 h-5 text-amber-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-sm">وضع المدير</p>
+                <p className="text-xs text-muted-foreground mt-0.5">تحدثي مع لينا مباشرة — أعطيها تعليمات وصوبي أخطاءها</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Chat Area */}
+          <div className="glass-card rounded-2xl overflow-hidden flex flex-col" style={{ minHeight: "420px" }}>
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3" style={{ maxHeight: "400px" }} dir="rtl">
+              {bossMessages.length === 0 && (
+                <div className="flex flex-col items-center justify-center h-48 text-center gap-3 text-muted-foreground">
+                  <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                    <Crown className="w-7 h-7 text-amber-400/60" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground/70">ابدئي المحادثة مع لينا</p>
+                    <p className="text-xs mt-1">أعطيها تعليمات، صوبي أخطاءها، أو اسأليها كيف كتتصرف مع العملاء</p>
+                  </div>
+                </div>
+              )}
+
+              {bossMessages.map((msg, i) => (
+                <div key={i} className={`flex flex-col gap-1 ${msg.role === "user" ? "items-end" : "items-start"}`}>
+                  <div className={`flex items-end gap-2 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
+                    {msg.role === "model" && (
+                      <div className="w-7 h-7 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0 mb-0.5">
+                        <Bot className="w-3.5 h-3.5 text-emerald-400" />
+                      </div>
+                    )}
+                    {msg.role === "user" && (
+                      <div className="w-7 h-7 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0 mb-0.5">
+                        <Crown className="w-3.5 h-3.5 text-amber-400" />
+                      </div>
+                    )}
+                    <div
+                      className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed max-w-[78%] whitespace-pre-wrap ${
+                        msg.role === "user"
+                          ? "bg-amber-500/15 border border-amber-500/25 text-foreground rounded-tr-sm"
+                          : "bg-emerald-500/10 border border-emerald-500/20 text-foreground rounded-tl-sm"
+                      }`}
+                      data-testid={`boss-msg-${i}`}
+                    >
+                      {msg.text}
+                    </div>
+                  </div>
+                  {msg.role === "model" && (
+                    <div className="pr-9">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 text-xs gap-1 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 rounded-lg px-2"
+                        onClick={() => saveInstructionMutation.mutate(msg.text)}
+                        disabled={saveInstructionMutation.isPending}
+                        data-testid={`button-save-instruction-${i}`}
+                      >
+                        <BookMarked className="w-3 h-3" />
+                        حفظ كتعليمة دائمة
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {bossChatMutation.isPending && (
+                <div className="flex items-start gap-2" dir="rtl">
+                  <div className="w-7 h-7 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0">
+                    <Bot className="w-3.5 h-3.5 text-emerald-400" />
+                  </div>
+                  <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl rounded-tl-sm px-3.5 py-2.5 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: "150ms" }} />
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: "300ms" }} />
+                  </div>
+                </div>
+              )}
+
+              <div ref={bossChatEndRef} />
+            </div>
+
+            {/* Input area */}
+            <div className="border-t border-border/30 p-3 flex gap-2 items-end" dir="rtl">
+              <Textarea
+                ref={bossInputRef}
+                value={bossInput}
+                onChange={(e) => setBossInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    sendBossMessage();
+                  }
+                }}
+                placeholder="اكتبي تعليمة أو سؤال للينا…"
+                rows={2}
+                className="flex-1 resize-none rounded-xl text-sm"
+                data-testid="input-boss-message"
+              />
+              <Button
+                size="icon"
+                className="h-10 w-10 rounded-xl shrink-0 liquid-gradient text-white shadow-lg"
+                onClick={sendBossMessage}
+                disabled={!bossInput.trim() || bossChatMutation.isPending}
+                data-testid="button-send-boss"
+              >
+                {bossChatMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+              </Button>
+            </div>
+          </div>
+
+          {/* Clear chat button */}
+          {bossMessages.length > 0 && (
+            <div className="flex justify-end">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-xs text-muted-foreground hover:text-destructive gap-1.5 rounded-xl"
+                onClick={() => setBossMessages([])}
+                data-testid="button-clear-boss-chat"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                مسح المحادثة
+              </Button>
+            </div>
+          )}
+
+          {/* Saved Instructions Panel */}
+          <div className="glass-card rounded-2xl overflow-hidden">
+            <div className="liquid-glass-header px-5 py-4 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/25 flex items-center justify-center shrink-0">
+                <BookMarked className="w-4 h-4 text-amber-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm">التعليمات المحفوظة</p>
+                <p className="text-xs text-muted-foreground mt-0.5">لينا غادي تطبقها مع كل العملاء</p>
+              </div>
+              {bossInstructions.length > 0 && (
+                <Badge variant="secondary" className="shrink-0 text-xs bg-amber-500/15 text-amber-400 border-amber-500/25">
+                  {bossInstructions.length}
+                </Badge>
+              )}
+            </div>
+
+            <div className="p-4 space-y-2" dir="rtl">
+              {bossInstructions.length === 0 ? (
+                <div className="text-center py-6 text-muted-foreground">
+                  <BookMarked className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  <p className="text-xs">ما كاين حتى تعليمة محفوظة حالياً</p>
+                  <p className="text-xs mt-1 opacity-70">اضغطي على "حفظ كتعليمة دائمة" بعد رد لينا</p>
+                </div>
+              ) : (
+                bossInstructions.map((inst, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-start gap-2 p-3 rounded-xl bg-muted/30 border border-border/40 group"
+                    data-testid={`saved-instruction-${idx}`}
+                  >
+                    <span className="text-amber-400 text-xs font-bold mt-0.5 shrink-0">{idx + 1}.</span>
+                    <p className="text-sm flex-1 leading-relaxed text-foreground/90">{inst}</p>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="w-6 h-6 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/10 hover:text-red-400 rounded-lg"
+                      onClick={() => deleteInstructionMutation.mutate(idx)}
+                      disabled={deleteInstructionMutation.isPending}
+                      data-testid={`button-delete-instruction-${idx}`}
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </div>
+                ))
+              )}
+
+              {/* Manual instruction input */}
+              <div className="pt-2 border-t border-border/30 mt-2">
+                <p className="text-xs text-muted-foreground mb-2">أو أضيفي تعليمة يدوياً:</p>
+                <ManualInstructionInput onSave={(text) => saveInstructionMutation.mutate(text)} isPending={saveInstructionMutation.isPending} />
+              </div>
+            </div>
+          </div>
+
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+function ManualInstructionInput({ onSave, isPending }: { onSave: (text: string) => void; isPending: boolean }) {
+  const [value, setValue] = useState("");
+  return (
+    <div className="flex gap-2" dir="rtl">
+      <Input
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder="مثال: لا تذكري أسعار التسريح بدون استشارة"
+        className="flex-1 text-sm rounded-xl"
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && value.trim()) {
+            onSave(value.trim());
+            setValue("");
+          }
+        }}
+        data-testid="input-manual-instruction"
+      />
+      <Button
+        size="sm"
+        className="shrink-0 rounded-xl gap-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/30"
+        variant="ghost"
+        onClick={() => { if (value.trim()) { onSave(value.trim()); setValue(""); } }}
+        disabled={!value.trim() || isPending}
+        data-testid="button-add-manual-instruction"
+      >
+        {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+        إضافة
+      </Button>
     </div>
   );
 }

@@ -1795,6 +1795,55 @@ export async function ensureStaffGenderColumn(): Promise<void> {
   }
 }
 
+export async function ensureBossInstructionsColumn(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      try {
+        await connection.query(`ALTER TABLE business_settings ADD COLUMN boss_instructions TEXT NULL`);
+      } catch (e: any) {
+        if (!e.message?.includes('Duplicate column')) throw e;
+      }
+      connection.release();
+    } else {
+      await pool.query(`ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS boss_instructions TEXT NULL`);
+    }
+    console.log("Boss instructions column ready");
+  } catch (error) {
+    console.error("Failed to ensure boss_instructions column:", error);
+  }
+}
+
+export async function getBossInstructions(): Promise<string[]> {
+  try {
+    let raw: string | null = null;
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      const [rows] = await connection.query(`SELECT boss_instructions FROM business_settings LIMIT 1`);
+      connection.release();
+      raw = (rows as any[])[0]?.boss_instructions ?? null;
+    } else {
+      const result = await pool.query(`SELECT boss_instructions FROM business_settings LIMIT 1`);
+      raw = result.rows[0]?.boss_instructions ?? null;
+    }
+    if (!raw) return [];
+    return JSON.parse(raw) as string[];
+  } catch {
+    return [];
+  }
+}
+
+export async function saveBossInstructions(instructions: string[]): Promise<void> {
+  const json = JSON.stringify(instructions);
+  if (dbDialect === 'mysql') {
+    const connection = await pool.getConnection();
+    await connection.query(`UPDATE business_settings SET boss_instructions = ? LIMIT 1`, [json]);
+    connection.release();
+  } else {
+    await pool.query(`UPDATE business_settings SET boss_instructions = $1`, [json]);
+  }
+}
+
 export async function ensureStaffGenderDefaults(): Promise<void> {
   try {
     if (dbDialect === 'mysql') {
