@@ -1911,3 +1911,27 @@ export async function ensureOwnerWithdrawalsTable(): Promise<void> {
     console.error("Failed to ensure owner_withdrawals table:", error);
   }
 }
+
+export async function ensureBusinessSettingsRow(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      try {
+        const [rows] = await connection.query(`SELECT id FROM business_settings LIMIT 1`);
+        if ((rows as any[]).length === 0) {
+          await connection.query(`INSERT INTO business_settings (business_name, currency, currency_symbol, opening_time, closing_time, working_days, loyalty_enabled, loyalty_points_per_dh, loyalty_points_value, referral_bonus_points, referral_bonus_referee, cancellation_hours, auto_lock_enabled, tts_voice, bot_enabled, bot_filter_mode, updated_at) VALUES ('PREGA SQUAD', 'MAD', 'DH', '09:00', '19:00', '[1,2,3,4,5,6]', true, 1, 0.1, 100, 50, 24, false, 'Aoede', true, 'all', NOW())`);
+        }
+      } finally {
+        connection.release();
+      }
+    } else {
+      const result = await pool.query(`SELECT id FROM business_settings LIMIT 1`);
+      if (result.rows.length === 0) {
+        await pool.query(`INSERT INTO business_settings (business_name, currency, currency_symbol, opening_time, closing_time, working_days, loyalty_enabled, loyalty_points_per_dh, loyalty_points_value, referral_bonus_points, referral_bonus_referee, cancellation_hours, auto_lock_enabled, planning_shortcuts, tts_voice, bot_enabled, bot_filter_mode, updated_at) VALUES ('PREGA SQUAD', 'MAD', 'DH', '09:00', '19:00', '[1,2,3,4,5,6]', true, 1, 0.1, 100, 50, 24, false, '["services","clients","salaries","inventory"]', 'Aoede', true, 'all', NOW())`);
+      }
+    }
+    console.log("Business settings row ready");
+  } catch (error) {
+    console.error("Failed to ensure business settings row:", error);
+  }
+}

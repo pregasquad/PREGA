@@ -341,6 +341,7 @@ export const businessSettings = mysqlTable("business_settings", {
   botEnabled: boolean("bot_enabled").notNull().default(true),
   botFilterMode: varchar("bot_filter_mode", { length: 20 }).notNull().default("all"),
   botFilterNumbers: text("bot_filter_numbers"),
+  bossInstructions: text("boss_instructions"),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 

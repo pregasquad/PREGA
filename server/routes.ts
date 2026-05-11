@@ -2767,11 +2767,15 @@ export async function registerRoutes(
   });
 
   // ── Boss Mode: Chat with Lina as the salon owner ─────────────────────────
+  function parseBossInstructions(raw: string | null | undefined): string[] {
+    if (!raw) return [];
+    try { return JSON.parse(raw) as string[]; } catch { return []; }
+  }
+
   app.get("/api/whatsapp/boss-instructions", isPinAuthenticated, async (_req, res) => {
     try {
-      const { getBossInstructions } = await import("./db");
-      const instructions = await getBossInstructions();
-      res.json({ instructions });
+      const settings = await storage.getBusinessSettings();
+      res.json({ instructions: parseBossInstructions(settings?.bossInstructions) });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
@@ -2780,10 +2784,10 @@ export async function registerRoutes(
   app.post("/api/whatsapp/boss-instructions", isPinAuthenticated, async (req, res) => {
     try {
       const { instruction } = z.object({ instruction: z.string().min(1) }).parse(req.body);
-      const { getBossInstructions, saveBossInstructions } = await import("./db");
-      const existing = await getBossInstructions();
+      const settings = await storage.getBusinessSettings();
+      const existing = parseBossInstructions(settings?.bossInstructions);
       const updated = [...existing, instruction];
-      await saveBossInstructions(updated);
+      await storage.updateBusinessSettings({ bossInstructions: JSON.stringify(updated) });
       res.json({ instructions: updated });
     } catch (err: any) {
       res.status(400).json({ error: err.message });
@@ -2793,13 +2797,13 @@ export async function registerRoutes(
   app.delete("/api/whatsapp/boss-instructions/:index", isPinAuthenticated, async (req, res) => {
     try {
       const idx = parseInt(req.params.index, 10);
-      const { getBossInstructions, saveBossInstructions } = await import("./db");
-      const existing = await getBossInstructions();
+      const settings = await storage.getBusinessSettings();
+      const existing = parseBossInstructions(settings?.bossInstructions);
       if (idx < 0 || idx >= existing.length) {
         return res.status(404).json({ error: "Instruction not found" });
       }
       const updated = existing.filter((_, i) => i !== idx);
-      await saveBossInstructions(updated);
+      await storage.updateBusinessSettings({ bossInstructions: JSON.stringify(updated) });
       res.json({ instructions: updated });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
@@ -2825,6 +2829,12 @@ export async function registerRoutes(
 
       const bizSettings = await storage.getBusinessSettings().catch(() => undefined);
       const salonName = bizSettings?.businessName || "الصالون";
+
+      const savedInstructions = parseBossInstructions((await storage.getBusinessSettings().catch(() => undefined))?.bossInstructions);
+
+      const instructionsBlock = savedInstructions.length > 0
+        ? `\n━━━ PERMANENT INSTRUCTIONS FROM YOUR BOSS ━━━\nThese are orders from the owner. Follow them strictly in EVERY client interaction — no exceptions:\n${savedInstructions.map((ins, i) => `${i + 1}. ${ins}`).join("\n")}\n`
+        : "";
 
       const bossModePrompt = `You are Lina — a real employee at ${salonName} salon, speaking directly with the salon owner/manager (not a client).
 
@@ -2859,7 +2869,7 @@ Sois directe, professionnelle et claire. Phrases courtes. Pas de formules creuse
 ━━━ Arabic/Darija replies (when boss writes in Arabic) ━━━
 كلمي بالدارجة المغربية — طبيعية ومباشرة. جمل قصيرة. بدون حشو.
 
-You are Lina — a real employee talking to her manager.`;
+You are Lina — a real employee talking to her manager.${instructionsBlock}`;
 
 
       // Try Gemini first
