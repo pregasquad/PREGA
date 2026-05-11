@@ -312,7 +312,9 @@ export function Sidebar() {
     const [, setLoc] = useLocation();
     return (
       <div className="flex items-center gap-3 cursor-pointer" onClick={() => setLoc("/planning")} data-testid="sidebar-link-home-logo">
-        <img src="/logo.png" alt={businessName} className="w-12 h-12 rounded-full object-cover" />
+        <div className="w-12 h-12 rounded-full bg-white shrink-0 flex items-center justify-center overflow-hidden shadow-sm">
+          <img src="/logo.png" alt={businessName} className="w-full h-full object-contain" />
+        </div>
         <div>
           <h1 className="text-lg font-display font-bold text-pink-500">{businessName}</h1>
           <p className="text-[10px] text-muted-foreground tracking-wide">Be Humble</p>

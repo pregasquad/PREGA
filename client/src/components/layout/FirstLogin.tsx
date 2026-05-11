@@ -371,7 +371,9 @@ export function FirstLogin({ children }: FirstLoginProps) {
         <div className="flex flex-col items-center gap-8 text-center">
           {/* Logo section */}
           <div className="flex flex-col items-center gap-3">
-            <img src="/prega_logo.png" alt={businessName} className="w-24 h-24" />
+            <div className="w-24 h-24 rounded-2xl bg-white flex items-center justify-center overflow-hidden shadow-md">
+              <img src="/prega_logo.png" alt={businessName} className="w-full h-full object-contain" />
+            </div>
             <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-white dark:via-slate-200 dark:to-slate-400 bg-clip-text text-transparent tracking-tight">
               {businessName}
             </h1>

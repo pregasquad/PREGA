@@ -46,6 +46,9 @@ export function ImageCropper({ imageSrc, onCropComplete, onCancel, aspect = 1 }:
 
     if (!ctx) return;
 
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
     ctx.drawImage(
       imgRef.current,
       completedCrop.x * scaleX,

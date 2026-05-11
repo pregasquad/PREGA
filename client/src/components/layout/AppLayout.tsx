@@ -19,7 +19,9 @@ function MobileBusinessName() {
       onClick={() => setLocation("/planning")}
       data-testid="link-home-logo"
     >
-      <img src="/logo.png" alt={businessName} className="w-8 h-8 rounded-full object-cover" />
+      <div className="w-8 h-8 rounded-full bg-white shrink-0 flex items-center justify-center overflow-hidden shadow-sm">
+        <img src="/logo.png" alt={businessName} className="w-full h-full object-contain" />
+      </div>
       <span className="text-sm font-bold text-pink-500">{businessName}</span>
     </div>
   );
