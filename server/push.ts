@@ -246,4 +246,76 @@ export async function checkAndSendAppointmentReminders(): Promise<void> {
   }
 }
 
+const sentRebookingJids = new Set<string>();
+let lastRebookingCheckDate = "";
+
+/**
+ * Once per day (at ~10:00), check all bot memory records.
+ * Clients who haven't been seen in X weeks and have a phone → send a "we miss you" WhatsApp.
+ * Default threshold: 3 weeks (21 days). Configurable via business settings.
+ */
+export async function checkAndSendRebookingReminders(): Promise<void> {
+  try {
+    const now = new Date();
+    const todayDate = getLocalDateString(now);
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    // Fire once per day between 10:00 and 10:10
+    if (lastRebookingCheckDate === todayDate) return;
+    if (currentMinutes < 10 * 60 || currentMinutes > 10 * 60 + 10) return;
+    lastRebookingCheckDate = todayDate;
+
+    const settings = await storage.getBusinessSettings();
+    const salonName = settings?.businessName || "صالوننا";
+    const bookingUrl = (settings as any)?.bookingUrl || "";
+
+    const { getAllBotMemories } = await import("./db");
+    const memories = await getAllBotMemories();
+
+    const { sendWhatsAppMessage } = await import("./baileys");
+
+    const WEEKS = 3;
+    const thresholdMs = WEEKS * 7 * 24 * 60 * 60 * 1000;
+
+    for (const mem of memories) {
+      if (!mem.phone) continue;
+      if (mem.botBlocked) continue;
+      if (sentRebookingJids.has(mem.jid)) continue;
+      if (!mem.lastSeen) continue;
+
+      const msSinceSeen = Date.now() - new Date(mem.lastSeen).getTime();
+      if (msSinceSeen < thresholdMs) continue;
+
+      // Build a personalised message in the client's language
+      const name = mem.clientName ? ` ${mem.clientName}` : "";
+      const lang = mem.language || "darija";
+
+      let msg: string;
+      if (lang === "french") {
+        msg = `Bonjour${name} 🌸\n\nCela fait un moment qu'on ne vous a pas vue chez ${salonName} — vous nous manquez ! 💖\n\nSi vous souhaitez reprendre soin de vous, on est là pour vous accueillir avec plaisir 😊${bookingUrl ? `\n\n📲 Réservez ici : ${bookingUrl}` : ""}`;
+      } else {
+        // Darija / Arabic default
+        msg = `مرحبا${name} 🌸\n\nوحشتينا بزاف! مزال ما جيتيش لـ${salonName} 💖\n\nكنا غير نتمنى تكوني بخير — وكي تحبي ترجعي كنا مستنياك هنا 😊${bookingUrl ? `\n\n📲 حجزي موعدك هنا: ${bookingUrl}` : ""}`;
+      }
+
+      try {
+        await sendWhatsAppMessage(mem.jid, msg);
+        sentRebookingJids.add(mem.jid);
+        console.log(`[Rebooking] Sent reminder to ${mem.clientName || mem.jid} (last seen ${Math.round(msSinceSeen / (24 * 60 * 60 * 1000))} days ago)`);
+      } catch (err) {
+        console.error(`[Rebooking] Failed to send to ${mem.jid}:`, err);
+      }
+
+      // Small delay between messages to avoid WhatsApp rate-limiting
+      await new Promise(r => setTimeout(r, 2000));
+    }
+
+    // Reset sent set daily so new clients who went inactive can receive next cycle
+    if (currentMinutes < 5) sentRebookingJids.clear();
+
+  } catch (error) {
+    console.error('[Rebooking] Error checking rebooking reminders:', error);
+  }
+}
+
 export { vapidPublicKey };

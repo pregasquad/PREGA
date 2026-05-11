@@ -4314,7 +4314,7 @@ export async function registerRoutes(
     // (text + images sent in quick succession) are collected and answered as ONE reply.
     // remoteJid = full WhatsApp JID (may be @s.whatsapp.net OR @lid for newer accounts)
     // phone     = numeric digits extracted from JID — used ONLY for DB matching
-    setIncomingMessageHandler(async (remoteJid: string, phone: string, text: string, imageBase64?: string, imageMimeType?: string, isVoice?: boolean, audioBase64?: string, audioMimeType?: string) => {
+    setIncomingMessageHandler(async (remoteJid: string, phone: string, text: string, imageBase64?: string, imageMimeType?: string, isVoice?: boolean, audioBase64?: string, audioMimeType?: string, pushName?: string) => {
       // Ignore empty messages, groups, and broadcasts
       if ((!text || !text.trim()) && !imageBase64) return;
       if (remoteJid.endsWith("@g.us")) return;
@@ -4705,7 +4705,11 @@ export async function registerRoutes(
           if (aiReply !== FALLBACK_REPLY) {
             // Re-use currentLang already computed above — no need to call detectLanguage again
             const detectedLang = currentLang;
-            const detectedName = extractName(mergedText);
+            // Use WhatsApp pushName (display name) as primary source — only if
+            // no name is already stored and the push name looks like a real name
+            const { sanitizeClientName: _sanitize } = await import("./gemini");
+            const pushNameCleaned = _sanitize(pushName || null);
+            const detectedName = extractName(mergedText) || pushNameCleaned;
             const mentionedSvcs = extractMentionedServices(mergedText + " " + aiReply, serviceList);
 
             // Store the real phone in memory so @lid JIDs can be resolved for filtering later
@@ -4896,7 +4900,7 @@ export async function registerRoutes(
           try {
             const { extractBotConfirmedAppointment } = await import("./gemini");
             const todayStr = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD in local TZ
-            const extracted = extractBotConfirmedAppointment(finalReply, newHistory, todayStr);
+            const extracted = extractBotConfirmedAppointment(finalReply, newHistory, todayStr, serviceList);
             if (extracted) {
               const clientName = mem.clientName || "عميل واتساب";
               const clientPhone = mem.phone || normalized || null;

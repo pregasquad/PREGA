@@ -992,7 +992,8 @@ export async function generateImage(
 export function extractBotConfirmedAppointment(
   botReply: string,
   conversationHistory: ConversationTurn[],
-  todayDateStr: string // "YYYY-MM-DD"
+  todayDateStr: string, // "YYYY-MM-DD"
+  knownServices?: { name: string }[]
 ): { date: string; time: string; service: string | null; price: number | null } | null {
   // ── 1. Is this reply a confirmation at all? ───────────────────────────────
   const confirmRx = /مؤكد|مؤكدة|مسجل|مسجلة|ثابت|تسجيل|تم التأكيد|تم الحجز|تم التسجيل|حجزك جاهز|حجز مؤكد|راه حجوزة|راه مسجل|غادي نشوفوك|ننتظروك|ننتظروكِ|موعدك مسجل|موعدك ثابت|موعدك محجوز|موعد مسجل|موعد محجوز|حجزناك|حجزناكِ|حجزتيك|شدينا ليك|شدينالك|كتبنا ليك|كتبناك|سجلنا ليك|سجلناك|ثبتنا ليك|ثبتناك|محجوزة ليك|محجوز ليك|موعدك كاين|نستناوك|كنستناوك|كنستناوكِ|هنا نستناوك|متنساش|واخا.*موعد|موعد.*واخا|نتسناوك|كنتسناوك|تنورينا|الموعد ديالك|الموعد تأكد|تأكد.*إن شاء الله|صافي.*الموعد|هانية حبيبتي|مؤكد عندنا|confirmé|confirmée|confirm|c'est noté|c'est enregistré|c'est fait|c'est bon|c'est pris|c'est réservé|c'est validé|noté|enregistré|réservé|réservée|validé|on vous attend|on t'attend|on se voit|rendez-vous.*confirm|votre.*rendez-vous|rdv confirmé|rdv pris|rendez-vous pris|rendez-vous réservé|je vous inscris|je t'inscris|inscrit|je note|je l'ai noté|votre place/i;
@@ -1201,6 +1202,25 @@ export function extractBotConfirmedAppointment(
     "gommage": "Gommage", "peeling": "Peeling",
   };
   if (service) service = serviceLabels[service.toLowerCase()] ?? service;
+
+  // ── 5b. Validate / upgrade service against the real DB service list ────────
+  // If we have the known services list, try to find a better exact match.
+  // Priority: exact name match in conversation → partial match → keep extracted
+  if (knownServices && knownServices.length > 0) {
+    const allText2 = [botReply, recentText].join(" ").toLowerCase();
+    // 1. Exact name match (case-insensitive)
+    const exactMatch = knownServices.find(s => allText2.includes(s.name.toLowerCase()));
+    if (exactMatch) {
+      service = exactMatch.name;
+    } else if (service) {
+      // 2. Check if what we extracted is a partial match of a real service name
+      const lowerService = service.toLowerCase();
+      const partialMatch = knownServices.find(s =>
+        s.name.toLowerCase().includes(lowerService) || lowerService.includes(s.name.toLowerCase().split(" ")[0])
+      );
+      if (partialMatch) service = partialMatch.name;
+    }
+  }
 
   // ── 6. Extract price from recent messages (best-effort) ──────────────────
   // Looks for patterns like "300 DH", "350 درهم", "prix: 250", "coûte 400 MAD"

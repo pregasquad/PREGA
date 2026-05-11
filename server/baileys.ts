@@ -31,7 +31,7 @@ let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let shouldReconnect = false;
 let reconnectAttempt = 0;
 let ioInstance: SocketIOServer | null = null;
-let incomingMessageHandler: ((jid: string, phone: string, text: string, imageBase64?: string, imageMimeType?: string, isVoice?: boolean, audioBase64?: string, audioMimeType?: string) => Promise<void>) | null = null;
+let incomingMessageHandler: ((jid: string, phone: string, text: string, imageBase64?: string, imageMimeType?: string, isVoice?: boolean, audioBase64?: string, audioMimeType?: string, pushName?: string) => Promise<void>) | null = null;
 
 function log(msg: string) {
   console.log(`[Baileys] ${msg}`);
@@ -487,7 +487,8 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
       }
 
       try {
-        await incomingMessageHandler(remoteJid, phone, text, imageBase64, imageMimeType, isVoice, audioBase64, audioMimeType);
+        const pushName: string | undefined = msg.pushName || undefined;
+        await incomingMessageHandler(remoteJid, phone, text, imageBase64, imageMimeType, isVoice, audioBase64, audioMimeType, pushName);
       } catch (e: any) {
         log(`Incoming handler error: ${e.message}`);
       }
@@ -504,7 +505,7 @@ export function setSocketIO(io: SocketIOServer): void {
 
 /** Registers the handler called for every incoming WhatsApp message */
 export function setIncomingMessageHandler(
-  handler: (jid: string, phone: string, text: string, imageBase64?: string, imageMimeType?: string, isVoice?: boolean, audioBase64?: string, audioMimeType?: string) => Promise<void>
+  handler: (jid: string, phone: string, text: string, imageBase64?: string, imageMimeType?: string, isVoice?: boolean, audioBase64?: string, audioMimeType?: string, pushName?: string) => Promise<void>
 ): void {
   incomingMessageHandler = handler;
 }

@@ -4,7 +4,7 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { initializeDatabase, warmupDatabase, ensurePushSubscriptionsTable, ensureAppointmentsAuditColumns, ensureForeignKeyConstraints, ensureAdminRolesPhotoColumn, ensureProductExpiryColumns, ensureServiceStartingPriceColumn, ensureServiceMaxPriceColumn, ensureDeductionClearedColumns, ensureDeductionPaidBackColumn, ensureStaffIdBackfillMySQL, ensureStaffPaymentsTable, ensureStaffPublicTokens, ensureAutoLockColumn, ensureChargeAttachmentColumns, ensurePlanningShortcutsColumn, ensureAppointmentDiscountColumns, ensureTombolaSpinsTable, ensureSalonPaymentsTable, ensureBookingStatusColumn, ensureBaileysSessionTable, ensureBotMemoryTable, ensureBotMemoryPhoneColumn, ensureBotBlockedColumn, ensureTtsVoiceColumn, ensureMapsLinkColumn, ensureBotEnabledColumn, ensureBotFilterColumns, ensureOwnerWithdrawalsTable, ensureOwnerWithdrawalsNotesColumn, ensureCategoriesColorColumn, ensureSalonComplaintsTable, ensureComplaintTypeColumn, ensureBotSilenceAfterBookingColumn, ensurePrivateRoomColumn, ensureStaffGenderColumn, ensureStaffGenderDefaults } from "./db";
-import { checkAndSendClosingReminder, checkAndSendAppointmentReminders } from "./push";
+import { checkAndSendClosingReminder, checkAndSendAppointmentReminders, checkAndSendRebookingReminders } from "./push";
 
 const app = express();
 const httpServer = createServer(app);
@@ -158,6 +158,9 @@ const startServer = async () => {
         checkAndSendAppointmentReminders().catch(err =>
           console.error('[Appointment Reminder] Error:', err)
         );
+        checkAndSendRebookingReminders().catch(err =>
+          console.error('[Rebooking Reminder] Error:', err)
+        );
       }, 15 * 1000);
 
       setInterval(() => {
@@ -166,6 +169,9 @@ const startServer = async () => {
         );
         checkAndSendAppointmentReminders().catch(err =>
           console.error('[Appointment Reminder] Error:', err)
+        );
+        checkAndSendRebookingReminders().catch(err =>
+          console.error('[Rebooking Reminder] Error:', err)
         );
       }, 5 * 60 * 1000);
     },
