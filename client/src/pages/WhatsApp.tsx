@@ -2334,31 +2334,36 @@ export default function WhatsApp() {
 
 function ManualInstructionInput({ onSave, isPending }: { onSave: (text: string) => void; isPending: boolean }) {
   const [value, setValue] = useState("");
+  const handleSave = () => {
+    if (value.trim()) { onSave(value.trim()); setValue(""); }
+  };
   return (
-    <div className="flex gap-2" dir="rtl">
-      <Input
+    <div className="space-y-2" dir="rtl">
+      <p className="text-xs text-muted-foreground/70">
+        يمكنك الكتابة بالعربية · الدارجة · الفرنسية · الإنجليزية — لينا غادي تفهم
+      </p>
+      <Textarea
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        placeholder="مثال: لا تذكري أسعار التسريح بدون استشارة"
-        className="flex-1 text-sm rounded-xl"
+        placeholder={"مثال: لا تذكري أسعار التسريح بدون استشارة\nEx: Don't share prices without consulting first\nExemple : Ne mentionne pas les prix sans accord"}
+        className="text-sm rounded-xl resize-none min-h-[80px]"
         onKeyDown={(e) => {
-          if (e.key === "Enter" && value.trim()) {
-            onSave(value.trim());
-            setValue("");
+          if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && value.trim()) {
+            handleSave();
           }
         }}
         data-testid="input-manual-instruction"
       />
       <Button
         size="sm"
-        className="shrink-0 rounded-xl gap-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/30"
+        className="w-full rounded-xl gap-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/30"
         variant="ghost"
-        onClick={() => { if (value.trim()) { onSave(value.trim()); setValue(""); } }}
+        onClick={handleSave}
         disabled={!value.trim() || isPending}
         data-testid="button-add-manual-instruction"
       >
         {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-        إضافة
+        حفظ التعليمة
       </Button>
     </div>
   );
