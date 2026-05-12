@@ -4822,6 +4822,9 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
             if (cached && Date.now() - cached.ts < AI_CACHE_TTL) {
               await stopTypingPresence(remoteJid);
               await sendWhatsAppMessage(remoteJid, cached.reply);
+              // Update lastSeen so this client is not treated as brand-new on the next message
+              const memWithSeen = { ...mem, lastSeen: new Date() };
+              persistMemory(memWithSeen).catch(() => {});
               console.log(`[Bot] Cache hit for ${remoteJid} — skipping AI call`);
               return;
             }
@@ -5128,16 +5131,36 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
               // When the client confirms via natural language, their real appointment
               // already exists in the DB with a "pending" (or no) status. We should
               // mark it "confirmed" instead of creating a ghost duplicate.
-              const existingPending = existingApts.find((a: any) => {
-                if (!a.phone) return false;
-                const ap = normPhone(a.phone);
-                if (clientPhoneNorm && ap !== clientPhoneNorm) return false;
-                const statusOk = !a.bookingStatus || a.bookingStatus === "pending" || a.bookingStatus === "modify_requested";
-                // Match by date+time if both are known, otherwise just match by phone
-                const dateMatch = !extracted.date || a.date === extracted.date;
-                const timeMatch = !extracted.time || a.startTime === extracted.time;
-                return statusOk && dateMatch && timeMatch;
-              });
+              // Only search for an existing appointment when we know this client's phone.
+              // If clientPhoneNorm is empty we cannot safely identify whose appointment to update —
+              // doing so risks marking a different client's appointment as confirmed.
+              const existingPending = clientPhoneNorm
+                ? existingApts.find((a: any) => {
+                    if (!a.phone) return false;
+                    const ap = normPhone(a.phone);
+                    if (ap !== clientPhoneNorm) return false; // ← strict: phone must match
+                    const statusOk = !a.bookingStatus || a.bookingStatus === "pending" || a.bookingStatus === "modify_requested";
+                    const dateMatch = !extracted.date || a.date === extracted.date;
+                    const timeMatch = !extracted.time || a.startTime === extracted.time;
+                    return statusOk && dateMatch && timeMatch;
+                  })
+                : null;
+
+              // Helper: silence the bot for this JID after auto-confirming an appointment.
+              // Prevents the bot from creating a second duplicate on the very next message.
+              const silenceBotAfterConfirm = async () => {
+                try {
+                  const silenceOk = (await storage.getBusinessSettings() as any)?.botSilenceAfterBooking !== false;
+                  if (!silenceOk) return;
+                  const silenced = { ...(memCache.get(remoteJid) || mem), botBlocked: true };
+                  memCache.set(remoteJid, silenced);
+                  saveBotMemory(silenced).catch(() => {});
+                  for (const k of Array.from(aiReplyCache.keys())) {
+                    if (k.startsWith(`${remoteJid}:`)) aiReplyCache.delete(k);
+                  }
+                  console.log(`[Bot] Silenced bot for ${remoteJid} after bot_confirmed auto-save`);
+                } catch { /* non-fatal */ }
+              };
 
               if (existingPending) {
                 await storage.updateAppointment(existingPending.id, { bookingStatus: "confirmed" } as any);
@@ -5148,6 +5171,7 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
                   "/whatsapp"
                 ).catch(() => {});
                 console.log(`[Bot] ✅ Updated existing appointment #${existingPending.id} to "confirmed" for ${clientLabel}`);
+                await silenceBotAfterConfirm();
               } else {
                 // ── Priority 2: No existing appointment → create a new bot_confirmed one ──
                 // Check for an already-saved bot_confirmed appointment to avoid duplicates
@@ -5191,6 +5215,7 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
                     "/whatsapp"
                   ).catch(() => {});
                   console.log(`[Bot] ✅ Auto-saved bot-confirmed appointment #${newApt.id} for ${clientLabel} on ${extracted.date} at ${extracted.time}`);
+                  await silenceBotAfterConfirm();
                 } else {
                   console.log(`[Bot] Duplicate bot_confirmed appointment skipped for ${clientLabel}`);
                 }
