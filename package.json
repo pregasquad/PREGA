@@ -10,7 +10,7 @@
     "node": "20.x"
   },
   "scripts": {
-    "dev": "NODE_ENV=development node_modules/.bin/tsx server/index.ts",
+    "dev": "NODE_ENV=development npx tsx server/index.ts",
     "build": "npx tsx script/build.ts",
     "start": "NODE_ENV=production node dist/index.cjs",
     "check": "tsc",
