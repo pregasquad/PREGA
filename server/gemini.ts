@@ -1111,40 +1111,74 @@ export function extractBotConfirmedAppointment(
   const dateStr = extractDate(botReply) ?? extractDate(recentText);
   if (!dateStr) return null; // no recognisable date → skip
 
-  // ── 5. Extract service (best-effort from full conversation) ───────────────
-  // Strategy: scan ALL text (bot reply + full history) for quoted service names.
-  // Handles: "Service1" و "Service2" و "Service3", single services, and 3+ services.
-  // Uses explicit Unicode escapes so straight " and curly " " quotes all match.
+  // ── 5. Extract service ────────────────────────────────────────────────────
+  // Priority order:
+  //   A) Exact DB service name found in bot reply or recent history (most reliable)
+  //   B) Quoted service name in bot reply / recent / full history
+  //   C) "لـ <service>" unquoted pattern in bot reply or recent
+  //   D) Keyword fallback against bot reply + recent only (NOT full history)
+  // This order ensures we always prefer the real DB name when the bot mentions it
+  // explicitly, and avoids picking up services mentioned in earlier unrelated turns.
+
   let service: string | null = null;
 
   const OPEN_Q  = "[\u0022\u201C\u00AB]"; // " " «
   const CLOSE_Q = "[\u0022\u201D\u00BB]"; // " " »
   const INSIDE  = "[^\u0022\u201C\u201D\u00AB\u00BB\n]{2,45}";
-
-  // Search bot reply first, then fall back to recent + full text
-  const searchSources2 = [botReply, recentText, allText];
   const quotedRx = new RegExp(`${OPEN_Q}(${INSIDE})${CLOSE_Q}`, "g");
+  const notService = /^(ok|merci|شكرا|واخا|تمام|مزيان|صحة|سلامة|demain|today|اليوم|غدا|باكر|سارة|anji|yousra|fatima|nadia|prix|salqm|خدمة واتساب|\d+)$/i;
 
-  // Words that are definitely NOT service names
-  const notService = /^(ok|merci|شكرا|واخا|تمام|مزيان|صحة|سلامة|demain|today|اليوم|غدا|باكر|سارة|anji|yousra|fatima|nadia|prix|salqm|\d+)$/i;
-
-  for (const src of searchSources2) {
-    quotedRx.lastIndex = 0;
-    const found: string[] = [];
-    let qm: RegExpExecArray | null;
-    while ((qm = quotedRx.exec(src)) !== null) {
-      const s = qm[1].trim();
-      if (s.length >= 2 && s.length <= 45 && !notService.test(s) && !found.includes(s)) {
-        found.push(s);
+  // ── A. Known DB services — highest priority ──────────────────────────────
+  // Search bot reply first, then recent text, then full history.
+  // Use word-boundary-safe matching (spaces / punctuation around name).
+  if (knownServices && knownServices.length > 0) {
+    const sources = [botReply, recentText, allText];
+    for (const src of sources) {
+      const srcLower = src.toLowerCase();
+      // Sort by name length desc so longer / more specific names match first
+      const sorted = [...knownServices].sort((a, b) => b.name.length - a.name.length);
+      for (const svc of sorted) {
+        if (srcLower.includes(svc.name.toLowerCase())) {
+          service = svc.name;
+          break;
+        }
       }
-    }
-    if (found.length >= 1) {
-      service = found.join(" + ");
-      break; // stop at the first source that gives results
+      if (service) break;
     }
   }
 
-  // Fallback: single service after لـ (unquoted) — "الموعد ديالك لـ Maillot complet …"
+  // ── B. Quoted service name in bot reply → recent → full history ───────────
+  if (!service) {
+    const searchSources2 = [botReply, recentText, allText];
+    for (const src of searchSources2) {
+      quotedRx.lastIndex = 0;
+      const found: string[] = [];
+      let qm: RegExpExecArray | null;
+      while ((qm = quotedRx.exec(src)) !== null) {
+        const s = qm[1].trim();
+        if (s.length >= 2 && s.length <= 45 && !notService.test(s) && !found.includes(s)) {
+          found.push(s);
+        }
+      }
+      if (found.length >= 1) {
+        service = found.join(" + ");
+        break;
+      }
+    }
+    // If found from quoted text, try to upgrade to real DB service name
+    if (service && knownServices && knownServices.length > 0) {
+      const lowerSvc = service.toLowerCase();
+      const upgrade = knownServices
+        .sort((a, b) => b.name.length - a.name.length)
+        .find(s => {
+          const sn = s.name.toLowerCase();
+          return sn.includes(lowerSvc) || lowerSvc.includes(sn);
+        });
+      if (upgrade) service = upgrade.name;
+    }
+  }
+
+  // ── C. Unquoted "لـ <service>" pattern in bot reply / recent ─────────────
   if (!service) {
     const directServiceRx = /لـ\s*[\u0022\u201C\u00AB]?([^\u0022\u201C\u201D\u00AB\u00BB\n،,+]{2,45}?)(?:[\u0022\u201D\u00BB]|\s+(?:يوم|مع|تأكد|مؤكد|غدا|اليوم|في\s+\d))/;
     const directMatch = botReply.match(directServiceRx) ?? recentText.match(directServiceRx);
@@ -1152,88 +1186,86 @@ export function extractBotConfirmedAppointment(
       const svcRaw = directMatch[1].trim();
       if (svcRaw.length >= 2 && svcRaw.length <= 45 && !notService.test(svcRaw)) {
         service = svcRaw;
-      }
-    }
-  }
-
-  const serviceKeywords = [
-    // Hair colour
-    "balayage", "بالياج", "ombré", "ombre", "couleur", "coloration", "صبغة", "صبغ",
-    "mèches", "meches", "highlights", "teinture",
-    // Smoothing / keratin
-    "كيراتين", "keratin", "lissage", "تمليس", "protéine", "proteine", "بروتين",
-    "lissage protéiné", "lissage proteine", "black caviar", "botox capillaire",
-    // Cut & style
-    "coupe", "قصة", "قص", "brushing", "brushin", "mise en plis", "coiffure",
-    // Makeup
-    "مكياج", "مكياج بسيط", "مكياج سيمبل", "makeup", "maquillage", "faux.cils", "faux cils",
-    "maquillage fiancée", "maquillage mariée", "maquillage soirée",
-    // Nails
-    "مانيكور", "مانيكير", "manucure", "pédicure", "pedicure", "بيديكير",
-    "vernis permanent", "semi.permanent", "nail art", "أظافر", "ونيس",
-    // Face & skin
-    "soins visage", "soin visage", "soin du visage", "facial", "وجه",
-    "gommage", "masque", "soin classique", "soin hydratant", "peeling",
-    // Brows & hair removal
-    "حواجب", "sourcils", "épilation", "عرو", "cire", "شمع",
-    // Body
-    "soins", "soin corps", "صوان", "massage", "hammam",
-    // General
-    "rendez-vous", "موعد", "خدمة",
-  ];
-  // Keyword fallback: only runs when direct لـ extraction didn't find a service
-  if (!service) {
-    const searchSources = [botReply, recentText, allText];
-    outer:
-    for (const src of searchSources) {
-      for (const kw of serviceKeywords) {
-        if (new RegExp(kw, "i").test(src)) {
-          service = kw;
-          break outer;
+        // Try to upgrade to real DB service name
+        if (knownServices && knownServices.length > 0) {
+          const lowerSvc = service.toLowerCase();
+          const upgrade = knownServices
+            .sort((a, b) => b.name.length - a.name.length)
+            .find(s => s.name.toLowerCase().includes(lowerSvc) || lowerSvc.includes(s.name.toLowerCase()));
+          if (upgrade) service = upgrade.name;
         }
       }
     }
   }
 
-  // Normalise service label: prefer prettier casing / Arabic label where possible
-  const serviceLabels: Record<string, string> = {
-    "balayage": "Balayage", "بالياج": "Balayage",
-    "coloration": "Coloration", "صبغة": "Coloration", "صبغ": "Coloration",
-    "couleur": "Coloration", "teinture": "Coloration",
-    "كيراتين": "Kératine", "keratin": "Kératine", "lissage": "Lissage",
-    "coupe": "Coupe", "قصة": "Coupe", "قص": "Coupe",
-    "brushing": "Brushing",
-    "makeup": "Maquillage", "maquillage": "Maquillage", "مكياج": "Maquillage",
-    "manucure": "Manucure", "مانيكور": "Manucure", "مانيكير": "Manucure",
-    "pédicure": "Pédicure", "pedicure": "Pédicure", "بيديكير": "Pédicure",
-    "sourcils": "Sourcils", "حواجب": "Sourcils",
-    "épilation": "Épilation", "عرو": "Épilation",
-    "massage": "Massage", "hammam": "Hammam",
-    "ombré": "Ombré", "ombre": "Ombré",
-    "mèches": "Mèches", "meches": "Mèches", "highlights": "Mèches",
-    "protéine": "Soin Protéiné", "proteine": "Soin Protéiné", "بروتين": "Soin Protéiné",
-    "botox capillaire": "Botox Capillaire",
-    "soins visage": "Soin Visage", "soin visage": "Soin Visage", "soin du visage": "Soin Visage",
-    "gommage": "Gommage", "peeling": "Peeling",
-  };
-  if (service) service = serviceLabels[service.toLowerCase()] ?? service;
-
-  // ── 5b. Validate / upgrade service against the real DB service list ────────
-  // If we have the known services list, try to find a better exact match.
-  // Priority: exact name match in conversation → partial match → keep extracted
-  if (knownServices && knownServices.length > 0) {
-    const allText2 = [botReply, recentText].join(" ").toLowerCase();
-    // 1. Exact name match (case-insensitive)
-    const exactMatch = knownServices.find(s => allText2.includes(s.name.toLowerCase()));
-    if (exactMatch) {
-      service = exactMatch.name;
-    } else if (service) {
-      // 2. Check if what we extracted is a partial match of a real service name
-      const lowerService = service.toLowerCase();
-      const partialMatch = knownServices.find(s =>
-        s.name.toLowerCase().includes(lowerService) || lowerService.includes(s.name.toLowerCase().split(" ")[0])
-      );
-      if (partialMatch) service = partialMatch.name;
+  // ── D. Keyword fallback — bot reply + recent text only (NOT full history) ──
+  // Excludes generic words ("موعد", "خدمة", "soins", "rendez-vous") that appear
+  // in almost every appointment reply and don't identify a specific service.
+  if (!service) {
+    const serviceKeywords = [
+      // Hair colour
+      "balayage", "بالياج", "ombré", "ombre", "coloration", "صبغة", "صبغ",
+      "mèches", "meches", "highlights", "teinture", "couleur cheveux",
+      // Smoothing / keratin
+      "كيراتين", "keratin", "lissage", "تمليس", "protéine", "proteine", "بروتين",
+      "lissage protéiné", "lissage proteine", "black caviar", "botox capillaire",
+      // Cut & style
+      "coupe", "قصة", "قص", "brushing", "brushin", "mise en plis",
+      // Makeup
+      "مكياج", "makeup", "maquillage", "faux cils",
+      "maquillage fiancée", "maquillage mariée", "maquillage soirée",
+      // Nails
+      "مانيكور", "مانيكير", "manucure", "pédicure", "pedicure", "بيديكير",
+      "vernis permanent", "semi-permanent", "nail art", "أظافر",
+      // Face & skin
+      "soins visage", "soin visage", "soin du visage", "facial",
+      "gommage", "masque", "soin classique", "soin hydratant", "peeling",
+      // Brows & hair removal
+      "حواجب", "sourcils", "épilation", "عرو", "épilation cire",
+      // Body
+      "soin corps", "صوان", "massage", "hammam",
+    ];
+    const kwSources = [botReply, recentText]; // ← NOT full history
+    outer:
+    for (const src of kwSources) {
+      for (const kw of serviceKeywords) {
+        if (new RegExp(`\\b${kw}\\b`, "i").test(src)) {
+          service = kw;
+          break outer;
+        }
+      }
+    }
+    // Normalise keyword to prettier label
+    if (service) {
+      const serviceLabels: Record<string, string> = {
+        "balayage": "Balayage", "بالياج": "Balayage",
+        "coloration": "Coloration", "صبغة": "Coloration", "صبغ": "Coloration",
+        "couleur cheveux": "Coloration", "teinture": "Coloration",
+        "كيراتين": "Kératine", "keratin": "Kératine", "lissage": "Lissage",
+        "coupe": "Coupe", "قصة": "Coupe", "قص": "Coupe",
+        "brushing": "Brushing",
+        "makeup": "Maquillage", "maquillage": "Maquillage", "مكياج": "Maquillage",
+        "manucure": "Manucure", "مانيكور": "Manucure", "مانيكير": "Manucure",
+        "pédicure": "Pédicure", "pedicure": "Pédicure", "بيديكير": "Pédicure",
+        "sourcils": "Sourcils", "حواجب": "Sourcils",
+        "épilation": "Épilation", "عرو": "Épilation", "épilation cire": "Épilation",
+        "massage": "Massage", "hammam": "Hammam",
+        "ombré": "Ombré", "ombre": "Ombré",
+        "mèches": "Mèches", "meches": "Mèches", "highlights": "Mèches",
+        "protéine": "Soin Protéiné", "proteine": "Soin Protéiné", "بروتين": "Soin Protéiné",
+        "botox capillaire": "Botox Capillaire",
+        "soins visage": "Soin Visage", "soin visage": "Soin Visage", "soin du visage": "Soin Visage",
+        "gommage": "Gommage", "peeling": "Peeling",
+      };
+      service = serviceLabels[service.toLowerCase()] ?? service;
+      // Final attempt to match to real DB service
+      if (knownServices && knownServices.length > 0) {
+        const lowerSvc = service.toLowerCase();
+        const upgrade = knownServices
+          .sort((a, b) => b.name.length - a.name.length)
+          .find(s => s.name.toLowerCase().includes(lowerSvc) || lowerSvc.includes(s.name.toLowerCase()));
+        if (upgrade) service = upgrade.name;
+      }
     }
   }
 
