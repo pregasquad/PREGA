@@ -67,11 +67,13 @@ let cachedPrompt = "";
 function buildSystemPrompt(ctx: SalonContext): string {
   const mem = ctx.clientMemory;
   const memKey = mem
-    ? `${mem.clientName ?? ""}|${mem.language ?? ""}|${(mem.preferredServices ?? []).join(",")}|${mem.visitCount ?? 0}`
+    ? `${mem.clientName ?? ""}|${mem.language ?? ""}|${(mem.preferredServices ?? []).join(",")}|${mem.visitCount ?? 0}|${mem.personalityNotes ?? ""}`
     : "";
   const staffKey = (ctx.staffMembers || []).map(s => `${s.name}:${s.gender}`).join(",");
   const bossKey = (ctx.bossInstructions || []).join("|");
-  const key = `${ctx.name}|${ctx.currency}|${ctx.services.length}|${staffKey}|${memKey}|${ctx.isNewConversation ? "new" : "returning"}|${bossKey}`;
+  const correctionsKey = (ctx.botCorrections || []).map(c => c.wrongInfo).join("|");
+  const complaintsKey = (ctx.resolvedComplaints || []).map(c => c.complaint).join("|");
+  const key = `${ctx.name}|${ctx.currency}|${ctx.services.length}|${staffKey}|${memKey}|${ctx.isNewConversation ? "new" : "returning"}|${bossKey}|${correctionsKey}|${complaintsKey}`;
   if (key === cachedPromptKey) return cachedPrompt;
 
   // Group services by category
@@ -100,6 +102,8 @@ function buildSystemPrompt(ctx: SalonContext): string {
       lines.push(`الخدمات التي سألت عنها من قبل: ${mem.preferredServices.join("، ")}`);
     if (mem.language && mem.language !== "unknown")
       lines.push(`لغتها المفضلة: ${mem.language}`);
+    if (mem.personalityNotes)
+      lines.push(`ملاحظات عن أسلوبها: ${mem.personalityNotes}`);
     memorySection = `
 ━━━ معلومات العميلة الحالية ━━━
 ${lines.join("\n")}
@@ -1068,6 +1072,33 @@ export function extractBotConfirmedAppointment(
     juillet: 7, août: 8, septembre: 9, octobre: 10, novembre: 11, décembre: 12,
   };
 
+  // Named-day → JS day-of-week index (0=Sun, 1=Mon, ... 6=Sat)
+  const namedDayIndex: Record<string, number> = {
+    // Arabic
+    "الأحد": 0, "الاحد": 0,
+    "الاثنين": 1, "الإثنين": 1,
+    "الثلاثاء": 2,
+    "الأربعاء": 3, "الاربعاء": 3,
+    "الخميس": 4,
+    "الجمعة": 5, "الجمعه": 5,
+    "السبت": 6,
+    // French
+    "dimanche": 0,
+    "lundi": 1,
+    "mardi": 2,
+    "mercredi": 3,
+    "jeudi": 4,
+    "vendredi": 5,
+    "samedi": 6,
+  };
+
+  /** Returns the next occurrence of dayIndex from today (0 = today if it matches). */
+  function nextWeekday(dayIndex: number): string {
+    const todayDow = today.getDay();
+    const diff = (dayIndex - todayDow + 7) % 7;
+    return addDays(diff === 0 ? 7 : diff); // 0 diff = same DOW as today → next week
+  }
+
   function extractDate(src: string): string | null {
     // Note: \b does not work with Arabic — use whitespace/punctuation boundaries instead
     // Check longer patterns FIRST to avoid "غدا" inside "بعد غدا" matching prematurely
@@ -1077,6 +1108,13 @@ export function extractBotConfirmedAppointment(
     if (/(^|[\s،,،.!؟?])(غدا|غداً|غد|باكر|بكرا)([\s،,،.!؟?]|$)|\bdemain\b|\btomorrow\b/i.test(src)) return addDays(1);
     // Relative: "اليوم" / "aujourd'hui" / "today" (0 days)
     if (/(^|[\s،,،.!؟?])(اليوم|دابا)([\s،,،.!؟?]|$)|\baujourd'hui\b|\btoday\b/i.test(src)) return todayDateStr;
+
+    // Named weekday — "يوم الاثنين", "le lundi", "lundi prochain", "الخميس القادم"
+    for (const [name, dow] of Object.entries(namedDayIndex)) {
+      // Allow the day name to appear with optional prefix (يوم / le / ce / next)
+      const rx = new RegExp(`(?:يوم\\s+|le\\s+|ce\\s+|next\\s+)?${name}(?:\\s+(?:القادم|المقبل|prochain|qui vient|next))?`, "i");
+      if (rx.test(src)) return nextWeekday(dow);
+    }
 
     // Named month "15 mai" / "15 مايو" / "15 ماي"
     for (const [mName, mNum] of Object.entries(arabicMonths)) {

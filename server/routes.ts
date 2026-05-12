@@ -4917,8 +4917,8 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
             getResolvedComplaints().catch(() => []),
             getBossInstructions().catch(() => []),
           ]);
-          const resolvedComplaints = allResolved.filter((rc) => rc.complaintType !== "bot_error");
-          const botCorrections = allResolved.filter((rc) => rc.complaintType === "bot_error");
+          const resolvedComplaints = allResolved.filter((rc) => rc.complaintType !== "bot_error" && rc.fixNote);
+          const botCorrections = allResolved.filter((rc) => rc.complaintType === "bot_error" && rc.fixNote);
 
           const staffMemberList = (allStaff || []).map((s: any) => ({
             name: s.name,
