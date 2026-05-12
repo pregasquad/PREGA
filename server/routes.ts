@@ -4626,8 +4626,14 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
 
           // ── Transcribe any voice notes in the batch ──────────────────────
           // Do this BEFORE merging so the transcription replaces "[voice message]"
+          // Skip transcription entirely if this JID is bot-blocked — voice notes
+          // can never be "1"/"2"/"3" quick actions, so there's nothing useful to do.
           const { transcribeAudio } = await import("./gemini");
           for (const msg of msgs) {
+            if (msg.isVoice && isIndividuallyBlocked) {
+              console.log(`[Bot] Skipping voice transcription for bot-blocked JID ${remoteJid}`);
+              return;
+            }
             if (msg.isVoice) {
               if (msg.audioBase64 && msg.audioMimeType) {
                 console.log(`[Bot] Transcribing voice note (${Math.round(msg.audioBase64.length * 0.75 / 1024)} KB) for ${remoteJid}`);
