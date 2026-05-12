@@ -804,25 +804,27 @@ export async function sendBotError(jid: string): Promise<void> {
 
 export async function sendAppointmentReminder(
   clientPhone: string, clientName: string, appointmentDate: string,
-  appointmentTime: string, serviceName: string, salonName?: string
+  appointmentTime: string, serviceName: string, salonName?: string,
+  language?: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const salon = salonName || "PREGASQUAD";
-  return sendWhatsAppMessage(
-    clientPhone,
-    `مرحباً ${clientName}! 💇‍♀️\n\n⏳ تذكير: موعدك بعد قليل!\n\n📅 ${appointmentDate}\n⏰ ${appointmentTime}\n💅 ${serviceName}\n\nنتطلع لرؤيتك في ${salon}! 🌸`
-  );
+  const msg = language === "french"
+    ? `Bonjour ${clientName} ! 💇‍♀️\n\n⏳ Rappel : votre rendez-vous est bientôt !\n\n📅 ${appointmentDate}\n⏰ ${appointmentTime}\n💅 ${serviceName}\n\nNous avons hâte de vous accueillir chez ${salon} ! 🌸`
+    : `مرحباً ${clientName}! 💇‍♀️\n\n⏳ تذكير: موعدك بعد قليل!\n\n📅 ${appointmentDate}\n⏰ ${appointmentTime}\n💅 ${serviceName}\n\nنتطلع لرؤيتك في ${salon}! 🌸`;
+  return sendWhatsAppMessage(clientPhone, msg);
 }
 
 export async function sendBookingConfirmation(
   clientPhone: string, clientName: string, appointmentDate: string,
-  appointmentTime: string, serviceName: string, _salonName?: string
+  appointmentTime: string, serviceName: string, _salonName?: string,
+  language?: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const firstName = clientName.split(" ")[0];
   const relativeDate = formatRelativeDate(appointmentDate);
-  return sendWhatsAppMessage(
-    clientPhone,
-    `مرحبا ${firstName} 🌸\n\nتم تأكيد موعدك بنجاح ✅\n\n📋 الخدمة: ${serviceName}\n📅 التاريخ: ${relativeDate}\n⏰ الوقت: ${appointmentTime}\n\nنتطلع لاستقبالك 💕`
-  );
+  const msg = language === "french"
+    ? `Bonjour ${firstName} 🌸\n\nVotre rendez-vous a bien été confirmé ✅\n\n📋 Prestation : ${serviceName}\n📅 Date : ${relativeDate}\n⏰ Heure : ${appointmentTime}\n\nNous avons hâte de vous accueillir 💕`
+    : `مرحبا ${firstName} 🌸\n\nتم تأكيد موعدك بنجاح ✅\n\n📋 الخدمة: ${serviceName}\n📅 التاريخ: ${relativeDate}\n⏰ الوقت: ${appointmentTime}\n\nنتطلع لاستقبالك 💕`;
+  return sendWhatsAppMessage(clientPhone, msg);
 }
 
 export async function sendWaitlistNotification(

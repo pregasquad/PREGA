@@ -842,12 +842,27 @@ export async function registerRoutes(
           const { sendBookingConfirmation, formatJid } = await import("./baileys");
           const allServiceNames = createdAppointments.map(a => a.service).join(" + ");
 
+          // Look up the client's preferred language from bot memory so the confirmation
+          // message is sent in the same language they use with the bot.
+          let clientConfirmLang: string | undefined;
+          try {
+            const { getBotMemoriesByPhone: _gmbp } = await import("./db");
+            let normPhone = (input.phone || "").replace(/[^0-9]/g, "");
+            if (normPhone.startsWith("00")) normPhone = normPhone.slice(2);
+            if (normPhone.startsWith("0") && normPhone.length === 10) normPhone = "212" + normPhone.slice(1);
+            if (normPhone.length === 9) normPhone = "212" + normPhone;
+            const mems = normPhone ? await _gmbp(normPhone) : [];
+            clientConfirmLang = mems.find((m) => m.language && m.language !== "unknown")?.language;
+          } catch { /* fall back to Arabic if lookup fails */ }
+
           await sendBookingConfirmation(
             input.phone,
             input.client.split(" (")[0],
             input.date,
             input.startTime,
-            allServiceNames
+            allServiceNames,
+            undefined,
+            clientConfirmLang
           );
 
           // Silence the bot for this client after the confirmation — only if setting is enabled
@@ -4565,6 +4580,8 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
       }
 
       addToBuffer(remoteJid, text, imageBase64, imageMimeType, isVoice, audioBase64, audioMimeType, async (msgs: BufferedMsg[]) => {
+        // Hoisted so the catch block can use it for a language-aware fallback message
+        let clientLang: string | undefined;
         try {
           // ── Re-check blocklist inside buffer callback ──────────────────────
           // Handles the case where the number was added to the blocklist while
@@ -4687,7 +4704,7 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
           const apt = pendingApts.length > 0 ? pendingApts[0] : null;
 
           // Client's language — already loaded via memCheck above, used for localised quick replies
-          const clientLang = memCheck?.language ?? undefined;
+          clientLang = memCheck?.language ?? undefined;
 
           if (apt && mergedText === "1") {
             await storage.updateAppointment(apt.id, { bookingStatus: "confirmed" } as any);
@@ -4731,11 +4748,11 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
               const typingMs = 1500 + Math.floor(Math.random() * 1000);
               await new Promise<void>((r) => setTimeout(r, typingMs));
               await stopTypingPresence(remoteJid);
-              await sendWhatsAppMessage(
-                remoteJid,
-                `واخا حبيبتي 💙\n\nتم إلغاء ميعادك بنجاح ✅\n\nإذا بغيتِ تحجزي وقت آخر، راسليني هنا وغادي يتواصلو معاكِ الفريق 🌸\nكنتمنو نشوفوك قريباً 💖`
-              );
-              console.log(`[Bot] Appointment ${aptToCancel.id} cancelled via natural language from ${remoteJid}`);
+              const cancelMsg = clientLang === "french"
+                ? `D'accord 💙\n\nVotre rendez-vous a bien été annulé ✅\n\nSi vous souhaitez reprendre un rendez-vous, n'hésitez pas à nous écrire ici 🌸\nOn espère vous revoir bientôt 💖`
+                : `واخا حبيبتي 💙\n\nتم إلغاء ميعادك بنجاح ✅\n\nإذا بغيتِ تحجزي وقت آخر، راسليني هنا وغادي يتواصلو معاكِ الفريق 🌸\nكنتمنو نشوفوك قريباً 💖`;
+              await sendWhatsAppMessage(remoteJid, cancelMsg);
+              console.log(`[Bot] Appointment ${aptToCancel.id} cancelled via natural language from ${remoteJid} (lang: ${clientLang})`);
               return;
             }
             // No appointment found — fall through so AI can respond naturally
@@ -4785,28 +4802,47 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
           // ── Short-reply fast-path: merci/شكرا/bye/بسلامة only ───────────
           {
             const t = mergedText.trim().toLowerCase();
-            const shortReplies: [RegExp, string[]][] = [
-              [/^(شكرا|شكراً|شكرا بزاف|chokran|merci|merci beaucoup|thank you|thanks|thx|🙏|شكرا لك|شكراً لك)$/i, [
-                "بالله عليك 🌸 يسعدنا نخدموك!",
-                "هيا بالله 💖 ننتظروك!",
-                "والله سعداء بيك 🌸",
-              ]],
-              [/^(بسلامة|بالسلامة|مع السلامة|au revoir|bye|byee|bbye|تصبح على خير|تصبحي على خير|lila sa3ida|bonne nuit|bonne journée|👋)$/i, [
-                "بسلامة 🌸 ننتظروك دايما!",
-                "مع السلامة 💖 تصبحي على خير!",
-                "يسلمك ربي 🌸 أي وقت راسليني!",
-              ]],
+            // Each entry: [pattern, arabicReplies, frenchReplies]
+            const shortReplies: [RegExp, string[], string[]][] = [
+              [
+                /^(شكرا|شكراً|شكرا بزاف|chokran|merci|merci beaucoup|thank you|thanks|thx|🙏|شكرا لك|شكراً لك)$/i,
+                [
+                  "بالله عليك 🌸 يسعدنا نخدموك!",
+                  "هيا بالله 💖 ننتظروك!",
+                  "والله سعداء بيك 🌸",
+                ],
+                [
+                  "Avec plaisir 🌸 On est là pour vous !",
+                  "De rien 💖 On vous attend !",
+                  "C'est nous qui remercions 🌸",
+                ],
+              ],
+              [
+                /^(بسلامة|بالسلامة|مع السلامة|au revoir|bye|byee|bbye|تصبح على خير|تصبحي على خير|lila sa3ida|bonne nuit|bonne journée|👋)$/i,
+                [
+                  "بسلامة 🌸 ننتظروك دايما!",
+                  "مع السلامة 💖 تصبحي على خير!",
+                  "يسلمك ربي 🌸 أي وقت راسليني!",
+                ],
+                [
+                  "Au revoir 🌸 On vous attend toujours !",
+                  "À bientôt 💖 Bonne journée !",
+                  "Bonne journée 🌸 N'hésitez pas à nous écrire !",
+                ],
+              ],
             ];
 
-            for (const [pattern, responses] of shortReplies) {
+            const isFrench = clientLang === "french";
+            for (const [pattern, arReplies, frReplies] of shortReplies) {
               if (pattern.test(t)) {
                 const { sendWhatsAppMessage: _send, sendTypingPresence: _tp, stopTypingPresence: _stp } = await import("./baileys");
                 await _tp(remoteJid);
                 await new Promise<void>((r) => setTimeout(r, 700 + Math.floor(Math.random() * 500)));
                 await _stp(remoteJid);
-                const reply = responses[Math.floor(Math.random() * responses.length)];
+                const pool = isFrench ? frReplies : arReplies;
+                const reply = pool[Math.floor(Math.random() * pool.length)];
                 await _send(remoteJid, reply);
-                console.log(`[Bot] Short-reply fast-path for ${remoteJid}: "${t}"`);
+                console.log(`[Bot] Short-reply fast-path for ${remoteJid} (${isFrench ? "fr" : "ar"}): "${t}"`);
                 return;
               }
             }
@@ -5257,10 +5293,13 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
         } catch (err: any) {
           console.error("[Bot] Error handling buffered batch:", err.message);
           try {
-            const { FALLBACK_REPLY } = await import("./gemini");
             const { sendWhatsAppMessage, stopTypingPresence } = await import("./baileys");
             await stopTypingPresence(remoteJid);
-            await sendWhatsAppMessage(remoteJid, FALLBACK_REPLY);
+            // Use a language-aware fallback — clientLang is available in this closure scope
+            const fallbackMsg = clientLang === "french"
+              ? "Merci de nous avoir contactés 🌸\nNotre équipe vous répondra dans les plus brefs délais — écrivez-nous directement ici 💖"
+              : "شكراً على تواصلك معنا 🌸\nفريقنا سيرد عليك في أقرب وقت — تواصلي معنا هنا مباشرة 💖";
+            await sendWhatsAppMessage(remoteJid, fallbackMsg);
           } catch { /* last-resort */ }
         }
       });
