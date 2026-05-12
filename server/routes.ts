@@ -873,6 +873,14 @@ export async function registerRoutes(
               mem = { ...mem, botBlocked: true };
             }
             await saveBotMemory(mem);
+            // Clear in-memory shadow cache so the block flag is effective immediately.
+            // Without this, the next message from this client would still hit the old
+            // unblocked cache entry and the bot would reply despite being silenced.
+            memCache.delete(jid);
+            for (const k of Array.from(aiReplyCache.keys())) {
+              if (k.startsWith(`${jid}:`)) aiReplyCache.delete(k);
+            }
+            console.log(`[Bot] Silenced bot for ${jid} after booking confirmation — memCache cleared`);
           } catch (blockErr) {
             console.log("Failed to silence bot after booking confirmation:", blockErr);
           }
@@ -4560,11 +4568,14 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
           }
 
           // ── Per-conversation bot block check ────────────────────────────
-          // Use loadMemory (memCache-backed) so block/unblock changes are instant.
+          // Load block flag early but do NOT return here — 1/2/3 quick actions
+          // (confirm / cancel / modify) and natural-language cancellations must
+          // still be processed even when the AI reply is silenced for this JID.
+          // The AI-reply gate is applied AFTER the quick-action section below.
           const memCheck = await loadMemory(remoteJid);
-          if (memCheck?.botBlocked) {
-            console.log(`[Bot] ${remoteJid} is individually bot-blocked — skipping reply`);
-            return;
+          const isIndividuallyBlocked = memCheck?.botBlocked === true;
+          if (isIndividuallyBlocked) {
+            console.log(`[Bot] ${remoteJid} is individually bot-blocked — quick actions still processed, AI reply will be skipped`);
           }
 
           // ── Transcribe any voice notes in the batch ──────────────────────
@@ -4702,6 +4713,15 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
               return;
             }
             // No appointment found — fall through so AI can respond naturally
+          }
+
+          // ── AI-reply gate for individually blocked conversations ──────────
+          // 1/2/3 quick actions and cancellations above already handled and
+          // returned early if they matched. Anything that reaches here is a
+          // regular message — skip it entirely if this JID is bot-blocked.
+          if (isIndividuallyBlocked) {
+            console.log(`[Bot] ${remoteJid} is bot-blocked — skipping AI reply`);
+            return;
           }
 
           // ── Image generation: client asked for a photo ───────────────────
@@ -5310,7 +5330,7 @@ async function seedDatabase() {
 
   const prods = await storage.getProducts();
   if (prods.length === 0) {
-    await storage.createProduct({ name: "Lissage Protéine", quantity: 10, category: "Produits Cheveux" });
-    await storage.createProduct({ name: "Color Blond", quantity: 5, category: "Produits Cheveux" });
+    await storage.createProduct({ name: "Lissage Protéine", quantity: 10 });
+    await storage.createProduct({ name: "Color Blond", quantity: 5 });
   }
 }
