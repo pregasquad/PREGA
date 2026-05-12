@@ -593,7 +593,6 @@ export interface LearnedInsights {
   language?: string;
   preferredServices?: string[];
   personalityNotes?: string | null;
-  bookingIntent?: boolean;
   complaints?: string[]; // new salon complaints extracted from this conversation
   botErrors?: { wrongInfo: string; correctInfo: string }[]; // cases where the bot gave wrong info and was corrected
 }
@@ -645,7 +644,6 @@ ${conversationText}
   "language": "arabic أو french أو darija أو unknown — اختر حسب لغة العميلة",
   "preferredServices": ["قائمة الخدمات التي سألت عنها أو أبدت اهتماماً بها من قائمة الصالون فقط"],
   "personalityNotes": "ملاحظة قصيرة (جملة أو جملتين) عن: أسلوبها في التواصل، تفضيلاتها، ميزانيتها إذا ظهرت، أي شيء يساعد على التعامل معها بشكل أفضل في المستقبل. null إذا ما عندكش معلومات كافية",
-  "bookingIntent": true,
   "complaints": ["قائمة الشكاوى أو المشاكل عن الصالون — جملة واحدة لكل شكوى. مصفوفة فارغة [] إذا ما كانتش شي شكوى"],
   "botErrors": [
     {
@@ -1334,5 +1332,10 @@ export function sanitizeClientName(raw: string | null | undefined): string | nul
  */
 export function detectImageRequest(text: string): boolean {
   const t = text.toLowerCase().trim();
-  return /أريني|اريني|أرسلي|ارسلي|أرسل|ارسل صورة|صورة|صور|وريني|ورني|كيف يبدو|كيف تبدو|شكل|مثال|أمثلة|show me|photo|image|picture|exemple|exemple photo|montre|envoie|résultat|montrez|résultats|send photo|voir\b|بالصورة|بالصور|صورة.*قصة|صورة.*شعر|صورة.*مكياج|صورة.*أظافر|صورة.*ألوان|صورة.*بالياج|صورة.*نقش|صورة.*سباحة|صورة.*سبا/i.test(t);
+  // Patterns chosen to be specific enough to avoid common false positives:
+  // - Removed "شكل" (extremely common Darija word meaning "form/how")
+  // - Removed "مثال/أمثلة" (common Arabic "example" words)
+  // - Removed "\bvoir\b" (common French verb "to see", triggers on any price inquiry)
+  // - "montre" narrowed to "montre-moi/montrez-moi" only (avoids noun "watch")
+  return /أريني|اريني|أرسلي|ارسلي|أرسل|ارسل صورة|صورة|صور|وريني|ورني|كيف يبدو|كيف تبدو|show me|photo|image|picture|exemple photo|montrez?-moi|montrez?\s+moi|montrez?\s+une|envoie|résultat|résultats|send photo|بالصورة|بالصور|صورة.*قصة|صورة.*شعر|صورة.*مكياج|صورة.*أظافر|صورة.*ألوان|صورة.*بالياج|صورة.*نقش|صورة.*سباحة|صورة.*سبا/i.test(t);
 }

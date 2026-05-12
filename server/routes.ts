@@ -2759,9 +2759,13 @@ export async function registerRoutes(
       const updated = {
         ...mem,
         clientName: sanitizeClientName(insights.clientName) ?? mem.clientName,
-        language: insights.language || mem.language,
+        // Only overwrite language if BotLearn returned a known value — "unknown" must not
+        // erase a language that was already learned in previous conversations.
+        language: (insights.language && insights.language !== "unknown") ? insights.language : mem.language,
         preferredServices: insights.preferredServices?.length ? insights.preferredServices : mem.preferredServices,
-        personalityNotes: insights.personalityNotes !== undefined ? insights.personalityNotes : mem.personalityNotes,
+        // Only update notes if BotLearn returned something non-null — returning null means
+        // "not enough data", not "the client has no notes". Prevents wiping stored context.
+        personalityNotes: insights.personalityNotes || mem.personalityNotes,
       };
       await saveBotMemory(updated);
       res.json({ success: true, insights });
