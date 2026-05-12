@@ -829,9 +829,10 @@ export async function registerRoutes(
         // Send push notification
         const clientName = item.client || "Client";
         const serviceName = item.service || "RDV";
+        const priceTag = item.price && item.price > 0 ? ` — ${item.price} DH` : "";
         sendPushNotification(
           "Nouveau RDV (En ligne)",
-          `${clientName} - ${serviceName} (${item.startTime}) - ${item.staff}`,
+          `${clientName} - ${serviceName}${priceTag} (${item.startTime}) - ${item.staff}`,
           `/planning?date=${item.date}`
         ).catch(console.error);
       }
@@ -1371,9 +1372,10 @@ export async function registerRoutes(
       // Send push notification for new appointment
       const clientName = item.client || "Client";
       const serviceName = item.service || "RDV";
+      const priceTag = item.price && item.price > 0 ? ` — ${item.price} DH` : "";
       sendPushNotification(
         "Nouveau RDV",
-        `${clientName} - ${serviceName} (${item.startTime}) - ${item.staff}`,
+        `${clientName} - ${serviceName}${priceTag} (${item.startTime}) - ${item.staff}`,
         `/planning?date=${item.date}`
       ).catch(console.error);
       
@@ -5234,9 +5236,10 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
               if (existingPending) {
                 await storage.updateAppointment(existingPending.id, { bookingStatus: "confirmed" } as any);
                 io.emit("booking:updated", { ...existingPending, bookingStatus: "confirmed" });
+                const _epPriceTag = existingPending.price && existingPending.price > 0 ? ` — ${existingPending.price} DH` : "";
                 sendPushNotification(
                   "حجز مؤكّد من البوت 🤖",
-                  `${existingPending.client} — ${existingPending.service || "خدمة"} — ${existingPending.date} ${existingPending.startTime}`,
+                  `${existingPending.client} — ${existingPending.service || "خدمة"}${_epPriceTag} — ${existingPending.date} ${existingPending.startTime}`,
                   "/whatsapp"
                 ).catch(() => {});
                 console.log(`[Bot] ✅ Updated existing appointment #${existingPending.id} to "confirmed" for ${clientLabel}`);
