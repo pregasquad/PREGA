@@ -888,29 +888,14 @@ export async function registerRoutes(
             }
 
             for (const jid of jidsToSilence) {
-              let mem = await getBotMemory(jid);
-              if (!mem) {
-                mem = {
-                  jid,
-                  phone: normalizedClientPhone || input.phone,
-                  clientName: input.client.split(" (")[0],
-                  language: "arabic",
-                  preferredServices: [],
-                  personalityNotes: null,
-                  convHistory: [],
-                  visitCount: 1,
-                  lastSeen: null,
-                  botBlocked: true,
-                };
-              } else {
-                mem = { ...mem, botBlocked: true };
-              }
-              await saveBotMemory(mem);
+              // Temporary in-memory silence only — do NOT write bot_blocked to DB.
+              // DB bot_blocked is reserved for admin-controlled blocks via the UI toggle.
+              silencedJids.set(jid, Date.now() + SILENCE_TTL);
               memCache.delete(jid);
               for (const k of Array.from(aiReplyCache.keys())) {
                 if (k.startsWith(`${jid}:`)) aiReplyCache.delete(k);
               }
-              console.log(`[Bot] Silenced bot for ${jid} after booking confirmation — memCache cleared`);
+              console.log(`[Bot] Temporarily silenced bot for ${jid} after booking confirmation (4h, in-memory only)`);
             }
           } catch (blockErr) {
             console.log("Failed to silence bot after booking confirmation:", blockErr);
@@ -4317,6 +4302,12 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
   type ConvTurn = { role: "user" | "model"; text: string };
   const memCache = new Map<string, BotClientMemory>();
 
+  // Temporary post-booking silence — in-memory only, NOT persisted to DB.
+  // Prevents the bot from replying immediately after auto-confirming an appointment.
+  // The admin-controlled block uses bot_blocked in the DB (set via the UI toggle only).
+  const SILENCE_TTL = 4 * 60 * 60 * 1000; // 4 hours
+  const silencedJids = new Map<string, number>(); // jid → expiry timestamp
+
   // How long an idle conversation keeps its context (7 days — returning clients always get full context)
   const CONV_TTL = 7 * 24 * 60 * 60 * 1000;
   // Maximum recent turns to keep in history (15 back-and-forth = 30 entries)
@@ -4618,11 +4609,27 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
           // (confirm / cancel / modify) and natural-language cancellations must
           // still be processed even when the AI reply is silenced for this JID.
           // The AI-reply gate is applied AFTER the quick-action section below.
-          const memCheck = await loadMemory(remoteJid);
-          const isIndividuallyBlocked = memCheck?.botBlocked === true;
-          if (isIndividuallyBlocked) {
-            console.log(`[Bot] ${remoteJid} is individually bot-blocked — quick actions still processed, AI reply will be skipped`);
+          //
+          // IMPORTANT: always read bot_blocked fresh from DB — never from the
+          // in-memory cache. The cache can hold stale botBlocked=true from a
+          // previous session or from the post-booking silence path, causing
+          // false positives for users who were never explicitly blocked.
+          const freshMem = await getBotMemory(remoteJid);
+          const isAdminBlocked = freshMem?.botBlocked === true;
+          // Also check in-memory temporary silence (set after auto-confirmed bookings)
+          const silenceExpiry = silencedJids.get(remoteJid);
+          const isTempSilenced = silenceExpiry !== undefined && Date.now() < silenceExpiry;
+          if (silenceExpiry !== undefined && Date.now() >= silenceExpiry) {
+            silencedJids.delete(remoteJid); // clean up expired entry
           }
+          const isIndividuallyBlocked = isAdminBlocked || isTempSilenced;
+          if (isAdminBlocked) {
+            console.log(`[Bot] ${remoteJid} is admin-blocked (DB) — quick actions still processed, AI reply will be skipped`);
+          } else if (isTempSilenced) {
+            console.log(`[Bot] ${remoteJid} is temporarily silenced after booking — quick actions still processed, AI reply will be skipped`);
+          }
+          // Also load full memory via cache for conversation context (used later)
+          const memCheck = await loadMemory(remoteJid);
 
           // ── Transcribe any voice notes in the batch ──────────────────────
           // Do this BEFORE merging so the transcription replaces "[voice message]"
@@ -5224,18 +5231,18 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
                 : null;
 
               // Helper: silence the bot for this JID after auto-confirming an appointment.
-              // Prevents the bot from creating a second duplicate on the very next message.
+              // Prevents the bot from replying immediately after auto-save.
+              // Uses in-memory silencedJids only — never writes bot_blocked to DB.
               const silenceBotAfterConfirm = async () => {
                 try {
                   const silenceOk = (await storage.getBusinessSettings() as any)?.botSilenceAfterBooking !== false;
                   if (!silenceOk) return;
-                  const silenced = { ...(memCache.get(remoteJid) || mem), botBlocked: true };
-                  memCache.set(remoteJid, silenced);
-                  saveBotMemory(silenced).catch(() => {});
+                  silencedJids.set(remoteJid, Date.now() + SILENCE_TTL);
+                  memCache.delete(remoteJid);
                   for (const k of Array.from(aiReplyCache.keys())) {
                     if (k.startsWith(`${remoteJid}:`)) aiReplyCache.delete(k);
                   }
-                  console.log(`[Bot] Silenced bot for ${remoteJid} after bot_confirmed auto-save`);
+                  console.log(`[Bot] Temporarily silenced bot for ${remoteJid} after bot_confirmed auto-save (4h, in-memory only)`);
                 } catch { /* non-fatal */ }
               };
 
