@@ -853,34 +853,49 @@ export async function registerRoutes(
           // Silence the bot for this client after the confirmation — only if setting is enabled
           const silenceEnabled = (await storage.getBusinessSettings() as any)?.botSilenceAfterBooking !== false;
           if (silenceEnabled) try {
-            const { getBotMemory, saveBotMemory } = await import("./db");
-            const jid = formatJid(input.phone);
-            let mem = await getBotMemory(jid);
-            if (!mem) {
-              mem = {
-                jid,
-                phone: input.phone,
-                clientName: input.client.split(" (")[0],
-                language: "arabic",
-                preferredServices: [],
-                personalityNotes: null,
-                convHistory: [],
-                visitCount: 1,
-                lastSeen: null,
-                botBlocked: true,
-              };
-            } else {
-              mem = { ...mem, botBlocked: true };
+            const { getBotMemory, saveBotMemory, getBotMemoriesByPhone } = await import("./db");
+
+            // Normalise client phone so we can find @lid entries keyed by LID, not real phone
+            let normalizedClientPhone = (input.phone || "").replace(/[^0-9]/g, "");
+            if (normalizedClientPhone.startsWith("00")) normalizedClientPhone = normalizedClientPhone.slice(2);
+            if (normalizedClientPhone.startsWith("0") && normalizedClientPhone.length === 10) normalizedClientPhone = "212" + normalizedClientPhone.slice(1);
+            if (normalizedClientPhone.length === 9) normalizedClientPhone = "212" + normalizedClientPhone;
+
+            // Build set of JIDs to silence:
+            // 1. The canonical @s.whatsapp.net JID (most common)
+            // 2. Any @lid JIDs found in memory with matching phone (handles newer WA accounts)
+            const canonicalJid = formatJid(input.phone);
+            const jidsToSilence = new Set<string>([canonicalJid]);
+            if (normalizedClientPhone) {
+              const phoneMems = await getBotMemoriesByPhone(normalizedClientPhone);
+              for (const pm of phoneMems) jidsToSilence.add(pm.jid);
             }
-            await saveBotMemory(mem);
-            // Clear in-memory shadow cache so the block flag is effective immediately.
-            // Without this, the next message from this client would still hit the old
-            // unblocked cache entry and the bot would reply despite being silenced.
-            memCache.delete(jid);
-            for (const k of Array.from(aiReplyCache.keys())) {
-              if (k.startsWith(`${jid}:`)) aiReplyCache.delete(k);
+
+            for (const jid of jidsToSilence) {
+              let mem = await getBotMemory(jid);
+              if (!mem) {
+                mem = {
+                  jid,
+                  phone: normalizedClientPhone || input.phone,
+                  clientName: input.client.split(" (")[0],
+                  language: "arabic",
+                  preferredServices: [],
+                  personalityNotes: null,
+                  convHistory: [],
+                  visitCount: 1,
+                  lastSeen: null,
+                  botBlocked: true,
+                };
+              } else {
+                mem = { ...mem, botBlocked: true };
+              }
+              await saveBotMemory(mem);
+              memCache.delete(jid);
+              for (const k of Array.from(aiReplyCache.keys())) {
+                if (k.startsWith(`${jid}:`)) aiReplyCache.delete(k);
+              }
+              console.log(`[Bot] Silenced bot for ${jid} after booking confirmation — memCache cleared`);
             }
-            console.log(`[Bot] Silenced bot for ${jid} after booking confirmation — memCache cleared`);
           } catch (blockErr) {
             console.log("Failed to silence bot after booking confirmation:", blockErr);
           }
@@ -4299,6 +4314,9 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
     return "unknown";
   }
 
+  // Common French/Darija words that are NOT names — used to filter extractName false positives
+  const NOT_A_NAME = /^(bon|bien|parfait|super|disponible|intéressée|intéressé|ok|oui|non|merci|désolée|désolé|possible|disponible|occupée|occupé|contente|content|là|ici|prête|prêt|seule|seul|libre|dispo|taman|mzyan|mzien|bghit|wakha|safi|mezyan|sympa|génial|géniale|top|nickel)$/i;
+
   /** Try to extract a client first name from their message */
   function extractName(text: string): string | null {
     const patterns = [
@@ -4306,15 +4324,20 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
       /اسمي\s+([\u0600-\u06FFa-zA-Z]+)/,
       /سميتي\s+([\u0600-\u06FFa-zA-Z]+)/,
       /إسمي\s+([\u0600-\u06FFa-zA-Z]+)/,
-      /je\s+m['']?appelle\s+([A-Za-zÀ-ÿ]+)/i,
-      /je\s+suis\s+([A-Za-zÀ-ÿ]+)/i,
-      /c['']?est\s+([A-Za-zÀ-ÿ]+)/i,
-      /ana\s+([A-Za-zÀ-ÿ\u0600-\u06FF]+)/i,
-      /smiyti\s+([A-Za-zÀ-ÿ\u0600-\u06FF]+)/i,
+      // French: "je m'appelle Fatima" — reliable, keep as-is
+      /je\s+m['']?appelle\s+([A-Za-zÀ-ÿ]{2,})/i,
+      // "je suis X" — only match if X starts with a capital letter (likely a proper name)
+      /je\s+suis\s+([A-Z][a-zÀ-ÿ]{1,})/,
+      // "ana X" / "smiyti X" in Darija-Latin
+      /\bana\s+([A-Za-zÀ-ÿ\u0600-\u06FF]{2,})/i,
+      /\bsmiyti\s+([A-Za-zÀ-ÿ\u0600-\u06FF]{2,})/i,
     ];
     for (const p of patterns) {
       const m = text.match(p);
-      if (m?.[1] && m[1].length >= 2) return m[1];
+      const candidate = m?.[1]?.trim();
+      if (candidate && candidate.length >= 2 && !NOT_A_NAME.test(candidate)) {
+        return candidate;
+      }
     }
     return null;
   }
@@ -4663,11 +4686,14 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
 
           const apt = pendingApts.length > 0 ? pendingApts[0] : null;
 
+          // Client's language — already loaded via memCheck above, used for localised quick replies
+          const clientLang = memCheck?.language ?? undefined;
+
           if (apt && mergedText === "1") {
             await storage.updateAppointment(apt.id, { bookingStatus: "confirmed" } as any);
             io.emit("booking:updated", { ...apt, bookingStatus: "confirmed" });
             io.emit("appointment:updated", { id: apt.id, bookingStatus: "confirmed" });
-            await sendBotConfirmed(remoteJid, apt.client ?? undefined, apt.service ?? undefined, apt.date ?? undefined, apt.startTime ?? undefined);
+            await sendBotConfirmed(remoteJid, apt.client ?? undefined, apt.service ?? undefined, apt.date ?? undefined, apt.startTime ?? undefined, clientLang);
             console.log(`[Bot] Appointment ${apt.id} confirmed by client (${remoteJid})`);
             return;
           }
@@ -4675,7 +4701,7 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
             await storage.updateAppointment(apt.id, { bookingStatus: "cancelled" } as any);
             io.emit("booking:updated", { ...apt, bookingStatus: "cancelled" });
             io.emit("appointment:updated", { id: apt.id, bookingStatus: "cancelled" });
-            await sendBotCancelled(remoteJid);
+            await sendBotCancelled(remoteJid, clientLang);
             console.log(`[Bot] Appointment ${apt.id} cancelled by client (${remoteJid})`);
             return;
           }
@@ -4683,7 +4709,7 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
             await storage.updateAppointment(apt.id, { bookingStatus: "modify_requested" } as any);
             io.emit("booking:updated", { ...apt, bookingStatus: "modify_requested" });
             io.emit("appointment:updated", { id: apt.id, bookingStatus: "modify_requested" });
-            await sendBotModify(remoteJid);
+            await sendBotModify(remoteJid, clientLang);
             console.log(`[Bot] Appointment ${apt.id} modify requested by client (${remoteJid})`);
             return;
           }
@@ -4911,7 +4937,10 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
             const { sanitizeClientName: _sanitize } = await import("./gemini");
             const pushNameCleaned = _sanitize(pushName || null);
             const detectedName = extractName(mergedText) || pushNameCleaned;
-            const mentionedSvcs = extractMentionedServices(mergedText + " " + aiReply, serviceList);
+            // Only track services mentioned in the CLIENT's message — not the bot reply.
+            // Including aiReply would add every service the bot listed in a general overview
+            // to the client's preferred services, polluting their profile.
+            const mentionedSvcs = extractMentionedServices(mergedText, serviceList);
 
             // Store the real phone in memory so @lid JIDs can be resolved for filtering later
             // For @s.whatsapp.net JIDs the phone is the real number; for @lid it's a LID (skip)

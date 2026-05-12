@@ -738,43 +738,55 @@ export async function sendBotConfirmed(
   clientName?: string,
   serviceName?: string,
   date?: string,
-  time?: string
+  time?: string,
+  language?: string
 ): Promise<void> {
   await sendTypingPresence(jid);
   await new Promise(r => setTimeout(r, 800 + Math.random() * 600));
   await stopTypingPresence(jid);
+  const isFrench = language === "french";
   if (clientName && serviceName && date && time) {
     const firstName = clientName.split(" ")[0];
     const relativeDate = formatRelativeDate(date);
     await sendWhatsAppMessage(
       jid,
-      `العفو يا ${firstName}، هانية حبيبتي! 🌸\n\nصافي، الموعد ديالك لـ "${serviceName}" تأكد ${relativeDate} إن شاء الله مع ${time}. نتسناوك تنورينا في الصالون، ومرحبا بيك 🌸✨`
+      isFrench
+        ? `Avec plaisir ${firstName} 🌸\n\nC'est bon ! Ton rendez-vous pour "${serviceName}" est confirmé ${relativeDate} à ${time} inch'Allah. On t'attend avec impatience 🌸✨`
+        : `العفو يا ${firstName}، هانية حبيبتي! 🌸\n\nصافي، الموعد ديالك لـ "${serviceName}" تأكد ${relativeDate} إن شاء الله مع ${time}. نتسناوك تنورينا في الصالون، ومرحبا بيك 🌸✨`
     );
   } else {
     await sendWhatsAppMessage(
       jid,
-      "شكراً لتأكيدك! 🌸\nموعدك مؤكد ✅\nنتطلع لرؤيتك. أي سؤال راسليني هنا 💖"
+      isFrench
+        ? "Merci pour ta confirmation ! 🌸\nTon rendez-vous est confirmé ✅\nOn a hâte de te voir. N'hésite pas si tu as des questions 💖"
+        : "شكراً لتأكيدك! 🌸\nموعدك مؤكد ✅\nنتطلع لرؤيتك. أي سؤال راسليني هنا 💖"
     );
   }
 }
 
-export async function sendBotCancelled(jid: string): Promise<void> {
+export async function sendBotCancelled(jid: string, language?: string): Promise<void> {
   await sendTypingPresence(jid);
   await new Promise(r => setTimeout(r, 800 + Math.random() * 600));
   await stopTypingPresence(jid);
+  const isFrench = language === "french";
   await sendWhatsAppMessage(
     jid,
-    "تم إلغاء موعدك ✅\nإذا أردتِ حجز وقت آخر، أخبريني وسيتواصل معكِ الفريق 🌸\nنتمنى نراكِ قريباً 💖"
+    isFrench
+      ? "Ton rendez-vous a bien été annulé ✅\nSi tu souhaites réserver à un autre moment, dis-le moi et l'équipe te contactera 🌸\nOn espère te revoir bientôt 💖"
+      : "تم إلغاء موعدك ✅\nإذا أردتِ حجز وقت آخر، أخبريني وسيتواصل معكِ الفريق 🌸\nنتمنى نراكِ قريباً 💖"
   );
 }
 
-export async function sendBotModify(jid: string): Promise<void> {
+export async function sendBotModify(jid: string, language?: string): Promise<void> {
   await sendTypingPresence(jid);
   await new Promise(r => setTimeout(r, 800 + Math.random() * 600));
   await stopTypingPresence(jid);
+  const isFrench = language === "french";
   await sendWhatsAppMessage(
     jid,
-    "تم استلام طلب التعديل ✅\nسيتواصل معكِ أحد الفريق قريباً لتحديد الوقت المناسب 🌸\nشكراً لتفهمك 💖"
+    isFrench
+      ? "Demande de modification reçue ✅\nUn membre de l'équipe te contactera prochainement pour fixer le nouveau créneau 🌸\nMerci pour ta compréhension 💖"
+      : "تم استلام طلب التعديل ✅\nسيتواصل معكِ أحد الفريق قريباً لتحديد الوقت المناسب 🌸\nشكراً لتفهمك 💖"
   );
 }
 

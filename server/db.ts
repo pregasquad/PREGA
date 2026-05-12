@@ -1289,6 +1289,58 @@ export async function saveBotMemory(mem: BotClientMemory): Promise<void> {
   }
 }
 
+/**
+ * Find all bot memory entries whose stored phone matches the given normalised phone number.
+ * Used to locate @lid JIDs when silencing after a staff-side booking confirmation.
+ */
+export async function getBotMemoriesByPhone(normalizedPhone: string): Promise<BotClientMemory[]> {
+  if (!normalizedPhone) return [];
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      const [rows] = await connection.query(
+        `SELECT * FROM bot_client_memory WHERE phone = ?`, [normalizedPhone]
+      );
+      connection.release();
+      return (rows as any[]).map((row) => ({
+        jid: row.jid,
+        phone: row.phone ?? null,
+        clientName: row.client_name ?? null,
+        language: row.language || 'unknown',
+        preferredServices: row.preferred_services
+          ? (typeof row.preferred_services === 'string' ? JSON.parse(row.preferred_services) : row.preferred_services)
+          : [],
+        personalityNotes: row.personality_notes ?? null,
+        convHistory: row.conv_history ? JSON.parse(row.conv_history) : [],
+        visitCount: row.visit_count || 1,
+        lastSeen: row.last_seen ? new Date(row.last_seen) : null,
+        botBlocked: row.bot_blocked === 1 || row.bot_blocked === true,
+      }));
+    } else {
+      const result = await pool.query(
+        `SELECT * FROM bot_client_memory WHERE phone = $1`, [normalizedPhone]
+      );
+      return result.rows.map((row: any) => ({
+        jid: row.jid,
+        phone: row.phone ?? null,
+        clientName: row.client_name ?? null,
+        language: row.language || 'unknown',
+        preferredServices: row.preferred_services
+          ? (typeof row.preferred_services === 'string' ? JSON.parse(row.preferred_services) : row.preferred_services)
+          : [],
+        personalityNotes: row.personality_notes ?? null,
+        convHistory: row.conv_history ? JSON.parse(row.conv_history) : [],
+        visitCount: row.visit_count || 1,
+        lastSeen: row.last_seen ? new Date(row.last_seen) : null,
+        botBlocked: row.bot_blocked === true,
+      }));
+    }
+  } catch (err) {
+    console.error("[BotMemory] getBotMemoriesByPhone failed for", normalizedPhone, err);
+    return [];
+  }
+}
+
 export async function getAllBotMemories(): Promise<BotClientMemory[]> {
   try {
     if (dbDialect === 'mysql') {
