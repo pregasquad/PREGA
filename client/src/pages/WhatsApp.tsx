@@ -2164,47 +2164,54 @@ export default function WhatsApp() {
                 </div>
               )}
 
-              {bossMessages.map((msg, i) => (
-                <div key={i} className={`flex flex-col gap-1 ${msg.role === "user" ? "items-end" : "items-start"}`}>
-                  <div className={`flex items-end gap-2 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
-                    {msg.role === "model" && (
-                      <div className="w-7 h-7 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0 mb-0.5">
-                        <Bot className="w-3.5 h-3.5 text-emerald-400" />
-                      </div>
-                    )}
-                    {msg.role === "user" && (
-                      <div className="w-7 h-7 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0 mb-0.5">
-                        <Crown className="w-3.5 h-3.5 text-amber-400" />
-                      </div>
-                    )}
-                    <div
-                      className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed max-w-[78%] whitespace-pre-wrap ${
-                        msg.role === "user"
-                          ? "bg-amber-500/15 border border-amber-500/25 text-foreground rounded-tr-sm"
-                          : "bg-emerald-500/10 border border-emerald-500/20 text-foreground rounded-tl-sm"
-                      }`}
-                      data-testid={`boss-msg-${i}`}
-                    >
-                      {msg.text}
-                    </div>
-                  </div>
-                  {msg.role === "user" && (
-                    <div className="pl-9 flex justify-end">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-6 text-xs gap-1 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 rounded-lg px-2"
-                        onClick={() => saveInstructionMutation.mutate(msg.text)}
-                        disabled={saveInstructionMutation.isPending}
-                        data-testid={`button-save-instruction-${i}`}
+              {bossMessages.map((msg, i) => {
+                // For Lina's replies, find the user message that preceded it
+                const prevUserMsg = msg.role === "model"
+                  ? bossMessages.slice(0, i).reverse().find(m => m.role === "user")
+                  : null;
+                return (
+                  <div key={i} className={`flex flex-col gap-1 ${msg.role === "user" ? "items-end" : "items-start"}`}>
+                    <div className={`flex items-end gap-2 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
+                      {msg.role === "model" && (
+                        <div className="w-7 h-7 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0 mb-0.5">
+                          <Bot className="w-3.5 h-3.5 text-emerald-400" />
+                        </div>
+                      )}
+                      {msg.role === "user" && (
+                        <div className="w-7 h-7 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0 mb-0.5">
+                          <Crown className="w-3.5 h-3.5 text-amber-400" />
+                        </div>
+                      )}
+                      <div
+                        className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed max-w-[78%] whitespace-pre-wrap ${
+                          msg.role === "user"
+                            ? "bg-amber-500/15 border border-amber-500/25 text-foreground rounded-tr-sm"
+                            : "bg-emerald-500/10 border border-emerald-500/20 text-foreground rounded-tl-sm"
+                        }`}
+                        data-testid={`boss-msg-${i}`}
                       >
-                        <BookMarked className="w-3 h-3" />
-                        حفظ كتعليمة دائمة
-                      </Button>
+                        {msg.text}
+                      </div>
                     </div>
-                  )}
-                </div>
-              ))}
+                    {/* Save button on Lina's reply — confirms she understood BEFORE saving permanently */}
+                    {msg.role === "model" && prevUserMsg && (
+                      <div className="pr-9 flex justify-start">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 text-xs gap-1.5 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 rounded-lg px-2.5 border border-amber-500/20"
+                          onClick={() => saveInstructionMutation.mutate(prevUserMsg.text)}
+                          disabled={saveInstructionMutation.isPending}
+                          data-testid={`button-save-instruction-${i}`}
+                        >
+                          <BookMarked className="w-3 h-3" />
+                          حفظ كتعليمة دائمة
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
 
               {bossChatMutation.isPending && (
                 <div className="flex items-start gap-2" dir="rtl">
@@ -2229,7 +2236,8 @@ export default function WhatsApp() {
                 value={bossInput}
                 onChange={(e) => setBossInput(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
+                  // Desktop only: Ctrl+Enter sends. Mobile uses the send button.
+                  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
                     e.preventDefault();
                     sendBossMessage();
                   }
