@@ -161,11 +161,13 @@ export default function WhatsApp() {
   );
   const [broadcastMsg, setBroadcastMsg] = useState("");
   const [selectedVoice, setSelectedVoice] = useState("Aoede");
+  const [selectedPersonality, setSelectedPersonality] = useState("warm");
 
   // ── Collapsible section states ────────────────────────────────────────────
   const [testOpen, setTestOpen] = useState(false);
   const [broadcastOpen, setBroadcastOpen] = useState(false);
   const [voiceOpen, setVoiceOpen] = useState(false);
+  const [personalityOpen, setPersonalityOpen] = useState(false);
   const [botConfirmedOpen, setBotConfirmedOpen] = useState(false);
   const [relearnLoadingJids, setRelearnLoadingJids] = useState<Set<string>>(new Set());
 
@@ -464,11 +466,12 @@ export default function WhatsApp() {
 
   useEffect(() => {
     if (bizSettings?.ttsVoice) setSelectedVoice(bizSettings.ttsVoice);
+    if (bizSettings?.linaPersonality) setSelectedPersonality(bizSettings.linaPersonality);
     if (bizSettings?.botFilterMode) setFilterMode(bizSettings.botFilterMode);
     if (bizSettings?.botFilterNumbers) {
       try { setFilterNumbers(JSON.parse(bizSettings.botFilterNumbers)); } catch { setFilterNumbers([]); }
     }
-  }, [bizSettings?.ttsVoice, bizSettings?.botFilterMode, bizSettings?.botFilterNumbers]);
+  }, [bizSettings?.ttsVoice, bizSettings?.linaPersonality, bizSettings?.botFilterMode, bizSettings?.botFilterNumbers]);
 
   const saveVoiceMutation = useMutation({
     mutationFn: (voice: string) =>
@@ -476,6 +479,17 @@ export default function WhatsApp() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/business-settings"] });
       toast({ title: "تم الحفظ ✓", description: "تم تحديث صوت البوت بنجاح" });
+    },
+    onError: (err: any) =>
+      toast({ title: "خطأ", description: err.message, variant: "destructive" }),
+  });
+
+  const savePersonalityMutation = useMutation({
+    mutationFn: (personality: string) =>
+      apiRequest("PATCH", "/api/business-settings", { linaPersonality: personality }).then((r) => r.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/business-settings"] });
+      toast({ title: "تم الحفظ ✓", description: "تم تحديث شخصية لينا" });
     },
     onError: (err: any) =>
       toast({ title: "خطأ", description: err.message, variant: "destructive" }),
@@ -1487,6 +1501,68 @@ export default function WhatsApp() {
       </div>
 
       {/* ── BOT VOICE SETTINGS ── */}
+      {/* ── LINA PERSONALITY ── */}
+      <div className="glass-card rounded-2xl overflow-hidden">
+        <button
+          className="liquid-glass-header w-full flex items-center gap-3 p-5 text-left hover:brightness-105 transition-all"
+          onClick={() => setPersonalityOpen((o) => !o)}
+          data-testid="button-toggle-personality"
+        >
+          <div className="w-10 h-10 rounded-xl liquid-gradient flex items-center justify-center shrink-0 shadow-lg">
+            <Sparkles className="w-5 h-5 text-white" />
+          </div>
+          <div className="flex-1">
+            <span className="font-semibold text-sm">شخصية لينا</span>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {({"warm":"دافئة وحنينة 🌸","professional":"محترفة وراقية ✨","playful":"مرحة وعفوية 😄","direct":"هادئة ومباشرة 🎯"} as Record<string,string>)[bizSettings?.linaPersonality ?? "warm"] ?? "دافئة وحنينة 🌸"}
+            </p>
+          </div>
+          {personalityOpen ? <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" /> : <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />}
+        </button>
+        {personalityOpen && (
+          <div className="border-t border-border/30 p-5 space-y-3">
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              اختاري كيفاش تتكلم لينا مع العملاء — الشخصية كتأثر على أسلوبها، كلامها، وإيموجياتها
+            </p>
+            <div className="grid grid-cols-1 gap-2" dir="rtl">
+              {[
+                { id: "warm",         icon: "🌸", label: "دافئة وحنينة",    desc: "حبيبتي، ma chérie، beaugossa — صاحبة قريبة ودافئة" },
+                { id: "professional", icon: "✨", label: "محترفة وراقية",   desc: "راقية وأنيقة — إيموجيات نادرة، كلام محترم" },
+                { id: "playful",      icon: "😄", label: "مرحة وعفوية",     desc: "خفيفة ومرحة — طاقة إيجابية وكلام تلقائي" },
+                { id: "direct",       icon: "🎯", label: "هادئة ومباشرة",   desc: "مباشرة وواضحة — بدون مقدمات ولا دلع" },
+              ].map((p) => (
+                <button
+                  key={p.id}
+                  data-testid={`button-personality-${p.id}`}
+                  onClick={() => setSelectedPersonality(p.id)}
+                  className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-right transition-all ${
+                    selectedPersonality === p.id
+                      ? "border-purple-500/60 bg-purple-500/10 ring-1 ring-purple-500/40"
+                      : "glass-subtle hover:brightness-105"
+                  }`}
+                >
+                  <span className="text-xl">{p.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <span className="font-semibold text-sm">{p.label}</span>
+                    <p className="text-xs text-muted-foreground mt-0.5">{p.desc}</p>
+                  </div>
+                  {selectedPersonality === p.id && <CheckCircle2 className="w-4 h-4 text-purple-500 shrink-0" />}
+                </button>
+              ))}
+            </div>
+            <Button
+              className="w-full"
+              onClick={() => savePersonalityMutation.mutate(selectedPersonality)}
+              disabled={savePersonalityMutation.isPending || selectedPersonality === (bizSettings?.linaPersonality ?? "warm")}
+              data-testid="button-save-personality"
+            >
+              {savePersonalityMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+              {savePersonalityMutation.isPending ? "جاري الحفظ…" : "حفظ الشخصية"}
+            </Button>
+          </div>
+        )}
+      </div>
+
       <div className="glass-card rounded-2xl overflow-hidden">
         <button
           className="liquid-glass-header w-full flex items-center gap-3 p-5 text-left hover:brightness-105 transition-all"

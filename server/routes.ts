@@ -4970,6 +4970,7 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
               correctInfo: bc.fixNote!,
             })),
             bossInstructions: bossInstructions.length > 0 ? bossInstructions : undefined,
+            personality: (bizSettings as any)?.linaPersonality || "warm",
           };
 
           // Single AI call with merged context from all buffered messages
