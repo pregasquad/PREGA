@@ -34,6 +34,19 @@ let ioInstance: SocketIOServer | null = null;
 let incomingMessageHandler: ((jid: string, phone: string, text: string, imageBase64?: string, imageMimeType?: string, isVoice?: boolean, audioBase64?: string, audioMimeType?: string, pushName?: string) => Promise<void>) | null = null;
 let outgoingMessageHandler: ((jid: string) => void) | null = null;
 
+// Track message IDs sent by the bot itself so we can ignore those fromMe events.
+// Capped at 200 entries to avoid unbounded growth.
+const botSentMessageIds = new Set<string>();
+function trackBotMessageId(id: string | undefined | null): void {
+  if (!id) return;
+  botSentMessageIds.add(id);
+  if (botSentMessageIds.size > 200) {
+    // Remove the oldest entry (first inserted)
+    const first = botSentMessageIds.values().next().value;
+    if (first) botSentMessageIds.delete(first);
+  }
+}
+
 function log(msg: string) {
   console.log(`[Baileys] ${msg}`);
 }
@@ -439,10 +452,13 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
 
     for (const msg of messages) {
       if (msg.key?.fromMe) {
-        // Boss manually replied — notify routes so Lina skips next client reply for this JID
-        const jid: string = msg.key?.remoteJid ?? "";
-        if (jid && !jid.endsWith("@g.us") && outgoingMessageHandler) {
-          outgoingMessageHandler(jid);
+        // Ignore messages that Lina sent herself — only act on boss's manual replies
+        const msgId: string = msg.key?.id ?? "";
+        if (!botSentMessageIds.has(msgId)) {
+          const jid: string = msg.key?.remoteJid ?? "";
+          if (jid && !jid.endsWith("@g.us") && outgoingMessageHandler) {
+            outgoingMessageHandler(jid);
+          }
         }
         continue;
       }
@@ -629,6 +645,7 @@ export async function sendWhatsAppMessage(
     // Accept both raw phone numbers and full JIDs (jid already contains @)
     const jid = to.includes("@") ? to : formatJid(to);
     const result = await sock.sendMessage(jid, { text: message });
+    trackBotMessageId(result?.key?.id);
     return { success: true, messageId: result?.key?.id };
   } catch (err: any) {
     log(`Send error: ${err.message}`);
@@ -643,6 +660,7 @@ export async function sendWhatsAppImage(
   try {
     const jid = to.includes("@") ? to : formatJid(to);
     const result = await sock.sendMessage(jid, { image: { url: imageUrl }, caption: caption || "" });
+    trackBotMessageId(result?.key?.id);
     return { success: true, messageId: result?.key?.id };
   } catch (err: any) {
     return { success: false, error: err.message };
@@ -704,6 +722,7 @@ export async function sendWhatsAppVoiceNote(
       mimetype: "audio/ogg; codecs=opus",
       ptt: true,
     });
+    trackBotMessageId(result?.key?.id);
     return { success: true, messageId: result?.key?.id };
   } catch (err: any) {
     log(`Voice note send error: ${err.message}`);
@@ -723,6 +742,7 @@ export async function sendWhatsAppImageBuffer(
       mimetype: mimeType,
       caption: caption || "",
     });
+    trackBotMessageId(result?.key?.id);
     return { success: true, messageId: result?.key?.id };
   } catch (err: any) {
     return { success: false, error: err.message };
