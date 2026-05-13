@@ -1866,6 +1866,25 @@ export async function ensureBossInstructionsColumn(): Promise<void> {
   }
 }
 
+export async function ensureLinaPersonalityColumn(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      try {
+        await connection.query(`ALTER TABLE business_settings ADD COLUMN lina_personality TEXT NULL DEFAULT '["warm"]'`);
+      } catch (e: any) {
+        if (!e.message?.includes('Duplicate column')) throw e;
+      }
+      connection.release();
+    } else {
+      await pool.query(`ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS lina_personality TEXT DEFAULT '["warm"]'`);
+    }
+    console.log("Lina personality column ready");
+  } catch (error) {
+    console.error("Failed to ensure lina_personality column:", error);
+  }
+}
+
 export async function getBossInstructions(): Promise<string[]> {
   try {
     let raw: string | null = null;
