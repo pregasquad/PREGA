@@ -427,7 +427,7 @@ export async function transcribeAudio(
               { text: "اكتبي نص هاد الرسالة الصوتية بالضبط كما هي، بدون أي تعليق أو إضافة." },
             ],
           }],
-          generationConfig: { maxOutputTokens: 400, temperature: 0 },
+          generationConfig: { maxOutputTokens: 1500, temperature: 0 },
         });
         const res = await fetch(url, {
           method: "POST",
