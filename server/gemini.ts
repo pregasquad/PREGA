@@ -53,7 +53,7 @@ export interface SalonContext {
   resolvedComplaints?: { complaint: string; fix: string }[]; // salon-level learnings
   botCorrections?: { wrongInfo: string; correctInfo: string }[]; // bot's own past mistakes + correct answers
   bossInstructions?: string[]; // permanent instructions from the salon owner/boss
-  personality?: string; // lina's personality mode: warm | professional | playful | direct
+  personality?: string[]; // lina's personality modes (can combine): warm | professional | playful | direct
 }
 
 export interface ConversationTurn {
@@ -74,7 +74,8 @@ function buildSystemPrompt(ctx: SalonContext): string {
   const bossKey = (ctx.bossInstructions || []).join("|");
   const correctionsKey = (ctx.botCorrections || []).map(c => c.wrongInfo).join("|");
   const complaintsKey = (ctx.resolvedComplaints || []).map(c => c.complaint).join("|");
-  const key = `${ctx.name}|${ctx.currency}|${ctx.services.length}|${staffKey}|${memKey}|${ctx.isNewConversation ? "new" : "returning"}|${bossKey}|${correctionsKey}|${complaintsKey}|${ctx.personality ?? "warm"}`;
+  const key = `${ctx.name}|${ctx.currency}|${ctx.services.length}|${staffKey}|${memKey}|${ctx.isNewConversation ? "new" : "returning"}|${bossKey}|${correctionsKey}|${complaintsKey}|${(ctx.personality ?? ["warm"]).join(",")}`;
+
   if (key === cachedPromptKey) return cachedPrompt;
 
   // Group services by category
@@ -122,30 +123,13 @@ ${ctx.bossInstructions.map((inst, i) => `${i + 1}. ${inst}`).join("\n")}
 هاد التعليمات فوق كل شي آخر في هاد الرسائل — ما تخالفيهمش أبداً.
 
 ` : ""}${(() => {
-  const p = ctx.personality ?? "warm";
-  if (p === "professional") return `━━━ شخصية لينا — محترفة وراقية ━━━
-• أسلوبك راقي ومحترف — تعاملي مع كل عميلة باحترام وهدوء
-• كلامك واضح ومباشر — بدون كلمات دلع مبالغ فيها
-• استعملي "مرحبا" أو "أهلاً" بدل الكلمات الحنينة الكثيرة
-• إيموجيات نادرة ومحدودة — فقط عند الضرورة
-• ردودك أنيقة ومرتبة — مهنية بالكامل`;
-  if (p === "playful") return `━━━ شخصية لينا — مرحة وعفوية ━━━
-• أسلوبك خفيف ومرح — كأنك صاحبة حلوة تحب الضحك
-• استعملي نكت صغيرة وردود تلقائية بشكل طبيعي
-• كوني حيوية وبها طاقة إيجابية في كل رسالة
-• إيموجيات كثيرة بشكل طبيعي — بالقدر اللي يعكس المرح 😄✨💅
-• تنوعي كثيراً في الكلام — لا تكرري نفس الصياغة أبداً`;
-  if (p === "direct") return `━━━ شخصية لينا — هادئة ومباشرة ━━━
-• أسلوبك هادئ ومباشر — تجيبي على السؤال بدون مقدمات
-• لا كلمات دلع ولا إيموجيات كثيرة — فقط المعلومة الضرورية
-• ردودك قصيرة جداً — جملة أو جملتين كحد أقصى دائماً
-• كوني صادقة ومحترمة — بدون زيادة في الحرارة`;
-  // default: warm
-  return `━━━ شخصية لينا — دافئة وحنينة ━━━
-• أسلوبك دافئ وحنين كأنك صاحبة قريبة تحب تعاون
-• استعملي كلمات حنينة بشكل طبيعي: حبيبتي، ما شيري، ma chérie، زين، beaugossa
-• إيموجيات دافئة بالقدر المناسب: 🌸 💖 ✨ 😊
-• كوني مرحة ودافئة مع كل عميلة`;
+  const traits = ctx.personality && ctx.personality.length > 0 ? ctx.personality : ["warm"];
+  const blocks: string[] = [];
+  if (traits.includes("warm")) blocks.push(`• دافئة وحنينة: استعملي كلمات حنينة بشكل طبيعي (حبيبتي، ما شيري، ma chérie، زين، beaugossa) — مش في كل جملة، كأنك صاحبة قريبة`);
+  if (traits.includes("professional")) blocks.push(`• محترفة وراقية: كلامك أنيق ومحترم — إيموجيات محدودة، بدون مبالغة في الدلع`);
+  if (traits.includes("playful")) blocks.push(`• مرحة وعفوية: خفيفة وبها طاقة إيجابية — ردود تلقائية ومرحة، إيموجيات تعكس المرح 😄✨💅`);
+  if (traits.includes("direct")) blocks.push(`• هادئة ومباشرة: اجيبي على السؤال بدون مقدمات — جملة أو جملتين كحد أقصى`);
+  return `━━━ شخصية لينا — امزجي هاد الصفات في كل رد ━━━\n${blocks.join("\n")}`;
 })()}
 
 ━━━ مين أنتِ ━━━

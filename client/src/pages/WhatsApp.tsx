@@ -161,7 +161,7 @@ export default function WhatsApp() {
   );
   const [broadcastMsg, setBroadcastMsg] = useState("");
   const [selectedVoice, setSelectedVoice] = useState("Aoede");
-  const [selectedPersonality, setSelectedPersonality] = useState("warm");
+  const [selectedPersonalities, setSelectedPersonalities] = useState<string[]>(["warm"]);
 
   // ── Collapsible section states ────────────────────────────────────────────
   const [testOpen, setTestOpen] = useState(false);
@@ -466,12 +466,27 @@ export default function WhatsApp() {
 
   useEffect(() => {
     if (bizSettings?.ttsVoice) setSelectedVoice(bizSettings.ttsVoice);
-    if (bizSettings?.linaPersonality) setSelectedPersonality(bizSettings.linaPersonality);
+    if (bizSettings?.linaPersonality) {
+      try {
+        const parsed = JSON.parse(bizSettings.linaPersonality);
+        setSelectedPersonalities(Array.isArray(parsed) ? parsed : ["warm"]);
+      } catch { setSelectedPersonalities(["warm"]); }
+    }
     if (bizSettings?.botFilterMode) setFilterMode(bizSettings.botFilterMode);
     if (bizSettings?.botFilterNumbers) {
       try { setFilterNumbers(JSON.parse(bizSettings.botFilterNumbers)); } catch { setFilterNumbers([]); }
     }
   }, [bizSettings?.ttsVoice, bizSettings?.linaPersonality, bizSettings?.botFilterMode, bizSettings?.botFilterNumbers]);
+
+  const togglePersonality = (id: string) => {
+    setSelectedPersonalities((prev) => {
+      if (prev.includes(id)) {
+        const next = prev.filter((p) => p !== id);
+        return next.length === 0 ? [id] : next; // at least one must stay selected
+      }
+      return [...prev, id];
+    });
+  };
 
   const saveVoiceMutation = useMutation({
     mutationFn: (voice: string) =>
@@ -485,8 +500,8 @@ export default function WhatsApp() {
   });
 
   const savePersonalityMutation = useMutation({
-    mutationFn: (personality: string) =>
-      apiRequest("PATCH", "/api/business-settings", { linaPersonality: personality }).then((r) => r.json()),
+    mutationFn: (personalities: string[]) =>
+      apiRequest("PATCH", "/api/business-settings", { linaPersonality: JSON.stringify(personalities) }).then((r) => r.json()),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/business-settings"] });
       toast({ title: "تم الحفظ ✓", description: "تم تحديث شخصية لينا" });
@@ -1514,7 +1529,13 @@ export default function WhatsApp() {
           <div className="flex-1">
             <span className="font-semibold text-sm">شخصية لينا</span>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {({"warm":"دافئة وحنينة 🌸","professional":"محترفة وراقية ✨","playful":"مرحة وعفوية 😄","direct":"هادئة ومباشرة 🎯"} as Record<string,string>)[bizSettings?.linaPersonality ?? "warm"] ?? "دافئة وحنينة 🌸"}
+              {(() => {
+                try {
+                  const saved: string[] = JSON.parse(bizSettings?.linaPersonality ?? '["warm"]');
+                  const labels: Record<string,string> = { warm:"دافئة 🌸", professional:"محترفة ✨", playful:"مرحة 😄", direct:"مباشرة 🎯" };
+                  return saved.map(p => labels[p] ?? p).join(" · ");
+                } catch { return "دافئة 🌸"; }
+              })()}
             </p>
           </div>
           {personalityOpen ? <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" /> : <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />}
@@ -1522,38 +1543,50 @@ export default function WhatsApp() {
         {personalityOpen && (
           <div className="border-t border-border/30 p-5 space-y-3">
             <p className="text-xs text-muted-foreground leading-relaxed">
-              اختاري كيفاش تتكلم لينا مع العملاء — الشخصية كتأثر على أسلوبها، كلامها، وإيموجياتها
+              اختاري صفة وحدة أو أكثر — لينا غادي تمزج بينهم في كل رد 🎨
             </p>
             <div className="grid grid-cols-1 gap-2" dir="rtl">
               {[
-                { id: "warm",         icon: "🌸", label: "دافئة وحنينة",    desc: "حبيبتي، ma chérie، beaugossa — صاحبة قريبة ودافئة" },
-                { id: "professional", icon: "✨", label: "محترفة وراقية",   desc: "راقية وأنيقة — إيموجيات نادرة، كلام محترم" },
-                { id: "playful",      icon: "😄", label: "مرحة وعفوية",     desc: "خفيفة ومرحة — طاقة إيجابية وكلام تلقائي" },
-                { id: "direct",       icon: "🎯", label: "هادئة ومباشرة",   desc: "مباشرة وواضحة — بدون مقدمات ولا دلع" },
-              ].map((p) => (
-                <button
-                  key={p.id}
-                  data-testid={`button-personality-${p.id}`}
-                  onClick={() => setSelectedPersonality(p.id)}
-                  className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-right transition-all ${
-                    selectedPersonality === p.id
-                      ? "border-purple-500/60 bg-purple-500/10 ring-1 ring-purple-500/40"
-                      : "glass-subtle hover:brightness-105"
-                  }`}
-                >
-                  <span className="text-xl">{p.icon}</span>
-                  <div className="flex-1 min-w-0">
-                    <span className="font-semibold text-sm">{p.label}</span>
-                    <p className="text-xs text-muted-foreground mt-0.5">{p.desc}</p>
-                  </div>
-                  {selectedPersonality === p.id && <CheckCircle2 className="w-4 h-4 text-purple-500 shrink-0" />}
-                </button>
-              ))}
+                { id: "warm",         icon: "🌸", label: "دافئة وحنينة",    desc: "حبيبتي، ma chérie، beaugossa — صاحبة قريبة" },
+                { id: "professional", icon: "✨", label: "محترفة وراقية",   desc: "أنيقة ومحترمة — إيموجيات محدودة" },
+                { id: "playful",      icon: "😄", label: "مرحة وعفوية",     desc: "خفيفة وبها طاقة — ردود تلقائية" },
+                { id: "direct",       icon: "🎯", label: "هادئة ومباشرة",   desc: "تجيب مباشرة بدون مقدمات" },
+              ].map((p) => {
+                const isSelected = selectedPersonalities.includes(p.id);
+                return (
+                  <button
+                    key={p.id}
+                    data-testid={`button-personality-${p.id}`}
+                    onClick={() => togglePersonality(p.id)}
+                    className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-right transition-all ${
+                      isSelected
+                        ? "border-purple-500/60 bg-purple-500/10 ring-1 ring-purple-500/40"
+                        : "glass-subtle hover:brightness-105"
+                    }`}
+                  >
+                    <span className="text-xl">{p.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <span className="font-semibold text-sm">{p.label}</span>
+                      <p className="text-xs text-muted-foreground mt-0.5">{p.desc}</p>
+                    </div>
+                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${
+                      isSelected ? "border-purple-500 bg-purple-500" : "border-border"
+                    }`}>
+                      {isSelected && <CheckCircle2 className="w-3 h-3 text-white" />}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
+            {selectedPersonalities.length > 1 && (
+              <div className="rounded-xl bg-purple-500/10 border border-purple-500/20 px-3 py-2 text-xs text-purple-300 text-right" dir="rtl">
+                لينا غادي تمزج: {selectedPersonalities.map(p => ({"warm":"دافئة","professional":"محترفة","playful":"مرحة","direct":"مباشرة"} as Record<string,string>)[p]).join(" + ")}
+              </div>
+            )}
             <Button
               className="w-full"
-              onClick={() => savePersonalityMutation.mutate(selectedPersonality)}
-              disabled={savePersonalityMutation.isPending || selectedPersonality === (bizSettings?.linaPersonality ?? "warm")}
+              onClick={() => savePersonalityMutation.mutate(selectedPersonalities)}
+              disabled={savePersonalityMutation.isPending}
               data-testid="button-save-personality"
             >
               {savePersonalityMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
