@@ -1833,13 +1833,26 @@ export async function ensureStaffGenderColumn(): Promise<void> {
     if (dbDialect === 'mysql') {
       const connection = await pool.getConnection();
       try {
-        await connection.query(`ALTER TABLE staff ADD COLUMN gender VARCHAR(10) NOT NULL DEFAULT 'female'`);
-      } catch (e: any) {
-        if (!e.message?.includes('Duplicate column')) throw e;
+        const [rows] = await connection.query(`
+          SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'staff' AND COLUMN_NAME = 'gender'
+        `);
+        if ((rows as any[]).length === 0) {
+          await connection.query(`ALTER TABLE staff ADD COLUMN gender VARCHAR(10) NOT NULL DEFAULT 'female'`);
+          console.log("Added gender column to staff");
+        }
+      } finally {
+        connection.release();
       }
-      connection.release();
     } else {
-      await pool.query(`ALTER TABLE staff ADD COLUMN IF NOT EXISTS gender VARCHAR(10) NOT NULL DEFAULT 'female'`);
+      await pool.query(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'staff' AND column_name = 'gender') THEN
+            ALTER TABLE staff ADD COLUMN gender VARCHAR(10) NOT NULL DEFAULT 'female';
+          END IF;
+        END $$;
+      `);
     }
     console.log("Staff gender column ready");
   } catch (error) {
@@ -1852,13 +1865,26 @@ export async function ensureBossInstructionsColumn(): Promise<void> {
     if (dbDialect === 'mysql') {
       const connection = await pool.getConnection();
       try {
-        await connection.query(`ALTER TABLE business_settings ADD COLUMN boss_instructions TEXT NULL`);
-      } catch (e: any) {
-        if (!e.message?.includes('Duplicate column')) throw e;
+        const [rows] = await connection.query(`
+          SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'business_settings' AND COLUMN_NAME = 'boss_instructions'
+        `);
+        if ((rows as any[]).length === 0) {
+          await connection.query(`ALTER TABLE business_settings ADD COLUMN boss_instructions TEXT NULL`);
+          console.log("Added boss_instructions column to business_settings");
+        }
+      } finally {
+        connection.release();
       }
-      connection.release();
     } else {
-      await pool.query(`ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS boss_instructions TEXT NULL`);
+      await pool.query(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'business_settings' AND column_name = 'boss_instructions') THEN
+            ALTER TABLE business_settings ADD COLUMN boss_instructions TEXT NULL;
+          END IF;
+        END $$;
+      `);
     }
     console.log("Boss instructions column ready");
   } catch (error) {
@@ -1871,13 +1897,27 @@ export async function ensureLinaPersonalityColumn(): Promise<void> {
     if (dbDialect === 'mysql') {
       const connection = await pool.getConnection();
       try {
-        await connection.query(`ALTER TABLE business_settings ADD COLUMN lina_personality TEXT NULL DEFAULT '["warm"]'`);
-      } catch (e: any) {
-        if (!e.message?.includes('Duplicate column')) throw e;
+        const [rows] = await connection.query(`
+          SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'business_settings' AND COLUMN_NAME = 'lina_personality'
+        `);
+        if ((rows as any[]).length === 0) {
+          await connection.query(`ALTER TABLE business_settings ADD COLUMN lina_personality TEXT NULL`);
+          await connection.query(`UPDATE business_settings SET lina_personality = '["warm"]' WHERE lina_personality IS NULL`);
+          console.log("Added lina_personality column to business_settings");
+        }
+      } finally {
+        connection.release();
       }
-      connection.release();
     } else {
-      await pool.query(`ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS lina_personality TEXT DEFAULT '["warm"]'`);
+      await pool.query(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'business_settings' AND column_name = 'lina_personality') THEN
+            ALTER TABLE business_settings ADD COLUMN lina_personality TEXT DEFAULT '["warm"]';
+          END IF;
+        END $$;
+      `);
     }
     console.log("Lina personality column ready");
   } catch (error) {
@@ -1938,13 +1978,26 @@ export async function ensurePrivateRoomColumn(): Promise<void> {
     if (dbDialect === 'mysql') {
       const connection = await pool.getConnection();
       try {
-        await connection.query(`ALTER TABLE appointments ADD COLUMN private_room TINYINT(1) NOT NULL DEFAULT 0`);
-      } catch (e: any) {
-        if (!e.message?.includes('Duplicate column')) throw e;
+        const [rows] = await connection.query(`
+          SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'appointments' AND COLUMN_NAME = 'private_room'
+        `);
+        if ((rows as any[]).length === 0) {
+          await connection.query(`ALTER TABLE appointments ADD COLUMN private_room TINYINT(1) NOT NULL DEFAULT 0`);
+          console.log("Added private_room column to appointments");
+        }
+      } finally {
+        connection.release();
       }
-      connection.release();
     } else {
-      await pool.query(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS private_room BOOLEAN NOT NULL DEFAULT FALSE`);
+      await pool.query(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'appointments' AND column_name = 'private_room') THEN
+            ALTER TABLE appointments ADD COLUMN private_room BOOLEAN NOT NULL DEFAULT FALSE;
+          END IF;
+        END $$;
+      `);
     }
     console.log("Private room column ready");
   } catch (error) {
