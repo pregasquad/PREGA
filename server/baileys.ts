@@ -32,6 +32,7 @@ let shouldReconnect = false;
 let reconnectAttempt = 0;
 let ioInstance: SocketIOServer | null = null;
 let incomingMessageHandler: ((jid: string, phone: string, text: string, imageBase64?: string, imageMimeType?: string, isVoice?: boolean, audioBase64?: string, audioMimeType?: string, pushName?: string) => Promise<void>) | null = null;
+let outgoingMessageHandler: ((jid: string) => void) | null = null;
 
 function log(msg: string) {
   console.log(`[Baileys] ${msg}`);
@@ -437,7 +438,14 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
     if (!incomingMessageHandler) return;
 
     for (const msg of messages) {
-      if (msg.key?.fromMe) continue;
+      if (msg.key?.fromMe) {
+        // Boss manually replied — notify routes so Lina skips next client reply for this JID
+        const jid: string = msg.key?.remoteJid ?? "";
+        if (jid && !jid.endsWith("@g.us") && outgoingMessageHandler) {
+          outgoingMessageHandler(jid);
+        }
+        continue;
+      }
       const remoteJid: string = msg.key?.remoteJid ?? "";
       if (!remoteJid) continue;
 
@@ -508,6 +516,11 @@ export function setIncomingMessageHandler(
   handler: (jid: string, phone: string, text: string, imageBase64?: string, imageMimeType?: string, isVoice?: boolean, audioBase64?: string, audioMimeType?: string, pushName?: string) => Promise<void>
 ): void {
   incomingMessageHandler = handler;
+}
+
+/** Registers the handler called when the boss manually sends a message to a client */
+export function setOutgoingMessageHandler(handler: (jid: string) => void): void {
+  outgoingMessageHandler = handler;
 }
 
 /** Called at server start — only connects if a saved DB session exists */

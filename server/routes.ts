@@ -4308,6 +4308,10 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
   const SILENCE_TTL = 4 * 60 * 60 * 1000; // 4 hours
   const silencedJids = new Map<string, number>(); // jid → expiry timestamp
 
+  // Manual reply tracking — when the boss replies manually, Lina skips the NEXT
+  // client message for that JID, then resumes normally after that.
+  const manuallyRepliedJids = new Map<string, number>(); // jid → timestamp of boss manual reply
+
   // How long an idle conversation keeps its context (7 days — returning clients always get full context)
   const CONV_TTL = 7 * 24 * 60 * 60 * 1000;
   // Maximum recent turns to keep in history (15 back-and-forth = 30 entries)
@@ -4515,8 +4519,14 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
     sess.timer = setTimeout(() => runFlush(remoteJid, flush), BUFFER_DELAY_MS);
   }
 
-  import("./baileys").then(({ initBaileys, setSocketIO, setIncomingMessageHandler, sendBotConfirmed, sendBotCancelled, sendBotModify, sendBotError }) => {
+  import("./baileys").then(({ initBaileys, setSocketIO, setIncomingMessageHandler, setOutgoingMessageHandler, sendBotConfirmed, sendBotCancelled, sendBotModify, sendBotError }) => {
     setSocketIO(io);
+
+    // When boss manually replies to a client → mark that JID for a one-time Lina skip
+    setOutgoingMessageHandler((jid: string) => {
+      manuallyRepliedJids.set(jid, Date.now());
+      console.log(`[Bot] Boss manually replied to ${jid} — Lina will skip next client message`);
+    });
     // On Replit dev, skip auto-connect — Koyeb production holds the active session.
     // Two simultaneous connections with the same creds cause WhatsApp to kick both (440/replaced).
     // The user can still manually link from the WhatsApp settings page when needed;
@@ -4627,6 +4637,15 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
             console.log(`[Bot] ${remoteJid} is admin-blocked (DB) — quick actions still processed, AI reply will be skipped`);
           } else if (isTempSilenced) {
             console.log(`[Bot] ${remoteJid} is temporarily silenced after booking — quick actions still processed, AI reply will be skipped`);
+          }
+
+          // ── Manual reply skip — boss replied manually → Lina skips this one message ──
+          const bossRepliedAt = manuallyRepliedJids.get(remoteJid);
+          if (bossRepliedAt !== undefined) {
+            // Remove from map so next client message is handled by Lina normally
+            manuallyRepliedJids.delete(remoteJid);
+            console.log(`[Bot] Boss manually replied to ${remoteJid} before this message — Lina skipping this one reply, will resume next message`);
+            return;
           }
           // Also load full memory via cache for conversation context (used later)
           const memCheck = await loadMemory(remoteJid);
