@@ -1,6 +1,7 @@
 import { useRef, useCallback, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Sidebar } from "./Sidebar";
+import { BottomNav } from "./BottomNav";
 import { SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -103,19 +104,17 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const isRtl = i18n.language === "ar";
   const [location] = useLocation();
   
-  // Initialize offline database and sync service
   useEffect(() => {
     const initOffline = async () => {
       await initOfflineDb();
-      startAutoSync(30000); // Sync every 30 seconds
+      startAutoSync(30000);
       if (navigator.onLine) {
-        refreshAndCacheData(); // Cache all data on first load
+        refreshAndCacheData();
       }
     };
     initOffline();
   }, []);
   
-  // Planning page handles its own scrolling - disable outer scroll
   const isPlanning = location === "/" || location === "/planning";
 
   const style = {
@@ -128,9 +127,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="flex h-screen w-full overflow-hidden bg-background safe-area-p" dir={isRtl ? "rtl" : "ltr"}>
         <Sidebar />
         <SwipeableContent isRtl={isRtl}>
+          {/* Top header — on mobile: logo + lang switcher only (no hamburger) */}
           <header className="flex h-12 items-center justify-between px-4 border-b bg-background shrink-0 z-20">
             <div className="flex items-center gap-3">
-              <SidebarTrigger />
+              {/* Hamburger only on desktop to toggle the sidebar */}
+              <SidebarTrigger className="hidden md:inline-flex" />
               <MobileBusinessName />
             </div>
             <div className="flex items-center gap-2">
@@ -138,11 +139,21 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <LanguageSwitcher />
             </div>
           </header>
-          <main className={`flex-1 min-h-0 ${isPlanning ? 'overflow-hidden p-0' : 'overflow-auto p-2 md:p-4'}`}>
+
+          <main
+            className={
+              isPlanning
+                ? "flex-1 min-h-0 overflow-hidden p-0"
+                : "flex-1 min-h-0 overflow-auto p-2 pb-20 md:p-4 md:pb-4"
+            }
+          >
             <div className="h-full flex flex-col min-h-0">
               {children}
             </div>
           </main>
+
+          {/* Mobile bottom tab bar — hidden on md+ (desktop uses sidebar) */}
+          <BottomNav />
         </SwipeableContent>
         <OfflineIndicator />
       </div>
