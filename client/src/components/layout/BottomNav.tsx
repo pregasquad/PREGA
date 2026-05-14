@@ -1,13 +1,13 @@
 import { Link, useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { useState, useEffect } from "react";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { useBusinessName } from "@/hooks/use-salon-data";
-import { io } from "socket.io-client";
+import { getAppSocket } from "@/lib/appSocket";
 import {
   Home, CalendarDays, Users, DollarSign, MoreHorizontal,
   History, Scissors, PackageOpen, Package, BarChart3,
@@ -42,13 +42,12 @@ const STAFF_ITEMS = [
   { labelKey: "nav.staffPerformance", href: "/staff-performance",  icon: TrendingUp,  permission: "view_staff_performance" },
 ];
 
-interface StoredNotification {
+interface BookingNotification {
   id: number;
   client: string;
   service: string;
   date: string;
   startTime: string;
-  staff: string;
 }
 
 export function BottomNav() {
@@ -57,7 +56,7 @@ export function BottomNav() {
   const [location, setLocation] = useLocation();
   const [moreOpen, setMoreOpen] = useState(false);
   const [waDisconnected, setWaDisconnected] = useState(false);
-  const [notifications, setNotifications] = useState<StoredNotification[]>([]);
+  const [notifications, setNotifications] = useState<BookingNotification[]>([]);
   const [notifOpen, setNotifOpen] = useState(false);
   const businessName = useBusinessName();
 
@@ -80,17 +79,26 @@ export function BottomNav() {
   };
 
   useEffect(() => {
-    const socket = io({ path: "/socket.io", transports: ["websocket", "polling"] });
+    const socket = getAppSocket();
 
-    socket.on("whatsapp:disconnected", () => setWaDisconnected(true));
-    socket.on("whatsapp:connected", () => setWaDisconnected(false));
-    socket.on("whatsapp:status", (data: any) => setWaDisconnected(!data.connected));
-
-    socket.on("new_booking", (booking: StoredNotification) => {
+    const onBookingCreated = (booking: BookingNotification) => {
       setNotifications(prev => [booking, ...prev].slice(0, 20));
-    });
+    };
+    const onWaDisconnected = () => setWaDisconnected(true);
+    const onWaConnected    = () => setWaDisconnected(false);
+    const onWaStatus       = (data: { connected: boolean }) => setWaDisconnected(!data.connected);
 
-    return () => { socket.disconnect(); };
+    socket.on("booking:created",        onBookingCreated);
+    socket.on("whatsapp:disconnected",  onWaDisconnected);
+    socket.on("whatsapp:connected",     onWaConnected);
+    socket.on("whatsapp:status",        onWaStatus);
+
+    return () => {
+      socket.off("booking:created",       onBookingCreated);
+      socket.off("whatsapp:disconnected", onWaDisconnected);
+      socket.off("whatsapp:connected",    onWaConnected);
+      socket.off("whatsapp:status",       onWaStatus);
+    };
   }, []);
 
   const handleLogout = () => {
@@ -105,7 +113,7 @@ export function BottomNav() {
   const filteredStaff   = STAFF_ITEMS.filter(item => hasPermission(item.permission));
 
   const isMoreActive = [...filteredMore, ...filteredStaff].some(item => location === item.href);
-  const hasBadge = waDisconnected || notifications.length > 0;
+  const hasBadge     = waDisconnected || notifications.length > 0;
 
   const handleNavClick = (href: string) => {
     setMoreOpen(false);
@@ -114,13 +122,14 @@ export function BottomNav() {
 
   return (
     <>
-      {/* ── Bottom Tab Bar ─────────────────────────────────────── */}
+      {/* ── Bottom Tab Bar (mobile only) ─────────────────────── */}
       <nav
         className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-t border-border"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         data-testid="bottom-nav"
       >
         <div className="flex items-stretch h-16">
+
           {filteredPrimary.map((tab) => {
             const isActive = location === tab.href || (tab.href === "/planning" && location === "/");
             return (
@@ -128,25 +137,25 @@ export function BottomNav() {
                 key={tab.href}
                 href={tab.href}
                 className={cn(
-                  "flex-1 flex flex-col items-center justify-center gap-1 relative transition-colors",
+                  "flex-1 flex flex-col items-center justify-center gap-1 relative transition-colors no-underline",
                   isActive ? "text-primary" : "text-muted-foreground"
                 )}
                 data-testid={`bottom-nav-${tab.href.replace("/", "")}`}
               >
                 {isActive && (
-                  <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-primary" />
+                  <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-b-full bg-primary" />
                 )}
                 <tab.icon
-                  className="w-5 h-5 transition-transform"
-                  style={{ transform: isActive ? "scale(1.1)" : "scale(1)" }}
+                  className="w-5 h-5"
+                  style={{ transform: isActive ? "scale(1.1)" : "scale(1)", transition: "transform 0.15s" }}
                   strokeWidth={isActive ? 2.5 : 2}
                 />
-                <span className="text-[9px] font-medium leading-none">{t(tab.labelKey)}</span>
+                <span className="text-[10px] font-medium leading-none">{t(tab.labelKey)}</span>
               </Link>
             );
           })}
 
-          {/* More button */}
+          {/* ── More button ─────────────────────────────────── */}
           <button
             type="button"
             onClick={() => setMoreOpen(true)}
@@ -157,7 +166,7 @@ export function BottomNav() {
             data-testid="bottom-nav-more"
           >
             {isMoreActive && (
-              <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-primary" />
+              <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-b-full bg-primary" />
             )}
             <div className="relative">
               <MoreHorizontal className="w-5 h-5" strokeWidth={isMoreActive ? 2.5 : 2} />
@@ -165,27 +174,30 @@ export function BottomNav() {
                 <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full border border-background" />
               )}
             </div>
-            <span className="text-[9px] font-medium leading-none">
-              {t("nav.more", { defaultValue: "Plus" })}
-            </span>
+            <span className="text-[10px] font-medium leading-none">{t("nav.more")}</span>
           </button>
+
         </div>
       </nav>
 
-      {/* ── More Sheet ─────────────────────────────────────────── */}
+      {/* ── More Sheet ───────────────────────────────────────── */}
       <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
         <SheetContent
           side="bottom"
-          className="h-[88vh] rounded-t-3xl p-0 md:hidden border-0 shadow-2xl"
+          hideClose
+          className="h-[88vh] rounded-t-3xl p-0 border-0 shadow-2xl"
           dir={isRtl ? "rtl" : "ltr"}
         >
+          {/* Required for accessibility — visually hidden */}
+          <SheetTitle className="sr-only">{t("nav.more")}</SheetTitle>
+
           <ScrollArea className="h-full">
-            <div className="p-5 pb-8">
+            <div className="p-5 pb-10">
 
-              {/* Handle bar */}
-              <div className="w-10 h-1 bg-muted-foreground/20 rounded-full mx-auto mb-4" />
+              {/* ── Handle bar ─────────────────────────────── */}
+              <div className="w-10 h-1 bg-muted-foreground/25 rounded-full mx-auto mb-5" />
 
-              {/* Header row */}
+              {/* ── Header row ─────────────────────────────── */}
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-2.5">
                   <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center overflow-hidden shadow-sm border border-border/30">
@@ -195,7 +207,7 @@ export function BottomNav() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {/* Notification bell */}
+                  {/* Notification bell — only when there are new bookings */}
                   {notifications.length > 0 && (
                     <button
                       type="button"
@@ -208,35 +220,40 @@ export function BottomNav() {
                       </span>
                     </button>
                   )}
+
+                  {/* Close button */}
                   <button
                     type="button"
                     onClick={() => setMoreOpen(false)}
-                    className="p-2 rounded-full bg-muted/50 text-muted-foreground"
+                    className="p-2 rounded-full bg-muted/50 text-muted-foreground hover:bg-muted transition-colors"
+                    aria-label="Close"
                   >
                     <X className="w-4 h-4" />
                   </button>
                 </div>
               </div>
 
-              {/* Notification list (inline collapsible) */}
+              {/* ── Inline notification list ────────────────── */}
               {notifOpen && notifications.length > 0 && (
-                <div className="mb-4 rounded-xl border border-border overflow-hidden">
+                <div className="mb-5 rounded-xl border border-border overflow-hidden">
                   {notifications.slice(0, 5).map((n, i) => (
                     <div
                       key={`${n.id}-${i}`}
-                      className="flex items-start gap-2 p-3 border-b border-border/50 last:border-0 bg-muted/20 cursor-pointer hover:bg-muted/40"
+                      className="flex items-start gap-2 p-3 border-b border-border/50 last:border-0 bg-muted/20 cursor-pointer hover:bg-muted/40 transition-colors"
                       onClick={() => { handleNavClick("/booking-history"); setNotifOpen(false); }}
                     >
                       <Bell className="w-3.5 h-3.5 mt-0.5 text-primary shrink-0" />
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-semibold truncate">{n.client}</p>
-                        <p className="text-[10px] text-muted-foreground truncate">{n.service} · {n.date} {n.startTime}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">
+                          {n.service} · {n.date} {n.startTime}
+                        </p>
                       </div>
                     </div>
                   ))}
                   <button
                     type="button"
-                    onClick={() => setNotifications([])}
+                    onClick={() => { setNotifications([]); setNotifOpen(false); }}
                     className="w-full text-[10px] text-muted-foreground py-2 hover:text-destructive transition-colors"
                   >
                     {t("sidebar.clearAll")}
@@ -244,11 +261,11 @@ export function BottomNav() {
                 </div>
               )}
 
-              {/* Main nav grid */}
+              {/* ── Main nav grid ───────────────────────────── */}
               <div className="grid grid-cols-3 gap-2.5 mb-5">
                 {filteredMore.map((item) => {
                   const isActive = location === item.href;
-                  const isWA = item.href === "/whatsapp";
+                  const isWA    = item.href === "/whatsapp";
                   return (
                     <button
                       key={item.href}
@@ -276,11 +293,11 @@ export function BottomNav() {
                 })}
               </div>
 
-              {/* Staff section */}
+              {/* ── Staff section ───────────────────────────── */}
               {filteredStaff.length > 0 && (
                 <div className="mb-5">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold mb-2.5 px-0.5">
-                    {t("nav.staff", { defaultValue: "Personnel" })}
+                    {t("nav.staff")}
                   </p>
                   <div className="grid grid-cols-3 gap-2.5">
                     {filteredStaff.map((item) => {
@@ -308,7 +325,7 @@ export function BottomNav() {
                 </div>
               )}
 
-              {/* Booking portal external link */}
+              {/* ── Booking portal link ─────────────────────── */}
               <a
                 href="/booking"
                 target="_blank"
@@ -319,7 +336,7 @@ export function BottomNav() {
                 <span className="text-sm font-medium">{t("nav.booking")}</span>
               </a>
 
-              {/* User info + logout */}
+              {/* ── User info + logout ──────────────────────── */}
               <div className="border-t border-border/50 pt-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className={cn(
@@ -343,6 +360,7 @@ export function BottomNav() {
                   <LogOut className="w-4 h-4" />
                 </Button>
               </div>
+
             </div>
           </ScrollArea>
         </SheetContent>

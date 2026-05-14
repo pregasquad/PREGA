@@ -1,7 +1,8 @@
 import { Link, useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { io, Socket } from "socket.io-client";
+import { Socket } from "socket.io-client";
+import { getAppSocket } from "@/lib/appSocket";
 import { useTranslation } from "react-i18next";
 import { useBusinessName } from "@/hooks/use-salon-data";
 import { useToast } from "@/hooks/use-toast";
@@ -179,9 +180,9 @@ export function Sidebar() {
 
   // Real-time Socket.IO connection for instant notifications
   useEffect(() => {
-    const socket: Socket = io();
-    
-    socket.on("booking:created", (newBooking: any) => {
+    const socket: Socket = getAppSocket();
+
+    const onBookingCreated = (newBooking: any) => {
       // Instantly refresh appointments data
       queryClient.invalidateQueries({ queryKey: ["/api/appointments/all"] });
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
@@ -210,9 +211,9 @@ export function Sidebar() {
       // Flash effect for new booking
       setNewBookingFlash(true);
       setTimeout(() => setNewBookingFlash(false), 3000);
-    });
+    };
 
-    socket.on("booking:updated", (apt: any) => {
+    const onBookingUpdated = (apt: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/appointments/all"] });
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/appointments/bot-confirmed"] });
@@ -242,9 +243,9 @@ export function Sidebar() {
           duration: 6000,
         });
       }
-    });
+    };
 
-    socket.on("whatsapp:disconnected", () => {
+    const onWaDisconnected = () => {
       setWaDisconnected(true);
       toast({
         title: "WhatsApp déconnecté",
@@ -252,9 +253,9 @@ export function Sidebar() {
         variant: "destructive",
         duration: 8000,
       });
-    });
+    };
 
-    socket.on("whatsapp:logged_out", () => {
+    const onWaLoggedOut = () => {
       setWaDisconnected(true);
       toast({
         title: "WhatsApp déconnecté",
@@ -262,14 +263,22 @@ export function Sidebar() {
         variant: "destructive",
         duration: 10000,
       });
-    });
+    };
 
-    socket.on("whatsapp:connected", () => {
-      setWaDisconnected(false);
-    });
+    const onWaConnected = () => setWaDisconnected(false);
+
+    socket.on("booking:created", onBookingCreated);
+    socket.on("booking:updated", onBookingUpdated);
+    socket.on("whatsapp:disconnected", onWaDisconnected);
+    socket.on("whatsapp:logged_out", onWaLoggedOut);
+    socket.on("whatsapp:connected", onWaConnected);
 
     return () => {
-      socket.disconnect();
+      socket.off("booking:created", onBookingCreated);
+      socket.off("booking:updated", onBookingUpdated);
+      socket.off("whatsapp:disconnected", onWaDisconnected);
+      socket.off("whatsapp:logged_out", onWaLoggedOut);
+      socket.off("whatsapp:connected", onWaConnected);
     };
   }, [queryClient, toast]);
 

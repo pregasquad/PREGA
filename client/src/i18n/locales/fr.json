@@ -27,7 +27,8 @@
     "tombola": "Roue de la Chance",
     "adminSettings": "Paramètres Admin",
     "booking": "Page de Réservation",
-    "bookingHistory": "Historique des RDV"
+    "bookingHistory": "Historique des RDV",
+    "more": "Plus"
   },
   "common": {
     "save": "Enregistrer",
@@ -796,15 +797,6 @@
     "editPastAppointments": "Modifier Rendez-vous Passés/Hors Horaires",
     "openCashDrawer": "Ouvrir Tiroir-Caisse"
   },
-  "days": {
-    "sunday": "Dimanche",
-    "monday": "Lundi",
-    "tuesday": "Mardi",
-    "wednesday": "Mercredi",
-    "thursday": "Jeudi",
-    "friday": "Vendredi",
-    "saturday": "Samedi"
-  },
   "home": {
     "dashboard": "Tableau de Bord",
     "overview": "Aperçu de l'activité du salon aujourd'hui",
@@ -1051,7 +1043,6 @@
     "invalidLink": "Ce lien portail est invalide ou a expiré",
     "walletBalance": "Solde du Portefeuille",
     "earningsAndDeductions": "Revenus & Déductions",
-    "commission": "Commission",
     "pendingDeductions": "Déductions en Attente",
     "lastPaid": "Dernier Paiement",
     "never": "Jamais",

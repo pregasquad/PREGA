@@ -27,7 +27,8 @@
     "tombola": "عجلة الحظ",
     "adminSettings": "إعدادات المدير",
     "booking": "صفحة الحجز",
-    "bookingHistory": "سجل الحجوزات"
+    "bookingHistory": "سجل الحجوزات",
+    "more": "المزيد"
   },
   "common": {
     "save": "حفظ",
@@ -485,12 +486,7 @@
     "catFinancial": "المالية",
     "catStaff": "الموظفين",
     "catScheduling": "الجدولة",
-    "catClients": "العملاء",
-    "revenue": "الإيرادات",
-    "expenses": "المصاريف",
-    "appointments": "المواعيد",
-    "paid": "مدفوع",
-    "unpaid": "غير مدفوع"
+    "catClients": "العملاء"
   },
   "booking": {
     "title": "احجز موعدك",
@@ -992,7 +988,6 @@
     "invalidLink": "رابط البوابة غير صالح أو منتهي الصلاحية",
     "walletBalance": "رصيد المحفظة",
     "earningsAndDeductions": "الأرباح والخصومات",
-    "commission": "العمولة",
     "pendingDeductions": "الخصومات المعلقة",
     "lastPaid": "آخر دفعة",
     "never": "أبداً",
