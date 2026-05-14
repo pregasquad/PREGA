@@ -5181,7 +5181,11 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
           const batchHasVoice = msgs.some((m) => m.isVoice);
           let repliedWithVoice = false;
 
-          if (batchHasVoice) {
+          // If the client asked for location/address, ALWAYS reply with text
+          // so the Google Maps link is clickable — never send a voice note for this
+          const isLocationRequest = /عنوان|العنوان|فين كاين|فين كاينين|location|موقع|خريطة|maps|كيجيو|كيجيوا|كيصلو|كيصل|كيوصل|كيوصلو|address|كيصلح|العنوان|أين|وين|كيدوز|locat/i.test(mergedText);
+
+          if (batchHasVoice && !isLocationRequest) {
             try {
               const { textToSpeech } = await import("./gemini");
               const { sendWhatsAppVoiceNote } = await import("./baileys");
