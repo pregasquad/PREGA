@@ -108,6 +108,7 @@ export default function Salaries() {
   const [payBackInputAmount, setPayBackInputAmount] = useState<string>("");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [openPaymentHistories, setOpenPaymentHistories] = useState<Record<number, boolean>>({});
+  const [openDeductions, setOpenDeductions] = useState<Record<number, boolean>>({});
   const [salonHistoryOpen, setSalonHistoryOpen] = useState(false);
   const [newCharge, setNewCharge] = useState({ type: "rent", name: "", amount: 0, date: format(workDayToday, "yyyy-MM-dd") });
   const [newDeduction, setNewDeduction] = useState<{ staffName: string; type: "advance" | "loan" | "penalty" | "other"; description: string; amount: number; date: string }>({ staffName: "", type: "advance", description: "", amount: 0, date: format(workDayToday, "yyyy-MM-dd") });
@@ -1040,78 +1041,95 @@ export default function Salaries() {
                   </div>
                 </div>
 
-                {/* Deductions — per-staff interactive */}
+                {/* Deductions — collapsible per-staff */}
                 <div className="px-4 pb-3">
-                  <div className="p-3 rounded-lg bg-orange-50/80 dark:bg-orange-950/20" data-testid={`text-staff-deductions-${s.id}`}>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <UserMinus className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
-                        <span className="text-xs font-bold text-orange-700 dark:text-orange-400">{t("staffPortal.allDeductions")}</span>
-                        {staffDeductionAmount > 0 && (
-                          <span className="text-xs font-bold tabular-nums text-red-600 dark:text-red-400">- {formatCurrency(staffDeductionAmount)} DH</span>
-                        )}
+                  <div className="rounded-lg overflow-hidden border border-orange-200/50 dark:border-orange-800/30" data-testid={`text-staff-deductions-${s.id}`}>
+                    <button
+                      type="button"
+                      onClick={() => setOpenDeductions(prev => ({ ...prev, [s.id]: !prev[s.id] }))}
+                      className="w-full flex items-center gap-2 px-3 py-2 bg-orange-50/80 dark:bg-orange-950/20 hover:bg-orange-100/60 dark:hover:bg-orange-900/30 transition-colors"
+                      data-testid={`button-toggle-deductions-${s.id}`}
+                    >
+                      <UserMinus className="h-3 w-3 text-orange-600 dark:text-orange-400 shrink-0" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-orange-700 dark:text-orange-400">
+                        {t("staffPortal.allDeductions")}
+                      </span>
+                      {staffDeductionAmount > 0 && (
+                        <span className="text-[10px] font-bold tabular-nums text-red-600 dark:text-red-400">
+                          - {formatCurrency(staffDeductionAmount)} DH
+                        </span>
+                      )}
+                      {staffAllDeductions.length > 0 && (
+                        <span className="text-[10px] text-orange-500/70 ml-0.5">({staffAllDeductions.length})</span>
+                      )}
+                      <div className="ml-auto flex items-center gap-1.5">
+                        <span
+                          className="flex items-center justify-center h-5 w-5 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-800/50 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setNewDeduction({ staffName: s.name, type: "advance", description: "", amount: 0, date: format(getWorkDayDate(bSettings?.openingTime, bSettings?.closingTime), "yyyy-MM-dd") });
+                            setShowDeductionDialog(true);
+                          }}
+                          data-testid={`button-add-deduction-staff-${s.id}`}
+                        >
+                          <Plus className="h-3 w-3" />
+                        </span>
+                        <ChevronDown className={`h-3 w-3 text-orange-500 transition-transform duration-200 ${openDeductions[s.id] ? "rotate-180" : ""}`} />
                       </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-6 w-6 p-0 text-orange-600 hover:text-orange-700 hover:bg-orange-100/50 dark:hover:bg-orange-900/30"
-                        onClick={() => {
-                          setNewDeduction({ staffName: s.name, type: "advance", description: "", amount: 0, date: format(getWorkDayDate(bSettings?.openingTime, bSettings?.closingTime), "yyyy-MM-dd") });
-                          setShowDeductionDialog(true);
-                        }}
-                        data-testid={`button-add-deduction-staff-${s.id}`}
-                      >
-                        <Plus className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                    {staffAllDeductions.length === 0 ? (
-                      <p className="text-[10px] text-muted-foreground text-center py-1">{t("salaries.noDeductionsForPeriod")}</p>
-                    ) : (
-                      <div className="space-y-0.5">
-                        {staffAllDeductions.map((d) => {
-                          const remaining = getRemainingAmount(d);
-                          return (
-                            <div key={d.id} className="flex items-center justify-between gap-1 py-1 border-t border-orange-200/30 dark:border-orange-800/20 first:border-0" data-testid={`text-staff-deduction-item-${d.id}`}>
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  <span className="text-xs font-medium">{getDeductionTypeLabel(d.type)}</span>
-                                  {d.description && (
-                                    <span className="text-[10px] text-muted-foreground truncate">- {d.description}</span>
-                                  )}
-                                  {d.cleared && (
-                                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400">{t("salaries.paidBack")}</span>
-                                  )}
-                                  {!d.cleared && (d.paidBack || 0) > 0 && (
-                                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400">
-                                      {formatCurrency(d.paidBack || 0)} {t("salaries.repaid")}
+                    </button>
+
+                    {openDeductions[s.id] && (
+                      <div className="px-3 py-2 bg-orange-50/40 dark:bg-orange-950/10">
+                        {staffAllDeductions.length === 0 ? (
+                          <p className="text-[10px] text-muted-foreground text-center py-1">{t("salaries.noDeductionsForPeriod")}</p>
+                        ) : (
+                          <div className="space-y-0.5">
+                            {staffAllDeductions.map((d) => {
+                              const remaining = getRemainingAmount(d);
+                              return (
+                                <div key={d.id} className="flex items-center justify-between gap-1 py-1 border-t border-orange-200/30 dark:border-orange-800/20 first:border-0" data-testid={`text-staff-deduction-item-${d.id}`}>
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className="text-xs font-medium">{getDeductionTypeLabel(d.type)}</span>
+                                      {d.description && (
+                                        <span className="text-[10px] text-muted-foreground truncate">- {d.description}</span>
+                                      )}
+                                      {d.cleared && (
+                                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400">{t("salaries.paidBack")}</span>
+                                      )}
+                                      {!d.cleared && (d.paidBack || 0) > 0 && (
+                                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400">
+                                          {formatCurrency(d.paidBack || 0)} {t("salaries.repaid")}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <span className={`text-[10px] tabular-nums ${d.cleared ? 'text-muted-foreground line-through' : 'text-red-600 dark:text-red-400'}`}>
+                                      - {formatCurrency(d.cleared ? d.amount : remaining)} DH · {format(parseISO(d.date), "d/M/yy")}
                                     </span>
-                                  )}
+                                  </div>
+                                  <div className="flex items-center gap-0.5 shrink-0">
+                                    {!d.cleared && (
+                                      <>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { setPayBackDeduction(d); setPayBackInputAmount(String(remaining)); }} data-testid={`button-payback-staff-deduction-${d.id}`}>
+                                          <ArrowDownLeft className="h-3 w-3 text-blue-600" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6" disabled={clearDeductionMutation.isPending} onClick={() => clearDeductionMutation.mutate(d.id)} data-testid={`button-clear-staff-deduction-${d.id}`}>
+                                          <CheckCircle className="h-3 w-3 text-green-600" />
+                                        </Button>
+                                      </>
+                                    )}
+                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setEditingDeduction(d)} data-testid={`button-edit-staff-deduction-${d.id}`}>
+                                      <Pencil className="h-3 w-3 text-pink-600" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => deleteDeductionMutation.mutate(d.id)} data-testid={`button-delete-staff-deduction-${d.id}`}>
+                                      <Trash2 className="h-3 w-3 text-destructive" />
+                                    </Button>
+                                  </div>
                                 </div>
-                                <span className={`text-[10px] tabular-nums ${d.cleared ? 'text-muted-foreground line-through' : 'text-red-600 dark:text-red-400'}`}>
-                                  - {formatCurrency(d.cleared ? d.amount : remaining)} DH · {format(parseISO(d.date), "d/M/yy")}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-0.5 shrink-0">
-                                {!d.cleared && (
-                                  <>
-                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { setPayBackDeduction(d); setPayBackInputAmount(String(remaining)); }} data-testid={`button-payback-staff-deduction-${d.id}`}>
-                                      <ArrowDownLeft className="h-3 w-3 text-blue-600" />
-                                    </Button>
-                                    <Button variant="ghost" size="icon" className="h-6 w-6" disabled={clearDeductionMutation.isPending} onClick={() => clearDeductionMutation.mutate(d.id)} data-testid={`button-clear-staff-deduction-${d.id}`}>
-                                      <CheckCircle className="h-3 w-3 text-green-600" />
-                                    </Button>
-                                  </>
-                                )}
-                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setEditingDeduction(d)} data-testid={`button-edit-staff-deduction-${d.id}`}>
-                                  <Pencil className="h-3 w-3 text-pink-600" />
-                                </Button>
-                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => deleteDeductionMutation.mutate(d.id)} data-testid={`button-delete-staff-deduction-${d.id}`}>
-                                  <Trash2 className="h-3 w-3 text-destructive" />
-                                </Button>
-                              </div>
-                            </div>
-                          );
-                        })}
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
