@@ -100,7 +100,7 @@ export default function Salaries() {
   const [showChargeDialog, setShowChargeDialog] = useState(false);
   const [showDeductionDialog, setShowDeductionDialog] = useState(false);
   const [expensesOpen, setExpensesOpen] = useState(false);
-  const [deductionsOpen, setDeductionsOpen] = useState(false);
+
   const [unclearedOpen, setUnclearedOpen] = useState(false);
   const [editingCharge, setEditingCharge] = useState<Charge | null>(null);
   const [editingDeduction, setEditingDeduction] = useState<StaffDeduction | null>(null);
@@ -1040,47 +1040,82 @@ export default function Salaries() {
                   </div>
                 </div>
 
-                {/* Deductions */}
-                {staffAllDeductions.length > 0 && (
-                  <div className="px-4 pb-3">
-                    <div className="p-3 rounded-lg bg-orange-50/80 dark:bg-orange-950/20" data-testid={`text-staff-deductions-${s.id}`}>
-                      <div className="flex items-center justify-between mb-2">
+                {/* Deductions — per-staff interactive */}
+                <div className="px-4 pb-3">
+                  <div className="p-3 rounded-lg bg-orange-50/80 dark:bg-orange-950/20" data-testid={`text-staff-deductions-${s.id}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <UserMinus className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
                         <span className="text-xs font-bold text-orange-700 dark:text-orange-400">{t("staffPortal.allDeductions")}</span>
                         {staffDeductionAmount > 0 && (
                           <span className="text-xs font-bold tabular-nums text-red-600 dark:text-red-400">- {formatCurrency(staffDeductionAmount)} DH</span>
                         )}
                       </div>
-                      <div className="space-y-1">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 w-6 p-0 text-orange-600 hover:text-orange-700 hover:bg-orange-100/50 dark:hover:bg-orange-900/30"
+                        onClick={() => {
+                          setNewDeduction({ staffName: s.name, type: "advance", description: "", amount: 0, date: format(getWorkDayDate(bSettings?.openingTime, bSettings?.closingTime), "yyyy-MM-dd") });
+                          setShowDeductionDialog(true);
+                        }}
+                        data-testid={`button-add-deduction-staff-${s.id}`}
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                    {staffAllDeductions.length === 0 ? (
+                      <p className="text-[10px] text-muted-foreground text-center py-1">{t("salaries.noDeductionsForPeriod")}</p>
+                    ) : (
+                      <div className="space-y-0.5">
                         {staffAllDeductions.map((d) => {
                           const remaining = getRemainingAmount(d);
                           return (
-                            <div key={d.id} className="flex items-center justify-between gap-2 py-1 border-t border-orange-200/30 dark:border-orange-800/20 first:border-0" data-testid={`text-staff-deduction-item-${d.id}`}>
-                              <div className="min-w-0 flex-1 flex items-center gap-1.5 flex-wrap">
-                                <span className="text-xs font-medium">{getDeductionTypeLabel(d.type)}</span>
-                                {d.description && (
-                                  <span className="text-[10px] text-muted-foreground">- {d.description}</span>
-                                )}
-                                {d.cleared && (
-                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400">
-                                    {t("salaries.paidBack")}
-                                  </span>
-                                )}
-                                {!d.cleared && (d.paidBack || 0) > 0 && (
-                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400">
-                                    {formatCurrency(d.paidBack || 0)} {t("salaries.repaid")}
-                                  </span>
-                                )}
+                            <div key={d.id} className="flex items-center justify-between gap-1 py-1 border-t border-orange-200/30 dark:border-orange-800/20 first:border-0" data-testid={`text-staff-deduction-item-${d.id}`}>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="text-xs font-medium">{getDeductionTypeLabel(d.type)}</span>
+                                  {d.description && (
+                                    <span className="text-[10px] text-muted-foreground truncate">- {d.description}</span>
+                                  )}
+                                  {d.cleared && (
+                                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400">{t("salaries.paidBack")}</span>
+                                  )}
+                                  {!d.cleared && (d.paidBack || 0) > 0 && (
+                                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400">
+                                      {formatCurrency(d.paidBack || 0)} {t("salaries.repaid")}
+                                    </span>
+                                  )}
+                                </div>
+                                <span className={`text-[10px] tabular-nums ${d.cleared ? 'text-muted-foreground line-through' : 'text-red-600 dark:text-red-400'}`}>
+                                  - {formatCurrency(d.cleared ? d.amount : remaining)} DH · {format(parseISO(d.date), "d/M/yy")}
+                                </span>
                               </div>
-                              <span className={`text-xs font-medium shrink-0 tabular-nums ${d.cleared ? 'text-muted-foreground line-through' : 'text-red-600 dark:text-red-400'}`}>
-                                - {formatCurrency(d.cleared ? d.amount : remaining)}
-                              </span>
+                              <div className="flex items-center gap-0.5 shrink-0">
+                                {!d.cleared && (
+                                  <>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { setPayBackDeduction(d); setPayBackInputAmount(String(remaining)); }} data-testid={`button-payback-staff-deduction-${d.id}`}>
+                                      <ArrowDownLeft className="h-3 w-3 text-blue-600" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6" disabled={clearDeductionMutation.isPending} onClick={() => clearDeductionMutation.mutate(d.id)} data-testid={`button-clear-staff-deduction-${d.id}`}>
+                                      <CheckCircle className="h-3 w-3 text-green-600" />
+                                    </Button>
+                                  </>
+                                )}
+                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setEditingDeduction(d)} data-testid={`button-edit-staff-deduction-${d.id}`}>
+                                  <Pencil className="h-3 w-3 text-pink-600" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => deleteDeductionMutation.mutate(d.id)} data-testid={`button-delete-staff-deduction-${d.id}`}>
+                                  <Trash2 className="h-3 w-3 text-destructive" />
+                                </Button>
+                              </div>
                             </div>
                           );
                         })}
                       </div>
-                    </div>
+                    )}
                   </div>
-                )}
+                </div>
 
                 {/* Service Breakdown */}
                 {Object.keys(wallet.walletServices).length > 0 && (
@@ -1409,174 +1444,79 @@ export default function Salaries() {
         </Card>
       </Collapsible>
 
-      {/* Deductions Section */}
-      <Collapsible open={deductionsOpen} onOpenChange={setDeductionsOpen}>
-        <Card className="glass-card">
-          <CollapsibleTrigger asChild>
-            <CardHeader className="flex flex-row items-center justify-between gap-2 p-3 pb-2 cursor-pointer" data-testid="button-toggle-deductions">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <UserMinus className="h-4 w-4 text-sky-500" />
-                {t("salaries.staffDeductions")}
-                <span className="text-sm font-normal text-muted-foreground">({filteredDeductions.length})</span>
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                <Dialog open={showDeductionDialog} onOpenChange={setShowDeductionDialog}>
-                  <DialogTrigger asChild>
-                    <Button size="sm" onClick={(e) => e.stopPropagation()} data-testid="button-add-deduction">
-                      <Plus className="h-4 w-4 mr-1" />
-                      +
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>{t("salaries.addStaffDeduction")}</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div>
-                        <Label>{t("salaries.staff")}</Label>
-                        <Select value={newDeduction.staffName} onValueChange={(v) => setNewDeduction({ ...newDeduction, staffName: v })}>
-                          <SelectTrigger data-testid="select-deduction-staff">
-                            <SelectValue placeholder={t("salaries.selectStaff")} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {staff.map((s) => (
-                              <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label>{t("salaries.deductionType")}</Label>
-                        <Select value={newDeduction.type} onValueChange={(v) => setNewDeduction({ ...newDeduction, type: v as "advance" | "loan" | "penalty" | "other" })}>
-                          <SelectTrigger data-testid="select-deduction-type">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="advance">{t("salaries.advance")}</SelectItem>
-                            <SelectItem value="loan">{t("salaries.loan")}</SelectItem>
-                            <SelectItem value="penalty">{t("salaries.penalty")}</SelectItem>
-                            <SelectItem value="other">{t("salaries.other")}</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label>{t("common.description")}</Label>
-                        <Input
-                          value={newDeduction.description}
-                          onChange={(e) => setNewDeduction({ ...newDeduction, description: e.target.value })}
-                          placeholder={t("salaries.deductionDescription")}
-                          data-testid="input-deduction-description"
-                        />
-                      </div>
-                      <div>
-                        <Label>{t("salaries.amountDH")}</Label>
-                        <Input
-                          type="number"
-                          value={newDeduction.amount || ""}
-                          onChange={(e) => setNewDeduction({ ...newDeduction, amount: parseFloat(e.target.value) || 0 })}
-                          placeholder="0"
-                          data-testid="input-deduction-amount"
-                        />
-                      </div>
-                      <div>
-                        <Label>{t("common.date")}</Label>
-                        <Input
-                          type="date"
-                          value={newDeduction.date}
-                          onChange={(e) => setNewDeduction({ ...newDeduction, date: e.target.value })}
-                          data-testid="input-deduction-date"
-                        />
-                      </div>
-                      <Button
-                        className="w-full"
-                        onClick={() => createDeductionMutation.mutate(newDeduction)}
-                        disabled={!newDeduction.staffName || !newDeduction.description || !newDeduction.amount || createDeductionMutation.isPending}
-                        data-testid="button-save-deduction"
-                      >
-                        {t("common.save")}
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-                <ChevronDown className={`h-4 w-4 transition-transform ${deductionsOpen ? "rotate-180" : ""}`} />
-              </div>
-            </CardHeader>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <CardContent className="px-3 pb-3 pt-0 space-y-2">
-              {filteredDeductions.map((deduction) => {
-                const remaining = getRemainingAmount(deduction);
-                return (
-                  <div key={deduction.id} className="p-3 rounded-lg glass-subtle flex justify-between items-center" data-testid={`deduction-item-${deduction.id}`}>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-medium">{deduction.staffName}</span>
-                        <span className="liquid-glass-chip text-xs">{getDeductionTypeLabel(deduction.type)}</span>
-                        {deduction.cleared ? (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400">{t("salaries.paidBack")}</span>
-                        ) : (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400">{t("salaries.pending")}</span>
-                        )}
-                        {!deduction.cleared && (deduction.paidBack || 0) > 0 && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400">
-                            {formatCurrency(deduction.paidBack || 0)} {t("salaries.repaid")}
-                          </span>
-                        )}
-                      </div>
-                      {deduction.description && (
-                        <div className="text-xs text-muted-foreground truncate mt-0.5">{deduction.description}</div>
-                      )}
-                      <div className="flex items-center gap-2 text-sm mt-1">
-                        <span className={`font-semibold tabular-nums ${deduction.cleared ? 'text-muted-foreground line-through' : 'text-red-600 dark:text-red-400'}`}>
-                          {formatCurrency(deduction.cleared ? deduction.amount : remaining)} DH
-                        </span>
-                        {!deduction.cleared && (deduction.paidBack || 0) > 0 && (
-                          <span className="text-[10px] text-muted-foreground">({t("salaries.of")} {formatCurrency(deduction.amount)})</span>
-                        )}
-                        <span className="text-muted-foreground text-xs">{format(parseISO(deduction.date), "d/M/yy")}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      {!deduction.cleared && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => { setPayBackDeduction(deduction); setPayBackInputAmount(String(remaining)); }}
-                            data-testid={`button-partial-payback-${deduction.id}`}
-                          >
-                            <ArrowDownLeft className="h-4 w-4 text-blue-600" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            disabled={clearDeductionMutation.isPending}
-                            onClick={() => clearDeductionMutation.mutate(deduction.id)}
-                            data-testid={`button-paidback-${deduction.id}`}
-                          >
-                            <CheckCircle className="h-4 w-4 text-green-600" />
-                          </Button>
-                        </>
-                      )}
-                      <Button variant="ghost" size="icon" onClick={() => setEditingDeduction(deduction)} data-testid={`button-edit-deduction-${deduction.id}`}>
-                        <Pencil className="h-4 w-4 text-pink-600" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => deleteDeductionMutation.mutate(deduction.id)} data-testid={`button-delete-deduction-${deduction.id}`}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
-              {filteredDeductions.length === 0 && (
-                <p className="text-center text-muted-foreground py-4 text-sm">
-                  {t("salaries.noDeductionsForPeriod")}
-                </p>
-              )}
-            </CardContent>
-          </CollapsibleContent>
-        </Card>
-      </Collapsible>
+      {/* Add Deduction Dialog — triggered from each staff card's + button */}
+      <Dialog open={showDeductionDialog} onOpenChange={setShowDeductionDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("salaries.addStaffDeduction")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>{t("salaries.staff")}</Label>
+              <Select value={newDeduction.staffName} onValueChange={(v) => setNewDeduction({ ...newDeduction, staffName: v })}>
+                <SelectTrigger data-testid="select-deduction-staff">
+                  <SelectValue placeholder={t("salaries.selectStaff")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {staff.map((s) => (
+                    <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>{t("salaries.deductionType")}</Label>
+              <Select value={newDeduction.type} onValueChange={(v) => setNewDeduction({ ...newDeduction, type: v as "advance" | "loan" | "penalty" | "other" })}>
+                <SelectTrigger data-testid="select-deduction-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="advance">{t("salaries.advance")}</SelectItem>
+                  <SelectItem value="loan">{t("salaries.loan")}</SelectItem>
+                  <SelectItem value="penalty">{t("salaries.penalty")}</SelectItem>
+                  <SelectItem value="other">{t("salaries.other")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>{t("common.description")}</Label>
+              <Input
+                value={newDeduction.description}
+                onChange={(e) => setNewDeduction({ ...newDeduction, description: e.target.value })}
+                placeholder={t("salaries.deductionDescription")}
+                data-testid="input-deduction-description"
+              />
+            </div>
+            <div>
+              <Label>{t("salaries.amountDH")}</Label>
+              <Input
+                type="number"
+                value={newDeduction.amount || ""}
+                onChange={(e) => setNewDeduction({ ...newDeduction, amount: parseFloat(e.target.value) || 0 })}
+                placeholder="0"
+                data-testid="input-deduction-amount"
+              />
+            </div>
+            <div>
+              <Label>{t("common.date")}</Label>
+              <Input
+                type="date"
+                value={newDeduction.date}
+                onChange={(e) => setNewDeduction({ ...newDeduction, date: e.target.value })}
+                data-testid="input-deduction-date"
+              />
+            </div>
+            <Button
+              className="w-full"
+              onClick={() => createDeductionMutation.mutate(newDeduction)}
+              disabled={!newDeduction.staffName || !newDeduction.description || !newDeduction.amount || createDeductionMutation.isPending}
+              data-testid="button-save-deduction"
+            >
+              {t("common.save")}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Expense Dialog */}
       <Dialog open={!!editingCharge} onOpenChange={(open) => !open && setEditingCharge(null)}>
