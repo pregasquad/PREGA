@@ -4519,14 +4519,30 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
   import("./baileys").then(({ initBaileys, setSocketIO, setIncomingMessageHandler, setOutgoingMessageHandler, sendBotConfirmed, sendBotCancelled, sendBotModify, sendBotError }) => {
     setSocketIO(io);
 
-    // When boss manually replies to a client → cancel any pending buffered Lina reply for that JID
-    setOutgoingMessageHandler((jid: string) => {
+    // When boss manually replies to a client → cancel pending Lina reply AND record boss text in history
+    setOutgoingMessageHandler((jid: string, bossText: string) => {
+      // 1. Cancel any buffered Lina reply that hasn't fired yet
       const sess = jidSessions.get(jid);
       if (sess && sess.timer) {
         clearTimeout(sess.timer);
         sess.timer = null;
         sess.buffer = [];
         console.log(`[Bot] Boss manually replied to ${jid} — cancelled Lina's pending reply`);
+      }
+
+      // 2. Persist boss's text into convHistory as a "model" turn so Lina reads it next time
+      if (bossText && bossText.trim()) {
+        loadMemory(jid).then((mem) => {
+          const history = getActiveHistory(mem);
+          const updated = mergeHistory(mem, [
+            ...history,
+            { role: "model" as const, text: `[رد المدير]: ${bossText.trim()}` },
+          ]);
+          persistMemory({ ...updated, lastSeen: new Date() });
+          console.log(`[Bot] Saved boss reply to conv history for ${jid}: "${bossText.slice(0, 60)}"`);
+        }).catch((err) => {
+          console.error(`[Bot] Failed to save boss reply to history for ${jid}:`, err);
+        });
       }
     });
     // On Replit dev, skip auto-connect — Koyeb production holds the active session.

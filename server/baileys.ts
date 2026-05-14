@@ -32,7 +32,7 @@ let shouldReconnect = false;
 let reconnectAttempt = 0;
 let ioInstance: SocketIOServer | null = null;
 let incomingMessageHandler: ((jid: string, phone: string, text: string, imageBase64?: string, imageMimeType?: string, isVoice?: boolean, audioBase64?: string, audioMimeType?: string, pushName?: string) => Promise<void>) | null = null;
-let outgoingMessageHandler: ((jid: string) => void) | null = null;
+let outgoingMessageHandler: ((jid: string, text: string) => void) | null = null;
 
 // Track message IDs sent by the bot itself so we can ignore those fromMe events.
 // Capped at 200 entries to avoid unbounded growth.
@@ -457,7 +457,19 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
         if (!botSentMessageIds.has(msgId)) {
           const jid: string = msg.key?.remoteJid ?? "";
           if (jid && !jid.endsWith("@g.us") && outgoingMessageHandler) {
-            outgoingMessageHandler(jid);
+            // Extract text so Lina can record what the boss wrote in conversation history
+            const om = msg.message;
+            let bossText = "";
+            if (om?.conversation) {
+              bossText = om.conversation;
+            } else if (om?.extendedTextMessage?.text) {
+              bossText = om.extendedTextMessage.text;
+            } else if (om?.imageMessage?.caption) {
+              bossText = om.imageMessage.caption;
+            } else if (om?.documentMessage?.caption) {
+              bossText = om.documentMessage.caption;
+            }
+            outgoingMessageHandler(jid, bossText);
           }
         }
         continue;
@@ -535,7 +547,7 @@ export function setIncomingMessageHandler(
 }
 
 /** Registers the handler called when the boss manually sends a message to a client */
-export function setOutgoingMessageHandler(handler: (jid: string) => void): void {
+export function setOutgoingMessageHandler(handler: (jid: string, text: string) => void): void {
   outgoingMessageHandler = handler;
 }
 
