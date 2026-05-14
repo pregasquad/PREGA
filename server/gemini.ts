@@ -54,6 +54,7 @@ export interface SalonContext {
   botCorrections?: { wrongInfo: string; correctInfo: string }[]; // bot's own past mistakes + correct answers
   bossInstructions?: string[]; // permanent instructions from the salon owner/boss
   personality?: string[]; // lina's personality modes (can combine): warm | professional | playful | direct
+  upcomingAppointment?: { date: string; time: string; service: string } | null; // null = no future appointment
 }
 
 export interface ConversationTurn {
@@ -206,6 +207,15 @@ ${ctx.resolvedComplaints.map(r => `• إذا سألت عميلة عن: "${r.com
 • لو السعر ثابت → هو ثابت فقط
 • للحجز → لو العميلة بغات تحجز، اتفقي معاها على التاريخ والساعة بشكل واضح، وبعد ما يتأكد كل شي قولي جملة فيها: اسم الخدمة + التاريخ + الساعة — مثال: "تمام، الموعد لـ إزالة الشعر يوم غدا مع 14:00 مؤكد عندنا 🌸" — لا تعطي رقم هاتف ولا تستعملي اسم العميلة
 • مهم جداً: لما تأكدي موعد محدد → لازم تذكري في نفس الرسالة: اسم الخدمة بوضوح + التاريخ (اليوم/غدا/اسم اليوم) + الساعة — هاد المعلومات ضرورية باش يتسجل الموعد في النظام تلقائياً
+
+━━━ معلومات الموعد القادم للعميلة ━━━
+${ctx.upcomingAppointment === undefined
+  ? "• ما عندناش معلومات عن مواعيد هاد العميلة — لا تذكري أي موعد محدد إلا لو هي سألت"
+  : ctx.upcomingAppointment === null
+  ? "• ⚠️ هاد العميلة ما عندها مواعيد قادمة مسجلة — لا تذكري أي موعد من محادثات قديمة أبداً. إذا جات تقول غداً عندها موعد أو سألت، قوليها 'حالياً ما عندكِ موعد مسجل عندنا' وعرضي عليها تحجز واحد"
+  : `• ✅ عندها موعد قادم: ${ctx.upcomingAppointment.service} — ${ctx.upcomingAppointment.date} مع ${ctx.upcomingAppointment.time}
+• لو العميلة سألت أو رمّحت للموعد → ذكريه بشكل طبيعي وسأليها إذا كان كاين شي آخر
+• لا تذكري الموعد بشكل تلقائي في كل رسالة — فقط لما يكون ذو صلة أو سألت`}
 
 ━━━ فريق العمل والغرفة الخاصة — قاعدة ذهبية لا تتخلي عنها ━━━
 ${ctx.staffMembers && ctx.staffMembers.length > 0 ? `فريق الصالون (معلومة سرية — استخدميها للرد فقط):

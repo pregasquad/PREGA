@@ -4746,8 +4746,15 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
             return ap === normalized;
           });
 
+          // Only consider future appointments for pending quick-replies (1/2/3)
+          const nowDate = new Date();
+          nowDate.setHours(0, 0, 0, 0);
           const pendingApts = matched
-            .filter((a: any) => !a.bookingStatus || a.bookingStatus === "pending" || a.bookingStatus === "modify_requested")
+            .filter((a: any) => {
+              if (!(!a.bookingStatus || a.bookingStatus === "pending" || a.bookingStatus === "modify_requested")) return false;
+              if (!a.date) return false;
+              return new Date(a.date) >= nowDate;
+            })
             .sort((a: any, b: any) => b.id - a.id);
 
           const apt = pendingApts.length > 0 ? pendingApts[0] : null;
@@ -4785,7 +4792,9 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
             const cancellableApts = matched
               .filter((a: any) => {
                 const s = a.bookingStatus;
-                return !s || s === "pending" || s === "confirmed" || s === "modify_requested";
+                if (!(!s || s === "pending" || s === "confirmed" || s === "modify_requested")) return false;
+                if (!a.date) return false;
+                return new Date(a.date) >= nowDate;
               })
               .sort((a: any, b: any) => b.id - a.id);
 
@@ -4970,6 +4979,36 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
             gender: s.gender || 'female',
           }));
 
+          // ── Find this client's next upcoming appointment (future only) ────
+          // Pass null if phone is known but no future appointment exists,
+          // or undefined if we can't determine (no phone linked to JID).
+          let upcomingAppointment: { date: string; time: string; service: string } | null | undefined = undefined;
+          if (normalized) {
+            try {
+              const futureClientApts = matched
+                .filter((a: any) => {
+                  if (!a.date) return false;
+                  return new Date(a.date) >= nowDate;
+                })
+                .sort((a: any, b: any) => {
+                  const da = new Date(`${a.date}T${a.startTime || "00:00"}`);
+                  const db = new Date(`${b.date}T${b.startTime || "00:00"}`);
+                  return da.getTime() - db.getTime();
+                });
+              if (futureClientApts.length > 0) {
+                const next = futureClientApts[0];
+                upcomingAppointment = {
+                  date: next.date,
+                  time: next.startTime || "",
+                  service: next.service || "",
+                };
+              } else {
+                // Phone is known, but no future appointments found
+                upcomingAppointment = null;
+              }
+            } catch { upcomingAppointment = undefined; }
+          }
+
           const salonCtx = {
             name: bizSettings?.businessName || "PREGASQUAD",
             address: bizSettings?.address || undefined,
@@ -4981,6 +5020,7 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
             services: serviceList,
             staffMembers: staffMemberList,
             isNewConversation,
+            upcomingAppointment,
             clientMemory: {
               clientName: mem.clientName,
               // Use the language detected from the CURRENT message batch (not just
