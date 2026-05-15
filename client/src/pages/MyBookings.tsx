@@ -348,7 +348,7 @@ export default function MyBookings() {
       </div>
 
       {/* Main Content - Planning Grid Style */}
-      <div ref={scrollContainerRef} className="flex-1 overflow-auto p-4">
+      <div ref={scrollContainerRef} className="flex-1 overflow-auto p-4 pb-20 md:pb-4">
         {appointments.length === 0 ? (
           <div className="glass-card p-8 text-center max-w-md mx-auto mt-8">
             <CalendarIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />

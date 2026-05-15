@@ -73,8 +73,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             className={
               isPlanning
                 ? "flex-1 min-h-0 overflow-hidden p-0"
-                : "flex-1 min-h-0 overflow-auto p-2 pb-20 md:p-4 md:pb-4"
+                : "flex-1 min-h-0 overflow-auto p-2 md:p-4 md:pb-4"
             }
+            style={!isPlanning ? { paddingBottom: "calc(5rem + env(safe-area-inset-bottom))" } : undefined}
           >
             <div className="h-full flex flex-col min-h-0">
               {children}
