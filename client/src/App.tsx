@@ -1,4 +1,4 @@
-import { Switch, Route, useLocation } from "wouter";
+import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -49,13 +49,7 @@ function PageLoader() {
 
 // Wrapper for smooth page content appearance
 function PageContent({ children }: { children: React.ReactNode }) {
-  const [location] = useLocation();
-  const isPlanning = location === "/" || location === "/planning";
-  return (
-    <div className={isPlanning ? "page-content flex-1 flex flex-col min-h-0" : "page-content flex flex-col"}>
-      {children}
-    </div>
-  );
+  return <div className="page-content h-full flex flex-col min-h-0">{children}</div>;
 }
 
 function PermissionGuard({ children, permission }: { children: React.ReactNode, permission?: string }) {
