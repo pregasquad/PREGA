@@ -129,9 +129,10 @@ const startServer = async () => {
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
-
-    res.status(status).json({ message });
-    throw err;
+    console.error(`[Error] ${status} — ${message}`, err.stack || "");
+    if (!res.headersSent) {
+      res.status(status).json({ message });
+    }
   });
 
   if (process.env.NODE_ENV === "production") {
@@ -193,4 +194,12 @@ process.on("SIGTERM", () => {
 });
 process.on("SIGINT", () => {
   httpServer.close(() => process.exit(0));
+});
+
+// Global crash guards — log but never crash the process on Koyeb
+process.on("uncaughtException", (err) => {
+  console.error("[uncaughtException] Unhandled error (server kept alive):", err);
+});
+process.on("unhandledRejection", (reason) => {
+  console.error("[unhandledRejection] Unhandled promise rejection (server kept alive):", reason);
 });
