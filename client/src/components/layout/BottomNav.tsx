@@ -1,4 +1,4 @@
-import { Link, useLocation } from "wouter";
+import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -8,39 +8,11 @@ import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { useBusinessName } from "@/hooks/use-salon-data";
 import { getAppSocket } from "@/lib/appSocket";
+import { SHORTCUT_OPTIONS, DEFAULT_SHORTCUTS, type ShortcutOption } from "@/lib/shortcuts";
 import {
-  Home, CalendarDays, Users, DollarSign, MoreHorizontal,
-  History, Scissors, PackageOpen, Package, BarChart3,
-  Wallet, Gift, MessageCircle, Sparkles, Settings,
-  ExternalLink, User, Percent, TrendingUp,
-  LogOut, ShieldCheck, UserCircle, Bell, X,
+  MoreHorizontal, LogOut, ShieldCheck, UserCircle,
+  Bell, X, ExternalLink,
 } from "lucide-react";
-
-const PRIMARY_TABS = [
-  { labelKey: "nav.home",     href: "/home",     icon: Home,         permission: "view_home" },
-  { labelKey: "nav.planning", href: "/planning",  icon: CalendarDays, permission: "view_planning" },
-  { labelKey: "nav.clients",  href: "/clients",   icon: Users,        permission: "view_clients" },
-  { labelKey: "nav.salaries", href: "/salaries",  icon: DollarSign,   permission: "view_salaries" },
-];
-
-const MORE_ITEMS = [
-  { labelKey: "nav.bookingHistory",  href: "/booking-history",  icon: History,       permission: "view_booking_history" },
-  { labelKey: "nav.services",        href: "/services",          icon: Scissors,      permission: "view_services" },
-  { labelKey: "nav.packages",        href: "/packages",          icon: PackageOpen,   permission: "view_packages" },
-  { labelKey: "nav.inventory",       href: "/inventory",         icon: Package,       permission: "view_inventory" },
-  { labelKey: "nav.expenses",        href: "/charges",           icon: Wallet,        permission: "view_expenses" },
-  { labelKey: "nav.reports",         href: "/reports",           icon: BarChart3,     permission: "view_reports" },
-  { labelKey: "nav.loyaltyRewards",  href: "/loyalty-rewards",   icon: Gift,          permission: "view_loyalty" },
-  { labelKey: "nav.whatsapp",        href: "/whatsapp",          icon: MessageCircle, permission: "admin_settings" },
-  { labelKey: "nav.tombola",         href: "/tombola",           icon: Sparkles,      permission: null },
-  { labelKey: "nav.adminSettings",   href: "/admin-settings",    icon: Settings,      permission: "admin_settings" },
-];
-
-const STAFF_ITEMS = [
-  { labelKey: "nav.staffManagement",  href: "/staff",              icon: User,        permission: "view_staff" },
-  { labelKey: "nav.staffCommissions", href: "/staff-commissions",  icon: Percent,     permission: "view_salaries" },
-  { labelKey: "nav.staffPerformance", href: "/staff-performance",  icon: TrendingUp,  permission: "view_staff_performance" },
-];
 
 interface BookingNotification {
   id: number;
@@ -67,6 +39,10 @@ export function BottomNav() {
     queryKey: ["/api/admin-roles"],
   });
 
+  const { data: businessSettings } = useQuery<{ planningShortcuts?: string[] }>({
+    queryKey: ["/api/business-settings"],
+  });
+
   const currentUser = adminRoles.find(r => r.name === currentUserName);
 
   const hasPermission = (permission: string | null) => {
@@ -88,10 +64,10 @@ export function BottomNav() {
     const onWaConnected    = () => setWaDisconnected(false);
     const onWaStatus       = (data: { connected: boolean }) => setWaDisconnected(!data.connected);
 
-    socket.on("booking:created",        onBookingCreated);
-    socket.on("whatsapp:disconnected",  onWaDisconnected);
-    socket.on("whatsapp:connected",     onWaConnected);
-    socket.on("whatsapp:status",        onWaStatus);
+    socket.on("booking:created",       onBookingCreated);
+    socket.on("whatsapp:disconnected", onWaDisconnected);
+    socket.on("whatsapp:connected",    onWaConnected);
+    socket.on("whatsapp:status",       onWaStatus);
 
     return () => {
       socket.off("booking:created",       onBookingCreated);
@@ -108,17 +84,26 @@ export function BottomNav() {
     window.location.href = "/";
   };
 
-  const filteredPrimary = PRIMARY_TABS.filter(tab => hasPermission(tab.permission));
-  const filteredMore    = MORE_ITEMS.filter(item => hasPermission(item.permission));
-  const filteredStaff   = STAFF_ITEMS.filter(item => hasPermission(item.permission));
-
-  const isMoreActive = [...filteredMore, ...filteredStaff].some(item => location === item.href);
-  const hasBadge     = waDisconnected || notifications.length > 0;
-
-  const handleNavClick = (href: string) => {
+  const handleNavClick = (route: string) => {
     setMoreOpen(false);
-    setLocation(href);
+    setLocation(route);
   };
+
+  // ── Compute primary tabs from business settings ──────────────────
+  const configuredKeys = businessSettings?.planningShortcuts || DEFAULT_SHORTCUTS;
+
+  const primaryTabs = configuredKeys
+    .map(key => SHORTCUT_OPTIONS.find(o => o.key === key))
+    .filter((opt): opt is ShortcutOption => opt !== undefined && hasPermission(opt.permission));
+
+  // More = everything NOT chosen as a primary tab, filtered by permission
+  const moreItems = SHORTCUT_OPTIONS.filter(
+    opt => !configuredKeys.includes(opt.key) && hasPermission(opt.permission)
+  );
+
+  const isMoreActive = moreItems.some(opt => location === opt.route);
+  const waInMore     = moreItems.some(opt => opt.key === "whatsapp");
+  const hasBadge     = (waInMore && waDisconnected) || notifications.length > 0;
 
   return (
     <>
@@ -130,17 +115,18 @@ export function BottomNav() {
       >
         <div className="flex items-stretch h-16">
 
-          {filteredPrimary.map((tab) => {
-            const isActive = location === tab.href || (tab.href === "/planning" && location === "/");
+          {primaryTabs.map((tab) => {
+            const isActive = location === tab.route || (tab.route === "/planning" && location === "/");
             return (
-              <Link
-                key={tab.href}
-                href={tab.href}
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => handleNavClick(tab.route)}
                 className={cn(
-                  "flex-1 flex flex-col items-center justify-center gap-1 relative transition-colors no-underline",
+                  "flex-1 flex flex-col items-center justify-center gap-1 relative transition-colors",
                   isActive ? "text-primary" : "text-muted-foreground"
                 )}
-                data-testid={`bottom-nav-${tab.href.replace("/", "")}`}
+                data-testid={`bottom-nav-${tab.key}`}
               >
                 {isActive && (
                   <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-b-full bg-primary" />
@@ -151,7 +137,7 @@ export function BottomNav() {
                   strokeWidth={isActive ? 2.5 : 2}
                 />
                 <span className="text-[10px] font-medium leading-none">{t(tab.labelKey)}</span>
-              </Link>
+              </button>
             );
           })}
 
@@ -188,16 +174,15 @@ export function BottomNav() {
           className="h-[88vh] rounded-t-3xl p-0 border-0 shadow-2xl"
           dir={isRtl ? "rtl" : "ltr"}
         >
-          {/* Required for accessibility — visually hidden */}
           <SheetTitle className="sr-only">{t("nav.more")}</SheetTitle>
 
           <ScrollArea className="h-full">
             <div className="p-5 pb-10">
 
-              {/* ── Handle bar ─────────────────────────────── */}
+              {/* Handle bar */}
               <div className="w-10 h-1 bg-muted-foreground/25 rounded-full mx-auto mb-5" />
 
-              {/* ── Header row ─────────────────────────────── */}
+              {/* Header row */}
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-2.5">
                   <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center overflow-hidden shadow-sm border border-border/30">
@@ -207,7 +192,6 @@ export function BottomNav() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {/* Notification bell — only when there are new bookings */}
                   {notifications.length > 0 && (
                     <button
                       type="button"
@@ -220,8 +204,6 @@ export function BottomNav() {
                       </span>
                     </button>
                   )}
-
-                  {/* Close button */}
                   <button
                     type="button"
                     onClick={() => setMoreOpen(false)}
@@ -233,7 +215,7 @@ export function BottomNav() {
                 </div>
               </div>
 
-              {/* ── Inline notification list ────────────────── */}
+              {/* Inline notification list */}
               {notifOpen && notifications.length > 0 && (
                 <div className="mb-5 rounded-xl border border-border overflow-hidden">
                   {notifications.slice(0, 5).map((n, i) => (
@@ -261,71 +243,45 @@ export function BottomNav() {
                 </div>
               )}
 
-              {/* ── Main nav grid ───────────────────────────── */}
-              <div className="grid grid-cols-3 gap-2.5 mb-5">
-                {filteredMore.map((item) => {
-                  const isActive = location === item.href;
-                  const isWA    = item.href === "/whatsapp";
-                  return (
-                    <button
-                      key={item.href}
-                      type="button"
-                      onClick={() => handleNavClick(item.href)}
-                      className={cn(
-                        "flex flex-col items-center gap-2 p-3.5 rounded-2xl transition-all active:scale-95",
-                        isActive
-                          ? "bg-primary/10 text-primary shadow-sm"
-                          : "bg-muted/40 text-foreground hover:bg-muted"
-                      )}
-                      data-testid={`more-nav-${item.href.replace("/", "")}`}
-                    >
-                      <div className="relative">
-                        <item.icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
-                        {isWA && waDisconnected && (
-                          <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full border border-background animate-pulse" />
+              {/* Nav grid — all items NOT in the bottom tabs */}
+              {moreItems.length > 0 ? (
+                <div className="grid grid-cols-3 gap-2.5 mb-5">
+                  {moreItems.map((opt) => {
+                    const isActive = location === opt.route;
+                    const isWA     = opt.key === "whatsapp";
+                    return (
+                      <button
+                        key={opt.key}
+                        type="button"
+                        onClick={() => handleNavClick(opt.route)}
+                        className={cn(
+                          "flex flex-col items-center gap-2 p-3.5 rounded-2xl transition-all active:scale-95",
+                          isActive
+                            ? "bg-primary/10 text-primary shadow-sm"
+                            : "bg-muted/40 text-foreground hover:bg-muted"
                         )}
-                      </div>
-                      <span className="text-[10px] font-medium text-center leading-tight">
-                        {t(item.labelKey)}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* ── Staff section ───────────────────────────── */}
-              {filteredStaff.length > 0 && (
-                <div className="mb-5">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold mb-2.5 px-0.5">
-                    {t("nav.staff")}
-                  </p>
-                  <div className="grid grid-cols-3 gap-2.5">
-                    {filteredStaff.map((item) => {
-                      const isActive = location === item.href;
-                      return (
-                        <button
-                          key={item.href}
-                          type="button"
-                          onClick={() => handleNavClick(item.href)}
-                          className={cn(
-                            "flex flex-col items-center gap-2 p-3.5 rounded-2xl transition-all active:scale-95",
-                            isActive
-                              ? "bg-primary/10 text-primary shadow-sm"
-                              : "bg-muted/40 text-foreground hover:bg-muted"
+                        data-testid={`more-nav-${opt.key}`}
+                      >
+                        <div className="relative">
+                          <opt.icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
+                          {isWA && waDisconnected && (
+                            <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full border border-background animate-pulse" />
                           )}
-                        >
-                          <item.icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
-                          <span className="text-[10px] font-medium text-center leading-tight">
-                            {t(item.labelKey)}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
+                        </div>
+                        <span className="text-[10px] font-medium text-center leading-tight">
+                          {t(opt.labelKey)}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
+              ) : (
+                <p className="text-center text-xs text-muted-foreground mb-5 py-4">
+                  {t("admin.planningShortcutsDesc")}
+                </p>
               )}
 
-              {/* ── Booking portal link ─────────────────────── */}
+              {/* Booking portal external link */}
               <a
                 href="/booking"
                 target="_blank"
@@ -336,7 +292,7 @@ export function BottomNav() {
                 <span className="text-sm font-medium">{t("nav.booking")}</span>
               </a>
 
-              {/* ── User info + logout ──────────────────────── */}
+              {/* User info + logout */}
               <div className="border-t border-border/50 pt-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className={cn(

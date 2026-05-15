@@ -799,6 +799,29 @@ export default function AdminSettings() {
                         </div>
                       ))}
                     </div>
+                    {/* Live preview of current bottom nav */}
+                    <div className="mt-4 pt-4 border-t border-border/40">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold mb-2">
+                        {t("admin.previewBottomNav", { defaultValue: "Preview" })}
+                      </p>
+                      <div className="flex items-center justify-around bg-muted/40 rounded-xl p-3">
+                        {[0, 1, 2, 3].map(i => {
+                          const key = businessForm.planningShortcuts?.[i] || DEFAULT_SHORTCUTS[i];
+                          const opt = SHORTCUT_OPTIONS.find(o => o.key === key);
+                          if (!opt) return <div key={i} className="flex-1" />;
+                          return (
+                            <div key={i} className="flex-1 flex flex-col items-center gap-1 text-muted-foreground">
+                              <opt.icon className="w-5 h-5" strokeWidth={2} />
+                              <span className="text-[9px] font-medium leading-none text-center">{t(opt.labelKey)}</span>
+                            </div>
+                          );
+                        })}
+                        <div className="flex-1 flex flex-col items-center gap-1 text-muted-foreground/50">
+                          <LayoutGrid className="w-5 h-5" strokeWidth={2} />
+                          <span className="text-[9px] font-medium leading-none">{t("nav.more")}</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="glass-subtle rounded-2xl p-5">

@@ -25,7 +25,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { insertAppointmentSchema, insertStaffSchema } from "@shared/schema";
-import { SHORTCUT_OPTIONS, DEFAULT_SHORTCUTS } from "@/lib/shortcuts";
 import { useToast } from "@/hooks/use-toast";
 import { autoPrint } from "@/lib/printReceipt";
 import { connectQz, openCashDrawer, isQzConnected, checkPrintStationAsync, remoteOpenDrawer } from "@/lib/qzPrint";
@@ -2977,28 +2976,6 @@ export default function Planning() {
         </button>
       )}
 
-      {isMobile && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 liquid-glass-tab-bar" data-testid="mobile-shortcuts-bar">
-          <div className="flex items-center justify-around py-0.5 px-6">
-            {(businessSettings?.planningShortcuts || DEFAULT_SHORTCUTS).map((shortcutKey: string) => {
-              const opt = SHORTCUT_OPTIONS.find(o => o.key === shortcutKey);
-              if (!opt) return null;
-              const IconComp = opt.icon;
-              return (
-                <button
-                  key={shortcutKey}
-                  onClick={() => setLocation(opt.route)}
-                  className="flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition-all active:scale-95"
-                  data-testid={`shortcut-${shortcutKey}`}
-                >
-                  <IconComp className="w-[18px] h-[18px] text-foreground/70" />
-                  <span className="text-[9px] font-medium text-foreground/60">{t(opt.labelKey)}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
