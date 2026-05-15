@@ -19,8 +19,9 @@ import { spawn } from "child_process";
 // ── Status codes that mean the session is permanently revoked ────────────────
 const PERMANENT_FAILURE_CODES = new Set([401, 403, 405]);
 // 440 = "Stream Errored (conflict)" — another instance holds the session.
-// Stop reconnecting immediately (session is still valid, just already in use).
+// Allow a few retries before giving up (in case the other instance is restarting).
 const CONFLICT_CODES = new Set([440]);
+const MAX_CONFLICT_ATTEMPTS = 4;
 const MAX_RECONNECT_ATTEMPTS = 5;
 
 // ── Module-level state ───────────────────────────────────────────────────────
@@ -33,6 +34,7 @@ let status: "disconnected" | "connecting" | "qr" | "pairing" | "open" = "disconn
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let shouldReconnect = false;
 let reconnectAttempt = 0;
+let conflictAttempt = 0;
 let ioInstance: SocketIOServer | null = null;
 let incomingMessageHandler: ((jid: string, phone: string, text: string, imageBase64?: string, imageMimeType?: string, isVoice?: boolean, audioBase64?: string, audioMimeType?: string, pushName?: string) => Promise<void>) | null = null;
 let outgoingMessageHandler: ((jid: string, text: string) => void) | null = null;
@@ -410,6 +412,7 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
       currentPairingCode = null;
       pairingCodeExpiresAt = null;
       reconnectAttempt = 0;
+      conflictAttempt = 0;
       shouldReconnect = true;
       log(`Connected as +${sock?.user?.id?.split(":")[0] ?? "?"}`);
       emitStatus();
@@ -439,11 +442,22 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
         // Notify frontend — permanent logout (device removed / session revoked)
         if (ioInstance) ioInstance.emit("whatsapp:logged_out", { reason: "device_removed" });
       } else if (CONFLICT_CODES.has(code)) {
-        // Another instance (e.g. Koyeb prod) already holds the session.
-        // Stop reconnecting immediately — session is still valid, no need to clear it.
-        log(`Session conflict (${code}) — another instance is connected. Stopping reconnect to avoid infinite loop.`);
-        shouldReconnect = false;
-        if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+        // Another instance holds the session (e.g. Koyeb prod).
+        // Retry up to MAX_CONFLICT_ATTEMPTS times, then give up.
+        conflictAttempt++;
+        if (conflictAttempt <= MAX_CONFLICT_ATTEMPTS) {
+          const delayMs = Math.min(10_000 * Math.pow(2, conflictAttempt - 1), 120_000);
+          log(`Session conflict (${code}) — attempt ${conflictAttempt}/${MAX_CONFLICT_ATTEMPTS}, retrying in ${delayMs / 1000}s…`);
+          if (reconnectTimer) clearTimeout(reconnectTimer);
+          reconnectTimer = setTimeout(() => {
+            connectSocket().catch(err => log(`Conflict reconnect failed: ${err.message}`));
+          }, delayMs);
+        } else {
+          log(`Session conflict (${code}) — reached max ${MAX_CONFLICT_ATTEMPTS} attempts. Giving up. Re-link manually if needed.`);
+          conflictAttempt = 0;
+          shouldReconnect = false;
+          if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+        }
         emitStatus();
         if (ioInstance) ioInstance.emit("whatsapp:disconnected");
       } else if (shouldReconnect) {
