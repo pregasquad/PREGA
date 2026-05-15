@@ -331,6 +331,10 @@ export default function Planning() {
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const [draggedAppointment, setDraggedAppointment] = useState<any>(null);
   const [dragOverSlot, setDragOverSlot] = useState<{staff: string, time: string} | null>(null);
+  const [resizingBooking, setResizingBooking] = useState<any>(null);
+  const resizeStartY = useRef<number>(0);
+  const resizeStartSpan = useRef<number>(1);
+  const [resizeCurrentSpan, setResizeCurrentSpan] = useState<number>(1);
   const pageRef = useRef<HTMLDivElement>(null);
   
   // Swipe gesture state for mobile date navigation
@@ -1723,6 +1727,45 @@ export default function Planning() {
     setDraggedAppointment(null);
   };
 
+  // Resize appointment by dragging the bottom handle
+  const resizeMutation = useMutation({
+    mutationFn: async ({ id, duration }: { id: number; duration: number }) => {
+      return apiRequest("PUT", `/api/appointments/${id}`, { duration });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments/all"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+    },
+    onError: () => {
+      toast({ title: t("common.error"), variant: "destructive" });
+    },
+  });
+
+  useEffect(() => {
+    if (!resizingBooking) return;
+    const SLOT_H = 52;
+    const onMove = (e: PointerEvent) => {
+      const deltaSlots = Math.round((e.clientY - resizeStartY.current) / SLOT_H);
+      setResizeCurrentSpan(Math.max(1, resizeStartSpan.current + deltaSlots));
+    };
+    const onUp = (e: PointerEvent) => {
+      const deltaSlots = Math.round((e.clientY - resizeStartY.current) / SLOT_H);
+      const newSpan = Math.max(1, resizeStartSpan.current + deltaSlots);
+      const newDuration = newSpan * 30;
+      if (newDuration !== resizingBooking.duration) {
+        resizeMutation.mutate({ id: resizingBooking.id, duration: newDuration });
+      }
+      setResizingBooking(null);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+  }, [resizingBooking]);
+
   const favoriteServices = useMemo(() => {
     return favoriteIds.map(id => services.find(s => s.id === id)).filter(Boolean);
   }, [services, favoriteIds]);
@@ -2297,7 +2340,9 @@ export default function Planning() {
                   );
                 }
 
-                const span = booking ? getBookingSpan(booking) : 1;
+                const isResizing = resizingBooking?.id === booking?.id;
+                const span = booking ? (isResizing ? resizeCurrentSpan : getBookingSpan(booking)) : 1;
+                const liveDuration = isResizing ? resizeCurrentSpan * 30 : booking?.duration;
 
                 const isDragOver = dragOverSlot?.staff === s.name && dragOverSlot?.time === hour;
                 const isDragging = draggedAppointment?.id === booking?.id;
@@ -2318,16 +2363,17 @@ export default function Planning() {
                           "appointment-card h-full text-white cursor-grab active:cursor-grabbing relative rounded-md shadow-md",
                           span === 1 ? "flex items-center gap-1 px-1.5 py-0.5" : span <= 2 ? "flex flex-col px-1.5 py-1" : "flex flex-col px-2 py-1.5",
                           isDragging && "opacity-50 scale-95",
+                          isResizing && "ring-2 ring-white/60 ring-inset shadow-xl",
                           isConflicting && "ring-2 ring-amber-400 ring-inset"
                         )}
                         style={{ 
                           background: `linear-gradient(135deg, ${s.color}ee, ${s.color}cc)`,
                           cursor: canEdit ? 'grab' : 'default'
                         }}
-                        draggable={canEdit}
+                        draggable={canEdit && !isResizing}
                         onDragStart={(e) => handleDragStart(e, booking)}
                         onDragEnd={handleDragEnd}
-                        onClick={(e) => handleAppointmentClick(e, booking)}
+                        onClick={(e) => { if (!isResizing) handleAppointmentClick(e, booking); }}
                       >
                         <div className="water-shimmer absolute inset-0 opacity-30" />
                         {isConflicting && (
@@ -2391,7 +2437,7 @@ export default function Planning() {
                             <div className="relative z-10 flex items-center w-full gap-1 min-w-0 pointer-events-auto">
                               <span className="text-[10px] font-bold bg-white/25 px-1 py-0.5 rounded shrink-0 tabular-nums">{booking.total}</span>
                               <span className="text-[9px] opacity-90 shrink-0">{booking.startTime}</span>
-                              <span className="text-[9px] opacity-70 shrink-0">{booking.duration}′</span>
+                              <span className={cn("text-[9px] shrink-0 tabular-nums", isResizing ? "opacity-100 font-bold bg-white/30 px-1 rounded" : "opacity-70")}>{liveDuration}′</span>
                               <span className="shrink-0" style={{ marginInlineStart: 'auto' }}>{paidButton}</span>
                             </div>
                           ) : (
@@ -2406,17 +2452,35 @@ export default function Planning() {
                                   </div>
                                 ))}
                               </div>
-                              <div className="relative shrink-0 pointer-events-auto mt-auto" style={{ direction: 'ltr' }}>
+                              <div className="relative shrink-0 pointer-events-auto mt-auto pb-3" style={{ direction: 'ltr' }}>
                                 <div className="flex items-center gap-1 flex-wrap">
                                   <span className="text-[11px] font-bold bg-white/25 px-1 py-0.5 rounded tabular-nums shrink-0">{booking.total}</span>
                                   <span className="text-[10px] opacity-80 shrink-0">{booking.startTime}</span>
-                                  <span className="text-[10px] opacity-80 shrink-0">{booking.duration}′</span>
+                                  <span className={cn("text-[10px] shrink-0 tabular-nums", isResizing ? "opacity-100 font-bold bg-white/30 px-1 rounded" : "opacity-80")}>{liveDuration}′</span>
                                   <span className="shrink-0 ml-auto">{paidButton}</span>
                                 </div>
                               </div>
                             </div>
                           );
                         })()}
+                        {/* Resize handle — drag to adjust appointment duration */}
+                        {canEdit && (
+                          <div
+                            className="absolute bottom-0 left-0 right-0 h-4 flex items-end justify-center pb-0.5 z-30 cursor-ns-resize touch-none"
+                            onPointerDown={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              const currentSpan = getBookingSpan(booking);
+                              resizeStartY.current = e.clientY;
+                              resizeStartSpan.current = currentSpan;
+                              setResizeCurrentSpan(currentSpan);
+                              setResizingBooking(booking);
+                              (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+                            }}
+                          >
+                            <div className="w-10 h-1 rounded-full bg-white/70 shadow-sm" />
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
