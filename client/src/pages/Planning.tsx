@@ -3084,7 +3084,7 @@ export default function Planning() {
       
       {/* ── Staff Wallet Portal Dialog ── */}
       <Dialog open={!!walletStaffId} onOpenChange={(open) => { if (!open) { setWalletStaffId(null); setWalletShowAdd(false); } }}>
-        <DialogContent className="max-w-sm w-[95vw] rounded-2xl p-0 overflow-hidden glass-card" dir={isRtl ? "rtl" : "ltr"}>
+        <DialogContent className="max-w-sm w-[95vw] rounded-2xl p-0 overflow-hidden bg-background border border-border shadow-2xl flex flex-col max-h-[85dvh]" dir={isRtl ? "rtl" : "ltr"}>
           {(() => {
             const ws = walletStaffId ? staffList.find(s => s.id === walletStaffId) : null;
             const cur = salonSettings?.currencySymbol || "DH";
@@ -3100,8 +3100,8 @@ export default function Planning() {
 
             return (
               <>
-                {/* Header */}
-                <div className="p-4 pb-3 flex items-center gap-3" style={{ borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
+                {/* Header — sticky */}
+                <div className="shrink-0 p-4 pb-3 flex items-center gap-3 border-b border-border bg-background">
                   <Avatar className="h-12 w-12 border-2" style={{ borderColor: ws?.color || "#ccc" }}>
                     <AvatarImage src={ws?.photoUrl || undefined} alt={ws?.name} />
                     <AvatarFallback className="text-white text-lg font-bold" style={{ backgroundColor: ws?.color || "#999" }}>
@@ -3117,9 +3117,9 @@ export default function Planning() {
                   </div>
                 </div>
 
-                {/* Wallet cards */}
+                {/* Wallet cards — scrollable */}
                 {walletPortalData ? (
-                  <div className="p-4 space-y-3">
+                  <div className="flex-1 overflow-y-auto p-4 space-y-3">
                     {/* Stats row */}
                     <div className="grid grid-cols-3 gap-2">
                       <div className="rounded-xl bg-muted/40 p-2.5 text-center">
