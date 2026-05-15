@@ -49,7 +49,13 @@ function PageLoader() {
 
 // Wrapper for smooth page content appearance
 function PageContent({ children }: { children: React.ReactNode }) {
-  return <div className="page-content h-full flex flex-col min-h-0">{children}</div>;
+  const [location] = useLocation();
+  const isPlanning = location === "/" || location === "/planning";
+  return (
+    <div className={isPlanning ? "page-content flex-1 flex flex-col min-h-0" : "page-content flex flex-col"}>
+      {children}
+    </div>
+  );
 }
 
 function PermissionGuard({ children, permission }: { children: React.ReactNode, permission?: string }) {

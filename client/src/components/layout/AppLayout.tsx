@@ -72,16 +72,20 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <main
             className={
               isPlanning
-                ? "flex-1 min-h-0 overflow-hidden p-0"
+                ? "flex-1 min-h-0 overflow-hidden p-0 flex flex-col"
                 : "flex-1 min-h-0 overflow-auto p-2 md:p-4"
             }
           >
-            <div
-              className="min-h-full flex flex-col"
-              style={!isPlanning ? { paddingBottom: "calc(5rem + env(safe-area-inset-bottom))" } : undefined}
-            >
-              {children}
-            </div>
+            {isPlanning ? (
+              children
+            ) : (
+              <div
+                className="flex flex-col"
+                style={{ paddingBottom: "calc(5rem + env(safe-area-inset-bottom))" }}
+              >
+                {children}
+              </div>
+            )}
           </main>
 
           {/* Mobile bottom tab bar — hidden on md+ (desktop uses sidebar) */}

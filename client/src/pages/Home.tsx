@@ -358,6 +358,7 @@ export default function Home() {
   const { data: lowStockProducts = [] } = useQuery<any[]>({
     queryKey: ["/api/products/low-stock"],
   });
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [cashVerified, setCashVerified] = useState(() => {
     const stored = localStorage.getItem(`cash_verified_${todayDate}`);
     return stored === "true";

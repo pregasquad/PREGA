@@ -1,6 +1,6 @@
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -29,6 +29,33 @@ export function BottomNav() {
   const [location, setLocation] = useLocation();
   const [moreOpen, setMoreOpen] = useState(false);
   const [waDisconnected, setWaDisconnected] = useState(false);
+  const touchStartYRef = useRef<number | null>(null);
+  const [sheetDragY, setSheetDragY] = useState(0);
+  const SWIPE_CLOSE_THRESHOLD = 80;
+
+  const handleSheetTouchStart = useCallback((e: React.TouchEvent) => {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const relativeY = e.touches[0].clientY - rect.top;
+    if (relativeY < 80) {
+      touchStartYRef.current = e.touches[0].clientY;
+    }
+  }, []);
+
+  const handleSheetTouchMove = useCallback((e: React.TouchEvent) => {
+    if (touchStartYRef.current === null) return;
+    const delta = e.touches[0].clientY - touchStartYRef.current;
+    if (delta > 0) setSheetDragY(delta);
+  }, []);
+
+  const handleSheetTouchEnd = useCallback(() => {
+    if (sheetDragY > SWIPE_CLOSE_THRESHOLD) {
+      setMoreOpen(false);
+      setTimeout(() => setSheetDragY(0), 300);
+    } else {
+      setSheetDragY(0);
+    }
+    touchStartYRef.current = null;
+  }, [sheetDragY]);
   const [notifications, setNotifications] = useState<BookingNotification[]>([]);
   const [notifOpen, setNotifOpen] = useState(false);
   const businessName = useBusinessName();
@@ -154,20 +181,30 @@ export function BottomNav() {
       </nav>
 
       {/* ── More Sheet ───────────────────────────────────────── */}
-      <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
+      <Sheet open={moreOpen} onOpenChange={(open) => { if (!open) { setSheetDragY(0); } setMoreOpen(open); }}>
         <SheetContent
           side="bottom"
           hideClose
-          className="h-[88vh] rounded-t-3xl p-0 border-0 shadow-2xl"
+          className="h-[88vh] rounded-t-3xl p-0 border-0 shadow-2xl overflow-hidden"
           dir={isRtl ? "rtl" : "ltr"}
+          style={{
+            transform: sheetDragY > 0 ? `translateY(${sheetDragY}px)` : undefined,
+            transition: sheetDragY === 0 ? "transform 0.3s ease" : "none",
+          }}
         >
           <SheetTitle className="sr-only">{t("nav.more")}</SheetTitle>
 
+          <div
+            className="h-full"
+            onTouchStart={handleSheetTouchStart}
+            onTouchMove={handleSheetTouchMove}
+            onTouchEnd={handleSheetTouchEnd}
+          >
           <ScrollArea className="h-full">
             <div className="p-5 pb-10">
 
-              {/* Handle bar */}
-              <div className="w-10 h-1 bg-muted-foreground/25 rounded-full mx-auto mb-5" />
+              {/* Handle bar — drag here to close */}
+              <div className="w-10 h-1 bg-muted-foreground/25 rounded-full mx-auto mb-5 cursor-grab" />
 
               {/* Header row */}
               <div className="flex items-center justify-between mb-5">
@@ -306,6 +343,7 @@ export function BottomNav() {
 
             </div>
           </ScrollArea>
+          </div>
         </SheetContent>
       </Sheet>
     </>
