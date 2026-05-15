@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { useBusinessName } from "@/hooks/use-salon-data";
@@ -185,7 +184,7 @@ export function BottomNav() {
         <SheetContent
           side="bottom"
           hideClose
-          className="h-[88vh] rounded-t-3xl p-0 border-0 shadow-2xl overflow-hidden"
+          className="max-h-[85vh] rounded-t-3xl p-0 border-0 shadow-2xl overflow-hidden"
           dir={isRtl ? "rtl" : "ltr"}
           style={{
             transform: sheetDragY > 0 ? `translateY(${sheetDragY}px)` : undefined,
@@ -195,12 +194,12 @@ export function BottomNav() {
           <SheetTitle className="sr-only">{t("nav.more")}</SheetTitle>
 
           <div
-            className="h-full"
+            className="overflow-y-auto"
+            style={{ maxHeight: "85vh" }}
             onTouchStart={handleSheetTouchStart}
             onTouchMove={handleSheetTouchMove}
             onTouchEnd={handleSheetTouchEnd}
           >
-          <ScrollArea className="h-full">
             <div className="p-5 pb-10">
 
               {/* Handle bar — drag here to close */}
@@ -342,7 +341,6 @@ export function BottomNav() {
               </div>
 
             </div>
-          </ScrollArea>
           </div>
         </SheetContent>
       </Sheet>

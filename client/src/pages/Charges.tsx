@@ -1,4 +1,5 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
+import { getWorkDayDate } from "@/lib/workday";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, startOfMonth, endOfMonth, parseISO, isWithinInterval, subMonths, addMonths } from "date-fns";
 import { fr, enUS, ar } from "date-fns/locale";
@@ -30,13 +31,13 @@ export default function Charges() {
   const [type, setType] = useState("Produit");
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
-  const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [date, setDate] = useState(() => format(getWorkDayDate(), "yyyy-MM-dd"));
   const [attachment, setAttachment] = useState<string | null>(null);
   const [attachmentName, setAttachmentName] = useState<string | null>(null);
   const [previewAttachment, setPreviewAttachment] = useState<{data: string, name: string} | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [newCategoryName, setNewCategoryName] = useState("");
-  const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [selectedMonth, setSelectedMonth] = useState(() => getWorkDayDate());
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isAdmin = sessionStorage.getItem("current_user_role") === "owner";
@@ -45,7 +46,18 @@ export default function Charges() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const [withdrawalAmount, setWithdrawalAmount] = useState("");
-  const [withdrawalDate, setWithdrawalDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [withdrawalDate, setWithdrawalDate] = useState(() => format(getWorkDayDate(), "yyyy-MM-dd"));
+  const chargesDateInitRef = useRef(false);
+
+  useEffect(() => {
+    if (salonSettings?.openingTime && salonSettings?.closingTime && !chargesDateInitRef.current) {
+      chargesDateInitRef.current = true;
+      const workDay = getWorkDayDate(salonSettings.openingTime, salonSettings.closingTime);
+      setDate(format(workDay, "yyyy-MM-dd"));
+      setWithdrawalDate(format(workDay, "yyyy-MM-dd"));
+      setSelectedMonth(workDay);
+    }
+  }, [salonSettings?.openingTime, salonSettings?.closingTime]);
   const [withdrawalNotes, setWithdrawalNotes] = useState("");
 
   const getLocale = () => {
@@ -58,7 +70,7 @@ export default function Charges() {
 
   const goToPreviousMonth = () => setSelectedMonth(subMonths(selectedMonth, 1));
   const goToNextMonth = () => setSelectedMonth(addMonths(selectedMonth, 1));
-  const goToCurrentMonth = () => setSelectedMonth(new Date());
+  const goToCurrentMonth = () => setSelectedMonth(getWorkDayDate(salonSettings?.openingTime, salonSettings?.closingTime));
 
   const { data: charges = [] } = useQuery<any[]>({
     queryKey: ["/api/charges"],

@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
+import { getWorkDayDate } from "@/lib/workday";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAppointments, useStaff, useServices, useBusinessSettings } from "@/hooks/use-salon-data";
@@ -70,16 +71,26 @@ export default function Reports() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [viewMode, setViewMode] = useState<ViewMode>("weekly");
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [customRange, setCustomRange] = useState<DateRange | undefined>({
-    from: new Date(),
-    to: new Date()
+  const [selectedDate, setSelectedDate] = useState<Date>(() => getWorkDayDate());
+  const [customRange, setCustomRange] = useState<DateRange | undefined>(() => {
+    const wd = getWorkDayDate();
+    return { from: wd, to: wd };
   });
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<ReportCategory>("financial");
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const { data: bSettings } = useBusinessSettings();
+  const reportsDateInitRef = useRef(false);
+
+  useEffect(() => {
+    if (bSettings?.openingTime && bSettings?.closingTime && !reportsDateInitRef.current) {
+      reportsDateInitRef.current = true;
+      const workDay = getWorkDayDate(bSettings.openingTime, bSettings.closingTime);
+      setSelectedDate(workDay);
+      setCustomRange({ from: workDay, to: workDay });
+    }
+  }, [bSettings?.openingTime, bSettings?.closingTime]);
   const { data: appointments = [] } = useAppointments();
   const { data: staffList = [] } = useStaff();
   const { data: services = [] } = useServices();

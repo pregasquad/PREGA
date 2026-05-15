@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { getWorkDayDate } from "@/lib/workday";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { formatCurrency } from "@/lib/utils";
@@ -18,13 +19,14 @@ import { useToast } from "@/hooks/use-toast";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import type { Staff, Appointment, Service, StaffGoal } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
+import { useBusinessSettings } from "@/hooks/use-salon-data";
 
 
 export default function StaffPerformance() {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [selectedMonth, setSelectedMonth] = useState(() => format(new Date(), "yyyy-MM"));
+  const [selectedMonth, setSelectedMonth] = useState(() => format(getWorkDayDate(), "yyyy-MM"));
   const [selectedStaff, setSelectedStaff] = useState<string>("all");
   const [activeTab, setActiveTab] = useState("performance");
   const [goalDialogOpen, setGoalDialogOpen] = useState(false);
@@ -35,6 +37,16 @@ export default function StaffPerformance() {
     appointmentsTarget: 0,
     bonusPercentage: 5,
   });
+
+  const { data: bSettings } = useBusinessSettings();
+  const perfDateInitRef = useRef(false);
+
+  useEffect(() => {
+    if (bSettings?.openingTime && bSettings?.closingTime && !perfDateInitRef.current) {
+      perfDateInitRef.current = true;
+      setSelectedMonth(format(getWorkDayDate(bSettings.openingTime, bSettings.closingTime), "yyyy-MM"));
+    }
+  }, [bSettings?.openingTime, bSettings?.closingTime]);
 
   const { data: staffList = [], isLoading: loadingStaff } = useQuery<Staff[]>({
     queryKey: ["/api/staff"],
