@@ -2149,21 +2149,21 @@ export default function Planning() {
         </div>
       )}
 
-      {/* Board with sticky header - Glass Container */}
-      <div className={cn("flex-1 min-h-0 flex flex-col glass-card rounded-3xl overflow-hidden", showSearchInput && appointmentSearch && searchResults.count > 0 && "hidden")} dir={isRtl ? "rtl" : "ltr"}>
-        {/* Sticky Staff Headers - iOS Liquid Glass Style */}
+      {/* Board with sticky header */}
+      <div className={cn("flex-1 min-h-0 flex flex-col rounded-2xl overflow-hidden border border-rose-100 dark:border-slate-700 shadow-lg bg-white dark:bg-slate-900", showSearchInput && appointmentSearch && searchResults.count > 0 && "hidden")} dir={isRtl ? "rtl" : "ltr"}>
+        {/* Sticky Staff Headers */}
         <div 
           ref={headerRef}
-          className="grid glass border-b border-white/20 dark:border-white/5 z-50 shrink-0 overflow-x-hidden"
+          className="grid z-50 shrink-0 overflow-x-hidden bg-gradient-to-b from-rose-50 to-white dark:from-slate-800 dark:to-slate-850 border-b-2 border-rose-200 dark:border-slate-600"
           style={{ 
             gridTemplateColumns: `44px repeat(${staffList.length}, minmax(80px, 1fr))`,
           }}
         >
-          <div className={cn("bg-white/30 dark:bg-white/5 py-1 px-0.5", isRtl ? "border-l border-white/20 dark:border-white/5" : "border-r border-white/20 dark:border-white/5")}></div>
+          <div className={cn("bg-rose-50/80 dark:bg-slate-900/80 py-1 px-0.5", isRtl ? "border-l border-rose-200 dark:border-slate-600" : "border-r border-rose-200 dark:border-slate-600")}></div>
           {staffList.map((s, staffIndex) => (
             <div 
               key={s.id} 
-              className={cn("py-1.5 px-0.5 font-semibold text-center text-[10px]", isRtl ? "border-l border-white/10 dark:border-white/5" : "border-r border-white/10 dark:border-white/5")}
+              className={cn("py-2 px-0.5 font-semibold text-center text-[10px]", isRtl ? "border-l border-rose-100 dark:border-slate-700" : "border-r border-rose-100 dark:border-slate-700")}
             >
               <div className="flex flex-col items-center justify-center gap-1">
                 {s.photoUrl ? (
@@ -2189,7 +2189,7 @@ export default function Planning() {
                     {s.name.charAt(0).toUpperCase()}
                   </div>
                 )}
-                <span className="text-foreground/90 font-bold text-[10px] leading-tight break-words max-w-[80px] truncate">{s.name}</span>
+                <span className="text-slate-700 dark:text-slate-200 font-bold text-[10px] leading-tight break-words max-w-[80px] truncate">{s.name}</span>
               </div>
             </div>
           ))}
@@ -2203,7 +2203,7 @@ export default function Planning() {
         )}
 
         {/* Scrollable content */}
-        <div ref={boardRef} className={cn("flex-1 min-h-0 overflow-auto relative free-scroll planning-scroll bg-white/80 dark:bg-slate-900/80", isMobile && "pb-24")}>
+        <div ref={boardRef} className={cn("flex-1 min-h-0 overflow-auto relative free-scroll planning-scroll bg-white dark:bg-slate-900", isMobile && "pb-24")}>
           <div 
             className="grid relative"
             style={{ 
@@ -2263,8 +2263,8 @@ export default function Planning() {
             <React.Fragment key={hour}>
               <div 
                 className={cn(
-                  "bg-white/60 dark:bg-slate-800/60 border-b border-slate-200/50 dark:border-slate-700/50 px-0.5 py-1 text-[11px] font-medium text-slate-500 dark:text-slate-400 sticky z-30 flex items-center justify-center",
-                  isRtl ? "right-0 border-l border-primary/20" : "left-0 border-r border-primary/20"
+                  "bg-rose-50 dark:bg-slate-800 border-b border-rose-100 dark:border-slate-700 px-0.5 py-1 text-[11px] font-bold text-rose-400 dark:text-slate-300 sticky z-30 flex items-center justify-center",
+                  isRtl ? "right-0 border-l-2 border-l-rose-200 dark:border-l-slate-600" : "left-0 border-r-2 border-r-rose-200 dark:border-r-slate-600"
                 )}
                 style={{ gridColumn: 1, gridRow: rowNum }}
               >
@@ -2282,7 +2282,7 @@ export default function Planning() {
                   return (
                     <div
                       key={`${s.id}-${hour}-covered`}
-                      className={cn("border-b border-slate-100/50 dark:border-slate-800/50 bg-transparent pointer-events-none", isRtl ? "border-l border-slate-100/50 dark:border-slate-800/50" : "border-r border-slate-100/50 dark:border-slate-800/50")}
+                      className={cn("border-b border-rose-50 dark:border-slate-800 bg-transparent pointer-events-none", isRtl ? "border-l border-rose-100 dark:border-slate-700" : "border-r border-rose-100 dark:border-slate-700")}
                       style={{ gridColumn: colNum, gridRow: rowNum }}
                     />
                   );
@@ -2417,10 +2417,11 @@ export default function Planning() {
                   <div
                     key={`${s.id}-${hour}`}
                     className={cn(
-                      "border-b border-slate-100/50 dark:border-slate-800/50 min-h-[60px] transition-all duration-300 bg-transparent",
-                      isRtl ? "border-l border-slate-100/50 dark:border-slate-800/50" : "border-r border-slate-100/50 dark:border-slate-800/50",
-                      "hover:bg-primary/5 dark:hover:bg-primary/10 cursor-pointer",
-                      isDragOver && "bg-primary/10 dark:bg-primary/20 ring-2 ring-primary/50 ring-inset"
+                      "border-b border-rose-50 dark:border-slate-800 min-h-[52px] transition-colors duration-150",
+                      isRtl ? "border-l border-rose-100 dark:border-slate-700" : "border-r border-rose-100 dark:border-slate-700",
+                      "hover:bg-rose-50/80 dark:hover:bg-slate-700/50 cursor-pointer",
+                      isDragOver && "bg-rose-100 dark:bg-slate-700 ring-2 ring-primary/40 ring-inset",
+                      hourIndex % 2 === 0 ? "bg-white dark:bg-slate-900" : "bg-rose-50/30 dark:bg-slate-800/50"
                     )}
                     style={{ 
                       gridColumn: colNum,
