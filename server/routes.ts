@@ -2619,6 +2619,9 @@ export async function registerRoutes(
   });
 
   app.post("/api/whatsapp/reconnect", isPinAuthenticated, async (_req, res) => {
+    if (process.env.REPL_ID) {
+      return res.status(400).json({ success: false, error: "REPLIT_DEV" });
+    }
     try {
       const { reconnect } = await import("./baileys");
       await reconnect();
@@ -2629,6 +2632,9 @@ export async function registerRoutes(
   });
 
   app.post("/api/whatsapp/disconnect", isPinAuthenticated, requirePermission("admin_settings"), async (_req, res) => {
+    if (process.env.REPL_ID) {
+      return res.status(400).json({ success: false, error: "REPLIT_DEV" });
+    }
     try {
       const { disconnect } = await import("./baileys");
       await disconnect();
@@ -2639,6 +2645,9 @@ export async function registerRoutes(
   });
 
   app.post("/api/whatsapp/clear-session", isPinAuthenticated, async (_req, res) => {
+    if (process.env.REPL_ID) {
+      return res.status(400).json({ success: false, error: "REPLIT_DEV" });
+    }
     try {
       const { clearSessionIfDisconnected } = await import("./baileys");
       clearSessionIfDisconnected();
