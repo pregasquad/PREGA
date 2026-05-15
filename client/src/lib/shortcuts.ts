@@ -33,3 +33,31 @@ export const SHORTCUT_OPTIONS: ShortcutOption[] = [
 ];
 
 export const DEFAULT_SHORTCUTS = ["planning", "home", "clients", "salaries"];
+
+export function normalizePlanningShortcuts(keys: unknown): string[] {
+  const input = Array.isArray(keys) ? keys : [];
+  const seen = new Set<string>();
+  const valid: string[] = [];
+
+  for (const k of input) {
+    if (
+      typeof k === "string" &&
+      SHORTCUT_OPTIONS.some(o => o.key === k) &&
+      !seen.has(k)
+    ) {
+      seen.add(k);
+      valid.push(k);
+    }
+    if (valid.length === 4) break;
+  }
+
+  for (const def of DEFAULT_SHORTCUTS) {
+    if (valid.length >= 4) break;
+    if (!seen.has(def)) {
+      seen.add(def);
+      valid.push(def);
+    }
+  }
+
+  return valid;
+}

@@ -8,7 +8,8 @@ import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { useBusinessName } from "@/hooks/use-salon-data";
 import { getAppSocket } from "@/lib/appSocket";
-import { SHORTCUT_OPTIONS, DEFAULT_SHORTCUTS, type ShortcutOption } from "@/lib/shortcuts";
+import { SHORTCUT_OPTIONS, normalizePlanningShortcuts, type ShortcutOption } from "@/lib/shortcuts";
+import { useNavigationPermissions } from "@/hooks/use-navigation-permissions";
 import {
   MoreHorizontal, LogOut, ShieldCheck, UserCircle,
   Bell, X, ExternalLink,
@@ -32,27 +33,11 @@ export function BottomNav() {
   const [notifOpen, setNotifOpen] = useState(false);
   const businessName = useBusinessName();
 
-  const currentUserName = typeof window !== "undefined" ? sessionStorage.getItem("current_user") : null;
-  const isAdmin = typeof window !== "undefined" ? sessionStorage.getItem("admin_authenticated") === "true" : false;
-
-  const { data: adminRoles = [] } = useQuery<Array<{ id: number; name: string; role: string; permissions: string[] }>>({
-    queryKey: ["/api/admin-roles"],
-  });
+  const { hasPermission, currentUserName, isAdmin } = useNavigationPermissions();
 
   const { data: businessSettings } = useQuery<{ planningShortcuts?: string[] }>({
     queryKey: ["/api/business-settings"],
   });
-
-  const currentUser = adminRoles.find(r => r.name === currentUserName);
-
-  const hasPermission = (permission: string | null) => {
-    if (!permission) return true;
-    if (!currentUserName || currentUserName === "Setup") return true;
-    if (!currentUser) return true;
-    if (currentUser.role === "owner") return true;
-    if (currentUser.permissions.length === 0) return true;
-    return currentUser.permissions.includes(permission);
-  };
 
   useEffect(() => {
     const socket = getAppSocket();
@@ -66,12 +51,14 @@ export function BottomNav() {
 
     socket.on("booking:created",       onBookingCreated);
     socket.on("whatsapp:disconnected", onWaDisconnected);
+    socket.on("whatsapp:logged_out",   onWaDisconnected);
     socket.on("whatsapp:connected",    onWaConnected);
     socket.on("whatsapp:status",       onWaStatus);
 
     return () => {
       socket.off("booking:created",       onBookingCreated);
       socket.off("whatsapp:disconnected", onWaDisconnected);
+      socket.off("whatsapp:logged_out",   onWaDisconnected);
       socket.off("whatsapp:connected",    onWaConnected);
       socket.off("whatsapp:status",       onWaStatus);
     };
@@ -90,7 +77,7 @@ export function BottomNav() {
   };
 
   // ── Compute primary tabs from business settings ──────────────────
-  const configuredKeys = businessSettings?.planningShortcuts || DEFAULT_SHORTCUTS;
+  const configuredKeys = normalizePlanningShortcuts(businessSettings?.planningShortcuts);
 
   const primaryTabs = configuredKeys
     .map(key => SHORTCUT_OPTIONS.find(o => o.key === key))

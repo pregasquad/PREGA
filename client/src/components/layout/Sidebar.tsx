@@ -118,11 +118,6 @@ export function Sidebar() {
   
   const { data: adminRoles = [] } = useQuery<AdminRole[]>({
     queryKey: ["/api/admin-roles"],
-    queryFn: async () => {
-      const res = await fetch("/api/admin-roles");
-      if (!res.ok) return [];
-      return res.json();
-    },
   });
 
   const currentUser = adminRoles.find(role => role.name === currentUserName);
