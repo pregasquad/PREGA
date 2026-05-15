@@ -3124,6 +3124,21 @@ export default function Planning() {
                       <span>{t("salaries.walletBalance")}</span>
                     </div>
                   </div>
+                  {canManage && walletPortalData && walletPortalData.walletBalance > 0 && (
+                    <button
+                      disabled={markStaffPaidMutation.isPending}
+                      onClick={() => markStaffPaidMutation.mutate({ staffId: walletStaffId!, staffName: walletPortalData.staffName, amount: Math.max(0, walletPortalData.walletBalance) })}
+                      className="shrink-0 flex flex-col items-center justify-center gap-0.5 w-14 h-14 rounded-2xl bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white transition-all shadow-md disabled:opacity-60"
+                      data-testid="button-wallet-mark-paid-header"
+                      title={t("salaries.markAsPaid")}
+                    >
+                      {markStaffPaidMutation.isPending
+                        ? <RefreshCw className="w-5 h-5 animate-spin" />
+                        : <CheckCircle className="w-5 h-5" />
+                      }
+                      <span className="text-[9px] font-bold leading-tight">{(walletPortalData.walletBalance).toFixed(0)}</span>
+                    </button>
+                  )}
                 </div>
 
                 {/* Wallet cards — scrollable */}

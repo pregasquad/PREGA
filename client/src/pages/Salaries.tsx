@@ -983,30 +983,23 @@ export default function Salaries() {
                       </div>
                     </div>
                     {wallet.walletBalance > 0 && (
-                      <div className="shrink-0 flex flex-col items-end gap-1">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="shrink-0"
-                          disabled={createPaymentMutation.isPending || !isBusinessOpen}
-                          onClick={() => createPaymentMutation.mutate({
-                            staffId: s.id,
-                            staffName: s.name,
-                            amount: Math.max(0, wallet.walletBalance),
-                          })}
-                          data-testid={`button-pay-staff-${s.id}`}
-                        >
-                          <CheckCircle className="h-3 w-3 me-1" />
-                          {t("salaries.markAsPaid")}
-                        </Button>
-                        {!isBusinessOpen && (
-                          <span className="text-[9px] text-muted-foreground text-end leading-tight">
-                            {bSettings?.openingTime && bSettings?.closingTime
-                              ? `${bSettings.openingTime} – ${bSettings.closingTime}`
-                              : "Business closed"}
-                          </span>
-                        )}
-                      </div>
+                      <button
+                        disabled={createPaymentMutation.isPending || !isBusinessOpen}
+                        onClick={() => createPaymentMutation.mutate({
+                          staffId: s.id,
+                          staffName: s.name,
+                          amount: Math.max(0, wallet.walletBalance),
+                        })}
+                        className="shrink-0 flex flex-col items-center justify-center gap-0.5 w-14 h-14 rounded-2xl bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white transition-all shadow-md disabled:opacity-60"
+                        data-testid={`button-pay-staff-${s.id}`}
+                        title={`${t("salaries.markAsPaid")} · ${!isBusinessOpen ? (bSettings?.openingTime && bSettings?.closingTime ? `${bSettings.openingTime}–${bSettings.closingTime}` : "Business closed") : ""}`}
+                      >
+                        {createPaymentMutation.isPending
+                          ? <RefreshCw className="h-5 w-5 animate-spin" />
+                          : <CheckCircle className="h-5 w-5" />
+                        }
+                        <span className="text-[9px] font-bold leading-tight">{wallet.walletBalance.toFixed(0)}</span>
+                      </button>
                     )}
                   </div>
                 </div>
