@@ -16,7 +16,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { CalendarIcon, ChevronLeft, ChevronRight, Plus, Trash2, Check, X, Search, Star, RefreshCw, Sparkles, CreditCard, Settings2, Scissors, Clock, User, ChevronsUpDown, ListTodo, Bell, UserCheck, Gift, AlertCircle, AlertTriangle, Wallet, Users, Package, Lock, ShieldCheck } from "lucide-react";
+import { CalendarIcon, ChevronLeft, ChevronRight, Plus, Trash2, Check, X, Search, Star, RefreshCw, Sparkles, CreditCard, Settings2, Scissors, Clock, User, ChevronsUpDown, ListTodo, Bell, UserCheck, Gift, AlertCircle, AlertTriangle, Wallet, Users, Package, Lock, ShieldCheck, CheckCircle, UserMinus, ChevronDown, Pencil, ArrowDownLeft } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
 import { cn } from "@/lib/utils";
@@ -388,6 +389,16 @@ export default function Planning() {
   const [appliedLoyaltyPoints, setAppliedLoyaltyPoints] = useState<{clientId: number; points: number; discountAmount: number} | null>(null);
   const [appliedGiftCardBalance, setAppliedGiftCardBalance] = useState<{clientId: number; amount: number; discountAmount: number} | null>(null);
   const priceInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  // Staff Wallet Portal state
+  const [walletStaffId, setWalletStaffId] = useState<number | null>(null);
+  const [walletShowAdd, setWalletShowAdd] = useState(false);
+  const [walletDeductForm, setWalletDeductForm] = useState<{
+    type: "advance" | "loan" | "penalty" | "other";
+    description: string;
+    amount: string;
+  }>({ type: "advance", description: "", amount: "" });
+  const [walletOpenDeductions, setWalletOpenDeductions] = useState(false);
+
   const { toast } = useToast();
   const { data: salonSettings } = useBusinessSettings();
 
@@ -425,6 +436,108 @@ export default function Planning() {
   const { data: adminRoles = [] } = useQuery<Array<{id: number; name: string; role: string; permissions: string[]}>>({
     queryKey: ["/api/admin-roles"],
   });
+
+  // Salary data for wallet portal (fetched lazily when wallet opens)
+  const { data: salaryData } = useQuery<{
+    staff: any[]; services: any[]; staffCommissions: any[];
+    appointments: any[]; charges: any[]; deductions: any[];
+    staffPayments: any[]; salonPayments: any[];
+  }>({
+    queryKey: ["/api/salaries/compute"],
+    enabled: !!walletStaffId,
+  });
+
+  const createDeductionMutation = useMutation({
+    mutationFn: async (data: { staffName: string; type: string; description: string; amount: number; date: string }) => {
+      const res = await apiRequest("POST", "/api/staff-deductions", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+      setWalletShowAdd(false);
+      setWalletDeductForm({ type: "advance", description: "", amount: "" });
+      toast({ title: t("salaries.deductions") });
+    },
+  });
+
+  const markStaffPaidMutation = useMutation({
+    mutationFn: async (data: { staffId: number; staffName: string; amount: number }) => {
+      const res = await apiRequest("POST", "/api/staff-payments", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+      toast({ title: t("salaries.markAsPaid") });
+    },
+  });
+
+  const clearWalletDeductionMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("PATCH", `/api/staff-deductions/${id}/clear`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+    },
+  });
+
+  // Compute wallet data for the selected staff member
+  const walletPortalData = useMemo(() => {
+    if (!walletStaffId || !salaryData) return null;
+    const s = salaryData.staff?.find((st: any) => st.id === walletStaffId);
+    if (!s) return null;
+
+    const staffPaymentsList: any[] = (salaryData.staffPayments || []).filter((p: any) => Number(p.staffId) === walletStaffId);
+    const lastPayment = staffPaymentsList.sort((a: any, b: any) => new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime())[0];
+    const lastPaymentDate = lastPayment ? new Date(lastPayment.paidAt) : null;
+
+    let sinceDate: string | null = null;
+    if (lastPaymentDate) {
+      const openMins = businessSettings?.openingTime
+        ? parseInt(businessSettings.openingTime.split(':')[0]) * 60 + parseInt(businessSettings.openingTime.split(':')[1])
+        : 0;
+      const dateMins = lastPaymentDate.getHours() * 60 + lastPaymentDate.getMinutes();
+      const adjusted = dateMins < openMins ? subDays(lastPaymentDate, 1) : lastPaymentDate;
+      sinceDate = `${adjusted.getFullYear()}-${String(adjusted.getMonth() + 1).padStart(2, "0")}-${String(adjusted.getDate()).padStart(2, "0")}`;
+    }
+
+    const getCommission = (serviceName: string) => {
+      const sc = (salaryData.staffCommissions || []).find((sc: any) => sc.staffName === s.name && sc.serviceName === serviceName);
+      return sc ? sc.commissionRate : 0;
+    };
+
+    const walletAppts = (salaryData.appointments || []).filter((apt: any) => {
+      if (!apt.paid) return false;
+      const match = Number(apt.staffId) === walletStaffId || (!apt.staffId && apt.staff === s.name);
+      if (!match) return false;
+      if (sinceDate) return apt.date >= sinceDate;
+      return true;
+    });
+
+    let walletRevenue = 0;
+    let walletCommission = 0;
+    walletAppts.forEach((apt: any) => {
+      const total = apt.total || 0;
+      walletRevenue += total;
+      walletCommission += (total * getCommission(apt.service || "")) / 100;
+    });
+
+    const pendingDeductions: any[] = (salaryData.deductions || []).filter((d: any) =>
+      !d.cleared && (Number(d.staffId) === walletStaffId || (!d.staffId && d.staffName === s.name))
+    );
+    const pendingTotal = pendingDeductions.reduce((sum: number, d: any) => sum + Math.max(0, d.amount - (d.paidBack || 0)), 0);
+
+    return {
+      staffName: s.name,
+      walletRevenue,
+      walletCommission,
+      walletBalance: walletCommission - pendingTotal,
+      sinceDate,
+      lastPaymentDate,
+      apptCount: walletAppts.length,
+      deductions: pendingDeductions,
+    };
+  }, [walletStaffId, salaryData, businessSettings]);
+
   const currentUserName = typeof window !== 'undefined' ? sessionStorage.getItem("current_user") : null;
   const currentUser = adminRoles.find(role => role.name === currentUserName);
   const hasPermission = (permission: string) => {
@@ -1728,8 +1841,15 @@ export default function Planning() {
             return (
               <div key={s.id} className="flex items-center gap-0.5 md:gap-1.5 glass-card px-1.5 md:px-2 py-0.5 md:py-1 rounded-full">
                 <div 
-                  className="w-6 h-6 md:w-8 md:h-8 rounded-full flex items-center justify-center text-white text-[9px] md:text-xs font-bold overflow-hidden"
+                  className="w-6 h-6 md:w-8 md:h-8 rounded-full flex items-center justify-center text-white text-[9px] md:text-xs font-bold overflow-hidden cursor-pointer active:scale-90 transition-transform"
                   style={{ backgroundColor: s.color }}
+                  onClick={() => {
+                    setWalletStaffId(s.id);
+                    setWalletShowAdd(false);
+                    setWalletOpenDeductions(false);
+                    setWalletDeductForm({ type: "advance", description: "", amount: "" });
+                  }}
+                  data-testid={`button-staff-wallet-${s.id}`}
                 >
                   {staffMember?.photoUrl ? (
                     <img src={staffMember.photoUrl} alt={s.name} className="w-full h-full object-cover" />
@@ -2961,6 +3081,205 @@ export default function Planning() {
         </DialogContent>
       </Dialog>
       
+      {/* ── Staff Wallet Portal Dialog ── */}
+      <Dialog open={!!walletStaffId} onOpenChange={(open) => { if (!open) { setWalletStaffId(null); setWalletShowAdd(false); } }}>
+        <DialogContent className="max-w-sm w-[95vw] rounded-2xl p-0 overflow-hidden glass-card" dir={isRtl ? "rtl" : "ltr"}>
+          {(() => {
+            const ws = walletStaffId ? staffList.find(s => s.id === walletStaffId) : null;
+            const cur = salonSettings?.currencySymbol || "DH";
+            const fmt = (n: number) => `${Math.abs(n).toFixed(0)} ${cur}`;
+            const deductLabel = (type: string) => {
+              if (type === "advance") return t("salaries.advance");
+              if (type === "penalty") return t("salaries.penalty");
+              if (type === "loan") return "Loan";
+              return type;
+            };
+            const today = format(getWorkDayDate(businessSettings?.openingTime, businessSettings?.closingTime), "yyyy-MM-dd");
+            const canManage = hasPermission("manage_salaries");
+
+            return (
+              <>
+                {/* Header */}
+                <div className="p-4 pb-3 flex items-center gap-3" style={{ borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
+                  <Avatar className="h-12 w-12 border-2" style={{ borderColor: ws?.color || "#ccc" }}>
+                    <AvatarImage src={ws?.photoUrl || undefined} alt={ws?.name} />
+                    <AvatarFallback className="text-white text-lg font-bold" style={{ backgroundColor: ws?.color || "#999" }}>
+                      {ws?.name?.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-base truncate">{ws?.name}</p>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Wallet className="w-3 h-3" />
+                      <span>{t("salaries.walletBalance")}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Wallet cards */}
+                {walletPortalData ? (
+                  <div className="p-4 space-y-3">
+                    {/* Stats row */}
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="rounded-xl bg-muted/40 p-2.5 text-center">
+                        <p className="text-[10px] text-muted-foreground mb-1">{t("salaries.totalRevenue")}</p>
+                        <p className="text-xs font-bold tabular-nums">{fmt(walletPortalData.walletRevenue)}</p>
+                      </div>
+                      <div className="rounded-xl bg-green-50/80 dark:bg-green-950/20 p-2.5 text-center">
+                        <p className="text-[10px] text-muted-foreground mb-1">{t("salaries.staffCommissions")}</p>
+                        <p className="text-xs font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{fmt(walletPortalData.walletCommission)}</p>
+                      </div>
+                      <div className="rounded-xl bg-primary/5 dark:bg-primary/10 p-2.5 text-center">
+                        <p className="text-[10px] text-muted-foreground mb-1">{t("salaries.walletBalance")}</p>
+                        <p className={`text-xs font-bold tabular-nums ${walletPortalData.walletBalance < 0 ? "text-red-600 dark:text-red-400" : walletPortalData.walletBalance > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}`}>
+                          {walletPortalData.walletBalance < 0 ? "- " : ""}{fmt(walletPortalData.walletBalance)}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Since / count info */}
+                    <p className="text-[10px] text-muted-foreground text-center">
+                      {walletPortalData.apptCount} rdv
+                      {walletPortalData.sinceDate ? ` · ${t("salaries.lastPaid")}: ${format(parseISO(walletPortalData.sinceDate), "d/M/yy")}` : ""}
+                    </p>
+
+                    {/* Mark as Paid */}
+                    {canManage && walletPortalData.walletBalance > 0 && (
+                      <button
+                        disabled={markStaffPaidMutation.isPending}
+                        onClick={() => markStaffPaidMutation.mutate({ staffId: walletStaffId!, staffName: walletPortalData.staffName, amount: Math.max(0, walletPortalData.walletBalance) })}
+                        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] text-white text-sm font-semibold transition-all shadow-sm disabled:opacity-60"
+                        data-testid="button-wallet-mark-paid"
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                        {t("salaries.markAsPaid")} · {fmt(walletPortalData.walletBalance)}
+                      </button>
+                    )}
+
+                    {/* Deductions section */}
+                    <div className="rounded-xl overflow-hidden border border-orange-200/50 dark:border-orange-800/30">
+                      <button
+                        type="button"
+                        onClick={() => setWalletOpenDeductions(v => !v)}
+                        className="w-full flex items-center gap-2 px-3 py-2 bg-orange-50/80 dark:bg-orange-950/20 hover:bg-orange-100/60 dark:hover:bg-orange-900/30 transition-colors"
+                      >
+                        <UserMinus className="h-3 w-3 text-orange-600 dark:text-orange-400 shrink-0" />
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-orange-700 dark:text-orange-400 flex-1 text-start">
+                          {t("staffPortal.allDeductions")}
+                          {walletPortalData.deductions.length > 0 && <span className="ms-1 text-orange-500/70">({walletPortalData.deductions.length})</span>}
+                        </span>
+                        {canManage && (
+                          <span
+                            className="flex items-center justify-center h-5 w-5 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400 hover:bg-orange-200 transition-colors"
+                            onClick={(e) => { e.stopPropagation(); setWalletShowAdd(v => !v); setWalletOpenDeductions(true); }}
+                            data-testid="button-wallet-add-deduction"
+                          >
+                            <Plus className="h-3 w-3" />
+                          </span>
+                        )}
+                        <ChevronDown className={`h-3 w-3 text-orange-500 transition-transform duration-200 ${walletOpenDeductions ? "rotate-180" : ""}`} />
+                      </button>
+
+                      {walletOpenDeductions && (
+                        <div className="px-3 py-2 bg-orange-50/40 dark:bg-orange-950/10 space-y-1">
+                          {/* Add deduction inline form */}
+                          {walletShowAdd && canManage && (
+                            <div className="bg-background rounded-xl p-3 space-y-2 mb-2 border border-orange-200/40">
+                              <p className="text-[11px] font-semibold text-orange-700 dark:text-orange-400">{t("salaries.deductionType")}</p>
+                              <Select value={walletDeductForm.type} onValueChange={(v) => setWalletDeductForm(f => ({ ...f, type: v as any }))}>
+                                <SelectTrigger className="h-8 text-xs rounded-lg">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="advance">{t("salaries.advance")}</SelectItem>
+                                  <SelectItem value="loan">Loan</SelectItem>
+                                  <SelectItem value="penalty">{t("salaries.penalty")}</SelectItem>
+                                  <SelectItem value="other">Other</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <Input
+                                className="h-8 text-xs rounded-lg"
+                                placeholder={t("salaries.deductionDescription")}
+                                value={walletDeductForm.description}
+                                onChange={(e) => setWalletDeductForm(f => ({ ...f, description: e.target.value }))}
+                              />
+                              <Input
+                                type="number"
+                                className="h-8 text-xs rounded-lg"
+                                placeholder={`${t("common.amount")} (${cur})`}
+                                value={walletDeductForm.amount}
+                                onChange={(e) => setWalletDeductForm(f => ({ ...f, amount: e.target.value }))}
+                              />
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => {
+                                    const amount = parseFloat(walletDeductForm.amount);
+                                    if (!amount || amount <= 0) return;
+                                    createDeductionMutation.mutate({
+                                      staffName: walletPortalData.staffName,
+                                      type: walletDeductForm.type,
+                                      description: walletDeductForm.description,
+                                      amount,
+                                      date: today,
+                                    });
+                                  }}
+                                  disabled={createDeductionMutation.isPending || !walletDeductForm.amount}
+                                  className="flex-1 py-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold transition-colors disabled:opacity-50"
+                                  data-testid="button-wallet-save-deduction"
+                                >
+                                  {createDeductionMutation.isPending ? "..." : t("common.save")}
+                                </button>
+                                <button
+                                  onClick={() => setWalletShowAdd(false)}
+                                  className="px-3 py-1.5 rounded-lg bg-muted hover:bg-muted/80 text-xs font-semibold transition-colors"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Deduction list */}
+                          {walletPortalData.deductions.length === 0 ? (
+                            <p className="text-[10px] text-muted-foreground text-center py-1">{t("salaries.noDeductionsForPeriod")}</p>
+                          ) : (
+                            walletPortalData.deductions.map((d: any) => {
+                              const remaining = Math.max(0, d.amount - (d.paidBack || 0));
+                              return (
+                                <div key={d.id} className="flex items-center justify-between gap-1 py-1.5 border-t border-orange-200/30 dark:border-orange-800/20 first:border-0">
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-xs font-medium">{deductLabel(d.type)}{d.description ? ` · ${d.description}` : ""}</p>
+                                    <p className="text-[10px] text-red-600 dark:text-red-400 tabular-nums">- {fmt(remaining)} · {format(parseISO(d.date), "d/M/yy")}</p>
+                                  </div>
+                                  {canManage && (
+                                    <button
+                                      onClick={() => clearWalletDeductionMutation.mutate(d.id)}
+                                      disabled={clearWalletDeductionMutation.isPending}
+                                      className="flex items-center justify-center h-6 w-6 rounded-full hover:bg-green-100 dark:hover:bg-green-900/30 text-green-600 transition-colors disabled:opacity-50"
+                                      data-testid={`button-wallet-clear-deduction-${d.id}`}
+                                    >
+                                      <CheckCircle className="h-3.5 w-3.5" />
+                                    </button>
+                                  )}
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-8 flex items-center justify-center">
+                    <RefreshCw className="w-5 h-5 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
       {/* Floating "Go to Now" button - iOS Liquid Glass Style */}
       {isToday && getCurrentTimePosition(hours, businessSettings?.openingTime, businessSettings?.closingTime) >= 0 && (
         <button
