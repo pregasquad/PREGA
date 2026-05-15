@@ -386,7 +386,7 @@ export default function Charges() {
   const netRemaining = monthRevenue - totalWithdrawals - totalCharges;
 
   return (
-    <div className="h-full flex flex-col gap-4 md:gap-6 p-2 md:p-4 animate-fade-in" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
+    <div className="flex flex-col gap-4 md:gap-6 p-2 md:p-4 animate-fade-in" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <h1 className="text-xl md:text-2xl lg:text-3xl font-display font-bold">{t("expenses.title")}</h1>
         
