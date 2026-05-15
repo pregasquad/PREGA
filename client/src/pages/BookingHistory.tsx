@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Search, User, Clock, Calendar, Check, UserPlus, Filter, RefreshCw, Trash2 } from "lucide-react";
 import {
   AlertDialog,
@@ -20,11 +21,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { SpinningLogo } from "@/components/ui/spinning-logo";
-import { format, parseISO, isToday, isYesterday, startOfToday, subDays } from "date-fns";
+import { format, parseISO, isToday, isYesterday } from "date-fns";
 import { ar, enUS, fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { useLocation } from "wouter";
 
 interface Appointment {
@@ -51,7 +50,8 @@ export default function BookingHistory() {
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const isMobile = useIsMobile();
+  // Synchronous init — no effect needed, avoids layout flash on mobile
+  const [isMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
   const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStaff, setFilterStaff] = useState<string>("all");
@@ -165,14 +165,6 @@ export default function BookingHistory() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <SpinningLogo size="lg" />
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6 p-4 md:p-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -251,7 +243,56 @@ export default function BookingHistory() {
           </div>
         </CardHeader>
         <CardContent className={isMobile ? "px-2" : undefined}>
-          {filteredAppointments.length === 0 ? (
+          {isLoading ? (
+            isMobile ? (
+              <div className="space-y-2">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="p-3 rounded-lg border space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-5 w-14 rounded-full" />
+                    </div>
+                    <Skeleton className="h-3 w-48" />
+                    <div className="flex items-center justify-between pt-2 border-t">
+                      <Skeleton className="h-3 w-28" />
+                      <Skeleton className="h-4 w-16" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-lg border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead>{t("bookingHistory.client")}</TableHead>
+                      <TableHead>{t("bookingHistory.service")}</TableHead>
+                      <TableHead>{t("common.date")}</TableHead>
+                      <TableHead>{t("planning.time")}</TableHead>
+                      <TableHead>{t("common.price")}</TableHead>
+                      <TableHead>{t("bookingHistory.status")}</TableHead>
+                      <TableHead>{t("bookingHistory.staff")}</TableHead>
+                      <TableHead />
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <TableRow key={i}>
+                        <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-36" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-14 rounded-full" /></TableCell>
+                        <TableCell><Skeleton className="h-8 w-32 rounded-md" /></TableCell>
+                        <TableCell><Skeleton className="h-8 w-8 rounded-md" /></TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )
+          ) : filteredAppointments.length === 0 ? (
             <p className="text-center py-8 text-muted-foreground">{t("bookingHistory.noResults")}</p>
           ) : isMobile ? (
             <div className="space-y-2">
