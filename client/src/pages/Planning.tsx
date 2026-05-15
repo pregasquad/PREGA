@@ -500,9 +500,17 @@ export default function Planning() {
       sinceDate = `${adjusted.getFullYear()}-${String(adjusted.getMonth() + 1).padStart(2, "0")}-${String(adjusted.getDate()).padStart(2, "0")}`;
     }
 
-    const getCommission = (serviceName: string) => {
-      const sc = (salaryData.staffCommissions || []).find((sc: any) => sc.staffName === s.name && sc.serviceName === serviceName);
-      return sc ? sc.commissionRate : 0;
+    // Match the exact same commission logic as Salaries.tsx getServiceCommission
+    const getCommission = (serviceName: string): number => {
+      const service = (salaryData.services || []).find((sv: any) => sv.name === serviceName);
+      if (!service) return 50;
+      // Check for a custom per-staff commission rate
+      const customComm = (salaryData.staffCommissions || []).find(
+        (c: any) => c.staffId === s.id && c.serviceId === service.id
+      );
+      if (customComm) return customComm.percentage;
+      // Fall back to the service's default commission percent
+      return service.commissionPercent ?? 50;
     };
 
     const walletAppts = (salaryData.appointments || []).filter((apt: any) => {
@@ -518,7 +526,8 @@ export default function Planning() {
     walletAppts.forEach((apt: any) => {
       const total = apt.total || 0;
       walletRevenue += total;
-      walletCommission += (total * getCommission(apt.service || "")) / 100;
+      const serviceName = apt.service || "Unknown";
+      walletCommission += (total * getCommission(serviceName)) / 100;
     });
 
     const pendingDeductions: any[] = (salaryData.deductions || []).filter((d: any) =>
