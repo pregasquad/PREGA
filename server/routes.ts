@@ -2849,7 +2849,7 @@ export async function registerRoutes(
         })).default([]),
       }).parse(req.body);
 
-      const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+      const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
       const groqKey = process.env.XAI_API_KEY;
 
       if (!geminiKey && !groqKey) {

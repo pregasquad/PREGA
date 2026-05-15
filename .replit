@@ -1,7 +1,8 @@
-modules = ["nodejs-20", "web", "bash", "python-3.11"]
+modules = ["nodejs-20", "web", "bash"]
 [agent]
 expertMode = true
 stack = "FULLSTACK_JS"
+integrations = ["javascript_gemini_ai_integrations:2.0.0"]
 
 [nix]
 channel = "stable-25_05"

@@ -1,4 +1,8 @@
-const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
+// Support Replit AI Integrations as a managed key source (no user key required)
+const REPLIT_GEMINI_BASE = process.env.AI_INTEGRATIONS_GEMINI_BASE_URL
+  ? `${process.env.AI_INTEGRATIONS_GEMINI_BASE_URL}/v1beta/models`
+  : null;
+const GEMINI_BASE = REPLIT_GEMINI_BASE || "https://generativelanguage.googleapis.com/v1beta/models";
 const GROQ_BASE = "https://api.groq.com/openai/v1";
 
 const MODEL_CASCADE = [
@@ -438,7 +442,7 @@ export async function transcribeAudio(
     "gemini-1.5-flash",               // proven STT fallback                  ✅
   ];
 
-  const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
   if (geminiKey) {
     for (const model of TRANSCRIPTION_MODELS) {
       // Skip if this model is on text-generation cooldown (quota hit)
@@ -557,7 +561,7 @@ export async function textToSpeech(
   text: string,
   voice?: string
 ): Promise<{ pcmBase64: string; sampleRate: number } | null> {
-  const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
   if (!geminiKey) return null;
 
   const TTS_MODELS = [
@@ -652,7 +656,7 @@ export async function learnFromConversation(
   // Need at least one full exchange (user + model) to learn from
   if (history.length < 2) return null;
 
-  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
   const groqKey = process.env.XAI_API_KEY;
   if (!apiKey && !groqKey) return null;
 
@@ -821,7 +825,7 @@ export async function askGemini(
   imageBase64?: string,
   imageMimeType?: string
 ): Promise<{ reply: string | null; newHistory: ConversationTurn[] }> {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
   const systemPrompt = buildSystemPrompt(ctx);
   const now = Date.now();
 
