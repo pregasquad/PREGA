@@ -28,6 +28,7 @@ export default function StaffPerformance() {
   const [selectedStaff, setSelectedStaff] = useState<string>("all");
   const [activeTab, setActiveTab] = useState("performance");
   const [goalDialogOpen, setGoalDialogOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedGoalStaff, setSelectedGoalStaff] = useState<Staff | null>(null);
   const [goalForm, setGoalForm] = useState({
     revenueTarget: 0,
@@ -246,13 +247,16 @@ export default function StaffPerformance() {
           <Button
             variant="outline"
             size="icon"
-            onClick={() => {
-              queryClient.invalidateQueries();
+            disabled={isRefreshing}
+            onClick={async () => {
+              setIsRefreshing(true);
+              await queryClient.invalidateQueries();
+              setIsRefreshing(false);
               toast({ title: t("common.refreshed"), description: t("common.dataUpdated") });
             }}
             title={t("common.refresh")}
           >
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
           </Button>
           <div>
             <Label className="text-xs md:text-sm">{t("staffPerformance.month")}</Label>

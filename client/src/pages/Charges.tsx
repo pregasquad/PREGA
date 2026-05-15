@@ -42,6 +42,7 @@ export default function Charges() {
   const isAdmin = sessionStorage.getItem("current_user_role") === "owner";
   const { data: salonSettings } = useBusinessSettings();
   const [withdrawalsExpanded, setWithdrawalsExpanded] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const [withdrawalAmount, setWithdrawalAmount] = useState("");
   const [withdrawalDate, setWithdrawalDate] = useState(format(new Date(), "yyyy-MM-dd"));
@@ -406,13 +407,16 @@ export default function Charges() {
           <Button
             variant="outline"
             size="icon"
-            onClick={() => {
-              queryClient.invalidateQueries();
+            disabled={isRefreshing}
+            onClick={async () => {
+              setIsRefreshing(true);
+              await queryClient.invalidateQueries();
+              setIsRefreshing(false);
               toast({ title: t("common.refreshed"), description: t("common.dataUpdated") });
             }}
             title={t("common.refresh")}
           >
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
           </Button>
         </div>
       </div>

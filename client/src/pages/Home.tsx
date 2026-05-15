@@ -108,6 +108,7 @@ function EditStaffForm({ staff, categories, onSubmit, isPending, t }: {
 function DayOpeningBriefing({ appointments, todayDate, businessName, currency }: { appointments: any[]; todayDate: string; businessName?: string; currency?: string }) {
   const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     const key = `briefing_shown_${todayDate}`;
@@ -493,14 +494,17 @@ export default function Home() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => {
-                queryClient.invalidateQueries();
+              disabled={isRefreshing}
+              onClick={async () => {
+                setIsRefreshing(true);
+                await queryClient.invalidateQueries();
+                setIsRefreshing(false);
                 toast({ title: t("common.refreshed"), description: t("common.dataUpdated") });
               }}
               title={t("common.refresh")}
               data-testid="button-refresh"
             >
-              <RefreshCw className="h-4 w-4" />
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
             </Button>
             <LanguageSwitcher />
             <Button 

@@ -38,6 +38,7 @@ export default function Clients() {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [isQuickBookOpen, setIsQuickBookOpen] = useState(false);
   const [quickBookClient, setQuickBookClient] = useState<Client | null>(null);
@@ -441,13 +442,16 @@ export default function Clients() {
           <Button
             variant="outline"
             size="icon"
-            onClick={() => {
-              queryClient.invalidateQueries();
+            disabled={isRefreshing}
+            onClick={async () => {
+              setIsRefreshing(true);
+              await queryClient.invalidateQueries();
+              setIsRefreshing(false);
               toast({ title: t("common.refreshed"), description: t("common.dataUpdated") });
             }}
             title={t("common.refresh")}
           >
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
           </Button>
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>

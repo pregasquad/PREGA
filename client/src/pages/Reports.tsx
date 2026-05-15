@@ -77,6 +77,7 @@ export default function Reports() {
   });
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<ReportCategory>("financial");
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const { data: bSettings } = useBusinessSettings();
   const { data: appointments = [] } = useAppointments();
@@ -373,14 +374,17 @@ export default function Reports() {
           <Button
             variant="outline"
             size="icon"
-            onClick={() => {
-              queryClient.invalidateQueries();
+            disabled={isRefreshing}
+            onClick={async () => {
+              setIsRefreshing(true);
+              await queryClient.invalidateQueries();
+              setIsRefreshing(false);
               toast({ title: t("common.refreshed"), description: t("common.dataUpdated") });
             }}
             title={t("common.refresh")}
             data-testid="button-refresh-reports"
           >
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
           </Button>
           <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
             <TabsList>

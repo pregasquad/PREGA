@@ -25,6 +25,7 @@ export default function StaffCommissions() {
   const [selectedStaffId, setSelectedStaffId] = useState<number | null>(null);
   const [commissionValues, setCommissionValues] = useState<Record<number, number>>({});
   const [hasChanges, setHasChanges] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [savedServices, setSavedServices] = useState<Set<number>>(new Set());
 
   const { data: staff = [] } = useQuery<Staff[]>({
@@ -135,13 +136,16 @@ export default function StaffCommissions() {
         <Button
           variant="outline"
           size="icon"
-          onClick={() => {
-            queryClient.invalidateQueries();
+          disabled={isRefreshing}
+          onClick={async () => {
+            setIsRefreshing(true);
+            await queryClient.invalidateQueries();
+            setIsRefreshing(false);
             toast({ title: t("common.refreshed"), description: t("common.dataUpdated") });
           }}
           title={t("common.refresh")}
         >
-          <RefreshCw className="h-4 w-4" />
+          <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
         </Button>
       </div>
 

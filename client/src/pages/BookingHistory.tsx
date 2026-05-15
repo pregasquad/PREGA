@@ -191,8 +191,8 @@ export default function BookingHistory() {
               {unassignedCount} {t("bookingHistory.toAssign")}
             </Badge>
           )}
-          <Button variant="outline" size="sm" onClick={() => refetch()}>
-            <RefreshCw className="w-4 h-4 mr-2" />
+          <Button variant="outline" size="sm" disabled={isLoading} onClick={async () => { await refetch(); }}>
+            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
             {t("common.refresh")}
           </Button>
         </div>

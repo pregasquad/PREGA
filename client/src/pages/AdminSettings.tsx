@@ -151,6 +151,7 @@ export default function AdminSettings() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<AdminRole | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     role: "receptionist",
@@ -553,14 +554,17 @@ export default function AdminSettings() {
             variant="ghost"
             size="icon"
             className="glass-subtle rounded-xl h-10 w-10 hover:scale-105 transition-transform"
-            onClick={() => {
-              queryClient.invalidateQueries();
+            disabled={isRefreshing}
+            onClick={async () => {
+              setIsRefreshing(true);
+              await queryClient.invalidateQueries();
+              setIsRefreshing(false);
               toast({ title: t("common.refreshed"), description: t("common.dataUpdated") });
             }}
             title={t("common.refresh")}
             data-testid="button-refresh"
           >
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
           </Button>
         </div>
       </div>
