@@ -18,6 +18,9 @@ import { spawn } from "child_process";
 
 // ── Status codes that mean the session is permanently revoked ────────────────
 const PERMANENT_FAILURE_CODES = new Set([401, 403, 405]);
+// 440 = "Stream Errored (conflict)" — another instance holds the session.
+// Stop reconnecting immediately (session is still valid, just already in use).
+const CONFLICT_CODES = new Set([440]);
 const MAX_RECONNECT_ATTEMPTS = 5;
 
 // ── Module-level state ───────────────────────────────────────────────────────
@@ -435,6 +438,14 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
         emitStatus();
         // Notify frontend — permanent logout (device removed / session revoked)
         if (ioInstance) ioInstance.emit("whatsapp:logged_out", { reason: "device_removed" });
+      } else if (CONFLICT_CODES.has(code)) {
+        // Another instance (e.g. Koyeb prod) already holds the session.
+        // Stop reconnecting immediately — session is still valid, no need to clear it.
+        log(`Session conflict (${code}) — another instance is connected. Stopping reconnect to avoid infinite loop.`);
+        shouldReconnect = false;
+        if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+        emitStatus();
+        if (ioInstance) ioInstance.emit("whatsapp:disconnected");
       } else if (shouldReconnect) {
         scheduleReconnect();
         if (ioInstance) ioInstance.emit("whatsapp:disconnected");
