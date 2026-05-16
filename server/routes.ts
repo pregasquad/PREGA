@@ -455,6 +455,9 @@ export async function registerRoutes(
     startTime: z.string().regex(/^\d{2}:\d{2}$/),
     phone: z.string().max(20).optional(),
     servicesJson: z.array(serviceItemSchema).optional().nullable(), // Multi-service support
+    paid: z.boolean().optional(), // PayPal online payment
+    paypalOrderId: z.string().max(100).optional(), // PayPal order reference
+    privateRoom: z.boolean().optional(),
   }).refine(
     (data) => data.servicesJson?.length || (data.service && data.duration && data.price && data.total),
     { message: "Either servicesJson or service/duration/price/total fields are required" }
@@ -708,7 +711,7 @@ export async function registerRoutes(
           total: effectiveTotal,
           date: input.date,
           startTime: input.startTime,
-          paid: false,
+          paid: input.paid === true,
           phone: input.phone || null,
           servicesJson: input.servicesJson,
         };
@@ -806,7 +809,7 @@ export async function registerRoutes(
             total: discountedPrice,
             date: input.date,
             startTime: currentStartTime,
-            paid: false,
+            paid: input.paid === true,
             phone: input.phone || null,
             servicesJson: group.services,
           };

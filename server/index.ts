@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
+import { registerPayPalRoutes } from "./paypal";
 import { initializeDatabase, warmupDatabase, ensurePushSubscriptionsTable, ensureAppointmentsAuditColumns, ensureForeignKeyConstraints, ensureAdminRolesPhotoColumn, ensureProductExpiryColumns, ensureServiceStartingPriceColumn, ensureServiceMaxPriceColumn, ensureDeductionClearedColumns, ensureDeductionPaidBackColumn, ensureStaffIdBackfillMySQL, ensureStaffPaymentsTable, ensureStaffPublicTokens, ensureAutoLockColumn, ensureChargeAttachmentColumns, ensurePlanningShortcutsColumn, ensureAppointmentDiscountColumns, ensureTombolaSpinsTable, ensureSalonPaymentsTable, ensureBookingStatusColumn, ensureBaileysSessionTable, ensureBotMemoryTable, ensureBotMemoryPhoneColumn, ensureBotBlockedColumn, ensureTtsVoiceColumn, ensureMapsLinkColumn, ensureBotEnabledColumn, ensureBotFilterColumns, ensureOwnerWithdrawalsTable, ensureOwnerWithdrawalsNotesColumn, ensureCategoriesColorColumn, ensureSalonComplaintsTable, ensureComplaintTypeColumn, ensureBotSilenceAfterBookingColumn, ensurePrivateRoomColumn, ensureStaffGenderColumn, ensureStaffGenderDefaults, ensureBossInstructionsColumn, ensureLinaPersonalityColumn, ensureBusinessSettingsRow } from "./db";
 import { checkAndSendClosingReminder, checkAndSendAppointmentReminders, checkAndSendRebookingReminders } from "./push";
 
@@ -125,6 +126,7 @@ const startServer = async () => {
   
   await registerRoutes(httpServer, app);
   registerObjectStorageRoutes(app);
+  registerPayPalRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

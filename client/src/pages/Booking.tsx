@@ -10,9 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { ar, enUS, fr } from "date-fns/locale";
-import { Clock, CheckCircle2, Scissors, User, Phone, CalendarDays, Sparkles, X, Users, Gift, Tag, CalendarCheck, Navigation, MapPin } from "lucide-react";
+import { Clock, CheckCircle2, Scissors, User, Phone, CalendarDays, Sparkles, X, Users, Gift, Tag, CalendarCheck, Navigation, MapPin, CreditCard, ChevronDown, ChevronUp } from "lucide-react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ServiceRecommendations } from "@/components/ServiceRecommendations";
+import { PayPalButton } from "@/components/PayPalButton";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
 import { trackEvent } from "@/lib/analytics";
@@ -126,6 +127,9 @@ export default function Booking() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [confirmedTotal, setConfirmedTotal] = useState<number>(0);
   const [privateRoom, setPrivateRoom] = useState<boolean>(false);
+  const [showPayPal, setShowPayPal] = useState<boolean>(false);
+  const [paypalPaid, setPaypalPaid] = useState<boolean>(false);
+  const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
 
   useEffect(() => {
     i18n.changeLanguage("fr");
@@ -345,6 +349,8 @@ export default function Booking() {
       phone: data.phone || undefined,
       servicesJson: selectedServices,
       privateRoom,
+      paid: paypalPaid,
+      paypalOrderId: paypalOrderId || undefined,
     };
     
     try {
@@ -1176,6 +1182,78 @@ export default function Booking() {
                     </div>
                   )}
                 </button>
+
+                {/* Optional PayPal payment section */}
+                {canSubmit && displayTotal > 0 && (
+                  <div className="rounded-2xl border-2 border-dashed border-border/60 overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowPayPal(prev => !prev);
+                        setPaypalPaid(false);
+                        setPaypalOrderId(null);
+                      }}
+                      className={cn(
+                        "w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold transition-all",
+                        showPayPal
+                          ? "bg-blue-500/10 text-blue-700 dark:text-blue-300"
+                          : "bg-muted/40 text-muted-foreground hover:bg-blue-50 dark:hover:bg-blue-950/20 hover:text-blue-700 dark:hover:text-blue-300"
+                      )}
+                    >
+                      <div className={cn(
+                        "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
+                        showPayPal ? "bg-blue-500 text-white" : "bg-muted text-muted-foreground"
+                      )}>
+                        <CreditCard className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1 text-start">
+                        <p className="font-semibold text-sm">Payer en ligne par carte</p>
+                        <p className="text-xs opacity-70 font-normal mt-0.5">PayPal · Visa · Mastercard · Carte bancaire</p>
+                      </div>
+                      {paypalPaid ? (
+                        <div className="flex items-center gap-1.5 text-emerald-600 text-xs font-bold shrink-0">
+                          <CheckCircle2 className="w-4 h-4" />
+                          Payé
+                        </div>
+                      ) : showPayPal ? (
+                        <ChevronUp className="w-4 h-4 shrink-0 opacity-60" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 shrink-0 opacity-60" />
+                      )}
+                    </button>
+
+                    {showPayPal && !paypalPaid && (
+                      <div className="px-4 pb-4 pt-3 space-y-3 bg-blue-50/50 dark:bg-blue-950/10">
+                        <p className="text-xs text-muted-foreground text-center">
+                          Montant à payer : <span className="font-bold text-foreground">{displayTotal} {t("common.currency")}</span>
+                        </p>
+                        <PayPalButton
+                          amount={displayTotal}
+                          currency="USD"
+                          description={`Salon ${businessName} — ${selectedServices.map(s => s.name).join(", ")}`}
+                          onSuccess={(orderId) => {
+                            setPaypalPaid(true);
+                            setPaypalOrderId(orderId);
+                            setShowPayPal(false);
+                          }}
+                          onError={() => {}}
+                        />
+                        <p className="text-[10px] text-muted-foreground/60 text-center">
+                          Paiement sécurisé via PayPal. Vous pouvez aussi payer au salon.
+                        </p>
+                      </div>
+                    )}
+
+                    {paypalPaid && (
+                      <div className="px-4 py-3 bg-emerald-50/80 dark:bg-emerald-950/20 flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">
+                          Paiement confirmé — votre réservation sera marquée comme payée.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <Button
                   type="submit"
