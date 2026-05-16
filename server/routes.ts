@@ -1956,23 +1956,48 @@ export async function registerRoutes(
       const futureStr = new Date(today.getFullYear() + 2, today.getMonth(), today.getDate()).toISOString().slice(0, 10);
 
       const appointments = await storage.getAppointmentsByDateRange(todayStr, futureStr);
-      const future = appointments
-        .filter(a => (a.staffId === staffMember.id || (!a.staffId && a.staff === staffMember.name)) && a.date >= todayStr)
+
+      // Normalize time: keep only HH:MM from any stored value
+      const normalizeTime = (t: string | null | undefined) => {
+        if (!t) return "";
+        const m = t.match(/(\d{2}:\d{2})/);
+        return m ? m[1] : t.slice(0, 5);
+      };
+
+      const forStaff = appointments.filter(a =>
+        a.staffId === staffMember.id || (!a.staffId && a.staff === staffMember.name)
+      );
+
+      const sorted = forStaff
+        .filter(a => {
+          // include today's appointments that haven't passed yet, and all future dates
+          if (a.date > todayStr) return true;
+          if (a.date === todayStr) {
+            const now = new Date();
+            const nowTime = `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
+            return (normalizeTime(a.startTime) || "00:00") >= nowTime;
+          }
+          return false;
+        })
         .sort((a, b) => {
           if (a.date !== b.date) return a.date < b.date ? -1 : 1;
-          return (a.startTime || "") < (b.startTime || "") ? -1 : 1;
+          return (normalizeTime(a.startTime) || "") < (normalizeTime(b.startTime) || "") ? -1 : 1;
         });
 
-      if (future.length === 0) return res.json(null);
-
-      const next = future[0];
-      res.json({
-        date: next.date,
-        startTime: next.startTime || "",
-        client: next.client ? next.client.split(" ")[0] : "",
-        service: next.service || "",
-        duration: next.duration || 0,
+      const toCard = (a: typeof sorted[0]) => ({
+        date: a.date,
+        startTime: normalizeTime(a.startTime),
+        client: a.client ? a.client.split(" ")[0] : "",
+        service: a.service || "",
+        duration: a.duration || 0,
+        paid: a.paid ?? false,
       });
+
+      const nextAppointment = sorted.length > 0 ? toCard(sorted[0]) : null;
+      const nextUnpaid = sorted.find(a => !a.paid);
+      const nextUnpaidAppointment = nextUnpaid ? toCard(nextUnpaid) : null;
+
+      res.json({ nextAppointment, nextUnpaidAppointment });
     } catch (err) {
       console.error("Error fetching next booking:", err);
       res.status(500).json({ message: "Server error" });

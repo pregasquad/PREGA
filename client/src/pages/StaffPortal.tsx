@@ -29,12 +29,18 @@ interface PortalAppointment {
   client: string;
 }
 
-interface NextBooking {
+interface NextBookingCard {
   date: string;
   startTime: string;
   client: string;
   service: string;
   duration: number;
+  paid: boolean;
+}
+
+interface NextBookingData {
+  nextAppointment: NextBookingCard | null;
+  nextUnpaidAppointment: NextBookingCard | null;
 }
 
 interface EarningsData {
@@ -115,16 +121,19 @@ export default function StaffPortal() {
     retry: false,
   });
 
-  const { data: nextBooking, isLoading: loadingNext } = useQuery<NextBooking | null>({
+  const { data: nextBookingData, isLoading: loadingNext } = useQuery<NextBookingData>({
     queryKey: ["/api/public/staff-portal", token, "next-booking"],
     queryFn: async () => {
       const res = await fetch(`/api/public/staff-portal/${token}/next-booking`);
-      if (!res.ok) return null;
+      if (!res.ok) return { nextAppointment: null, nextUnpaidAppointment: null };
       return res.json();
     },
     enabled: !!staffInfo,
     refetchInterval: 60_000,
   });
+
+  const nextAppointment = nextBookingData?.nextAppointment ?? null;
+  const nextUnpaid = nextBookingData?.nextUnpaidAppointment ?? null;
 
   // Earnings always fetched in walletMode — server computes lastPaidAt → today automatically
   const { data: earnings, isLoading: loadingEarnings } = useQuery<EarningsData>({
@@ -276,60 +285,119 @@ export default function StaffPortal() {
       )}
 
       <div className="max-w-2xl mx-auto px-4 py-4 space-y-4">
-        {/* Next Booking card */}
+        {/* Next Appointment + Next Unpaid — shown once data loaded */}
         {!loadingNext && (
-          <Card
-            className={nextBooking
-              ? nextBooking.date === todayStr
-                ? "border-amber-400/60 bg-amber-50/60 dark:bg-amber-900/10"
-                : "border-primary/20 bg-primary/5"
-              : "border-muted"}
-            data-testid="card-next-booking"
-          >
-            <CardContent className="p-3">
-              <div className="flex items-center gap-3">
-                <div className={`shrink-0 p-2 rounded-md ${nextBooking ? nextBooking.date === todayStr ? "bg-amber-100 dark:bg-amber-900/30" : "bg-primary/10" : "bg-muted"}`}>
-                  <Calendar className={`w-5 h-5 ${nextBooking ? nextBooking.date === todayStr ? "text-amber-600" : "text-primary" : "text-muted-foreground"}`} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                    {t("staffPortal.nextBooking", "Next Booking")}
-                  </p>
-                  {nextBooking ? (
-                    <>
-                      <p className="text-sm font-bold mt-0.5" data-testid="text-next-booking-time">
-                        {nextBooking.date === todayStr
-                          ? t("staffPortal.today", "Today")
-                          : (() => {
-                              const tomorrow = new Date();
-                              tomorrow.setDate(tomorrow.getDate() + 1);
-                              const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, "0")}-${String(tomorrow.getDate()).padStart(2, "0")}`;
-                              return nextBooking.date === tomorrowStr
-                                ? t("staffPortal.tomorrow", "Tomorrow")
-                                : format(parseISO(nextBooking.date), "EEE d MMM", { locale: getDateLocale() });
-                            })()}{" "}
-                        {nextBooking.startTime && (
-                          <span className="font-normal text-muted-foreground">· {nextBooking.startTime}</span>
+          <div className="grid grid-cols-2 gap-3">
+            {/* Next Appointment */}
+            {(() => {
+              const appt = nextAppointment;
+              const isToday = appt?.date === todayStr;
+              const tomorrowDate = new Date();
+              tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+              const tomorrowStr = `${tomorrowDate.getFullYear()}-${String(tomorrowDate.getMonth() + 1).padStart(2, "0")}-${String(tomorrowDate.getDate()).padStart(2, "0")}`;
+              const isTomorrow = appt?.date === tomorrowStr;
+              const dayLabel = appt
+                ? isToday
+                  ? t("staffPortal.today", "Today")
+                  : isTomorrow
+                  ? t("staffPortal.tomorrow", "Tomorrow")
+                  : format(parseISO(appt.date), "EEE d MMM", { locale: getDateLocale() })
+                : null;
+              return (
+                <Card
+                  className={appt
+                    ? isToday
+                      ? "border-amber-400/60 bg-amber-50/60 dark:bg-amber-900/10"
+                      : "border-primary/20 bg-primary/5"
+                    : "border-muted"}
+                  data-testid="card-next-appointment"
+                >
+                  <CardContent className="p-3 space-y-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className={`w-3.5 h-3.5 shrink-0 ${appt ? isToday ? "text-amber-500" : "text-primary" : "text-muted-foreground"}`} />
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground truncate">
+                        {t("staffPortal.nextAppointment", "Next Appt")}
+                      </p>
+                    </div>
+                    {appt ? (
+                      <>
+                        <p className={`text-sm font-bold leading-tight ${isToday ? "text-amber-600 dark:text-amber-400" : ""}`} data-testid="text-next-appt-day">
+                          {dayLabel}
+                        </p>
+                        <p className="text-lg font-extrabold leading-none" data-testid="text-next-appt-time">
+                          {appt.startTime || "—"}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate" data-testid="text-next-appt-details">
+                          {appt.service}
+                          {appt.client ? ` · ${appt.client}` : ""}
+                        </p>
+                        {appt.duration > 0 && (
+                          <p className="text-[10px] text-muted-foreground">{appt.duration} min</p>
                         )}
+                      </>
+                    ) : (
+                      <p className="text-xs text-muted-foreground pt-1" data-testid="text-no-next-appt">
+                        {t("staffPortal.noUpcomingBookings", "No upcoming bookings")}
                       </p>
-                      <p className="text-xs text-muted-foreground truncate mt-0.5" data-testid="text-next-booking-details">
-                        {nextBooking.service}
-                        {nextBooking.client && ` · ${nextBooking.client}`}
-                        {nextBooking.duration > 0 && ` · ${nextBooking.duration}min`}
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })()}
+
+            {/* Next Unpaid Appointment */}
+            {(() => {
+              const appt = nextUnpaid;
+              const isToday = appt?.date === todayStr;
+              const tomorrowDate = new Date();
+              tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+              const tomorrowStr = `${tomorrowDate.getFullYear()}-${String(tomorrowDate.getMonth() + 1).padStart(2, "0")}-${String(tomorrowDate.getDate()).padStart(2, "0")}`;
+              const isTomorrow = appt?.date === tomorrowStr;
+              const dayLabel = appt
+                ? isToday
+                  ? t("staffPortal.today", "Today")
+                  : isTomorrow
+                  ? t("staffPortal.tomorrow", "Tomorrow")
+                  : format(parseISO(appt.date), "EEE d MMM", { locale: getDateLocale() })
+                : null;
+              return (
+                <Card
+                  className={appt ? "border-red-300/60 bg-red-50/40 dark:bg-red-900/10" : "border-muted"}
+                  data-testid="card-next-unpaid"
+                >
+                  <CardContent className="p-3 space-y-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <Clock className={`w-3.5 h-3.5 shrink-0 ${appt ? "text-red-500" : "text-muted-foreground"}`} />
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground truncate">
+                        {t("staffPortal.nextUnpaid", "Next Unpaid")}
                       </p>
-                    </>
-                  ) : (
-                    <p className="text-sm text-muted-foreground mt-0.5" data-testid="text-no-next-booking">
-                      {t("staffPortal.noUpcomingBookings", "No upcoming bookings")}
-                    </p>
-                  )}
-                </div>
-                {nextBooking && (
-                  <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                    </div>
+                    {appt ? (
+                      <>
+                        <p className="text-sm font-bold leading-tight text-red-600 dark:text-red-400" data-testid="text-next-unpaid-day">
+                          {dayLabel}
+                        </p>
+                        <p className="text-lg font-extrabold leading-none" data-testid="text-next-unpaid-time">
+                          {appt.startTime || "—"}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate" data-testid="text-next-unpaid-details">
+                          {appt.service}
+                          {appt.client ? ` · ${appt.client}` : ""}
+                        </p>
+                        {appt.duration > 0 && (
+                          <p className="text-[10px] text-muted-foreground">{appt.duration} min</p>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-xs text-muted-foreground pt-1" data-testid="text-no-unpaid">
+                        {t("staffPortal.allPaid", "All paid")}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })()}
+          </div>
         )}
 
         {/* Period label */}
