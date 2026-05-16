@@ -1,14 +1,46 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 
 const PAYPAL_BASE =
   process.env.PAYPAL_ENV === "live"
     ? "https://api-m.paypal.com"
     : "https://api-m.sandbox.paypal.com";
 
+// Currencies PayPal actually supports — prevents arbitrary string injection
+const ALLOWED_CURRENCIES = new Set([
+  "MAD", "USD", "EUR", "GBP", "CAD", "AUD", "CHF", "JPY", "AED", "SAR", "QAR", "KWD", "BHD", "OMR",
+]);
+
+// Simple per-IP rate limiter: max 20 PayPal calls per 5 minutes
+const paypalRateLimits = new Map<string, { count: number; resetAt: number }>();
+const PAYPAL_RATE_LIMIT = 20;
+const PAYPAL_RATE_WINDOW = 5 * 60 * 1000; // 5 minutes
+
+function paypalRateLimitMiddleware(req: Request, res: Response, next: NextFunction) {
+  const ip = req.ip || req.socket.remoteAddress || "unknown";
+  const now = Date.now();
+  const record = paypalRateLimits.get(ip);
+
+  if (!record || now > record.resetAt) {
+    paypalRateLimits.set(ip, { count: 1, resetAt: now + PAYPAL_RATE_WINDOW });
+    return next();
+  }
+  if (record.count >= PAYPAL_RATE_LIMIT) {
+    return res.status(429).json({ error: "Too many requests. Please try again later." });
+  }
+  record.count++;
+  next();
+}
+
+// Cache the access token to avoid fetching a new one on every request (tokens last 9 hours)
+let cachedToken: { value: string; expiresAt: number } | null = null;
+
 async function getAccessToken(): Promise<string> {
   const clientId = process.env.PAYPAL_CLIENT_ID;
   const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
   if (!clientId || !clientSecret) throw new Error("PayPal credentials not configured");
+
+  const now = Date.now();
+  if (cachedToken && now < cachedToken.expiresAt) return cachedToken.value;
 
   const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
   const res = await fetch(`${PAYPAL_BASE}/v1/oauth2/token`, {
@@ -25,30 +57,39 @@ async function getAccessToken(): Promise<string> {
     throw new Error(`PayPal token error: ${err}`);
   }
 
-  const data = await res.json() as { access_token: string };
-  return data.access_token;
+  const data = await res.json() as { access_token: string; expires_in: number };
+  // Cache with a 5-minute safety margin before actual expiry
+  cachedToken = { value: data.access_token, expiresAt: now + (data.expires_in - 300) * 1000 };
+  return cachedToken.value;
 }
 
 export function registerPayPalRoutes(app: Express) {
-  // Return the client-side client ID (safe to expose)
-  app.get("/api/paypal/config", (_req, res) => {
+  // Return the client-side client ID (safe to expose — public key by design)
+  app.get("/api/paypal/config", paypalRateLimitMiddleware, (_req, res) => {
     const clientId = process.env.PAYPAL_CLIENT_ID;
     if (!clientId) return res.status(503).json({ error: "PayPal not configured" });
     res.json({ clientId });
   });
 
-  // Create a PayPal order for a booking deposit / full payment
-  app.post("/api/paypal/create-order", async (req, res) => {
+  // Create a PayPal order for a booking payment
+  app.post("/api/paypal/create-order", paypalRateLimitMiddleware, async (req, res) => {
     try {
-      const { amount, currency = "USD", description = "Salon appointment" } = req.body as {
+      const { amount, currency = "MAD", description = "Salon appointment" } = req.body as {
         amount: number;
         currency?: string;
         description?: string;
       };
 
-      if (!amount || isNaN(amount) || amount <= 0) {
+      if (!amount || typeof amount !== "number" || isNaN(amount) || amount <= 0 || amount > 100000) {
         return res.status(400).json({ error: "Invalid amount" });
       }
+
+      const safeCurrency = String(currency).toUpperCase();
+      if (!ALLOWED_CURRENCIES.has(safeCurrency)) {
+        return res.status(400).json({ error: "Unsupported currency" });
+      }
+
+      const safeDescription = String(description).slice(0, 127);
 
       const token = await getAccessToken();
       const orderRes = await fetch(`${PAYPAL_BASE}/v2/checkout/orders`, {
@@ -62,10 +103,10 @@ export function registerPayPalRoutes(app: Express) {
           purchase_units: [
             {
               amount: {
-                currency_code: currency,
+                currency_code: safeCurrency,
                 value: amount.toFixed(2),
               },
-              description,
+              description: safeDescription,
             },
           ],
         }),
@@ -86,14 +127,16 @@ export function registerPayPalRoutes(app: Express) {
   });
 
   // Capture an approved PayPal order
-  app.post("/api/paypal/capture-order", async (req, res) => {
+  app.post("/api/paypal/capture-order", paypalRateLimitMiddleware, async (req, res) => {
     try {
       const { orderId } = req.body as { orderId: string };
-      if (!orderId) return res.status(400).json({ error: "Missing orderId" });
+      if (!orderId || typeof orderId !== "string" || orderId.length > 100) {
+        return res.status(400).json({ error: "Missing or invalid orderId" });
+      }
 
       const token = await getAccessToken();
       const captureRes = await fetch(
-        `${PAYPAL_BASE}/v2/checkout/orders/${orderId}/capture`,
+        `${PAYPAL_BASE}/v2/checkout/orders/${encodeURIComponent(orderId)}/capture`,
         {
           method: "POST",
           headers: {

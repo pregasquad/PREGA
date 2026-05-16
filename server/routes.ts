@@ -713,6 +713,8 @@ export async function registerRoutes(
           startTime: input.startTime,
           paid: input.paid === true,
           paypalOrderId: input.paypalOrderId || null,
+          bookingStatus: input.paid === true ? "confirmed" : "pending",
+          privateRoom: input.privateRoom ?? false,
           phone: input.phone || null,
           servicesJson: input.servicesJson,
         };
@@ -811,7 +813,9 @@ export async function registerRoutes(
             date: input.date,
             startTime: currentStartTime,
             paid: input.paid === true,
-            paypalOrderId: gi === 0 ? (input.paypalOrderId || null) : null,
+            paypalOrderId: input.paypalOrderId || null,
+            bookingStatus: input.paid === true ? "confirmed" : "pending",
+            privateRoom: input.privateRoom ?? false,
             phone: input.phone || null,
             servicesJson: group.services,
           };
