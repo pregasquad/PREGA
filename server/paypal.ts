@@ -32,6 +32,47 @@ function paypalRateLimitMiddleware(req: Request, res: Response, next: NextFuncti
   next();
 }
 
+// Real-time MAD exchange rates cached for 1 hour
+// Uses open.er-api.com (free, no key required) — falls back to hardcoded rates on failure
+const RATE_CACHE_TTL = 60 * 60 * 1000; // 1 hour
+let rateCache: { rates: Record<string, number>; fetchedAt: number } | null = null;
+
+async function getMadRate(targetCurrency: string): Promise<number> {
+  // If PAYPAL_EXCHANGE_RATE is set manually, always use that
+  if (process.env.PAYPAL_EXCHANGE_RATE) {
+    return parseFloat(process.env.PAYPAL_EXCHANGE_RATE);
+  }
+
+  const now = Date.now();
+  if (!rateCache || now - rateCache.fetchedAt > RATE_CACHE_TTL) {
+    try {
+      // Fetch rates with MAD as the base — rates tell us how many of each currency = 1 MAD
+      const res = await fetch("https://open.er-api.com/v6/latest/MAD", {
+        signal: AbortSignal.timeout(5000),
+      });
+      if (res.ok) {
+        const data = await res.json() as { result: string; rates: Record<string, number> };
+        if (data.result === "success" && data.rates) {
+          rateCache = { rates: data.rates, fetchedAt: now };
+          console.log("[PayPal] Exchange rates refreshed from open.er-api.com");
+        }
+      }
+    } catch (err) {
+      console.warn("[PayPal] Could not fetch live exchange rates, using fallback:", err);
+    }
+  }
+
+  if (rateCache?.rates[targetCurrency]) {
+    // rateCache.rates[targetCurrency] = how many targetCurrency per 1 MAD
+    // We need madRate = how many MAD per 1 targetCurrency = 1 / rate
+    return Math.round((1 / rateCache.rates[targetCurrency]) * 1000) / 1000;
+  }
+
+  // Hardcoded fallback rates (MAD per 1 unit)
+  const fallback: Record<string, number> = { EUR: 10.9, USD: 10.0, GBP: 12.8, AED: 2.72, SAR: 2.67 };
+  return fallback[targetCurrency] ?? 10.0;
+}
+
 // Cache the access token to avoid fetching a new one on every request (tokens last 9 hours)
 let cachedToken: { value: string; expiresAt: number } | null = null;
 
@@ -70,7 +111,7 @@ export function registerPayPalRoutes(app: Express) {
   // Default: EUR for live, USD for sandbox. Override with PAYPAL_CURRENCY env var.
   // Override conversion rate with PAYPAL_EXCHANGE_RATE env var (MAD per 1 unit of PayPal currency).
   // e.g. PAYPAL_EXCHANGE_RATE=10.9 means 1 EUR = 10.9 MAD
-  app.get("/api/paypal/config", paypalRateLimitMiddleware, (_req, res) => {
+  app.get("/api/paypal/config", paypalRateLimitMiddleware, async (_req, res) => {
     const clientId = process.env.PAYPAL_CLIENT_ID;
     const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
     if (!clientId || !clientSecret) {
@@ -79,9 +120,8 @@ export function registerPayPalRoutes(app: Express) {
     }
     const isLive = process.env.PAYPAL_ENV === "live";
     const currency = process.env.PAYPAL_CURRENCY || (isLive ? "EUR" : "USD");
-    // MAD per 1 unit of the PayPal currency (e.g. 1 EUR ≈ 10.9 MAD, 1 USD ≈ 10 MAD)
-    const defaultRate = currency === "EUR" ? 10.9 : currency === "USD" ? 10.0 : 1.0;
-    const madRate = parseFloat(process.env.PAYPAL_EXCHANGE_RATE || String(defaultRate));
+    // Fetch live MAD→currency rate (cached 1h), falls back to hardcoded if API unreachable
+    const madRate = await getMadRate(currency);
     res.json({ clientId, currency, madRate });
   });
 
