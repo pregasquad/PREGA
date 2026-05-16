@@ -1946,6 +1946,39 @@ export async function registerRoutes(
   });
 
   // Staff Portal - public routes (token-based)
+  app.get("/api/public/staff-portal/:token/next-booking", publicRateLimitMiddleware, async (req, res) => {
+    try {
+      const staffMember = await storage.getStaffByToken(req.params.token);
+      if (!staffMember) return res.status(404).json({ message: "Invalid portal link" });
+
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+      const futureStr = new Date(today.getFullYear() + 2, today.getMonth(), today.getDate()).toISOString().slice(0, 10);
+
+      const appointments = await storage.getAppointmentsByDateRange(todayStr, futureStr);
+      const future = appointments
+        .filter(a => (a.staffId === staffMember.id || (!a.staffId && a.staff === staffMember.name)) && a.date >= todayStr)
+        .sort((a, b) => {
+          if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+          return (a.startTime || "") < (b.startTime || "") ? -1 : 1;
+        });
+
+      if (future.length === 0) return res.json(null);
+
+      const next = future[0];
+      res.json({
+        date: next.date,
+        startTime: next.startTime || "",
+        client: next.client ? next.client.split(" ")[0] : "",
+        service: next.service || "",
+        duration: next.duration || 0,
+      });
+    } catch (err) {
+      console.error("Error fetching next booking:", err);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
   app.get("/api/public/staff-portal/:token", publicRateLimitMiddleware, async (req, res) => {
     try {
       const staffMember = await storage.getStaffByToken(req.params.token);

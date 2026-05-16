@@ -6,7 +6,7 @@ import { formatCurrency } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
-import { DollarSign, Calendar, TrendingUp, Wallet, AlertTriangle, Clock, Globe, Download, Share, X } from "lucide-react";
+import { DollarSign, Calendar, TrendingUp, Wallet, AlertTriangle, Clock, Globe, Download, Share, X, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format, parseISO } from "date-fns";
@@ -27,6 +27,14 @@ interface PortalAppointment {
   total: number;
   paid: boolean;
   client: string;
+}
+
+interface NextBooking {
+  date: string;
+  startTime: string;
+  client: string;
+  service: string;
+  duration: number;
 }
 
 interface EarningsData {
@@ -105,6 +113,17 @@ export default function StaffPortal() {
     },
     enabled: !!token,
     retry: false,
+  });
+
+  const { data: nextBooking, isLoading: loadingNext } = useQuery<NextBooking | null>({
+    queryKey: ["/api/public/staff-portal", token, "next-booking"],
+    queryFn: async () => {
+      const res = await fetch(`/api/public/staff-portal/${token}/next-booking`);
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!staffInfo,
+    refetchInterval: 60_000,
   });
 
   // Earnings always fetched in walletMode — server computes lastPaidAt → today automatically
@@ -257,6 +276,62 @@ export default function StaffPortal() {
       )}
 
       <div className="max-w-2xl mx-auto px-4 py-4 space-y-4">
+        {/* Next Booking card */}
+        {!loadingNext && (
+          <Card
+            className={nextBooking
+              ? nextBooking.date === todayStr
+                ? "border-amber-400/60 bg-amber-50/60 dark:bg-amber-900/10"
+                : "border-primary/20 bg-primary/5"
+              : "border-muted"}
+            data-testid="card-next-booking"
+          >
+            <CardContent className="p-3">
+              <div className="flex items-center gap-3">
+                <div className={`shrink-0 p-2 rounded-md ${nextBooking ? nextBooking.date === todayStr ? "bg-amber-100 dark:bg-amber-900/30" : "bg-primary/10" : "bg-muted"}`}>
+                  <Calendar className={`w-5 h-5 ${nextBooking ? nextBooking.date === todayStr ? "text-amber-600" : "text-primary" : "text-muted-foreground"}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    {t("staffPortal.nextBooking", "Next Booking")}
+                  </p>
+                  {nextBooking ? (
+                    <>
+                      <p className="text-sm font-bold mt-0.5" data-testid="text-next-booking-time">
+                        {nextBooking.date === todayStr
+                          ? t("staffPortal.today", "Today")
+                          : (() => {
+                              const tomorrow = new Date();
+                              tomorrow.setDate(tomorrow.getDate() + 1);
+                              const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, "0")}-${String(tomorrow.getDate()).padStart(2, "0")}`;
+                              return nextBooking.date === tomorrowStr
+                                ? t("staffPortal.tomorrow", "Tomorrow")
+                                : format(parseISO(nextBooking.date), "EEE d MMM", { locale: getDateLocale() });
+                            })()}{" "}
+                        {nextBooking.startTime && (
+                          <span className="font-normal text-muted-foreground">· {nextBooking.startTime}</span>
+                        )}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate mt-0.5" data-testid="text-next-booking-details">
+                        {nextBooking.service}
+                        {nextBooking.client && ` · ${nextBooking.client}`}
+                        {nextBooking.duration > 0 && ` · ${nextBooking.duration}min`}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground mt-0.5" data-testid="text-no-next-booking">
+                      {t("staffPortal.noUpcomingBookings", "No upcoming bookings")}
+                    </p>
+                  )}
+                </div>
+                {nextBooking && (
+                  <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Period label */}
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold">{t("staffPortal.myPerformance")}</h2>
