@@ -113,6 +113,7 @@ export default function Booking() {
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [isSuccess, setIsSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [bookingError, setBookingError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [businessName, setBusinessName] = useState("PREGA SQUAD");
   
@@ -334,6 +335,7 @@ export default function Booking() {
     }
 
     setIsSubmitting(true);
+    setBookingError(null);
     
     const clientName = data.phone ? `${data.client} (${data.phone})` : data.client;
     const serviceNames = selectedPackage 
@@ -392,8 +394,9 @@ export default function Booking() {
         appointmentId: result.id,
         loyaltyPointsBalance: result.loyaltyPointsBalance,
       }).catch(() => {});
-    } catch (error) {
+    } catch (error: any) {
       console.error("Booking failed:", error);
+      setBookingError(error?.message || t("booking.bookingFailed", "Une erreur est survenue. Veuillez réessayer."));
     } finally {
       setIsSubmitting(false);
     }
@@ -1255,6 +1258,13 @@ export default function Booking() {
                         </p>
                       </div>
                     )}
+                  </div>
+                )}
+
+                {bookingError && (
+                  <div className="flex items-start gap-2 px-4 py-3 rounded-xl bg-destructive/10 border border-destructive/20 text-sm text-destructive">
+                    <X className="h-4 w-4 mt-0.5 shrink-0" />
+                    <span>{bookingError}</span>
                   </div>
                 )}
 
