@@ -163,9 +163,15 @@ export function registerPayPalRoutes(app: Express) {
               description: safeDescription,
             },
           ],
+          payer: {
+            address: {
+              country_code: "MA",
+            },
+          },
           application_context: {
             shipping_preference: "NO_SHIPPING",
             user_action: "PAY_NOW",
+            locale: "ar-MA",
           },
         }),
       });
