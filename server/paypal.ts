@@ -64,17 +64,20 @@ async function getAccessToken(): Promise<string> {
 }
 
 export function registerPayPalRoutes(app: Express) {
-  // Return the client-side client ID (safe to expose — public key by design)
+  // Return client ID and the correct currency for the current environment.
+  // Sandbox does not support MAD — use USD there. Live uses MAD (or PAYPAL_CURRENCY override).
   app.get("/api/paypal/config", paypalRateLimitMiddleware, (_req, res) => {
     const clientId = process.env.PAYPAL_CLIENT_ID;
     if (!clientId) return res.status(503).json({ error: "PayPal not configured" });
-    res.json({ clientId });
+    const isLive = process.env.PAYPAL_ENV === "live";
+    const currency = process.env.PAYPAL_CURRENCY || (isLive ? "MAD" : "USD");
+    res.json({ clientId, currency });
   });
 
   // Create a PayPal order for a booking payment
   app.post("/api/paypal/create-order", paypalRateLimitMiddleware, async (req, res) => {
     try {
-      const { amount, currency = "MAD", description = "Salon appointment" } = req.body as {
+      const { amount, currency = "USD", description = "Salon appointment" } = req.body as {
         amount: number;
         currency?: string;
         description?: string;

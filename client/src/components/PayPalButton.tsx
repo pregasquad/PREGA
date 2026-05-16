@@ -6,12 +6,12 @@ declare global {
     paypal?: {
       Buttons: (opts: object) => { render: (el: HTMLElement) => Promise<void>; close: () => void };
     };
+    paypalLoadedCurrency?: string;
   }
 }
 
 interface PayPalButtonProps {
   amount: number;
-  currency?: string;
   description?: string;
   onSuccess: (orderId: string) => void;
   onError?: (err: unknown) => void;
@@ -19,7 +19,6 @@ interface PayPalButtonProps {
 
 export function PayPalButton({
   amount,
-  currency = "MAD",
   description = "Salon appointment",
   onSuccess,
   onError,
@@ -34,17 +33,27 @@ export function PayPalButton({
 
     const init = async () => {
       try {
-        // Fetch client ID from backend
+        // Fetch client ID + correct currency from backend (sandbox=USD, live=MAD)
         const configRes = await fetch("/api/paypal/config");
         if (!configRes.ok) throw new Error("PayPal not configured");
-        const { clientId } = await configRes.json() as { clientId: string };
+        const { clientId, currency } = await configRes.json() as { clientId: string; currency: string };
 
-        // Load PayPal SDK if not already present
+        // Load PayPal SDK — if already loaded but for a different currency, reload it
+        const needsReload = window.paypal && window.paypalLoadedCurrency !== currency;
+        if (needsReload) {
+          // Remove old script so the SDK reloads with the correct currency
+          document.querySelectorAll('script[src*="paypal.com/sdk"]').forEach(s => s.remove());
+          delete (window as any).paypal;
+        }
+
         if (!window.paypal) {
           await new Promise<void>((resolve, reject) => {
             const script = document.createElement("script");
             script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=${currency}&components=buttons&enable-funding=card`;
-            script.onload = () => resolve();
+            script.onload = () => {
+              window.paypalLoadedCurrency = currency;
+              resolve();
+            };
             script.onerror = () => reject(new Error("Failed to load PayPal SDK"));
             document.head.appendChild(script);
           });
@@ -110,7 +119,7 @@ export function PayPalButton({
       cancelled = true;
       buttonsRef.current?.close();
     };
-  }, [amount, currency, description]);
+  }, [amount, description]);
 
   return (
     <div className="w-full space-y-2">
