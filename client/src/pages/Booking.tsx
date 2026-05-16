@@ -1189,9 +1189,8 @@ export default function Booking() {
                     <button
                       type="button"
                       onClick={() => {
+                        if (paypalPaid) return;
                         setShowPayPal(prev => !prev);
-                        setPaypalPaid(false);
-                        setPaypalOrderId(null);
                       }}
                       className={cn(
                         "w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold transition-all",
@@ -1229,7 +1228,7 @@ export default function Booking() {
                         </p>
                         <PayPalButton
                           amount={displayTotal}
-                          currency="USD"
+                          currency="MAD"
                           description={`Salon ${businessName} — ${selectedServices.map(s => s.name).join(", ")}`}
                           onSuccess={(orderId) => {
                             setPaypalPaid(true);

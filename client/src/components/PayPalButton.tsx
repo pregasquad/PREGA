@@ -19,7 +19,7 @@ interface PayPalButtonProps {
 
 export function PayPalButton({
   amount,
-  currency = "USD",
+  currency = "MAD",
   description = "Salon appointment",
   onSuccess,
   onError,
