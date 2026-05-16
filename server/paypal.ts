@@ -8,7 +8,8 @@ const PAYPAL_BASE =
 // Currencies PayPal actually supports — prevents arbitrary string injection
 // NOTE: MAD (Moroccan Dirham) is NOT supported by PayPal. Use EUR or USD and convert.
 const ALLOWED_CURRENCIES = new Set([
-  "USD", "EUR", "GBP", "CAD", "AUD", "CHF", "JPY", "AED", "SAR", "QAR", "KWD", "BHD", "OMR",
+  "USD", "EUR", "GBP", "CAD", "AUD", "CHF", "JPY", "SGD",
+  "AED", "SAR", "QAR", "KWD", "BHD", "OMR",
 ]);
 
 // Simple per-IP rate limiter: max 20 PayPal calls per 5 minutes
@@ -69,7 +70,7 @@ async function getMadRate(targetCurrency: string): Promise<number> {
   }
 
   // Hardcoded fallback rates (MAD per 1 unit)
-  const fallback: Record<string, number> = { EUR: 10.9, USD: 10.0, GBP: 12.8, AED: 2.72, SAR: 2.67 };
+  const fallback: Record<string, number> = { EUR: 10.9, USD: 10.0, GBP: 12.8, SGD: 7.5, AED: 2.72, SAR: 2.67 };
   return fallback[targetCurrency] ?? 10.0;
 }
 
@@ -119,7 +120,9 @@ export function registerPayPalRoutes(app: Express) {
       return res.status(503).json({ error: "PayPal not configured" });
     }
     const isLive = process.env.PAYPAL_ENV === "live";
-    const currency = process.env.PAYPAL_CURRENCY || (isLive ? "EUR" : "USD");
+    // Default live currency is SGD — the PayPal merchant account is Singapore-based.
+    // Override with PAYPAL_CURRENCY env var if the account currency changes.
+    const currency = process.env.PAYPAL_CURRENCY || (isLive ? "SGD" : "USD");
     // Fetch live MAD→currency rate (cached 1h), falls back to hardcoded if API unreachable
     const madRate = await getMadRate(currency);
     res.json({ clientId, currency, madRate });
