@@ -4781,7 +4781,7 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
           clientLang = memCheck?.language ?? undefined;
 
           if (apt && mergedText === "1") {
-            await storage.updateAppointment(apt.id, { bookingStatus: "confirmed" } as any);
+            try { await storage.updateAppointment(apt.id, { bookingStatus: "confirmed" } as any); } catch (e) { console.warn(`[Bot] updateAppointment confirmed failed for #${apt.id}:`, e); }
             io.emit("booking:updated", { ...apt, bookingStatus: "confirmed" });
             io.emit("appointment:updated", { id: apt.id, bookingStatus: "confirmed" });
             await sendBotConfirmed(remoteJid, apt.client ?? undefined, apt.service ?? undefined, apt.date ?? undefined, apt.startTime ?? undefined, clientLang);
@@ -4789,7 +4789,7 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
             return;
           }
           if (apt && mergedText === "2") {
-            await storage.updateAppointment(apt.id, { bookingStatus: "cancelled" } as any);
+            try { await storage.updateAppointment(apt.id, { bookingStatus: "cancelled" } as any); } catch (e) { console.warn(`[Bot] updateAppointment cancelled failed for #${apt.id}:`, e); }
             io.emit("booking:updated", { ...apt, bookingStatus: "cancelled" });
             io.emit("appointment:updated", { id: apt.id, bookingStatus: "cancelled" });
             await sendBotCancelled(remoteJid, clientLang);
@@ -4797,7 +4797,7 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
             return;
           }
           if (apt && mergedText === "3") {
-            await storage.updateAppointment(apt.id, { bookingStatus: "modify_requested" } as any);
+            try { await storage.updateAppointment(apt.id, { bookingStatus: "modify_requested" } as any); } catch (e) { console.warn(`[Bot] updateAppointment modify_requested failed for #${apt.id}:`, e); }
             io.emit("booking:updated", { ...apt, bookingStatus: "modify_requested" });
             io.emit("appointment:updated", { id: apt.id, bookingStatus: "modify_requested" });
             await sendBotModify(remoteJid, clientLang);
@@ -4820,7 +4820,7 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
               const { sendWhatsAppMessage, sendTypingPresence, stopTypingPresence } = await import("./baileys");
               await sendTypingPresence(remoteJid);
               const aptToCancel = cancellableApts[0];
-              await storage.updateAppointment(aptToCancel.id, { bookingStatus: "cancelled" } as any);
+              try { await storage.updateAppointment(aptToCancel.id, { bookingStatus: "cancelled" } as any); } catch (e) { console.warn(`[Bot] updateAppointment natural-cancel failed for #${aptToCancel.id}:`, e); }
               const typingMs = 1500 + Math.floor(Math.random() * 1000);
               await new Promise<void>((r) => setTimeout(r, typingMs));
               await stopTypingPresence(remoteJid);
@@ -5347,7 +5347,7 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
               };
 
               if (existingPending) {
-                await storage.updateAppointment(existingPending.id, { bookingStatus: "confirmed" } as any);
+                try { await storage.updateAppointment(existingPending.id, { bookingStatus: "confirmed" } as any); } catch (e) { console.warn(`[Bot] updateAppointment bot-confirm failed for #${existingPending.id}:`, e); }
                 io.emit("booking:updated", { ...existingPending, bookingStatus: "confirmed" });
                 const _epPriceTag = existingPending.price && existingPending.price > 0 ? ` — ${existingPending.price} DH` : "";
                 sendPushNotification(
