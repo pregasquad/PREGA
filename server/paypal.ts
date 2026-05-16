@@ -163,6 +163,10 @@ export function registerPayPalRoutes(app: Express) {
               description: safeDescription,
             },
           ],
+          application_context: {
+            shipping_preference: "NO_SHIPPING",
+            user_action: "PAY_NOW",
+          },
         }),
       });
 
