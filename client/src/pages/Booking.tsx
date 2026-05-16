@@ -130,9 +130,14 @@ export default function Booking() {
   const [showPayPal, setShowPayPal] = useState<boolean>(false);
   const [paypalPaid, setPaypalPaid] = useState<boolean>(false);
   const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
+  const [paypalAvailable, setPaypalAvailable] = useState<boolean>(false);
 
   useEffect(() => {
     i18n.changeLanguage("fr");
+    // Check if PayPal is configured on the server — hide section entirely if not
+    fetch("/api/paypal/config")
+      .then(r => { if (r.ok) setPaypalAvailable(true); })
+      .catch(() => {});
   }, []);
 
   // Defer socket connection to after initial render
@@ -1183,8 +1188,8 @@ export default function Booking() {
                   )}
                 </button>
 
-                {/* Optional PayPal payment section */}
-                {canSubmit && displayTotal > 0 && (
+                {/* Optional PayPal payment section — only shown when backend credentials are confirmed */}
+                {canSubmit && displayTotal > 0 && paypalAvailable && (
                   <div className="rounded-2xl border-2 border-dashed border-border/60 overflow-hidden">
                     <button
                       type="button"

@@ -65,10 +65,15 @@ async function getAccessToken(): Promise<string> {
 
 export function registerPayPalRoutes(app: Express) {
   // Return client ID and the correct currency for the current environment.
+  // Returns 503 if either credential is missing — the frontend hides the payment section entirely.
   // Sandbox does not support MAD — use USD there. Live uses MAD (or PAYPAL_CURRENCY override).
   app.get("/api/paypal/config", paypalRateLimitMiddleware, (_req, res) => {
     const clientId = process.env.PAYPAL_CLIENT_ID;
-    if (!clientId) return res.status(503).json({ error: "PayPal not configured" });
+    const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
+    if (!clientId || !clientSecret) {
+      console.warn("[PayPal] config endpoint called but PAYPAL_CLIENT_ID or PAYPAL_CLIENT_SECRET is not set");
+      return res.status(503).json({ error: "PayPal not configured" });
+    }
     const isLive = process.env.PAYPAL_ENV === "live";
     const currency = process.env.PAYPAL_CURRENCY || (isLive ? "MAD" : "USD");
     res.json({ clientId, currency });
