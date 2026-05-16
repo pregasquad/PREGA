@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader2, CreditCard, Lock } from "lucide-react";
+import { Loader2, CreditCard, Lock, CheckCircle2 } from "lucide-react";
 
 declare global {
   interface Window {
@@ -8,6 +8,14 @@ declare global {
         isEligible: () => boolean;
         render: (opts: object) => Promise<{
           submit: (opts?: object) => Promise<{ orderId: string }>;
+          getState: () => {
+            fields: {
+              number: { isValid: boolean };
+              expirationDate: { isValid: boolean };
+              cvv: { isValid: boolean };
+            };
+          };
+          on: (event: string, handler: () => void) => void;
         }>;
       };
     };
@@ -28,11 +36,50 @@ export function PayPalButton({
   onSuccess,
   onError,
 }: PayPalButtonProps) {
-  const hostedFieldsRef = useRef<{ submit: (opts?: object) => Promise<{ orderId: string }> } | null>(null);
+  const hostedFieldsRef = useRef<{
+    submit: (opts?: object) => Promise<{ orderId: string }>;
+    getState: () => { fields: { number: { isValid: boolean }; expirationDate: { isValid: boolean }; cvv: { isValid: boolean } } };
+    on: (event: string, handler: () => void) => void;
+  } | null>(null);
+  const payingRef = useRef(false);
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
+  const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [convertedAmount, setConvertedAmount] = useState<{ value: number; currency: string } | null>(null);
+
+  const doSubmit = async () => {
+    if (!hostedFieldsRef.current || payingRef.current) return;
+    payingRef.current = true;
+    setPaying(true);
+    setError(null);
+    try {
+      const result = await hostedFieldsRef.current.submit();
+      const orderId = (result as any).orderId ?? (result as any).orderID;
+
+      const captureRes = await fetch("/api/paypal/capture-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId }),
+      });
+      const capture = await captureRes.json() as { success: boolean; orderId: string };
+      if (capture.success) {
+        setSuccess(true);
+        onSuccess(capture.orderId);
+      } else {
+        setError("Le paiement a échoué. Vérifiez vos infos.");
+        onError?.(new Error("Capture failed"));
+        payingRef.current = false;
+        setPaying(false);
+      }
+    } catch (err) {
+      console.error("[PayPal pay]", err);
+      setError("Le paiement a échoué. Vérifiez vos infos.");
+      onError?.(err);
+      payingRef.current = false;
+      setPaying(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -68,7 +115,7 @@ export function PayPalButton({
 
         if (cancelled || !window.paypal?.HostedFields) return;
         if (!window.paypal.HostedFields.isEligible()) {
-          throw new Error("Hosted Fields not eligible for this account");
+          throw new Error("Hosted Fields not eligible");
         }
 
         const hf = await window.paypal.HostedFields.render({
@@ -84,34 +131,37 @@ export function PayPalButton({
           },
           styles: {
             input: {
-              "font-size": "16px",
+              "font-size": "15px",
               "font-family": "inherit",
               color: "inherit",
               padding: "0 12px",
             },
             ":focus": { color: "inherit" },
             ".invalid": { color: "#ef4444" },
+            ".valid": { color: "inherit" },
           },
           fields: {
-            number: {
-              selector: "#paypal-card-number",
-              placeholder: "0000 0000 0000 0000",
-            },
-            cvv: {
-              selector: "#paypal-cvv",
-              placeholder: "CVV",
-            },
-            expirationDate: {
-              selector: "#paypal-expiry",
-              placeholder: "MM/YY",
-            },
+            number: { selector: "#paypal-card-number", placeholder: "Numéro de carte" },
+            cvv: { selector: "#paypal-cvv", placeholder: "CVV" },
+            expirationDate: { selector: "#paypal-expiry", placeholder: "MM/AA" },
           },
         });
 
-        if (!cancelled) {
-          hostedFieldsRef.current = hf;
-          setLoading(false);
-        }
+        if (cancelled) return;
+        hostedFieldsRef.current = hf;
+        setLoading(false);
+
+        // Auto-submit once all 3 fields are valid — no button click needed
+        hf.on("validityChange", () => {
+          const state = hf.getState();
+          const allValid =
+            state.fields.number.isValid &&
+            state.fields.expirationDate.isValid &&
+            state.fields.cvv.isValid;
+          if (allValid && !payingRef.current) {
+            doSubmit();
+          }
+        });
       } catch (err) {
         if (!cancelled) {
           console.error("[PayPal HostedFields init]", err);
@@ -125,37 +175,17 @@ export function PayPalButton({
     return () => { cancelled = true; };
   }, [amount, description]);
 
-  const handlePay = async () => {
-    if (!hostedFieldsRef.current || paying) return;
-    setError(null);
-    setPaying(true);
-    try {
-      const result = await hostedFieldsRef.current.submit();
-      const orderId = (result as any).orderId ?? (result as any).orderID;
-
-      const captureRes = await fetch("/api/paypal/capture-order", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId }),
-      });
-      const capture = await captureRes.json() as { success: boolean; orderId: string };
-      if (capture.success) {
-        onSuccess(capture.orderId);
-      } else {
-        setError("Le paiement a échoué. Vérifiez vos infos et réessayez.");
-        onError?.(new Error("Capture failed"));
-      }
-    } catch (err) {
-      console.error("[PayPal pay]", err);
-      setError("Le paiement a échoué. Vérifiez vos infos et réessayez.");
-      onError?.(err);
-    } finally {
-      setPaying(false);
-    }
-  };
-
   const fieldClass =
-    "h-11 w-full rounded-lg border border-input bg-background text-sm overflow-hidden";
+    "h-11 w-full rounded-lg border border-input bg-background overflow-hidden transition-colors";
+
+  if (success) {
+    return (
+      <div className="flex flex-col items-center gap-2 py-4 text-green-600">
+        <CheckCircle2 className="w-8 h-8" />
+        <p className="text-sm font-semibold">Paiement confirmé !</p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full space-y-3">
@@ -184,27 +214,23 @@ export function PayPalButton({
           <div id="paypal-cvv" className={fieldClass} />
         </div>
 
+        {paying && (
+          <div className="flex items-center justify-center gap-2 py-2 text-sm text-muted-foreground">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span>Traitement en cours...</span>
+          </div>
+        )}
+
         {error && (
           <p className="text-xs text-destructive text-center">{error}</p>
         )}
 
-        <button
-          onClick={handlePay}
-          disabled={paying}
-          className="w-full h-11 rounded-lg bg-primary text-primary-foreground text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
-        >
-          {paying ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <CreditCard className="w-4 h-4" />
-          )}
-          {paying ? "Traitement..." : "Payer par carte"}
-        </button>
-
-        <p className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
-          <Lock className="w-3 h-3" />
-          Paiement sécurisé via PayPal
-        </p>
+        {!paying && (
+          <p className="flex items-center justify-center gap-1 text-xs text-muted-foreground pt-1">
+            <Lock className="w-3 h-3" />
+            Le paiement s'effectue automatiquement dès que la carte est saisie
+          </p>
+        )}
       </div>
     </div>
   );
