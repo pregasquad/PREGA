@@ -27,21 +27,30 @@ export function PayPalButton({
   const buttonsRef = useRef<ReturnType<NonNullable<typeof window.paypal>["Buttons"]> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [convertedAmount, setConvertedAmount] = useState<{ value: number; currency: string } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
     const init = async () => {
       try {
-        // Fetch client ID + correct currency from backend (sandbox=USD, live=MAD)
+        // Fetch client ID, PayPal-supported currency, and MAD→currency rate from backend
         const configRes = await fetch("/api/paypal/config");
         if (!configRes.ok) throw new Error("PayPal not configured");
-        const { clientId, currency } = await configRes.json() as { clientId: string; currency: string };
+        const { clientId, currency, madRate } = await configRes.json() as {
+          clientId: string;
+          currency: string;
+          madRate: number;
+        };
+
+        // Convert MAD amount to the PayPal currency (e.g. EUR or USD)
+        // madRate = how many MAD equal 1 unit of the PayPal currency
+        const paypalAmount = Math.ceil((amount / madRate) * 100) / 100;
+        if (!cancelled) setConvertedAmount({ value: paypalAmount, currency });
 
         // Load PayPal SDK — if already loaded but for a different currency, reload it
         const needsReload = window.paypal && window.paypalLoadedCurrency !== currency;
         if (needsReload) {
-          // Remove old script so the SDK reloads with the correct currency
           document.querySelectorAll('script[src*="paypal.com/sdk"]').forEach(s => s.remove());
           delete (window as any).paypal;
         }
@@ -75,7 +84,7 @@ export function PayPalButton({
             const res = await fetch("/api/paypal/create-order", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ amount, currency, description }),
+              body: JSON.stringify({ amount: paypalAmount, currency, description }),
             });
             if (!res.ok) throw new Error("Failed to create order");
             const data = await res.json() as { id: string };
@@ -131,6 +140,12 @@ export function PayPalButton({
       )}
       {error && (
         <p className="text-xs text-destructive text-center">{error}</p>
+      )}
+      {convertedAmount && !loading && (
+        <p className="text-xs text-muted-foreground text-center">
+          Montant facturé : <span className="font-semibold text-foreground">{convertedAmount.value.toFixed(2)} {convertedAmount.currency}</span>
+          <span className="opacity-60"> (≈ {amount} DH)</span>
+        </p>
       )}
       <div ref={containerRef} className={loading ? "hidden" : "block"} />
     </div>

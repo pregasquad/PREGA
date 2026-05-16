@@ -6,8 +6,9 @@ const PAYPAL_BASE =
     : "https://api-m.sandbox.paypal.com";
 
 // Currencies PayPal actually supports — prevents arbitrary string injection
+// NOTE: MAD (Moroccan Dirham) is NOT supported by PayPal. Use EUR or USD and convert.
 const ALLOWED_CURRENCIES = new Set([
-  "MAD", "USD", "EUR", "GBP", "CAD", "AUD", "CHF", "JPY", "AED", "SAR", "QAR", "KWD", "BHD", "OMR",
+  "USD", "EUR", "GBP", "CAD", "AUD", "CHF", "JPY", "AED", "SAR", "QAR", "KWD", "BHD", "OMR",
 ]);
 
 // Simple per-IP rate limiter: max 20 PayPal calls per 5 minutes
@@ -64,9 +65,11 @@ async function getAccessToken(): Promise<string> {
 }
 
 export function registerPayPalRoutes(app: Express) {
-  // Return client ID and the correct currency for the current environment.
-  // Returns 503 if either credential is missing — the frontend hides the payment section entirely.
-  // Sandbox does not support MAD — use USD there. Live uses MAD (or PAYPAL_CURRENCY override).
+  // Return client ID, the PayPal-supported currency, and MAD→currency conversion rate.
+  // PayPal does NOT support MAD, so the salon's MAD prices must be converted.
+  // Default: EUR for live, USD for sandbox. Override with PAYPAL_CURRENCY env var.
+  // Override conversion rate with PAYPAL_EXCHANGE_RATE env var (MAD per 1 unit of PayPal currency).
+  // e.g. PAYPAL_EXCHANGE_RATE=10.9 means 1 EUR = 10.9 MAD
   app.get("/api/paypal/config", paypalRateLimitMiddleware, (_req, res) => {
     const clientId = process.env.PAYPAL_CLIENT_ID;
     const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
@@ -75,8 +78,11 @@ export function registerPayPalRoutes(app: Express) {
       return res.status(503).json({ error: "PayPal not configured" });
     }
     const isLive = process.env.PAYPAL_ENV === "live";
-    const currency = process.env.PAYPAL_CURRENCY || (isLive ? "MAD" : "USD");
-    res.json({ clientId, currency });
+    const currency = process.env.PAYPAL_CURRENCY || (isLive ? "EUR" : "USD");
+    // MAD per 1 unit of the PayPal currency (e.g. 1 EUR ≈ 10.9 MAD, 1 USD ≈ 10 MAD)
+    const defaultRate = currency === "EUR" ? 10.9 : currency === "USD" ? 10.0 : 1.0;
+    const madRate = parseFloat(process.env.PAYPAL_EXCHANGE_RATE || String(defaultRate));
+    res.json({ clientId, currency, madRate });
   });
 
   // Create a PayPal order for a booking payment
