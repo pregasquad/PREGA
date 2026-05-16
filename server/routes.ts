@@ -712,6 +712,7 @@ export async function registerRoutes(
           date: input.date,
           startTime: input.startTime,
           paid: input.paid === true,
+          paypalOrderId: input.paypalOrderId || null,
           phone: input.phone || null,
           servicesJson: input.servicesJson,
         };
@@ -810,6 +811,7 @@ export async function registerRoutes(
             date: input.date,
             startTime: currentStartTime,
             paid: input.paid === true,
+            paypalOrderId: gi === 0 ? (input.paypalOrderId || null) : null,
             phone: input.phone || null,
             servicesJson: group.services,
           };
