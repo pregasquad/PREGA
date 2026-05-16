@@ -3,13 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, Edit2, User, Phone, Mail, DollarSign, Palette, Tag, Calendar, Coffee, CalendarOff, Upload, Camera, Loader2, Share2, Check } from "lucide-react";
+import { Plus, Trash2, Edit2, User, Phone, Mail, DollarSign, Palette, Tag, Calendar, Coffee, CalendarOff, Upload, Camera, Loader2, Share2, Check, Clock } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormMessage, FormLabel } from "@/components/ui/form";
 import { insertStaffSchema } from "@shared/schema";
 import { z } from "zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { api } from "@shared/routes";
 import { useState } from "react";
@@ -66,6 +66,28 @@ export default function Staff() {
   const createStaff = useCreateStaff();
   const updateStaff = useUpdateStaff();
   const deleteStaff = useDeleteStaff();
+
+  type NextBooking = { date: string; startTime: string; client: string; service: string; staffId: number | null };
+  const { data: nextBookings = {} } = useQuery<Record<string, NextBooking>>({
+    queryKey: ["/api/staff/next-bookings"],
+    refetchInterval: 60_000,
+  });
+
+  const getNextBooking = (staff: StaffType): NextBooking | undefined => {
+    if (staff.id && nextBookings[String(staff.id)]) return nextBookings[String(staff.id)];
+    return nextBookings[staff.name] ?? undefined;
+  };
+
+  const formatBookingDate = (dateStr: string): string => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    const d = new Date(dateStr + "T00:00:00");
+    if (d.getTime() === today.getTime()) return t("staff.today", "Today");
+    if (d.getTime() === tomorrow.getTime()) return t("staff.tomorrow", "Tomorrow");
+    return d.toLocaleDateString(i18n.language === "ar" ? "ar-MA" : i18n.language === "fr" ? "fr-FR" : "en-GB", { weekday: "short", day: "numeric", month: "short" });
+  };
 
   const handleSharePortalLink = async (staffMember: StaffType) => {
     let token = staffMember.publicToken;
@@ -760,6 +782,34 @@ export default function Staff() {
                     ))}
                   </div>
                 )}
+
+                {/* Next upcoming booking */}
+                {(() => {
+                  const nb = getNextBooking(staff);
+                  if (!nb) return (
+                    <div className="flex items-center gap-2 mt-3 pt-3 border-t text-xs text-muted-foreground/60">
+                      <Clock className="h-3.5 w-3.5 shrink-0" />
+                      <span>{t("staff.noUpcoming", "No upcoming bookings")}</span>
+                    </div>
+                  );
+                  const isToday = nb.date === new Date().toISOString().slice(0, 10);
+                  return (
+                    <div
+                      className={`flex items-start gap-2 mt-3 pt-3 border-t text-xs rounded-lg px-2 py-2 -mx-2 ${isToday ? "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800" : "bg-primary/5"}`}
+                      data-testid={`next-booking-${staff.id}`}
+                    >
+                      <Clock className={`h-3.5 w-3.5 mt-0.5 shrink-0 ${isToday ? "text-amber-500" : "text-primary"}`} />
+                      <div className="min-w-0">
+                        <div className={`font-semibold ${isToday ? "text-amber-600 dark:text-amber-400" : "text-primary"}`}>
+                          {formatBookingDate(nb.date)}
+                          {nb.startTime && <span className="font-normal text-muted-foreground"> · {nb.startTime}</span>}
+                        </div>
+                        <div className="text-muted-foreground truncate">{nb.client}</div>
+                        <div className="text-muted-foreground/70 truncate">{nb.service}</div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </CardContent>
             </Card>
           );

@@ -1578,6 +1578,44 @@ export async function registerRoutes(
     res.json(items);
   });
 
+  // Next upcoming booking per staff member
+  app.get("/api/staff/next-bookings", isPinAuthenticated, async (_req, res) => {
+    try {
+      const today = new Date();
+      const todayStr = today.toISOString().slice(0, 10);
+      const futureStr = new Date(today.getFullYear() + 2, today.getMonth(), today.getDate()).toISOString().slice(0, 10);
+      const appointments = await storage.getAppointmentsByDateRange(todayStr, futureStr);
+
+      // Sort all future appointments by date+time
+      const sorted = appointments
+        .filter(a => a.date >= todayStr)
+        .sort((a, b) => {
+          if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+          return (a.startTime || "") < (b.startTime || "") ? -1 : 1;
+        });
+
+      // Pick earliest appointment per staff member
+      const nextByStaff: Record<string, { date: string; startTime: string; client: string; service: string; staffId: number | null }> = {};
+      for (const apt of sorted) {
+        const key = apt.staffId ? String(apt.staffId) : apt.staff || "";
+        if (key && !nextByStaff[key]) {
+          nextByStaff[key] = {
+            date: apt.date,
+            startTime: apt.startTime || "",
+            client: apt.client || "",
+            service: apt.service || "",
+            staffId: apt.staffId ?? null,
+          };
+        }
+      }
+
+      res.json(nextByStaff);
+    } catch (err) {
+      console.error("[next-bookings]", err);
+      res.status(500).json({ error: "Failed to fetch next bookings" });
+    }
+  });
+
   app.post("/api/staff", isPinAuthenticated, requirePermission("manage_staff"), async (req, res) => {
     const { randomUUID } = await import("crypto");
     const staffData = { ...req.body, publicToken: req.body.publicToken || randomUUID() };
