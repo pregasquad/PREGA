@@ -2077,3 +2077,32 @@ export async function ensureBusinessSettingsRow(): Promise<void> {
     console.error("Failed to ensure business settings row:", error);
   }
 }
+
+export async function ensurePaypalOrderIdColumn(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      const [rows] = await connection.query(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'appointments' AND COLUMN_NAME = 'paypal_order_id'
+      `);
+      if ((rows as any[]).length === 0) {
+        await connection.query(`ALTER TABLE appointments ADD COLUMN paypal_order_id VARCHAR(100) NULL DEFAULT NULL`);
+        console.log("Added paypal_order_id column to appointments");
+      }
+      connection.release();
+    } else {
+      await pool.query(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'appointments' AND column_name = 'paypal_order_id') THEN
+            ALTER TABLE appointments ADD COLUMN paypal_order_id TEXT NULL;
+          END IF;
+        END $$;
+      `);
+    }
+    console.log("PayPal order ID column ready");
+  } catch (error) {
+    console.error("Failed to ensure paypal_order_id column:", error);
+  }
+}

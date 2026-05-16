@@ -101,6 +101,7 @@ export const appointments = pgTable("appointments", {
   createdAt: timestamp("created_at").defaultNow(),
   bookingStatus: varchar("booking_status", { length: 20 }).default("pending"),
   privateRoom: boolean("private_room").default(false).notNull(),
+  paypalOrderId: text("paypal_order_id"),
 });
 
 export const services = pgTable("services", {
