@@ -5,9 +5,13 @@ const PAYPAL_BASE =
     ? "https://api-m.paypal.com"
     : "https://api-m.sandbox.paypal.com";
 
-// Only USD and EUR accepted — simplest, most universally supported PayPal currencies.
+// All major PayPal-supported currencies accepted server-side.
 // MAD is NOT supported by PayPal; prices are converted from MAD at runtime.
-const ALLOWED_CURRENCIES = new Set(["USD", "EUR"]);
+// The currency shown/charged to customers is controlled by PAYPAL_CURRENCY env var (defaults to EUR).
+const ALLOWED_CURRENCIES = new Set([
+  "USD", "EUR", "GBP", "CAD", "AUD", "CHF", "JPY", "SGD",
+  "AED", "SAR", "QAR", "KWD", "BHD", "OMR", "HKD", "NOK", "SEK", "DKK", "MXN", "BRL",
+]);
 
 // Simple per-IP rate limiter: max 20 PayPal calls per 5 minutes
 const paypalRateLimits = new Map<string, { count: number; resetAt: number }>();
