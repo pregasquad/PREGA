@@ -2315,12 +2315,12 @@ export default function Planning() {
             <React.Fragment key={hour}>
               <div 
                 className={cn(
-                  "bg-rose-50 dark:bg-slate-800 border-b border-rose-100 dark:border-slate-700 px-0.5 py-1 text-[11px] font-bold text-rose-400 dark:text-slate-300 sticky z-30 flex items-center justify-center",
+                  "bg-rose-50 dark:bg-slate-800 border-b border-rose-100 dark:border-slate-700 px-0.5 text-[11px] font-bold text-rose-400 dark:text-slate-300 sticky z-30 flex items-start justify-center pt-0",
                   isRtl ? "right-0 border-l-2 border-l-rose-200 dark:border-l-slate-600" : "left-0 border-r-2 border-r-rose-200 dark:border-r-slate-600"
                 )}
                 style={{ gridColumn: 1, gridRow: rowNum }}
               >
-                {hour}
+                <span className="-translate-y-[50%] block">{hour}</span>
               </div>
 
               {staffList.map((s, staffIndex) => {
