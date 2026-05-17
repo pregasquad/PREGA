@@ -285,10 +285,9 @@ export default function StaffPortal() {
       )}
 
       <div className="max-w-2xl mx-auto px-4 py-4 space-y-4">
-        {/* Next Appointment + Next Unpaid — shown once data loaded */}
+        {/* Next Appointment — single full-width card */}
         {!loadingNext && (
-          <div className="grid grid-cols-2 gap-3">
-            {/* Next Appointment */}
+          <>
             {(() => {
               const appt = nextAppointment;
               const isToday = appt?.date === todayStr;
@@ -312,29 +311,35 @@ export default function StaffPortal() {
                     : "border-muted"}
                   data-testid="card-next-appointment"
                 >
-                  <CardContent className="p-3 space-y-1.5">
-                    <div className="flex items-center gap-1.5">
-                      <Calendar className={`w-3.5 h-3.5 shrink-0 ${appt ? isToday ? "text-amber-500" : "text-primary" : "text-muted-foreground"}`} />
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground truncate">
-                        {t("staffPortal.nextAppointment", "Next Appt")}
-                      </p>
+                  <CardContent className="p-3">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Calendar className={`w-3.5 h-3.5 shrink-0 ${appt ? isToday ? "text-amber-500" : "text-primary" : "text-muted-foreground"}`} />
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          {t("staffPortal.nextAppointment", "Next Appt")}
+                        </p>
+                      </div>
+                      {appt && (
+                        <p className={`text-[10px] text-muted-foreground shrink-0`}>
+                          {appt.duration > 0 ? `${appt.duration} min` : ""}
+                        </p>
+                      )}
                     </div>
                     {appt ? (
-                      <>
-                        <p className={`text-sm font-bold leading-tight ${isToday ? "text-amber-600 dark:text-amber-400" : ""}`} data-testid="text-next-appt-day">
-                          {dayLabel}
-                        </p>
-                        <p className="text-lg font-extrabold leading-none" data-testid="text-next-appt-time">
+                      <div className="mt-1.5 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className={`text-sm font-bold leading-tight ${isToday ? "text-amber-600 dark:text-amber-400" : ""}`} data-testid="text-next-appt-day">
+                            {dayLabel}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate mt-0.5" data-testid="text-next-appt-details">
+                            {appt.service}
+                            {appt.client ? ` · ${appt.client}` : ""}
+                          </p>
+                        </div>
+                        <p className="text-2xl font-extrabold leading-none shrink-0" data-testid="text-next-appt-time">
                           {appt.startTime || "—"}
                         </p>
-                        <p className="text-xs text-muted-foreground truncate" data-testid="text-next-appt-details">
-                          {appt.service}
-                          {appt.client ? ` · ${appt.client}` : ""}
-                        </p>
-                        {appt.duration > 0 && (
-                          <p className="text-[10px] text-muted-foreground">{appt.duration} min</p>
-                        )}
-                      </>
+                      </div>
                     ) : (
                       <p className="text-xs text-muted-foreground pt-1" data-testid="text-no-next-appt">
                         {t("staffPortal.noUpcomingBookings", "No upcoming bookings")}
@@ -344,60 +349,7 @@ export default function StaffPortal() {
                 </Card>
               );
             })()}
-
-            {/* Next Unpaid Appointment */}
-            {(() => {
-              const appt = nextUnpaid;
-              const isToday = appt?.date === todayStr;
-              const tomorrowDate = new Date();
-              tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-              const tomorrowStr = `${tomorrowDate.getFullYear()}-${String(tomorrowDate.getMonth() + 1).padStart(2, "0")}-${String(tomorrowDate.getDate()).padStart(2, "0")}`;
-              const isTomorrow = appt?.date === tomorrowStr;
-              const dayLabel = appt
-                ? isToday
-                  ? t("staffPortal.today", "Today")
-                  : isTomorrow
-                  ? t("staffPortal.tomorrow", "Tomorrow")
-                  : format(parseISO(appt.date), "EEE d MMM", { locale: getDateLocale() })
-                : null;
-              return (
-                <Card
-                  className={appt ? "border-red-300/60 bg-red-50/40 dark:bg-red-900/10" : "border-muted"}
-                  data-testid="card-next-unpaid"
-                >
-                  <CardContent className="p-3 space-y-1.5">
-                    <div className="flex items-center gap-1.5">
-                      <Clock className={`w-3.5 h-3.5 shrink-0 ${appt ? "text-red-500" : "text-muted-foreground"}`} />
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground truncate">
-                        {t("staffPortal.nextUnpaid", "Next Unpaid")}
-                      </p>
-                    </div>
-                    {appt ? (
-                      <>
-                        <p className="text-sm font-bold leading-tight text-red-600 dark:text-red-400" data-testid="text-next-unpaid-day">
-                          {dayLabel}
-                        </p>
-                        <p className="text-lg font-extrabold leading-none" data-testid="text-next-unpaid-time">
-                          {appt.startTime || "—"}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate" data-testid="text-next-unpaid-details">
-                          {appt.service}
-                          {appt.client ? ` · ${appt.client}` : ""}
-                        </p>
-                        {appt.duration > 0 && (
-                          <p className="text-[10px] text-muted-foreground">{appt.duration} min</p>
-                        )}
-                      </>
-                    ) : (
-                      <p className="text-xs text-muted-foreground pt-1" data-testid="text-no-unpaid">
-                        {t("staffPortal.allPaid", "All paid")}
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })()}
-          </div>
+          </>
         )}
 
         {/* Period label */}
