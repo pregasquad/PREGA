@@ -499,6 +499,20 @@ export default function WhatsApp() {
       toast({ title: "خطأ", description: err.message, variant: "destructive" }),
   });
 
+  const toggleTtsMutation = useMutation({
+    mutationFn: (enabled: boolean) =>
+      apiRequest("PATCH", "/api/business-settings", { ttsEnabled: enabled }).then((r) => r.json()),
+    onSuccess: (_data, enabled) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/business-settings"] });
+      toast({
+        title: enabled ? "الرسائل الصوتية مفعّلة ✓" : "الرسائل الصوتية متوقفة ✓",
+        description: enabled ? "لينا غترد بصوت على الرسائل الصوتية 🔊" : "لينا غترد بنص فقط 🔇",
+      });
+    },
+    onError: (err: any) =>
+      toast({ title: "خطأ", description: err.message, variant: "destructive" }),
+  });
+
   const savePersonalityMutation = useMutation({
     mutationFn: (personalities: string[]) =>
       apiRequest("PATCH", "/api/business-settings", { linaPersonality: JSON.stringify(personalities) }).then((r) => r.json()),
@@ -1607,7 +1621,9 @@ export default function WhatsApp() {
           </div>
           <div className="flex-1">
             <span className="font-semibold text-sm">صوت البوت (رسائل صوتية)</span>
-            <p className="text-xs text-muted-foreground mt-0.5">{bizSettings?.ttsVoice ?? "Aoede"} — Gemini TTS</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {bizSettings?.ttsEnabled !== false ? `${bizSettings?.ttsVoice ?? "Aoede"} — مفعّل 🔊` : "متوقف — الرد نصي فقط 🔇"}
+            </p>
           </div>
           {voiceOpen ? (
             <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" />
@@ -1617,6 +1633,36 @@ export default function WhatsApp() {
         </button>
         {voiceOpen && (
           <div className="border-t border-border/30 p-5 space-y-3">
+            {/* TTS on/off toggle */}
+            <div className="flex items-center justify-between gap-3 rounded-xl border px-4 py-3 glass-subtle">
+              <div className="flex items-center gap-2.5">
+                {bizSettings?.ttsEnabled !== false
+                  ? <span className="text-lg">🔊</span>
+                  : <span className="text-lg">🔇</span>
+                }
+                <div>
+                  <p className="text-sm font-semibold">الرد الصوتي</p>
+                  <p className="text-xs text-muted-foreground">
+                    {bizSettings?.ttsEnabled !== false ? "مفعّل — لينا تجاوب بصوت" : "متوقف — الرد نصي فقط"}
+                  </p>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                disabled={toggleTtsMutation.isPending}
+                onClick={() => toggleTtsMutation.mutate(bizSettings?.ttsEnabled === false)}
+                className={bizSettings?.ttsEnabled !== false
+                  ? "bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl"
+                  : "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-xl"
+                }
+                data-testid="button-toggle-tts"
+              >
+                {toggleTtsMutation.isPending
+                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  : bizSettings?.ttsEnabled !== false ? "إيقاف" : "تفعيل"
+                }
+              </Button>
+            </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
               عندما يرسل العميل رسالة صوتية، يرد البوت بصوت — اختاري صوت لينا المناسب للصالون 💅
             </p>

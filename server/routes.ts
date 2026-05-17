@@ -4669,7 +4669,12 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
         console.log(`[Bot] Boss manually replied to ${jid} — cancelled Lina's pending reply`);
       }
 
-      // 2. Persist boss's text into convHistory as a "model" turn so Lina reads it next time
+      // 2. Silence Lina for 2 hours after boss reply so the next client message is NOT auto-answered
+      const BOSS_SILENCE_TTL = 2 * 60 * 60 * 1000; // 2 hours
+      silencedJids.set(jid, Date.now() + BOSS_SILENCE_TTL);
+      console.log(`[Bot] Boss replied to ${jid} — Lina silenced for 2 h`);
+
+      // 3. Persist boss's text into convHistory as a "model" turn so Lina reads it next time
       if (bossText && bossText.trim()) {
         loadMemory(jid).then((mem) => {
           const history = getActiveHistory(mem);
@@ -5364,7 +5369,8 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
           // so the Google Maps link is clickable — never send a voice note for this
           const isLocationRequest = /عنوان|العنوان|فين كاين|فين كاينين|location|موقع|خريطة|maps|كيجيو|كيجيوا|كيصلو|كيصل|كيوصل|كيوصلو|address|كيصلح|العنوان|أين|وين|كيدوز|locat/i.test(mergedText);
 
-          if (batchHasVoice && !isLocationRequest) {
+          const ttsEnabled = (bizSettings as any)?.ttsEnabled !== false;
+          if (batchHasVoice && !isLocationRequest && ttsEnabled) {
             try {
               const { textToSpeech } = await import("./gemini");
               const { sendWhatsAppVoiceNote } = await import("./baileys");

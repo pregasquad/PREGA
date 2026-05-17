@@ -339,6 +339,7 @@ export const businessSettings = mysqlTable("business_settings", {
   autoLockEnabled: boolean("auto_lock_enabled").notNull().default(false),
   planningShortcuts: json("planning_shortcuts").$type<string[]>().notNull().default(["Soin Visage", "Soin Corps", "Massage", "Manucure", "Pédicure", "Épilation", "Coiffure", "Maquillage"]),
   ttsVoice: varchar("tts_voice", { length: 50 }).notNull().default("Aoede"),
+  ttsEnabled: boolean("tts_enabled").notNull().default(true),
   linaPersonality: text("lina_personality").notNull().default('["warm"]'),
   botEnabled: boolean("bot_enabled").notNull().default(true),
   botFilterMode: varchar("bot_filter_mode", { length: 20 }).notNull().default("all"),

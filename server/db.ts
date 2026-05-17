@@ -1586,6 +1586,35 @@ export async function ensureTtsVoiceColumn(): Promise<void> {
   }
 }
 
+export async function ensureTtsEnabledColumn(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      const [rows] = await connection.query(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'business_settings' AND COLUMN_NAME = 'tts_enabled'
+      `);
+      if ((rows as any[]).length === 0) {
+        await connection.query(`ALTER TABLE business_settings ADD COLUMN tts_enabled BOOLEAN NOT NULL DEFAULT TRUE`);
+        console.log("Added tts_enabled column to business_settings table");
+      }
+      connection.release();
+    } else {
+      await pool.query(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'business_settings' AND column_name = 'tts_enabled') THEN
+            ALTER TABLE business_settings ADD COLUMN tts_enabled BOOLEAN NOT NULL DEFAULT TRUE;
+          END IF;
+        END $$;
+      `);
+    }
+    console.log("TTS enabled column ready");
+  } catch (error) {
+    console.error("Failed to ensure tts_enabled column:", error);
+  }
+}
+
 export async function ensureCategoriesColorColumn(): Promise<void> {
   try {
     if (dbDialect === 'mysql') {
