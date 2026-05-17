@@ -5094,11 +5094,17 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
             }
           }
 
-          // Fetch salon context (settings + services + staff list)
-          const [bizSettings, allServices, allStaff] = await Promise.all([
+          // Fetch salon context (settings + services + staff list + 20-day planning)
+          const planStart = nowDate.toISOString().split("T")[0];
+          const planEndDate = new Date(nowDate);
+          planEndDate.setDate(planEndDate.getDate() + 19);
+          const planEnd = planEndDate.toISOString().split("T")[0];
+
+          const [bizSettings, allServices, allStaff, planningAppts] = await Promise.all([
             storage.getBusinessSettings().catch(() => undefined),
             storage.getServices().catch(() => []),
             storage.getStaff().catch(() => []),
+            storage.getAppointmentsByDateRange(planStart, planEnd).catch(() => []),
           ]);
 
           const serviceList = (allServices || []).map((s: any) => ({
@@ -5122,6 +5128,29 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
             name: s.name,
             gender: s.gender || 'female',
           }));
+
+          // ── Build 20-day planning snapshot for availability checking ────
+          const ARABIC_DAYS = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+          const planningSnapshot = (() => {
+            const days = [];
+            for (let i = 0; i < 20; i++) {
+              const d = new Date(nowDate);
+              d.setDate(d.getDate() + i);
+              const dateStr = d.toISOString().split("T")[0];
+              const dayLabel = i === 0 ? "اليوم" : i === 1 ? "غدا" : `${ARABIC_DAYS[d.getDay()]} ${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}`;
+              const dayAppts = (planningAppts as any[]).filter((a: any) => a.date === dateStr && a.isPaid === false);
+              const bookedSlots = dayAppts.map((a: any) => {
+                const startTime: string = a.startTime || "00:00";
+                const dur: number = a.duration || 60;
+                const [hh, mm] = startTime.split(":").map(Number);
+                const endMin = hh * 60 + mm + dur;
+                const endTime = `${String(Math.floor(endMin / 60)).padStart(2,"0")}:${String(endMin % 60).padStart(2,"0")}`;
+                return { time: startTime, endTime, staff: a.staff || a.staffName || "?", service: a.service || a.serviceName || "?", duration: dur };
+              }).sort((a: any, b: any) => a.time.localeCompare(b.time));
+              days.push({ date: dateStr, dayLabel, bookedSlots });
+            }
+            return days;
+          })();
 
           // ── Find this client's next upcoming appointment (future only) ────
           // Pass null if phone is known but no future appointment exists,
@@ -5184,6 +5213,7 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
               correctInfo: bc.fixNote!,
             })),
             bossInstructions: bossInstructions.length > 0 ? bossInstructions : undefined,
+            planningSnapshot,
             personality: (() => {
               try {
                 const raw = (bizSettings as any)?.linaPersonality;

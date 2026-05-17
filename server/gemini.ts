@@ -42,6 +42,18 @@ export interface ClientMemory {
   visitCount?: number;
 }
 
+export interface PlanningDay {
+  date: string;       // "2026-05-17"
+  dayLabel: string;   // "اليوم" / "غدا" / "الأربعاء 20/05"
+  bookedSlots: {
+    time: string;     // "14:00"
+    endTime: string;  // "17:00"
+    staff: string;
+    service: string;
+    duration: number; // minutes
+  }[];
+}
+
 export interface SalonContext {
   name: string;
   address?: string;
@@ -53,12 +65,13 @@ export interface SalonContext {
   services: { name: string; price: number; duration: number; category: string; isStartingPrice?: boolean }[];
   staffMembers?: { name: string; gender: string }[];
   clientMemory?: ClientMemory;
-  isNewConversation?: boolean; // true = first message in this session / day
-  resolvedComplaints?: { complaint: string; fix: string }[]; // salon-level learnings
-  botCorrections?: { wrongInfo: string; correctInfo: string }[]; // bot's own past mistakes + correct answers
-  bossInstructions?: string[]; // permanent instructions from the salon owner/boss
-  personality?: string[]; // lina's personality modes (can combine): warm | professional | playful | direct
-  upcomingAppointment?: { date: string; time: string; service: string } | null; // null = no future appointment
+  isNewConversation?: boolean;
+  resolvedComplaints?: { complaint: string; fix: string }[];
+  botCorrections?: { wrongInfo: string; correctInfo: string }[];
+  bossInstructions?: string[];
+  personality?: string[];
+  upcomingAppointment?: { date: string; time: string; service: string } | null;
+  planningSnapshot?: PlanningDay[]; // next 20 days of booked slots
 }
 
 export interface ConversationTurn {
@@ -79,7 +92,8 @@ function buildSystemPrompt(ctx: SalonContext): string {
   const bossKey = (ctx.bossInstructions || []).join("|");
   const correctionsKey = (ctx.botCorrections || []).map(c => c.wrongInfo).join("|");
   const complaintsKey = (ctx.resolvedComplaints || []).map(c => c.complaint).join("|");
-  const key = `${ctx.name}|${ctx.currency}|${ctx.services.length}|${staffKey}|${memKey}|${ctx.isNewConversation ? "new" : "returning"}|${bossKey}|${correctionsKey}|${complaintsKey}|${(ctx.personality ?? ["warm"]).join(",")}`;
+  const planningKey = (ctx.planningSnapshot || []).map(d => `${d.date}:${d.bookedSlots.length}`).join(",");
+  const key = `${ctx.name}|${ctx.currency}|${ctx.services.length}|${staffKey}|${memKey}|${ctx.isNewConversation ? "new" : "returning"}|${bossKey}|${correctionsKey}|${complaintsKey}|${(ctx.personality ?? ["warm"]).join(",")}|${planningKey}`;
 
   if (key === cachedPromptKey) return cachedPrompt;
 
@@ -95,7 +109,7 @@ function buildSystemPrompt(ctx: SalonContext): string {
           .map(
             ([cat, svcs]) =>
               `【${cat}】\n` +
-              svcs.map((s) => `  • ${s.name} : ${s.isStartingPrice ? `à partir de ${s.price}` : s.price} ${ctx.currency || "DH"}`).join("\n")
+              svcs.map((s) => `  • ${s.name} : ${s.isStartingPrice ? `à partir de ${s.price}` : s.price} ${ctx.currency || "DH"} — ${s.duration} min`).join("\n")
           )
           .join("\n\n")
       : "  (liste non disponible)";
@@ -209,8 +223,26 @@ ${ctx.resolvedComplaints.map(r => `• إذا سألت عميلة عن: "${r.com
 • لا تقولي أبداً "تواصلي معنا للأسعار" — هي معاكِ الآن
 • لو السعر "à partir de X" → قولي "كيبدأ من X درهم حسب الطول"
 • لو السعر ثابت → هو ثابت فقط
+• دائماً اذكري مدة الخدمة بالدقائق — مثال: "الـ Balayage كياخد 300 min" — لا تقولي أبداً "ساعات" أو "5h" أو "2h30"، قولي دائماً "X min"
 • للحجز → لو العميلة بغات تحجز، اتفقي معاها على التاريخ والساعة بشكل واضح، وبعد ما يتأكد كل شي قولي جملة فيها: اسم الخدمة + التاريخ + الساعة — مثال: "تمام، الموعد لـ إزالة الشعر يوم غدا مع 14:00 مؤكد عندنا 🌸" — لا تعطي رقم هاتف ولا تستعملي اسم العميلة
 • مهم جداً: لما تأكدي موعد محدد → لازم تذكري في نفس الرسالة: اسم الخدمة بوضوح + التاريخ (اليوم/غدا/اسم اليوم) + الساعة — هاد المعلومات ضرورية باش يتسجل الموعد في النظام تلقائياً
+
+${ctx.planningSnapshot && ctx.planningSnapshot.length > 0 ? `━━━ التقويم — المواعيد المحجوزة (20 يوم القادمة) ━━━
+هاد هو التقويم الحالي للصالون — استعمليه لتحققي من التوفر قبل تأكيد أي حجز:
+${ctx.planningSnapshot.map(day => {
+  if (day.bookedSlots.length === 0) return `📅 ${day.dayLabel} (${day.date}): فارغ — كل الأوقات متاحة`;
+  const slots = day.bookedSlots.map(s => `    ⏰ ${s.time}–${s.endTime} | ${s.staff} | ${s.service} (${s.duration} min)`).join("\n");
+  return `📅 ${day.dayLabel} (${day.date}):\n${slots}`;
+}).join("\n")}
+
+🔑 قواعد التحقق من التوفر — اتبعيها بدقة:
+1. لما تطلب عميلة موعد (غدا، بكرا، أي يوم) → شوفي التقويم أعلاه للتاريخ اللي بغات
+2. إذا اليوم فارغ أو الوقت المطلوب ما فيهوش تعارض → وافقي على الموعد مباشرة وأكديه
+3. إذا الوقت المطلوب فيه مواعيد → شوفي إذا كاين موظف آخر فارغ في نفس الوقت (عدد الموظفين: ${ctx.staffMembers?.length || 1}) — إذا كاين موظف فارغ → وافقي وأكدي
+4. إذا كل الموظفين مشغولين في الوقت المطلوب → اقترحي أقرب وقت فارغ في نفس اليوم أو اليوم اللي بعده
+5. لا تقبلي حجز في وقت مشغول بالكامل — كوني صادقة وعطيها بديل: "هداك الوقت عندنا موعد، ماذا لو جيتي الساعة X؟"
+6. الأيام اللي مكتوب "فارغ" → كل الأوقات متاحة في أوقات العمل (${ctx.openingTime || "09:00"}–${ctx.closingTime || "20:00"})` : `━━━ التقويم ━━━
+• ما عندناش بيانات التقويم حالياً — إذا طلبت عميلة موعد، وافقي بشكل طبيعي واقترحي الوقت المناسب لها`}
 
 ━━━ معلومات الموعد القادم للعميلة ━━━
 ${ctx.upcomingAppointment === undefined
