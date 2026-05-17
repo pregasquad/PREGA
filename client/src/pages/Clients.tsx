@@ -1,6 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { io } from "socket.io-client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -73,6 +74,18 @@ export default function Clients() {
   const { data: clients = [], isLoading } = useQuery<Client[]>({
     queryKey: ["/api/clients"],
   });
+
+  useEffect(() => {
+    const socket = io();
+    const refresh = () => queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+    socket.on("client:created", refresh);
+    socket.on("client:updated", refresh);
+    return () => {
+      socket.off("client:created", refresh);
+      socket.off("client:updated", refresh);
+      socket.disconnect();
+    };
+  }, [queryClient]);
 
   const { data: services = [] } = useQuery<Service[]>({
     queryKey: ["/api/services"],

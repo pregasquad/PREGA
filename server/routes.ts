@@ -65,6 +65,58 @@ async function checkAndNotifyLowStock(productId: number) {
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 
 /**
+ * Normalize a phone number to a consistent 12-digit format (e.g. 212XXXXXXXXX).
+ * Mirrors the normalization done inside the WhatsApp message handler.
+ */
+function normalizePhone(p: string): string {
+  let n = p.replace(/[^0-9]/g, "");
+  if (n.startsWith("00")) n = n.slice(2);
+  if (n.startsWith("0") && n.length === 10) n = "212" + n.slice(1);
+  if (n.length === 9) n = "212" + n;
+  return n;
+}
+
+/**
+ * When a WhatsApp message arrives, make sure the sender has a client record.
+ * - Looks up existing clients by normalized phone number.
+ * - If found and name is blank, fills it from the WhatsApp push name.
+ * - If not found, creates a new client with the push name + phone.
+ * Fire-and-forget — never throws.
+ */
+async function ensureWhatsAppClient(
+  normalizedPhone: string,
+  pushName: string | null | undefined,
+  emitFn?: (event: string, data: unknown) => void
+): Promise<void> {
+  try {
+    if (!normalizedPhone || normalizedPhone.length < 7) return;
+
+    const allClients = await storage.getClients();
+    const existing = allClients.find(
+      (c) => c.phone && normalizePhone(c.phone) === normalizedPhone
+    );
+
+    if (existing) {
+      // Already known — fill in a missing name from WhatsApp push name
+      if ((!existing.name || existing.name === existing.phone) && pushName?.trim()) {
+        await storage.updateClient(existing.id, { name: pushName.trim() });
+        console.log(`[WhatsApp] Updated name for client #${existing.id} → "${pushName.trim()}"`);
+        if (emitFn) emitFn("client:updated", { id: existing.id });
+      }
+      return;
+    }
+
+    // New contact — create a client record
+    const name = pushName?.trim() || normalizedPhone;
+    const created = await storage.createClient({ name, phone: normalizedPhone });
+    console.log(`[WhatsApp] Auto-created client "${name}" (${normalizedPhone})`);
+    if (emitFn) emitFn("client:created", created);
+  } catch (err) {
+    console.error("[ensureWhatsAppClient] Error:", err);
+  }
+}
+
+/**
  * After an appointment is created, ensure the client record has a phone number.
  * - If clientId is known: update that client's phone if it's missing.
  * - If only a name is known: look up by name, update phone if missing, or
@@ -4878,6 +4930,12 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
           if (normalized.startsWith("00")) normalized = normalized.slice(2);
           if (normalized.startsWith("0") && normalized.length === 10) normalized = "212" + normalized.slice(1);
           if (normalized.length === 9) normalized = "212" + normalized;
+
+          // ── Auto-create / update client record from WhatsApp ─────────────
+          // Only for real phone JIDs (not @lid which carries a LID, not a real number)
+          if (remoteJid.endsWith("@s.whatsapp.net")) {
+            ensureWhatsAppClient(normalized, pushName, (event, data) => io.emit(event, data)).catch(() => {});
+          }
 
           // ── Appointment quick-reply check (1/2/3) ────────────────────────
           const allApts = await storage.getAppointments();
