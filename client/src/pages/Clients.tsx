@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { io } from "socket.io-client";
+import { getAppSocket } from "@/lib/appSocket";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,14 +76,14 @@ export default function Clients() {
   });
 
   useEffect(() => {
-    const socket = io();
+    const socket = getAppSocket();
     const refresh = () => queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
     socket.on("client:created", refresh);
     socket.on("client:updated", refresh);
     return () => {
       socket.off("client:created", refresh);
       socket.off("client:updated", refresh);
-      socket.disconnect();
+      // Do NOT disconnect — this is a shared singleton used across the app
     };
   }, [queryClient]);
 

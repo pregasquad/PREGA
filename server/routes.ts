@@ -66,7 +66,7 @@ import { registerObjectStorageRoutes } from "./replit_integrations/object_storag
 
 /**
  * Normalize a phone number to a consistent 12-digit format (e.g. 212XXXXXXXXX).
- * Mirrors the normalization done inside the WhatsApp message handler.
+ * Single source of truth — used by ensureWhatsAppClient and the message handler.
  */
 function normalizePhone(p: string): string {
   let n = p.replace(/[^0-9]/g, "");
@@ -77,10 +77,19 @@ function normalizePhone(p: string): string {
 }
 
 /**
+ * Per-phone mutex: prevents race conditions when two messages arrive at the
+ * same instant from the same new number (which would otherwise both see
+ * "client not found" and both try to INSERT, creating duplicates).
+ */
+const _clientUpsertLock = new Map<string, Promise<void>>();
+
+/**
  * When a WhatsApp message arrives, make sure the sender has a client record.
- * - Looks up existing clients by normalized phone number.
+ * - Fast path: direct DB lookup by normalized phone (O(1)).
+ * - Fallback path: scan all clients with normalization for legacy phone formats.
  * - If found and name is blank, fills it from the WhatsApp push name.
  * - If not found, creates a new client with the push name + phone.
+ * - Serializes concurrent calls for the same phone to avoid duplicate inserts.
  * Fire-and-forget — never throws.
  */
 async function ensureWhatsAppClient(
@@ -88,32 +97,53 @@ async function ensureWhatsAppClient(
   pushName: string | null | undefined,
   emitFn?: (event: string, data: unknown) => void
 ): Promise<void> {
-  try {
-    if (!normalizedPhone || normalizedPhone.length < 7) return;
+  if (!normalizedPhone || normalizedPhone.length < 7) return;
 
-    const allClients = await storage.getClients();
-    const existing = allClients.find(
-      (c) => c.phone && normalizePhone(c.phone) === normalizedPhone
-    );
+  // Chain onto any in-flight upsert for the same phone to prevent duplicates
+  const previous = _clientUpsertLock.get(normalizedPhone) ?? Promise.resolve();
+  const next = previous.then(async () => {
+    try {
+      // Fast path: direct DB query for exact normalized phone
+      let existing = await storage.getClientByPhone(normalizedPhone);
 
-    if (existing) {
-      // Already known — fill in a missing name from WhatsApp push name
-      if ((!existing.name || existing.name === existing.phone) && pushName?.trim()) {
-        await storage.updateClient(existing.id, { name: pushName.trim() });
-        console.log(`[WhatsApp] Updated name for client #${existing.id} → "${pushName.trim()}"`);
-        if (emitFn) emitFn("client:updated", { id: existing.id });
+      // Fallback: scan clients whose stored phone normalizes to the same value
+      // (handles legacy entries saved in non-canonical format)
+      if (!existing) {
+        const allClients = await storage.getClients();
+        existing = allClients.find(
+          (c) => c.phone && normalizePhone(c.phone) === normalizedPhone
+        );
       }
-      return;
-    }
 
-    // New contact — create a client record
-    const name = pushName?.trim() || normalizedPhone;
-    const created = await storage.createClient({ name, phone: normalizedPhone });
-    console.log(`[WhatsApp] Auto-created client "${name}" (${normalizedPhone})`);
-    if (emitFn) emitFn("client:created", created);
-  } catch (err) {
-    console.error("[ensureWhatsAppClient] Error:", err);
-  }
+      if (existing) {
+        // Already known — fill in a missing name from WhatsApp push name
+        if ((!existing.name || existing.name === existing.phone) && pushName?.trim()) {
+          await storage.updateClient(existing.id, { name: pushName.trim() });
+          console.log(`[WhatsApp] Updated name for client #${existing.id} → "${pushName.trim()}"`);
+          if (emitFn) emitFn("client:updated", { id: existing.id });
+        }
+        return;
+      }
+
+      // New contact — create a client record
+      const name = pushName?.trim() || normalizedPhone;
+      const created = await storage.createClient({ name, phone: normalizedPhone });
+      console.log(`[WhatsApp] Auto-created client "${name}" (${normalizedPhone})`);
+      if (emitFn) emitFn("client:created", created);
+    } catch (err) {
+      console.error("[ensureWhatsAppClient] Error:", err);
+    }
+  });
+
+  _clientUpsertLock.set(normalizedPhone, next);
+  // Clean up the lock entry once settled so the Map doesn't grow unbounded
+  next.finally(() => {
+    if (_clientUpsertLock.get(normalizedPhone) === next) {
+      _clientUpsertLock.delete(normalizedPhone);
+    }
+  });
+
+  await next;
 }
 
 /**
