@@ -981,12 +981,12 @@ export async function registerRoutes(
             for (const jid of jidsToSilence) {
               // Temporary in-memory silence only — do NOT write bot_blocked to DB.
               // DB bot_blocked is reserved for admin-controlled blocks via the UI toggle.
-              silencedJids.set(jid, Date.now() + SILENCE_TTL);
+              silencedJids.set(jid, { expiry: Date.now() + SILENCE_TTL, reason: 'booking' });
               memCache.delete(jid);
               for (const k of Array.from(aiReplyCache.keys())) {
                 if (k.startsWith(`${jid}:`)) aiReplyCache.delete(k);
               }
-              console.log(`[Bot] Temporarily silenced bot for ${jid} after booking confirmation (4h, in-memory only)`);
+              console.log(`[Bot] Temporarily silenced bot for ${jid} after booking confirmation (booking, in-memory only)`);
             }
           } catch (blockErr) {
             console.log("Failed to silence bot after booking confirmation:", blockErr);
@@ -4900,8 +4900,8 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
           // can never be "1"/"2"/"3" quick actions, so there's nothing useful to do.
           const { transcribeAudio } = await import("./gemini");
           for (const msg of msgs) {
-            if (msg.isVoice && isIndividuallyBlocked) {
-              console.log(`[Bot] Skipping voice transcription for bot-blocked JID ${remoteJid}`);
+            if (msg.isVoice && isHardBlocked) {
+              console.log(`[Bot] Skipping voice transcription for hard-blocked JID ${remoteJid}`);
               return;
             }
             if (msg.isVoice) {
