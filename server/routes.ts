@@ -2844,6 +2844,54 @@ export async function registerRoutes(
     }
   });
 
+  // Sync all WhatsApp contacts into the clients table
+  app.post("/api/whatsapp/sync-clients", isPinAuthenticated, async (_req, res) => {
+    try {
+      const { getAllBotMemories } = await import("./db");
+      const memories = await getAllBotMemories();
+      const appointments = await storage.getAppointments();
+
+      let created = 0;
+      let updated = 0;
+
+      const emit = (event: string, data: unknown) => io.emit(event, data);
+
+      // 1. Sync from bot_client_memory (real WhatsApp contacts who chatted)
+      for (const mem of memories) {
+        // Only use entries that have a real phone resolved (skip raw @lid numeric IDs)
+        const rawPhone = mem.phone || mem.jid.replace("@s.whatsapp.net", "").replace("@lid", "");
+        const normalized = normalizePhone(rawPhone);
+        if (!normalized || normalized.length < 7) continue;
+        // Skip obviously-LID numbers (long numeric IDs that are not phone numbers)
+        if (normalized.length > 15) continue;
+
+        const before = await storage.getClientByPhone(normalized);
+        await ensureWhatsAppClient(normalized, mem.clientName, emit);
+        const after = await storage.getClientByPhone(normalized);
+
+        if (!before && after) created++;
+        else if (before && !before.name && after?.name) updated++;
+      }
+
+      // 2. Sync from appointments (clients who booked even without chatting)
+      for (const apt of appointments) {
+        if (!apt.phone) continue;
+        const normalized = normalizePhone(apt.phone);
+        if (!normalized || normalized.length < 7 || normalized.length > 15) continue;
+
+        const before = await storage.getClientByPhone(normalized);
+        await ensureWhatsAppClient(normalized, apt.client || null, emit);
+        const after = await storage.getClientByPhone(normalized);
+
+        if (!before && after) created++;
+      }
+
+      res.json({ ok: true, created, updated });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   app.get("/api/whatsapp/bot-conversations", isPinAuthenticated, async (_req, res) => {
     try {
       const { getAllBotMemories } = await import("./db");
@@ -4819,6 +4867,8 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
             if (memEntry?.phone) {
               resolvedPhone = normalizeBotPhone(memEntry.phone);
               console.log(`[Bot] @lid resolved phone from memory: ${resolvedPhone}`);
+              // Auto-create client record now that we have the real phone
+              ensureWhatsAppClient(resolvedPhone, pushName ?? memEntry.clientName, (event, data) => io.emit(event, data)).catch(() => {});
             } else {
               console.log(`[Bot] @lid JID — no phone in memory yet, lidRaw=${phone}`);
             }

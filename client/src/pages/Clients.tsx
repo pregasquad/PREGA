@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit2, Trash2, User, Phone, Mail, Gift, Calendar as CalendarIcon, Star, Crown, Award, Zap, Clock, RefreshCw, CreditCard, Search, Check } from "lucide-react";
+import { Plus, Edit2, Trash2, User, Phone, Mail, Gift, Calendar as CalendarIcon, Star, Crown, Award, Zap, Clock, RefreshCw, CreditCard, Search, Check, MessageCircle } from "lucide-react";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
 import { format, startOfToday } from "date-fns";
 import { ar, enUS, fr } from "date-fns/locale";
@@ -134,6 +134,29 @@ export default function Clients() {
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
   }, [quickBookClientHistory, services]);
+
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleWhatsAppSync = async () => {
+    setIsSyncing(true);
+    try {
+      const res = await fetch("/api/whatsapp/sync-clients", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Sync failed");
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      toast({
+        title: t("clients.whatsappSync", "WhatsApp Sync"),
+        description: t("clients.whatsappSyncResult", "{{created}} added, {{updated}} updated", {
+          created: data.created,
+          updated: data.updated,
+        }),
+      });
+    } catch (err: any) {
+      toast({ title: t("common.error", "Error"), description: err.message, variant: "destructive" });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -452,6 +475,20 @@ export default function Clients() {
           <p className="text-sm md:text-base text-muted-foreground">{t("clients.pageDesc")}</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isSyncing}
+            onClick={handleWhatsAppSync}
+            data-testid="button-whatsapp-sync"
+            title={t("clients.whatsappSync", "Sync from WhatsApp")}
+            className="gap-1.5 text-green-600 border-green-300 hover:bg-green-50 dark:text-green-400 dark:border-green-700 dark:hover:bg-green-950"
+          >
+            <MessageCircle className={`h-4 w-4 ${isSyncing ? "animate-pulse" : ""}`} />
+            {isSyncing
+              ? t("common.syncing", "جاري...")
+              : t("clients.whatsappSync", "مزامنة واتساب")}
+          </Button>
           <Button
             variant="outline"
             size="icon"
