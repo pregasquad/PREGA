@@ -2847,8 +2847,8 @@ export async function registerRoutes(
   // Sync all WhatsApp contacts into the clients table
   app.post("/api/whatsapp/sync-clients", isPinAuthenticated, async (_req, res) => {
     try {
-      const { getAllBotMemories } = await import("./db");
-      const memories = await getAllBotMemories();
+      const { getAllBotMemoriesAll } = await import("./db");
+      const memories = await getAllBotMemoriesAll();
       const appointments = await storage.getAppointments();
 
       let created = 0;
@@ -4849,6 +4849,26 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
       }
       if ((botSettings as any).botEnabled === false) return;
 
+      // ── @lid phone resolution (always — before filter AND before buffer) ──────
+      // For @lid JIDs the "phone" argument is a raw numeric LID, not a real phone.
+      // Resolve the real phone from bot_client_memory (saved on first @s.whatsapp.net
+      // contact) so it can be used for filtering AND for client auto-creation.
+      let lidResolvedPhone: string | null = null;
+      if (remoteJid.endsWith("@lid")) {
+        try {
+          const { getBotMemory: _getBotMem } = await import("./db");
+          const memEntry = await _getBotMem(remoteJid);
+          if (memEntry?.phone) {
+            lidResolvedPhone = normalizeBotPhone(memEntry.phone);
+            console.log(`[Bot] @lid resolved phone from memory: ${lidResolvedPhone}`);
+            // Auto-create client record immediately — always, regardless of filter mode
+            ensureWhatsAppClient(lidResolvedPhone, pushName ?? memEntry.clientName, (event, data) => io.emit(event, data)).catch(() => {});
+          } else {
+            console.log(`[Bot] @lid JID — no phone in memory yet, lidRaw=${phone}`);
+          }
+        } catch { /* ignore */ }
+      }
+
       // ── Phone number filter (allowlist / blocklist) ────────────────────────
       const filterMode: string = (botSettings as any).botFilterMode || "all";
       if (filterMode !== "all") {
@@ -4857,23 +4877,8 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
         try { filterList = JSON.parse(rawNums); } catch { filterList = []; }
         const normalizedList = filterList.map(normalizeBotPhone).filter(Boolean);
 
-        // For @lid JIDs the "phone" extracted from the JID is a numeric LID, not a real phone.
-        // Resolve the real phone from the bot_client_memory table (stored on first @s.whatsapp.net message).
-        let resolvedPhone = normalizeBotPhone(phone);
-        if (remoteJid.endsWith("@lid")) {
-          try {
-            const { getBotMemory: _getBotMem } = await import("./db");
-            const memEntry = await _getBotMem(remoteJid);
-            if (memEntry?.phone) {
-              resolvedPhone = normalizeBotPhone(memEntry.phone);
-              console.log(`[Bot] @lid resolved phone from memory: ${resolvedPhone}`);
-              // Auto-create client record now that we have the real phone
-              ensureWhatsAppClient(resolvedPhone, pushName ?? memEntry.clientName, (event, data) => io.emit(event, data)).catch(() => {});
-            } else {
-              console.log(`[Bot] @lid JID — no phone in memory yet, lidRaw=${phone}`);
-            }
-          } catch { /* ignore */ }
-        }
+        // Reuse already-resolved real phone for @lid; fall back to raw for @s.whatsapp.net
+        const resolvedPhone = lidResolvedPhone ?? normalizeBotPhone(phone);
 
         const isInList = normalizedList.includes(resolvedPhone);
         console.log(`[Bot] Filter mode=${filterMode} list=${JSON.stringify(normalizedList)} incoming=${resolvedPhone} inList=${isInList}`);
@@ -5019,9 +5024,13 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
           if (normalized.length === 9) normalized = "212" + normalized;
 
           // ── Auto-create / update client record from WhatsApp ─────────────
-          // Only for real phone JIDs (not @lid which carries a LID, not a real number)
+          // @s.whatsapp.net → use normalized phone directly.
+          // @lid → lidResolvedPhone was resolved + ensured before the buffer; re-call
+          //         here so any better pushName we now have gets applied.
           if (remoteJid.endsWith("@s.whatsapp.net")) {
             ensureWhatsAppClient(normalized, pushName, (event, data) => io.emit(event, data)).catch(() => {});
+          } else if (remoteJid.endsWith("@lid") && lidResolvedPhone) {
+            ensureWhatsAppClient(lidResolvedPhone, pushName, (event, data) => io.emit(event, data)).catch(() => {});
           }
 
           // ── Appointment quick-reply check (1/2/3) ────────────────────────

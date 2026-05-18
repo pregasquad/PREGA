@@ -1341,6 +1341,26 @@ export async function getBotMemoriesByPhone(normalizedPhone: string): Promise<Bo
   }
 }
 
+function _mapBotMemoryRow(row: any, dialect: 'mysql' | 'postgres'): BotClientMemory {
+  return {
+    jid: row.jid,
+    phone: row.phone ?? null,
+    clientName: row.client_name ?? null,
+    language: row.language || 'unknown',
+    preferredServices: row.preferred_services
+      ? (typeof row.preferred_services === 'string' ? JSON.parse(row.preferred_services) : row.preferred_services)
+      : [],
+    personalityNotes: row.personality_notes ?? null,
+    convHistory: row.conv_history ? JSON.parse(row.conv_history) : [],
+    visitCount: row.visit_count || 0,
+    lastSeen: row.last_seen ? new Date(row.last_seen) : null,
+    botBlocked: dialect === 'mysql'
+      ? (row.bot_blocked === 1 || row.bot_blocked === true)
+      : row.bot_blocked === true,
+  };
+}
+
+/** Returns the 100 most-recent bot memories — used by the UI conversation panel. */
 export async function getAllBotMemories(): Promise<BotClientMemory[]> {
   try {
     if (dbDialect === 'mysql') {
@@ -1349,41 +1369,37 @@ export async function getAllBotMemories(): Promise<BotClientMemory[]> {
         `SELECT * FROM bot_client_memory ORDER BY last_seen DESC LIMIT 100`
       );
       connection.release();
-      return (rows as any[]).map((row) => ({
-        jid: row.jid,
-        phone: row.phone ?? null,
-        clientName: row.client_name ?? null,
-        language: row.language || 'unknown',
-        preferredServices: row.preferred_services
-          ? (typeof row.preferred_services === 'string' ? JSON.parse(row.preferred_services) : row.preferred_services)
-          : [],
-        personalityNotes: row.personality_notes ?? null,
-        convHistory: row.conv_history ? JSON.parse(row.conv_history) : [],
-        visitCount: row.visit_count || 0,
-        lastSeen: row.last_seen ? new Date(row.last_seen) : null,
-        botBlocked: row.bot_blocked === 1 || row.bot_blocked === true,
-      }));
+      return (rows as any[]).map((r) => _mapBotMemoryRow(r, 'mysql'));
     } else {
       const result = await pool.query(
         `SELECT * FROM bot_client_memory ORDER BY last_seen DESC LIMIT 100`
       );
-      return result.rows.map((row: any) => ({
-        jid: row.jid,
-        phone: row.phone ?? null,
-        clientName: row.client_name ?? null,
-        language: row.language || 'unknown',
-        preferredServices: row.preferred_services
-          ? (typeof row.preferred_services === 'string' ? JSON.parse(row.preferred_services) : row.preferred_services)
-          : [],
-        personalityNotes: row.personality_notes ?? null,
-        convHistory: row.conv_history ? JSON.parse(row.conv_history) : [],
-        visitCount: row.visit_count || 0,
-        lastSeen: row.last_seen ? new Date(row.last_seen) : null,
-        botBlocked: row.bot_blocked === true,
-      }));
+      return result.rows.map((r: any) => _mapBotMemoryRow(r, 'postgres'));
     }
   } catch (err) {
     console.error("[BotMemory] getAllBotMemories failed:", err);
+    return [];
+  }
+}
+
+/** Returns ALL bot memories — no LIMIT — used only by the client sync endpoint. */
+export async function getAllBotMemoriesAll(): Promise<BotClientMemory[]> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      const [rows] = await connection.query(
+        `SELECT * FROM bot_client_memory ORDER BY last_seen DESC`
+      );
+      connection.release();
+      return (rows as any[]).map((r) => _mapBotMemoryRow(r, 'mysql'));
+    } else {
+      const result = await pool.query(
+        `SELECT * FROM bot_client_memory ORDER BY last_seen DESC`
+      );
+      return result.rows.map((r: any) => _mapBotMemoryRow(r, 'postgres'));
+    }
+  } catch (err) {
+    console.error("[BotMemory] getAllBotMemoriesAll failed:", err);
     return [];
   }
 }
