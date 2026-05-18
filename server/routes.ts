@@ -4526,7 +4526,7 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
   // Temporary post-booking silence — in-memory only, NOT persisted to DB.
   // Prevents the bot from replying immediately after auto-confirming an appointment.
   // The admin-controlled block uses bot_blocked in the DB (set via the UI toggle only).
-  const SILENCE_TTL = 4 * 60 * 60 * 1000; // 4 hours
+  const SILENCE_TTL = 1 * 60 * 1000; // 1 minute
   const silencedJids = new Map<string, number>(); // jid → expiry timestamp
 
 
@@ -4751,10 +4751,10 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
         console.log(`[Bot] Boss manually replied to ${jid} — cancelled Lina's pending reply`);
       }
 
-      // 2. Silence Lina for 2 hours after boss reply so the next client message is NOT auto-answered
-      const BOSS_SILENCE_TTL = 2 * 60 * 60 * 1000; // 2 hours
+      // 2. Silence Lina for 1 minute after boss reply so the next client message is NOT auto-answered
+      const BOSS_SILENCE_TTL = 1 * 60 * 1000; // 1 minute
       silencedJids.set(jid, Date.now() + BOSS_SILENCE_TTL);
-      console.log(`[Bot] Boss replied to ${jid} — Lina silenced for 2 h`);
+      console.log(`[Bot] Boss replied to ${jid} — Lina silenced for 1 min`);
 
       // 3. Persist boss's text into convHistory as a "model" turn so Lina reads it next time
       if (bossText && bossText.trim()) {
