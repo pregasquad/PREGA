@@ -4527,7 +4527,7 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
   // Prevents the bot from replying immediately after auto-confirming an appointment.
   // The admin-controlled block uses bot_blocked in the DB (set via the UI toggle only).
   const SILENCE_TTL = 1 * 60 * 1000; // 1 minute
-  const silencedJids = new Map<string, number>(); // jid → expiry timestamp
+  const silencedJids = new Map<string, { expiry: number; reason: 'booking' | 'boss' }>(); // jid → silence info
 
 
   // How long an idle conversation keeps its context (7 days — returning clients always get full context)
@@ -4751,10 +4751,11 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
         console.log(`[Bot] Boss manually replied to ${jid} — cancelled Lina's pending reply`);
       }
 
-      // 2. Silence Lina for 1 minute after boss reply so the next client message is NOT auto-answered
-      const BOSS_SILENCE_TTL = 1 * 60 * 1000; // 1 minute
-      silencedJids.set(jid, Date.now() + BOSS_SILENCE_TTL);
-      console.log(`[Bot] Boss replied to ${jid} — Lina silenced for 1 min`);
+      // 2. Silence Lina briefly after boss reply — if a NEW client message arrives and boss
+      //    doesn't reply within the 15s buffer window, Lina will take over automatically.
+      const BOSS_SILENCE_TTL = 1 * 60 * 1000; // 1 minute cap (cleared on next flush if boss stays silent)
+      silencedJids.set(jid, { expiry: Date.now() + BOSS_SILENCE_TTL, reason: 'boss' });
+      console.log(`[Bot] Boss replied to ${jid} — Lina standing by (takes over if boss stays silent after next client msg)`);
 
       // 3. Persist boss's text into convHistory as a "model" turn so Lina reads it next time
       if (bossText && bossText.trim()) {
@@ -4870,17 +4871,23 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
           // false positives for users who were never explicitly blocked.
           const freshMem = await getBotMemory(remoteJid);
           const isAdminBlocked = freshMem?.botBlocked === true;
-          // Also check in-memory temporary silence (set after auto-confirmed bookings)
-          const silenceExpiry = silencedJids.get(remoteJid);
-          const isTempSilenced = silenceExpiry !== undefined && Date.now() < silenceExpiry;
-          if (silenceExpiry !== undefined && Date.now() >= silenceExpiry) {
+          // Also check in-memory temporary silence (set after auto-confirmed bookings or boss replies)
+          const silenceEntry = silencedJids.get(remoteJid);
+          const isTempSilenced = silenceEntry !== undefined && Date.now() < silenceEntry.expiry;
+          const silenceReason = isTempSilenced ? silenceEntry!.reason : undefined;
+          if (silenceEntry !== undefined && Date.now() >= silenceEntry.expiry) {
             silencedJids.delete(remoteJid); // clean up expired entry
           }
+          // 'boss' silence: Lina will take over after the buffer flush if boss didn't reply — NOT a hard block
+          // 'booking' silence: hard block for the silence window
+          const isHardBlocked = isAdminBlocked || (isTempSilenced && silenceReason === 'booking');
           const isIndividuallyBlocked = isAdminBlocked || isTempSilenced;
           if (isAdminBlocked) {
             console.log(`[Bot] ${remoteJid} is admin-blocked (DB) — quick actions still processed, AI reply will be skipped`);
-          } else if (isTempSilenced) {
+          } else if (isTempSilenced && silenceReason === 'booking') {
             console.log(`[Bot] ${remoteJid} is temporarily silenced after booking — quick actions still processed, AI reply will be skipped`);
+          } else if (isTempSilenced && silenceReason === 'boss') {
+            console.log(`[Bot] ${remoteJid} is in boss-reply standby — boss had 15s to respond, Lina will take over`);
           }
 
 
@@ -5049,12 +5056,16 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
           }
 
           // ── AI-reply gate for individually blocked conversations ──────────
-          // 1/2/3 quick actions and cancellations above already handled and
-          // returned early if they matched. Anything that reaches here is a
-          // regular message — skip it entirely if this JID is bot-blocked.
-          if (isIndividuallyBlocked) {
-            console.log(`[Bot] ${remoteJid} is bot-blocked — skipping AI reply`);
+          // 'booking' silence and admin-block are hard stops.
+          // 'boss' silence: boss had 15s (the buffer window) to reply — clear it now and let Lina answer.
+          if (isHardBlocked) {
+            console.log(`[Bot] ${remoteJid} is hard-blocked (admin or booking silence) — skipping AI reply`);
             return;
+          }
+          if (isTempSilenced && silenceReason === 'boss') {
+            // Boss didn't reply within the buffer window — Lina takes over, clear the standby
+            silencedJids.delete(remoteJid);
+            console.log(`[Bot] ${remoteJid} boss standby cleared — Lina taking over`);
           }
 
           // ── Image generation: client asked for a photo ───────────────────
@@ -5582,7 +5593,7 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
                 try {
                   const silenceOk = (await storage.getBusinessSettings() as any)?.botSilenceAfterBooking !== false;
                   if (!silenceOk) return;
-                  silencedJids.set(remoteJid, Date.now() + SILENCE_TTL);
+                  silencedJids.set(remoteJid, { expiry: Date.now() + SILENCE_TTL, reason: 'booking' });
                   memCache.delete(remoteJid);
                   for (const k of Array.from(aiReplyCache.keys())) {
                     if (k.startsWith(`${remoteJid}:`)) aiReplyCache.delete(k);
