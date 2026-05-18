@@ -9,21 +9,21 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/pregasquad-icon.jpeg",
+      "src": "/pregasquad-icon.png",
       "sizes": "192x192",
-      "type": "image/jpeg",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/pregasquad-icon.jpeg",
+      "src": "/pregasquad-icon.png",
       "sizes": "512x512",
-      "type": "image/jpeg",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/pregasquad-icon.jpeg",
+      "src": "/pregasquad-icon.png",
       "sizes": "512x512",
-      "type": "image/jpeg",
+      "type": "image/png",
       "purpose": "maskable"
     }
   ]
