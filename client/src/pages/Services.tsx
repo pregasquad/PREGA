@@ -26,6 +26,7 @@ const serviceFormSchema = insertServiceSchema.extend({
   linkedProductId: z.coerce.number().optional().nullable(),
   linkedProductIds: z.array(z.number()).default([]),
   commissionPercent: z.coerce.number().min(0).max(100).default(50),
+  emoji: z.string().max(10).optional().nullable(),
 });
 
 export default function Services() {
@@ -96,7 +97,7 @@ export default function Services() {
 
   const sForm = useForm({
     resolver: zodResolver(serviceFormSchema),
-    defaultValues: { name: "", price: 0, duration: 30, category: "", linkedProductId: null, linkedProductIds: [] as number[], commissionPercent: 50, isStartingPrice: false }
+    defaultValues: { name: "", price: 0, duration: 30, category: "", linkedProductId: null, linkedProductIds: [] as number[], commissionPercent: 50, isStartingPrice: false, emoji: "" }
   });
 
   const cForm = useForm({
@@ -219,7 +220,10 @@ export default function Services() {
                           categoryServices.map(service => (
                             <div key={service.id} data-testid={`card-service-${service.id}`} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/50 group">
                               <div className="min-w-0">
-                                <h4 className="font-semibold text-sm truncate">{service.name}</h4>
+                                <h4 className="font-semibold text-sm truncate">
+                                  {(service as any).emoji && <span className="mr-1">{(service as any).emoji}</span>}
+                                  {service.name}
+                                </h4>
                                 <p className="text-xs text-muted-foreground">{service.duration} {t("common.minutes")} • {service.isStartingPrice ? `${t("services.startingFrom")} ` : ''}{service.price} DH • {t("services.commission")} {service.commissionPercent ?? 50}%</p>
                                 {(((service.linkedProductIds as number[] | null | undefined) || []).length > 0 || service.linkedProductId) && (
                                   <div className="text-xs text-primary flex items-center gap-1 mt-1 flex-wrap">
@@ -261,17 +265,31 @@ export default function Services() {
             <form onSubmit={sForm.handleSubmit((data) => {
               createService.mutate(data, { onSuccess: () => { sForm.reset(); setShowAddService(false); } });
             })} className="space-y-4">
-              <FormField
-                control={sForm.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("services.serviceName")}</FormLabel>
-                    <FormControl><Input {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="flex gap-3">
+                <FormField
+                  control={sForm.control}
+                  name="emoji"
+                  render={({ field }) => (
+                    <FormItem className="w-20 shrink-0">
+                      <FormLabel>{t("services.emoji", "إيموجي")}</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value ?? ""} placeholder="💅" className="text-center text-xl" maxLength={2} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={sForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem className="flex-1">
+                      <FormLabel>{t("services.serviceName")}</FormLabel>
+                      <FormControl><Input {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
               <div className="grid grid-cols-3 gap-3">
                 <FormField
                   control={sForm.control}
@@ -410,9 +428,17 @@ export default function Services() {
           <DialogHeader><DialogTitle>{t("services.editService")}</DialogTitle></DialogHeader>
           <Form {...editSForm}>
             <form onSubmit={editSForm.handleSubmit((data) => updateServiceMutation.mutate({ id: editingService!.id, data }))} className="space-y-4">
-              <FormField control={editSForm.control} name="name" render={({ field }) => (
-                <FormItem><FormLabel>{t("common.name")}</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
-              )} />
+              <div className="flex gap-3">
+                <FormField control={editSForm.control} name="emoji" render={({ field }) => (
+                  <FormItem className="w-20 shrink-0">
+                    <FormLabel>{t("services.emoji", "إيموجي")}</FormLabel>
+                    <FormControl><Input {...field} value={field.value ?? ""} placeholder="💅" className="text-center text-xl" maxLength={2} /></FormControl>
+                  </FormItem>
+                )} />
+                <FormField control={editSForm.control} name="name" render={({ field }) => (
+                  <FormItem className="flex-1"><FormLabel>{t("common.name")}</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+                )} />
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <FormField control={editSForm.control} name="price" render={({ field }) => (
                   <FormItem><FormLabel>{t("common.price")}</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>

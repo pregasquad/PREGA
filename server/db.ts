@@ -886,6 +886,35 @@ export async function ensureServiceMaxPriceColumn(): Promise<void> {
   }
 }
 
+export async function ensureServiceEmojiColumn(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      const [rows] = await connection.query(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'services' AND COLUMN_NAME = 'emoji'
+      `);
+      if ((rows as any[]).length === 0) {
+        await connection.query(`ALTER TABLE services ADD COLUMN emoji VARCHAR(10) NULL`);
+        console.log("Added emoji column to services table");
+      }
+      connection.release();
+    } else {
+      await pool.query(`
+        DO $$ 
+        BEGIN 
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'services' AND column_name = 'emoji') THEN
+            ALTER TABLE services ADD COLUMN emoji VARCHAR(10) NULL;
+          END IF;
+        END $$;
+      `);
+    }
+    console.log("Service emoji column ready");
+  } catch (error) {
+    console.error("Failed to ensure service emoji column:", error);
+  }
+}
+
 export async function ensurePlanningShortcutsColumn(): Promise<void> {
   try {
     if (dbDialect === 'mysql') {

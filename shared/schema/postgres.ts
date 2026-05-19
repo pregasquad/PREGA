@@ -116,6 +116,7 @@ export const services = pgTable("services", {
   loyaltyPointsMultiplier: integer("loyalty_points_multiplier").notNull().default(1),
   isStartingPrice: boolean("is_starting_price").notNull().default(false),
   maxPrice: doublePrecision("max_price"),
+  emoji: varchar("emoji", { length: 10 }),
 });
 
 export const categories = pgTable("categories", {

@@ -115,6 +115,7 @@ export const services = mysqlTable("services", {
   loyaltyPointsMultiplier: int("loyalty_points_multiplier").notNull().default(1),
   isStartingPrice: boolean("is_starting_price").notNull().default(false),
   maxPrice: double("max_price"),
+  emoji: varchar("emoji", { length: 10 }),
 });
 
 export const categories = mysqlTable("categories", {
