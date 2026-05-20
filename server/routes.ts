@@ -2845,7 +2845,7 @@ export async function registerRoutes(
   });
 
   // Sync all WhatsApp contacts into the clients table
-  app.post("/api/whatsapp/sync-clients", isPinAuthenticated, async (_req, res) => {
+  app.post("/api/whatsapp/sync-clients", isPinAuthenticated, requirePermission("manage_clients"), async (_req, res) => {
     try {
       const { getAllBotMemoriesAll } = await import("./db");
       const memories = await getAllBotMemoriesAll();
@@ -5017,8 +5017,11 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
             console.log(`[Bot] Merged batch of ${batchSize} message(s) for ${remoteJid}: "${mergedText.slice(0, 60)}"`);
           }
 
-          // Normalize the phone for DB matching (digits only)
-          let normalized = phone.replace(/[^0-9]/g, "");
+          // Normalize the phone for DB matching (digits only).
+          // For @lid JIDs the raw `phone` is a numeric LID, not a real phone number —
+          // use the resolved real phone from memory instead when available.
+          const rawPhoneForNorm = (remoteJid.endsWith("@lid") && lidResolvedPhone) ? lidResolvedPhone : phone;
+          let normalized = rawPhoneForNorm.replace(/[^0-9]/g, "");
           if (normalized.startsWith("00")) normalized = normalized.slice(2);
           if (normalized.startsWith("0") && normalized.length === 10) normalized = "212" + normalized.slice(1);
           if (normalized.length === 9) normalized = "212" + normalized;

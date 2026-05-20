@@ -289,7 +289,10 @@ export default function WhatsApp() {
     socket.on("booking:created", () => {
       queryClient.invalidateQueries({ queryKey: ["/api/appointments/bot-confirmed"] });
     });
-    return () => { socket.disconnect(); };
+    return () => {
+      socket.disconnect();
+      if (codeExpiryRef.current) clearInterval(codeExpiryRef.current);
+    };
   }, []);
 
   // ── Pick up pairing code from poll response ──────────────────────────────

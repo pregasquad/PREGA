@@ -1993,7 +1993,7 @@ export async function ensureLinaPersonalityColumn(): Promise<void> {
         END $$;
       `);
     }
-    console.log("Lina personality column ready");
+    console.log("Wissal personality column ready");
   } catch (error) {
     console.error("Failed to ensure lina_personality column:", error);
   }

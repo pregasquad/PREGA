@@ -477,12 +477,12 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
 
     for (const msg of messages) {
       if (msg.key?.fromMe) {
-        // Ignore messages that Lina sent herself — only act on boss's manual replies
+        // Ignore messages that Wissal sent herself — only act on boss's manual replies
         const msgId: string = msg.key?.id ?? "";
         if (!botSentMessageIds.has(msgId)) {
           const jid: string = msg.key?.remoteJid ?? "";
           if (jid && !jid.endsWith("@g.us") && outgoingMessageHandler) {
-            // Extract text so Lina can record what the boss wrote in conversation history
+            // Extract text so Wissal can record what the boss wrote in conversation history
             const om = msg.message;
             let bossText = "";
             if (om?.conversation) {
