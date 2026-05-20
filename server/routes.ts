@@ -4790,13 +4790,20 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
     // When boss manually replies to a client → cancel pending Wissal reply AND record boss text in history
     setOutgoingMessageHandler((jid: string, bossText: string) => {
-      // 1. Cancel any buffered Wissal reply that hasn't fired yet
+      // 1. Cancel any buffered Wissal reply that hasn't fired yet.
+      //    IMPORTANT: save the buffered client messages to history BEFORE discarding
+      //    them so Wissal knows what the client originally asked when she takes over.
       const sess = jidSessions.get(jid);
+      let pendingClientTurns: ConvTurn[] = [];
       if (sess && sess.timer) {
         clearTimeout(sess.timer);
         sess.timer = null;
+        // Harvest any buffered client messages (text only — images are rarely relevant here)
+        pendingClientTurns = sess.buffer
+          .filter((m) => m.text && m.text.trim())
+          .map((m) => ({ role: "user" as const, text: m.text.trim() }));
         sess.buffer = [];
-        console.log(`[Bot] Boss manually replied to ${jid} — cancelled Wissal's pending reply`);
+        console.log(`[Bot] Boss manually replied to ${jid} — cancelled Wissal's pending reply (${pendingClientTurns.length} client msg(s) preserved in history)`);
       }
 
       // 2. Silence Wissal briefly after boss reply — if a NEW client message arrives and boss
@@ -4805,16 +4812,29 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
       silencedJids.set(jid, { expiry: Date.now() + BOSS_SILENCE_TTL, reason: 'boss' });
       console.log(`[Bot] Boss replied to ${jid} — Wissal standing by (takes over if boss stays silent after next client msg)`);
 
-      // 3. Persist boss's text into convHistory as a "model" turn so Wissal reads it next time
+      // 3. Persist: client messages (if any) + boss reply into convHistory so Wissal
+      //    can read the full context and continue from exactly where the boss left off.
       if (bossText && bossText.trim()) {
         loadMemory(jid).then((mem) => {
-          const history = getActiveHistory(mem);
-          const updated = mergeHistory(mem, [
-            ...history,
-            { role: "model" as const, text: `[رد المدير]: ${bossText.trim()}` },
-          ]);
+          const existingHistory = getActiveHistory(mem);
+
+          // Build the new turns: existing history + any client msgs the boss intercepted + boss reply
+          const newTurns: ConvTurn[] = [...existingHistory, ...pendingClientTurns];
+
+          // Gemini requires history to alternate user → model and MUST start with "user".
+          // If the combined history would start with a model turn (boss proactively wrote
+          // to a client who had never messaged before), insert a context marker so the
+          // API receives a valid user/model alternation.
+          if (newTurns.length === 0) {
+            // No prior context at all — add a placeholder so history starts with "user"
+            newTurns.push({ role: "user" as const, text: "[بدأت المحادثة من طرف الصالون]" });
+          }
+
+          newTurns.push({ role: "model" as const, text: `[رد المدير]: ${bossText.trim()}` });
+
+          const updated = mergeHistory(mem, newTurns);
           persistMemory({ ...updated, lastSeen: new Date() });
-          console.log(`[Bot] Saved boss reply to conv history for ${jid}: "${bossText.slice(0, 60)}"`);
+          console.log(`[Bot] Saved boss reply to conv history for ${jid}: "${bossText.slice(0, 60)}" (total turns: ${newTurns.length})`);
         }).catch((err) => {
           console.error(`[Bot] Failed to save boss reply to history for ${jid}:`, err);
         });
