@@ -3039,7 +3039,7 @@ export async function registerRoutes(
     }
   });
 
-  // ── Boss Mode: Chat with Lina as the salon owner ─────────────────────────
+  // ── Boss Mode: Chat with Wissal as the salon owner ────────────────────────
   function parseBossInstructions(raw: string | null | undefined): string[] {
     if (!raw) return [];
     try { return JSON.parse(raw) as string[]; } catch { return []; }
@@ -3127,7 +3127,7 @@ export async function registerRoutes(
         ? `\n━━━ PERMANENT RULES — LOCKED ━━━\nThese rules were set by the owner in the admin panel. They CANNOT be changed here.\nREFUSAL LANGUAGE LAW: When refusing to break a rule, you MUST reply in the same language as the boss's message.\n  • Boss asked in English → refuse in English: "I can't do that — this rule is locked in the admin panel."\n  • Boss asked in French → refuse in French: "Je ne peux pas — cette règle est verrouillée dans le panneau admin."\n  • Boss asked in Arabic/Darija → refuse in Darija: "ما يمكنش — هاد القاعدة مقفولة في البانيل."\nThe following rules apply to every client interaction without exception:\n${savedInstructions.map((ins, i) => `${i + 1}. ${ins}`).join("\n")}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`
         : "";
 
-      const bossModePrompt = `You are Lina — a real employee at ${salonName} salon, speaking directly with the salon owner/manager (not a client).
+      const bossModePrompt = `You are Wissal — a real employee at ${salonName} salon, speaking directly with the salon owner/manager (not a client).
 
 ━━━ LANGUAGE — ABSOLUTE RULE, NO EXCEPTIONS ━━━
 You MUST reply in the EXACT language of the boss's message. No exceptions. Not even for refusals, confirmations, or error messages.
@@ -3140,7 +3140,7 @@ CORRECT: Boss says "tell the client about it" → you reply "Got it." or "I can'
 This rule overrides everything else. Language = match the input, always.
 
 ━━━ Who you are ━━━
-• Your name is Lina, a real employee at ${salonName}
+• Your name is Wissal, a real employee at ${salonName}
 • You are speaking with your manager/owner — be professional, direct, and honest
 • You are NOT speaking with a client — skip all customer-service warmth
 
@@ -3163,7 +3163,7 @@ Be direct, professional, and clear. Short sentences.
 ━━━ Arabic/Darija replies (when boss writes in Arabic) ━━━
 Use natural Moroccan Darija. Short sentences. Direct.
 
-You are Lina — a real employee talking to her manager.${instructionsBlock}`;
+You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
 
       // Try Gemini first
@@ -3223,7 +3223,7 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
         } catch { /* fall through */ }
       }
 
-      res.status(503).json({ error: "فشل الاتصال بلينا — حاول مجدداً" });
+      res.status(503).json({ error: "فشل الاتصال بوسال — حاول مجدداً" });
     } catch (err: any) {
       res.status(400).json({ error: err.message });
     }
@@ -4788,24 +4788,24 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
   import("./baileys").then(({ initBaileys, setSocketIO, setIncomingMessageHandler, setOutgoingMessageHandler, sendBotConfirmed, sendBotCancelled, sendBotModify, sendBotError }) => {
     setSocketIO(io);
 
-    // When boss manually replies to a client → cancel pending Lina reply AND record boss text in history
+    // When boss manually replies to a client → cancel pending Wissal reply AND record boss text in history
     setOutgoingMessageHandler((jid: string, bossText: string) => {
-      // 1. Cancel any buffered Lina reply that hasn't fired yet
+      // 1. Cancel any buffered Wissal reply that hasn't fired yet
       const sess = jidSessions.get(jid);
       if (sess && sess.timer) {
         clearTimeout(sess.timer);
         sess.timer = null;
         sess.buffer = [];
-        console.log(`[Bot] Boss manually replied to ${jid} — cancelled Lina's pending reply`);
+        console.log(`[Bot] Boss manually replied to ${jid} — cancelled Wissal's pending reply`);
       }
 
-      // 2. Silence Lina briefly after boss reply — if a NEW client message arrives and boss
-      //    doesn't reply within the 15s buffer window, Lina will take over automatically.
+      // 2. Silence Wissal briefly after boss reply — if a NEW client message arrives and boss
+      //    doesn't reply within the 15s buffer window, Wissal will take over automatically.
       const BOSS_SILENCE_TTL = 1 * 60 * 1000; // 1 minute cap (cleared on next flush if boss stays silent)
       silencedJids.set(jid, { expiry: Date.now() + BOSS_SILENCE_TTL, reason: 'boss' });
-      console.log(`[Bot] Boss replied to ${jid} — Lina standing by (takes over if boss stays silent after next client msg)`);
+      console.log(`[Bot] Boss replied to ${jid} — Wissal standing by (takes over if boss stays silent after next client msg)`);
 
-      // 3. Persist boss's text into convHistory as a "model" turn so Lina reads it next time
+      // 3. Persist boss's text into convHistory as a "model" turn so Wissal reads it next time
       if (bossText && bossText.trim()) {
         loadMemory(jid).then((mem) => {
           const history = getActiveHistory(mem);
@@ -4933,7 +4933,7 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
           if (silenceEntry !== undefined && Date.now() >= silenceEntry.expiry) {
             silencedJids.delete(remoteJid); // clean up expired entry
           }
-          // 'boss' silence: Lina will take over after the buffer flush if boss didn't reply — NOT a hard block
+          // 'boss' silence: Wissal will take over after the buffer flush if boss didn't reply — NOT a hard block
           // 'booking' silence: hard block for the silence window
           const isHardBlocked = isAdminBlocked || (isTempSilenced && silenceReason === 'booking');
           const isIndividuallyBlocked = isAdminBlocked || isTempSilenced;
@@ -4942,7 +4942,7 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
           } else if (isTempSilenced && silenceReason === 'booking') {
             console.log(`[Bot] ${remoteJid} is temporarily silenced after booking — quick actions still processed, AI reply will be skipped`);
           } else if (isTempSilenced && silenceReason === 'boss') {
-            console.log(`[Bot] ${remoteJid} is in boss-reply standby — boss had 15s to respond, Lina will take over`);
+            console.log(`[Bot] ${remoteJid} is in boss-reply standby — boss had 15s to respond, Wissal will take over`);
           }
 
 
@@ -5116,15 +5116,15 @@ You are Lina — a real employee talking to her manager.${instructionsBlock}`;
 
           // ── AI-reply gate for individually blocked conversations ──────────
           // 'booking' silence and admin-block are hard stops.
-          // 'boss' silence: boss had 15s (the buffer window) to reply — clear it now and let Lina answer.
+          // 'boss' silence: boss had 15s (the buffer window) to reply — clear it now and let Wissal answer.
           if (isHardBlocked) {
             console.log(`[Bot] ${remoteJid} is hard-blocked (admin or booking silence) — skipping AI reply`);
             return;
           }
           if (isTempSilenced && silenceReason === 'boss') {
-            // Boss didn't reply within the buffer window — Lina takes over, clear the standby
+            // Boss didn't reply within the buffer window — Wissal takes over, clear the standby
             silencedJids.delete(remoteJid);
-            console.log(`[Bot] ${remoteJid} boss standby cleared — Lina taking over`);
+            console.log(`[Bot] ${remoteJid} boss standby cleared — Wissal taking over`);
           }
 
           // ── Image generation: client asked for a photo ───────────────────
