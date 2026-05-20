@@ -3223,7 +3223,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
         } catch { /* fall through */ }
       }
 
-      res.status(503).json({ error: "فشل الاتصال بوسال — حاول مجدداً" });
+      res.status(503).json({ error: "فشل الاتصال بوصال — حاول مجدداً" });
     } catch (err: any) {
       res.status(400).json({ error: err.message });
     }

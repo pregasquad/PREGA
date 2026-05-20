@@ -509,7 +509,7 @@ export default function WhatsApp() {
       queryClient.invalidateQueries({ queryKey: ["/api/business-settings"] });
       toast({
         title: enabled ? "الرسائل الصوتية مفعّلة ✓" : "الرسائل الصوتية متوقفة ✓",
-        description: enabled ? "وسال غترد بصوت على الرسائل الصوتية 🔊" : "وسال غترد بنص فقط 🔇",
+        description: enabled ? "وصال غترد بصوت على الرسائل الصوتية 🔊" : "وصال غترد بنص فقط 🔇",
       });
     },
     onError: (err: any) =>
@@ -521,7 +521,7 @@ export default function WhatsApp() {
       apiRequest("PATCH", "/api/business-settings", { linaPersonality: JSON.stringify(personalities) }).then((r) => r.json()),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/business-settings"] });
-      toast({ title: "تم الحفظ ✓", description: "تم تحديث شخصية وسال" });
+      toast({ title: "تم الحفظ ✓", description: "تم تحديث شخصية وصال" });
     },
     onError: (err: any) =>
       toast({ title: "خطأ", description: err.message, variant: "destructive" }),
@@ -534,7 +534,7 @@ export default function WhatsApp() {
       queryClient.invalidateQueries({ queryKey: ["/api/business-settings"] });
       toast({
         title: enabled ? "البوت مفعّل ✓" : "البوت متوقف ✓",
-        description: enabled ? "وسال راه كيجاوب دابا 🤖" : "البوت متوقف — الرسائل ما غاديش تتجاوب أوتوماتيك",
+        description: enabled ? "وصال راه كيجاوب دابا 🤖" : "البوت متوقف — الرسائل ما غاديش تتجاوب أوتوماتيك",
       });
     },
     onError: (err: any) =>
@@ -549,8 +549,8 @@ export default function WhatsApp() {
       toast({
         title: enable ? "الصمت مفعّل ✓" : "الصمت ملغى ✓",
         description: enable
-          ? "وسال ما غاديش تجاوب بعد تأكيد الحجز 🔇"
-          : "وسال غاتكمل تجاوب بعد الحجز 💬",
+          ? "وصال ما غاديش تجاوب بعد تأكيد الحجز 🔇"
+          : "وصال غاتكمل تجاوب بعد الحجز 💬",
       });
     },
     onError: (err: any) =>
@@ -728,7 +728,7 @@ export default function WhatsApp() {
       apiRequest("POST", "/api/whatsapp/boss-instructions", { instruction }).then((r) => r.json()),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/whatsapp/boss-instructions"] });
-      toast({ title: "✓ حُفظت التعليمة", description: "وسال غادي تطبق هاد التعليمة مع العملاء" });
+      toast({ title: "✓ حُفظت التعليمة", description: "وصال غادي تطبق هاد التعليمة مع العملاء" });
     },
     onError: (err: any) =>
       toast({ title: "خطأ في الحفظ", description: err.message, variant: "destructive" }),
@@ -850,7 +850,7 @@ export default function WhatsApp() {
           </TabsTrigger>
           <TabsTrigger value="boss" className="flex-1 rounded-lg gap-2" data-testid="tab-boss-mode">
             <Crown className="w-4 h-4" />
-            كلم وسال
+            كلم وصال
           </TabsTrigger>
         </TabsList>
 
@@ -865,7 +865,7 @@ export default function WhatsApp() {
               {botEnabled ? <Bot className="w-5 h-5 text-emerald-400" /> : <BotOff className="w-5 h-5 text-red-400" />}
             </div>
             <div className="min-w-0">
-              <p className="font-semibold text-sm">البوت (وسال)</p>
+              <p className="font-semibold text-sm">البوت (وصال)</p>
               <p className={`text-xs mt-0.5 truncate ${botEnabled ? "text-emerald-400" : "text-red-400"}`}>
                 {botEnabled ? "مفعّل — كيجاوب أوتوماتيك 🟢" : "متوقف — الرسائل ما غاديش تتجاوب 🔴"}
               </p>
@@ -901,8 +901,8 @@ export default function WhatsApp() {
               <p className="font-semibold text-sm">صمت بعد الحجز</p>
               <p className="text-xs text-muted-foreground mt-0.5 truncate">
                 {bizSettings?.botSilenceAfterBooking !== false
-                  ? "وسال ما كترد حتى بعد تأكيد الحجز 🔇"
-                  : "وسال كتكمل تجاوب بعد الحجز 💬"}
+                  ? "وصال ما كترد حتى بعد تأكيد الحجز 🔇"
+                  : "وصال كتكمل تجاوب بعد الحجز 💬"}
               </p>
             </div>
           </div>
@@ -1398,7 +1398,7 @@ export default function WhatsApp() {
                           {isBotError ? (
                             <div className="space-y-1.5">
                               <div className="flex items-center gap-1.5">
-                                <span className="text-[10px] font-semibold text-red-400 uppercase tracking-wide">خطأ قالته وسال</span>
+                                <span className="text-[10px] font-semibold text-red-400 uppercase tracking-wide">خطأ قالته وصال</span>
                               </div>
                               <p className="text-sm leading-relaxed text-red-300/80 line-through" dir="rtl">{c.complaintText}</p>
                               {c.fixNote && (
@@ -1544,7 +1544,7 @@ export default function WhatsApp() {
             <Sparkles className="w-5 h-5 text-white" />
           </div>
           <div className="flex-1">
-            <span className="font-semibold text-sm">شخصية وسال</span>
+            <span className="font-semibold text-sm">شخصية وصال</span>
             <p className="text-xs text-muted-foreground mt-0.5">
               {(() => {
                 try {
@@ -1560,7 +1560,7 @@ export default function WhatsApp() {
         {personalityOpen && (
           <div className="border-t border-border/30 p-5 space-y-3">
             <p className="text-xs text-muted-foreground leading-relaxed">
-              اختاري صفة وحدة أو أكثر — وسال غادي تمزج بينهم في كل رد 🎨
+              اختاري صفة وحدة أو أكثر — وصال غادي تمزج بينهم في كل رد 🎨
             </p>
             <div className="grid grid-cols-1 gap-2" dir="rtl">
               {[
@@ -1597,7 +1597,7 @@ export default function WhatsApp() {
             </div>
             {selectedPersonalities.length > 1 && (
               <div className="rounded-xl bg-purple-500/10 border border-purple-500/20 px-3 py-2 text-xs text-purple-300 text-right" dir="rtl">
-                وسال غادي تمزج: {selectedPersonalities.map(p => ({"warm":"دافئة","professional":"محترفة","playful":"مرحة","direct":"مباشرة"} as Record<string,string>)[p]).join(" + ")}
+                وصال غادي تمزج: {selectedPersonalities.map(p => ({"warm":"دافئة","professional":"محترفة","playful":"مرحة","direct":"مباشرة"} as Record<string,string>)[p]).join(" + ")}
               </div>
             )}
             <Button
@@ -1646,7 +1646,7 @@ export default function WhatsApp() {
                 <div>
                   <p className="text-sm font-semibold">الرد الصوتي</p>
                   <p className="text-xs text-muted-foreground">
-                    {bizSettings?.ttsEnabled !== false ? "مفعّل — وسال تجاوب بصوت" : "متوقف — الرد نصي فقط"}
+                    {bizSettings?.ttsEnabled !== false ? "مفعّل — وصال تجاوب بصوت" : "متوقف — الرد نصي فقط"}
                   </p>
                 </div>
               </div>
@@ -1667,7 +1667,7 @@ export default function WhatsApp() {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              عندما يرسل العميل رسالة صوتية، يرد البوت بصوت — اختاري صوت وسال المناسب للصالون 💅
+              عندما يرسل العميل رسالة صوتية، يرد البوت بصوت — اختاري صوت وصال المناسب للصالون 💅
             </p>
             <div className="grid grid-cols-1 gap-2" dir="rtl">
               {[
@@ -1876,7 +1876,7 @@ export default function WhatsApp() {
             <BookOpen className="w-5 h-5 text-white" />
           </div>
           <div className="flex-1">
-            <span className="font-semibold text-sm">سجل محادثات وسال</span>
+            <span className="font-semibold text-sm">سجل محادثات وصال</span>
             <p className="text-xs text-muted-foreground mt-0.5">
               {conversations ? `${conversations.length} محادثة محفوظة` : "اضغط لعرض المحادثات"}
             </p>
@@ -1983,7 +1983,7 @@ export default function WhatsApp() {
                               )}
                             </div>
                             <p className="text-xs text-muted-foreground truncate mt-0.5" dir="rtl">
-                              {lastMsg?.role === "model" ? "وسال: " : ""}
+                              {lastMsg?.role === "model" ? "وصال: " : ""}
                               {lastMsg?.text?.replace(/^🎙️\s*/, "") ?? "—"}
                             </p>
                           </div>
@@ -2080,7 +2080,7 @@ export default function WhatsApp() {
                                   dir="rtl"
                                 >
                                   {turn.role === "model" && (
-                                    <span className="text-[10px] font-semibold text-emerald-400 block mb-0.5">وسال</span>
+                                    <span className="text-[10px] font-semibold text-emerald-400 block mb-0.5">وصال</span>
                                   )}
                                   <span className="whitespace-pre-wrap break-words">
                                     {turn.text.replace(/^🎙️\s*/, "")}
@@ -2301,7 +2301,7 @@ export default function WhatsApp() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-sm">وضع المدير</p>
-                <p className="text-xs text-muted-foreground mt-0.5">تحدثي مع وسال مباشرة — أعطيها تعليمات وصوبي أخطاءها</p>
+                <p className="text-xs text-muted-foreground mt-0.5">تحدثي مع وصال مباشرة — أعطيها تعليمات وصوبي أخطاءها</p>
               </div>
             </div>
           </div>
@@ -2316,7 +2316,7 @@ export default function WhatsApp() {
                     <Crown className="w-7 h-7 text-amber-400/60" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-foreground/70">ابدئي المحادثة مع وسال</p>
+                    <p className="text-sm font-medium text-foreground/70">ابدئي المحادثة مع وصال</p>
                     <p className="text-xs mt-1">أعطيها تعليمات، صوبي أخطاءها، أو اسأليها كيف كتتصرف مع العملاء</p>
                   </div>
                 </div>
@@ -2400,7 +2400,7 @@ export default function WhatsApp() {
                     sendBossMessage();
                   }
                 }}
-                placeholder="اكتبي تعليمة أو سؤال لوسال…"
+                placeholder="اكتبي تعليمة أو سؤال لوصال…"
                 rows={2}
                 className="flex-1 resize-none rounded-xl text-sm"
                 data-testid="input-boss-message"
@@ -2445,7 +2445,7 @@ export default function WhatsApp() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-sm">التعليمات المحفوظة</p>
-                <p className="text-xs text-muted-foreground mt-0.5">وسال غادي تطبقها مع كل العملاء</p>
+                <p className="text-xs text-muted-foreground mt-0.5">وصال غادي تطبقها مع كل العملاء</p>
               </div>
               {bossInstructions.length > 0 && (
                 <Badge variant="secondary" className="shrink-0 text-xs bg-amber-500/15 text-amber-400 border-amber-500/25">
@@ -2459,7 +2459,7 @@ export default function WhatsApp() {
                 <div className="text-center py-6 text-muted-foreground">
                   <BookMarked className="w-8 h-8 mx-auto mb-2 opacity-30" />
                   <p className="text-xs">ما كاين حتى تعليمة محفوظة حالياً</p>
-                  <p className="text-xs mt-1 opacity-70">اضغطي على "حفظ كتعليمة دائمة" بعد رد وسال</p>
+                  <p className="text-xs mt-1 opacity-70">اضغطي على "حفظ كتعليمة دائمة" بعد رد وصال</p>
                 </div>
               ) : (
                 bossInstructions.map((inst, idx) => (
@@ -2506,7 +2506,7 @@ function ManualInstructionInput({ onSave, isPending }: { onSave: (text: string) 
   return (
     <div className="space-y-2" dir="rtl">
       <p className="text-xs text-muted-foreground/70">
-        يمكنك الكتابة بالعربية · الدارجة · الفرنسية · الإنجليزية — وسال غادي تفهم
+        يمكنك الكتابة بالعربية · الدارجة · الفرنسية · الإنجليزية — وصال غادي تفهم
       </p>
       <Textarea
         value={value}
