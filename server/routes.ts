@@ -4577,6 +4577,12 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
   const SILENCE_TTL = 1 * 60 * 1000; // 1 minute
   const silencedJids = new Map<string, { expiry: number; reason: 'booking' | 'boss' }>(); // jid → silence info
 
+  // Per-JID serialization lock for boss history writes — prevents lost turns from concurrent boss replies
+  const bossHistoryLocks = new Map<string, Promise<void>>();
+  // Timestamp of the most recent boss manual reply per JID — lets in-flight AI flushes detect a mid-flight override
+  const bossOverrideAt = new Map<string, number>();
+  // In-memory dedup fingerprints for boss corrections — prevents duplicate bot_error DB rows
+  const bossCorrectionsDedup = new Set<string>();
 
   // How long an idle conversation keeps its context (7 days — returning clients always get full context)
   const CONV_TTL = 7 * 24 * 60 * 60 * 1000;
@@ -4670,6 +4676,28 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
     if (!mem.lastSeen) return [];
     if (Date.now() - new Date(mem.lastSeen).getTime() > CONV_TTL) return [];
     return mem.convHistory;
+  }
+
+  /**
+   * Normalize a turn sequence before saving:
+   * 1. Coalesces adjacent same-role turns (joins text with newline) — prevents Gemini API errors
+   * 2. Ensures the sequence always starts with a "user" turn (inserts placeholder if needed)
+   */
+  function normalizeTurns(turns: ConvTurn[]): ConvTurn[] {
+    if (turns.length === 0) return turns;
+    const out: ConvTurn[] = [];
+    for (const turn of turns) {
+      const last = out[out.length - 1];
+      if (last && last.role === turn.role) {
+        out[out.length - 1] = { role: last.role, text: `${last.text}\n${turn.text}` };
+      } else {
+        out.push({ ...turn });
+      }
+    }
+    if (out[0]?.role === "model") {
+      out.unshift({ role: "user" as const, text: "[بدأت المحادثة من طرف الصالون]" });
+    }
+    return out;
   }
 
   /** Merge new turns into memory, trimming to max depth */
@@ -4806,37 +4834,42 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
         console.log(`[Bot] Boss manually replied to ${jid} — cancelled Wissal's pending reply (${pendingClientTurns.length} client msg(s) preserved in history)`);
       }
 
-      // 2. Silence Wissal briefly after boss reply — if a NEW client message arrives and boss
+      // 2. Record override timestamp so any in-flight AI flush (timer already fired,
+      //    currently generating a reply) can detect the boss intercept and abort sending.
+      bossOverrideAt.set(jid, Date.now());
+
+      // 3. Silence Wissal briefly after boss reply — if a NEW client message arrives and boss
       //    doesn't reply within the 15s buffer window, Wissal will take over automatically.
       const BOSS_SILENCE_TTL = 1 * 60 * 1000; // 1 minute cap (cleared on next flush if boss stays silent)
       silencedJids.set(jid, { expiry: Date.now() + BOSS_SILENCE_TTL, reason: 'boss' });
       console.log(`[Bot] Boss replied to ${jid} — Wissal standing by (takes over if boss stays silent after next client msg)`);
 
-      // 3. Persist: client messages (if any) + boss reply into convHistory so Wissal
+      // 4. Persist: client messages (if any) + boss reply into convHistory so Wissal
       //    can read the full context and continue from exactly where the boss left off.
       //    Also: if the boss is correcting Wissal's last reply, auto-save the correction
       //    so Wissal never repeats that mistake in any future conversation.
+      //    Serialized per-JID via bossHistoryLocks to prevent lost turns from concurrent boss replies.
       if (bossText && bossText.trim()) {
-        loadMemory(jid).then(async (mem) => {
+        const prev = bossHistoryLocks.get(jid) ?? Promise.resolve();
+        const next = prev.then(async () => {
+          const mem = await loadMemory(jid);
           const existingHistory = getActiveHistory(mem);
 
-          // Build the new turns: existing history + any client msgs the boss intercepted + boss reply
-          const newTurns: ConvTurn[] = [...existingHistory, ...pendingClientTurns];
+          // Build raw turns: existing history + any client msgs the boss intercepted
+          const rawTurns: ConvTurn[] = [...existingHistory, ...pendingClientTurns];
 
-          // Gemini requires history to alternate user → model and MUST start with "user".
-          // If the combined history would start with a model turn (boss proactively wrote
-          // to a client who had never messaged before), insert a context marker so the
-          // API receives a valid user/model alternation.
-          if (newTurns.length === 0) {
-            // No prior context at all — add a placeholder so history starts with "user"
-            newTurns.push({ role: "user" as const, text: "[بدأت المحادثة من طرف الصالون]" });
-          }
+          // normalizeTurns: coalesces adjacent same-role runs + ensures starts with "user"
+          // Then append boss reply as final model turn (normalizeTurns handles the coalescing
+          // if existingHistory already ends with a model turn).
+          const beforeBoss = normalizeTurns(rawTurns);
+          beforeBoss.push({ role: "model" as const, text: `[رد المدير]: ${bossText.trim()}` });
+          // Re-normalize to handle edge case where normalizeTurns produced a final model turn
+          // right before the boss turn (e.g. existingHistory ended with model, pendingTurns empty)
+          const finalTurns = normalizeTurns(beforeBoss);
 
-          newTurns.push({ role: "model" as const, text: `[رد المدير]: ${bossText.trim()}` });
-
-          const updated = mergeHistory(mem, newTurns);
+          const updated = mergeHistory(mem, finalTurns);
           persistMemory({ ...updated, lastSeen: new Date() });
-          console.log(`[Bot] Saved boss reply to conv history for ${jid}: "${bossText.slice(0, 60)}" (total turns: ${newTurns.length})`);
+          console.log(`[Bot] Saved boss reply to conv history for ${jid}: "${bossText.slice(0, 60)}" (total turns: ${finalTurns.length})`);
 
           // ── Auto-detect boss corrections of Wissal's previous answer ──────────
           // Find Wissal's last genuine reply in history (not a [رد المدير]: turn,
@@ -4855,17 +4888,29 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
               const { detectBossCorrection } = await import("./gemini");
               const result = await detectBossCorrection(wissalLastTurn.text, bossText.trim());
               if (result?.isCorrection && result.wrongInfo?.trim().length > 3 && result.correctInfo?.trim().length > 3) {
-                const { saveSalonComplaint } = await import("./db");
-                await saveSalonComplaint({
-                  complaintText: result.wrongInfo.trim(),
-                  complaintType: "bot_error",
-                  sourceJid: jid,
-                  sourcePhone: mem.phone || null,
-                  clientName: mem.clientName || null,
-                  isResolved: true,
-                  fixNote: result.correctInfo.trim(),
-                });
-                console.log(`[BossCorrection] Auto-saved correction for ${jid}: ❌ "${result.wrongInfo.slice(0, 60)}" → ✅ "${result.correctInfo.slice(0, 60)}"`);
+                // Fix 6: dedup — skip if we've already recorded this exact correction in this session
+                const dedupKey = `${result.wrongInfo.trim().slice(0, 80)}|${result.correctInfo.trim().slice(0, 80)}`;
+                if (bossCorrectionsDedup.has(dedupKey)) {
+                  console.log(`[BossCorrection] Dedup: skipping duplicate correction for ${jid}`);
+                } else {
+                  bossCorrectionsDedup.add(dedupKey);
+                  // Keep the dedup set from growing unbounded (cap at 500 entries)
+                  if (bossCorrectionsDedup.size > 500) {
+                    const first = bossCorrectionsDedup.values().next().value;
+                    if (first !== undefined) bossCorrectionsDedup.delete(first);
+                  }
+                  const { saveSalonComplaint } = await import("./db");
+                  await saveSalonComplaint({
+                    complaintText: result.wrongInfo.trim(),
+                    complaintType: "bot_error",
+                    sourceJid: jid,
+                    sourcePhone: mem.phone || null,
+                    clientName: mem.clientName || null,
+                    isResolved: true,
+                    fixNote: result.correctInfo.trim(),
+                  });
+                  console.log(`[BossCorrection] Auto-saved correction for ${jid}: ❌ "${result.wrongInfo.slice(0, 60)}" → ✅ "${result.correctInfo.slice(0, 60)}"`);
+                }
               } else if (result) {
                 console.log(`[BossCorrection] No correction detected for ${jid} (isCorrection=${result.isCorrection})`);
               }
@@ -4873,9 +4918,11 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
               console.warn(`[BossCorrection] Detection failed for ${jid}: ${err.message}`);
             }
           }
-        }).catch((err) => {
+        }).catch((err: any) => {
           console.error(`[Bot] Failed to save boss reply to history for ${jid}:`, err);
         });
+        // Store as void-typed chain so it never leaks a rejected promise
+        bossHistoryLocks.set(jid, next.then(() => {}).catch(() => {}));
       }
     });
     // On Replit dev, skip auto-connect — Koyeb production holds the active session.
@@ -4945,6 +4992,10 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
       }
 
       addToBuffer(remoteJid, text, imageBase64, imageMimeType, isVoice, audioBase64, audioMimeType, async (msgs: BufferedMsg[]) => {
+        // Capture the boss-override watermark at flush start — used below to detect mid-flight
+        // boss intercepts (boss replied AFTER the 15s timer fired but BEFORE we sent the reply).
+        const flushStartedAt = Date.now();
+        const bossOverrideAtFlushStart = bossOverrideAt.get(remoteJid) ?? 0;
         // Hoisted so the catch block can use it for a language-aware fallback message
         let clientLang: string | undefined;
         try {
@@ -5640,6 +5691,17 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
             } catch (ttsErr: any) {
               console.warn(`[Bot] TTS error: ${ttsErr.message} — falling back to text`);
             }
+          }
+
+          // ── Mid-flight boss-override check (Fix 3) ──────────────────────────
+          // If the boss manually replied to this client AFTER our flush started
+          // (timer fired → AI generating → boss types → AI done), abort sending
+          // so we don't talk over the boss.
+          const currentBossOverride = bossOverrideAt.get(remoteJid) ?? 0;
+          if (currentBossOverride > bossOverrideAtFlushStart) {
+            await stopTypingPresence(remoteJid);
+            console.log(`[Bot] Mid-flight boss override detected for ${remoteJid} — aborting AI send (boss replied at +${currentBossOverride - flushStartedAt}ms)`);
+            return;
           }
 
           // Send text reply if: not a voice batch, or voice send failed

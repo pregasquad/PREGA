@@ -723,27 +723,41 @@ export async function detectBossCorrection(
 - إذا المدير فقط يكمل أو يضيف معلومات إضافية دون تصحيح → isCorrection = false
 - إذا المدير يرحب أو يشكر أو يحادث بشكل عام → isCorrection = false`;
 
+  // Fix 5: coerce string booleans ("true"/"false") that some models return
   const tryParse = (text: string): BossCorrectionResult | null => {
     const cleaned = text.replace(/```json\s*/gi, "").replace(/```\s*/gi, "").trim();
+    const coerce = (obj: any): BossCorrectionResult | null => {
+      if (!obj || typeof obj !== "object") return null;
+      let isCorrection = obj.isCorrection;
+      if (typeof isCorrection === "string") isCorrection = isCorrection.toLowerCase() === "true";
+      if (typeof isCorrection !== "boolean") return null;
+      return {
+        isCorrection,
+        wrongInfo: typeof obj.wrongInfo === "string" ? obj.wrongInfo : "",
+        correctInfo: typeof obj.correctInfo === "string" ? obj.correctInfo : "",
+      };
+    };
     try {
-      const obj = JSON.parse(cleaned);
-      if (typeof obj?.isCorrection === "boolean") return obj as BossCorrectionResult;
+      const result = coerce(JSON.parse(cleaned));
+      if (result) return result;
     } catch { /* fall through */ }
     const match = cleaned.match(/\{[\s\S]*\}/);
     if (match) {
       try {
-        const obj = JSON.parse(match[0]);
-        if (typeof obj?.isCorrection === "boolean") return obj as BossCorrectionResult;
+        const result = coerce(JSON.parse(match[0]));
+        if (result) return result;
       } catch { /* ignore */ }
     }
     return null;
   };
 
-  // Try Gemini first (fastest model only — this is a cheap classification call)
+  // Fix 4: small cascade (lite → 2.5-flash → 1.5-flash) so a single unavailable model
+  // doesn't silently kill correction detection
+  const CORRECTION_CASCADE = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-1.5-flash"];
   if (apiKey) {
-    const model = "gemini-2.5-flash-lite";
     const now = Date.now();
-    if (!modelCooldowns[model] || now >= modelCooldowns[model]) {
+    for (const model of CORRECTION_CASCADE) {
+      if (modelCooldowns[model] && now < modelCooldowns[model]) continue;
       try {
         const url = `${GEMINI_BASE}/${model}:generateContent?key=${apiKey}`;
         const res = await fetch(url, {
@@ -759,14 +773,17 @@ export async function detectBossCorrection(
           const text: string = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? "";
           const parsed = tryParse(text);
           if (parsed) {
-            console.log(`[BossCorrection] Gemini detected correction=${parsed.isCorrection}`);
+            console.log(`[BossCorrection] ${model} detected correction=${parsed.isCorrection}`);
             return parsed;
           }
+          break; // Model responded but parse failed — no point trying heavier models
         } else if (res.status === 429) {
           modelCooldowns[model] = Date.now() + QUOTA_COOLDOWN_MS;
+        } else if (res.status === 404) {
+          break; // Model not found — skip remaining cascade
         }
       } catch (err: any) {
-        console.warn(`[BossCorrection] Gemini error: ${err.message}`);
+        console.warn(`[BossCorrection] ${model} error: ${err.message}`);
       }
     }
   }
@@ -824,8 +841,16 @@ export async function learnFromConversation(
   const groqKey = process.env.XAI_API_KEY;
   if (!apiKey && !groqKey) return null;
 
+  // Fix 7: label [رد المدير]: turns as "المدير" instead of "وصال" so the learning
+  // AI doesn't attribute the boss's words to Wissal and create false bot-error corrections.
   const conversationText = history
-    .map((t) => `${t.role === "user" ? "العميلة" : "وصال"}: ${t.text}`)
+    .map((t) => {
+      if (t.role === "user") return `العميلة: ${t.text}`;
+      if (t.text.startsWith("[رد المدير]:")) return `المدير: ${t.text.replace(/^\[رد المدير\]:\s*/, "")}`;
+      if (t.text.startsWith("[بدأت المحادثة")) return null; // skip synthetic placeholder turns
+      return `وصال: ${t.text}`;
+    })
+    .filter(Boolean)
     .join("\n");
 
   const servicesStr = availableServices.join("، ") || "غير محددة";
