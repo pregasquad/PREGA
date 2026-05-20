@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { PushNotifications } from "@/components/PushNotifications";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
+import { GlobalSearch } from "@/components/GlobalSearch";
 import { initOfflineDb } from "@/lib/offlineDb";
 import { startAutoSync, refreshAndCacheData } from "@/lib/syncService";
 import { useBusinessName } from "@/hooks/use-salon-data";
@@ -64,6 +65,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <MobileBusinessName />
             </div>
             <div className="flex items-center gap-2">
+              <GlobalSearch />
               <PushNotifications />
               <LanguageSwitcher />
             </div>

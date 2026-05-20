@@ -371,7 +371,7 @@ export async function registerRoutes(
   });
 
   // Staff/Admin photo upload - stores as base64 in DB (works on any hosting)
-  app.post("/api/admin-roles/:id/photo", multer({ 
+  app.post("/api/admin-roles/:id/photo", isPinAuthenticated, multer({ 
     storage: multer.memoryStorage(),
     limits: {
       fileSize: 10 * 1024 * 1024,

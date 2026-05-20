@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { format, addDays, startOfToday, parseISO, subDays } from "date-fns";
+import { getWorkDayDate } from "@/lib/workday";
 import { useTranslation } from "react-i18next";
 import { useAppointments, useStaff, useServices, useCreateAppointment, useUpdateAppointment, useDeleteAppointment, useBusinessSettings } from "@/hooks/use-salon-data";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -71,34 +72,6 @@ const formSchema = insertAppointmentSchema.extend({
 
 type AppointmentFormValues = z.infer<typeof formSchema>;
 
-// Get the "work day" date - work day runs 10am to 2am, so before 2am is still previous day
-function getWorkDayDate(openingTime?: string, closingTime?: string): Date {
-  const now = new Date();
-  const hour = now.getHours();
-  const minutes = now.getMinutes();
-  const currentTotalMinutes = hour * 60 + minutes;
-  
-  // Determine overnight cutoff from business settings
-  let overnightCutoffMinutes = 2 * 60; // Default 2 AM fallback
-  
-  if (openingTime && closingTime) {
-    const [openH, openM] = openingTime.split(":").map(Number);
-    const [closeH, closeM] = closingTime.split(":").map(Number);
-    const openingMinutes = openH * 60 + openM;
-    const closingMinutes = closeH * 60 + closeM;
-    
-    // If closing time is before opening time, it's an overnight business
-    if (closingMinutes < openingMinutes) {
-      overnightCutoffMinutes = closingMinutes;
-    }
-  }
-  
-  // If we're past midnight but before the overnight cutoff, consider it still the previous work day
-  if (currentTotalMinutes < overnightCutoffMinutes) {
-    return subDays(startOfToday(), 1);
-  }
-  return startOfToday();
-}
 
 export default function Planning() {
   const { t, i18n } = useTranslation();
@@ -576,28 +549,7 @@ export default function Planning() {
   
   // Check if we're viewing the current "work day" (accounting for overnight closing)
   const isToday = useMemo(() => {
-    const now = new Date();
-    const hour = now.getHours();
-    const minutes = now.getMinutes();
-    const currentTotalMinutes = hour * 60 + minutes;
-    
-    // Determine overnight cutoff from business settings
-    let overnightCutoffMinutes = 2 * 60; // Default 2 AM fallback
-    
-    if (businessSettings?.openingTime && businessSettings?.closingTime) {
-      const [openH, openM] = businessSettings.openingTime.split(":").map(Number);
-      const [closeH, closeM] = businessSettings.closingTime.split(":").map(Number);
-      const openingMinutes = openH * 60 + openM;
-      const closingMinutes = closeH * 60 + closeM;
-      
-      // If closing time is before opening time, it's an overnight business
-      if (closingMinutes < openingMinutes) {
-        overnightCutoffMinutes = closingMinutes;
-      }
-    }
-    
-    // If we're past midnight but before the overnight cutoff, consider it still the previous work day
-    const workDayDate = currentTotalMinutes < overnightCutoffMinutes ? subDays(now, 1) : now;
+    const workDayDate = getWorkDayDate(businessSettings?.openingTime, businessSettings?.closingTime);
     return format(date, "yyyy-MM-dd") === format(workDayDate, "yyyy-MM-dd");
   }, [date, currentTime, businessSettings?.openingTime, businessSettings?.closingTime]);
 
@@ -1920,20 +1872,23 @@ export default function Planning() {
           </div>
 
           {/* Date nav */}
-          <Button variant="ghost" size="icon" className="h-7 w-7 md:h-9 md:w-9 rounded-full p-0" onClick={() => setDate(d => addDays(d, -1))}>
+          <Button variant="ghost" size="icon" className="h-8 w-8 md:h-9 md:w-9 rounded-full p-0 touch-manipulation" onClick={() => setDate(d => addDays(d, -1))} data-testid="button-prev-day">
             {isRtl ? <ChevronRight className="w-4 h-4 md:w-5 md:h-5" /> : <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" />}
           </Button>
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="ghost" className="h-7 px-1.5 md:h-9 md:px-3 text-xs md:text-sm font-medium rounded-full">
-                {format(date, "dd/MM")}
+              <Button variant="ghost" className="h-8 px-2 md:h-9 md:px-3 text-xs md:text-sm font-medium rounded-full touch-manipulation flex flex-col items-center gap-0 leading-none" data-testid="button-date-picker">
+                <span className="text-[9px] md:hidden text-muted-foreground font-normal -mb-0.5">
+                  {format(date, "EEE")}
+                </span>
+                <span>{format(date, "dd/MM")}</span>
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0 rounded-2xl glass-card shadow-xl" align="end">
               <Calendar mode="single" selected={date} onSelect={(d) => d && setDate(d)} initialFocus />
             </PopoverContent>
           </Popover>
-          <Button variant="ghost" size="icon" className="h-7 w-7 md:h-9 md:w-9 rounded-full p-0" onClick={() => setDate(d => addDays(d, 1))}>
+          <Button variant="ghost" size="icon" className="h-8 w-8 md:h-9 md:w-9 rounded-full p-0 touch-manipulation" onClick={() => setDate(d => addDays(d, 1))} data-testid="button-next-day">
             {isRtl ? <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" /> : <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />}
           </Button>
 
@@ -2013,14 +1968,14 @@ export default function Planning() {
                 </button>
               </div>
             ) : (
-              <button className="p-1 md:p-1" onClick={() => setShowSearchInput(true)}>
+              <button className="p-2 md:p-1 rounded-full hover:bg-muted/50 touch-manipulation" onClick={() => setShowSearchInput(true)} data-testid="button-search-appointments">
                 <Search className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground" />
               </button>
             )}
           </div>
 
           <button
-            className="p-0.5 md:p-1 shrink-0"
+            className="p-2 md:p-1 shrink-0 rounded-full hover:bg-muted/50 touch-manipulation"
             onClick={() => {
               queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
               queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
@@ -2030,8 +1985,9 @@ export default function Planning() {
               }
               toast({ title: t("common.refreshed"), description: t("common.dataUpdated") });
             }}
+            data-testid="button-refresh-planning"
           >
-            <RefreshCw className={cn("w-3.5 h-3.5 md:w-4.5 md:h-4.5 text-muted-foreground", loadingApps && "animate-spin")} />
+            <RefreshCw className={cn("w-4 h-4 text-muted-foreground", loadingApps && "animate-spin")} />
           </button>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { io } from "socket.io-client";
+import { getAppSocket } from "@/lib/appSocket";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -225,7 +225,7 @@ export default function WhatsApp() {
 
   // ── Socket.IO: instant pairing code / error (no waiting for next poll) ──
   useEffect(() => {
-    const socket = io();
+    const socket = getAppSocket();
     socket.on("whatsapp:pairing_code", ({ code, expiresAt }: { code: string; expiresAt?: number }) => {
       setPairingCode(code);
       setIsWaitingForCode(false);
@@ -290,7 +290,14 @@ export default function WhatsApp() {
       queryClient.invalidateQueries({ queryKey: ["/api/appointments/bot-confirmed"] });
     });
     return () => {
-      socket.disconnect();
+      socket.off("whatsapp:pairing_code");
+      socket.off("whatsapp:pairing_code_expired");
+      socket.off("whatsapp:pairing_error");
+      socket.off("whatsapp:connected");
+      socket.off("whatsapp:disconnected");
+      socket.off("whatsapp:logged_out");
+      socket.off("booking:updated");
+      socket.off("booking:created");
       if (codeExpiryRef.current) clearInterval(codeExpiryRef.current);
     };
   }, []);

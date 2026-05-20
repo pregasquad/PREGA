@@ -14,8 +14,9 @@ import { DollarSign, Users, CalendarIcon, TrendingUp, Building2, RefreshCw, Plus
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
-import { io, Socket } from "socket.io-client";
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay, parseISO, isAfter, isBefore, isEqual, subDays, startOfToday } from "date-fns";
+import { getAppSocket } from "@/lib/appSocket";
+import { getWorkDayDate } from "@/lib/workday";
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay, parseISO, isAfter, isBefore, isEqual, subDays } from "date-fns";
 import { ar, enUS, fr } from "date-fns/locale";
 import { apiRequest } from "@/lib/queryClient";
 import { useBusinessSettings } from "@/hooks/use-salon-data";
@@ -25,33 +26,6 @@ import { saveSalariesCache } from "@/lib/offlineDb";
 import { refreshSalariesBackground } from "@/lib/salariesRefresher";
 
 type PeriodType = "day" | "week" | "month" | "custom";
-
-function getWorkDayDate(openingTime?: string, closingTime?: string): Date {
-  const now = new Date();
-  const hour = now.getHours();
-  const minutes = now.getMinutes();
-  const currentTotalMinutes = hour * 60 + minutes;
-  if (openingTime && closingTime) {
-    const [openH, openM] = openingTime.split(":").map(Number);
-    const [closeH, closeM] = closingTime.split(":").map(Number);
-    const openingMinutes = openH * 60 + openM;
-    const closingMinutes = closeH * 60 + closeM;
-    if (closingMinutes < openingMinutes) {
-      if (currentTotalMinutes < closingMinutes) {
-        return subDays(startOfToday(), 1);
-      }
-    } else {
-      if (currentTotalMinutes < openingMinutes) {
-        return subDays(startOfToday(), 1);
-      }
-    }
-  } else {
-    if (currentTotalMinutes < 2 * 60) {
-      return subDays(startOfToday(), 1);
-    }
-  }
-  return startOfToday();
-}
 
 // Check if current time is within business hours
 function isWithinBusinessHours(openingTime?: string, closingTime?: string): boolean {
@@ -140,7 +114,7 @@ export default function Salaries() {
   }, [bSettings?.openingTime, bSettings?.closingTime]);
 
   useEffect(() => {
-    const socket: Socket = io();
+    const socket = getAppSocket();
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     const invalidate = () => {
       if (debounceTimer) clearTimeout(debounceTimer);
@@ -153,7 +127,9 @@ export default function Salaries() {
     socket.on("appointment:updated", invalidate);
     socket.on("appointment:paid", invalidate);
     return () => {
-      socket.disconnect();
+      socket.off("booking:created", invalidate);
+      socket.off("appointment:updated", invalidate);
+      socket.off("appointment:paid", invalidate);
       if (debounceTimer) clearTimeout(debounceTimer);
     };
   }, [queryClient]);
