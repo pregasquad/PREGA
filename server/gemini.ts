@@ -678,6 +678,130 @@ export interface LearnedInsights {
   botErrors?: { wrongInfo: string; correctInfo: string }[]; // cases where the bot gave wrong info and was corrected
 }
 
+export interface BossCorrectionResult {
+  isCorrection: boolean;
+  wrongInfo: string;   // what Wissal said that was wrong
+  correctInfo: string; // what the boss said is correct
+}
+
+/**
+ * After the boss manually replies to a client, check whether the boss is
+ * correcting something Wissal said in her previous turn.
+ *
+ * Returns a BossCorrectionResult if a correction was detected, null otherwise.
+ * Uses the lightest available model — result is fire-and-forget from the caller.
+ */
+export async function detectBossCorrection(
+  wissalLastReply: string,
+  bossReply: string
+): Promise<BossCorrectionResult | null> {
+  if (!wissalLastReply?.trim() || !bossReply?.trim()) return null;
+
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
+  const groqKey = process.env.XAI_API_KEY;
+  if (!apiKey && !groqKey) return null;
+
+  const prompt = `أنت نظام تحليل ذكي لصالون تجميل. مهمتك: تحديد ما إذا كان المدير/صاحبة الصالون يصحح/تصحح معلومة خاطئة قالتها المساعدة الآلية (وصال).
+
+رد المساعدة الآلية (وصال) الأخير:
+"${wissalLastReply.trim()}"
+
+رد المدير/صاحبة الصالون بعده:
+"${bossReply.trim()}"
+
+هل يصحح رد المدير معلومة خاطئة قالتها وصال؟
+
+أجب بـ JSON فقط بدون أي نص خارجه:
+{
+  "isCorrection": true أو false,
+  "wrongInfo": "ما قالته وصال بشكل خاطئ — جملة موجزة، أو '' إذا لا يوجد تصحيح",
+  "correctInfo": "المعلومة الصحيحة حسب المدير — جملة موجزة، أو '' إذا لا يوجد تصحيح"
+}
+
+ملاحظات:
+- isCorrection = true فقط إذا كان المدير يصحح معلومة واضحة (سعر خاطئ، خدمة غير متاحة، وقت خاطئ، معلومة مغلوطة)
+- إذا المدير فقط يكمل أو يضيف معلومات إضافية دون تصحيح → isCorrection = false
+- إذا المدير يرحب أو يشكر أو يحادث بشكل عام → isCorrection = false`;
+
+  const tryParse = (text: string): BossCorrectionResult | null => {
+    const cleaned = text.replace(/```json\s*/gi, "").replace(/```\s*/gi, "").trim();
+    try {
+      const obj = JSON.parse(cleaned);
+      if (typeof obj?.isCorrection === "boolean") return obj as BossCorrectionResult;
+    } catch { /* fall through */ }
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (match) {
+      try {
+        const obj = JSON.parse(match[0]);
+        if (typeof obj?.isCorrection === "boolean") return obj as BossCorrectionResult;
+      } catch { /* ignore */ }
+    }
+    return null;
+  };
+
+  // Try Gemini first (fastest model only — this is a cheap classification call)
+  if (apiKey) {
+    const model = "gemini-2.5-flash-lite";
+    const now = Date.now();
+    if (!modelCooldowns[model] || now >= modelCooldowns[model]) {
+      try {
+        const url = `${GEMINI_BASE}/${model}:generateContent?key=${apiKey}`;
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: { maxOutputTokens: 200, temperature: 0.1 },
+          }),
+        });
+        if (res.ok) {
+          const data = (await res.json()) as any;
+          const text: string = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? "";
+          const parsed = tryParse(text);
+          if (parsed) {
+            console.log(`[BossCorrection] Gemini detected correction=${parsed.isCorrection}`);
+            return parsed;
+          }
+        } else if (res.status === 429) {
+          modelCooldowns[model] = Date.now() + QUOTA_COOLDOWN_MS;
+        }
+      } catch (err: any) {
+        console.warn(`[BossCorrection] Gemini error: ${err.message}`);
+      }
+    }
+  }
+
+  // Groq fallback
+  if (groqKey) {
+    try {
+      const res = await fetch(`${GROQ_BASE}/chat/completions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${groqKey}` },
+        body: JSON.stringify({
+          model: "llama-3.1-8b-instant",
+          messages: [{ role: "user", content: prompt }],
+          max_tokens: 200,
+          temperature: 0.1,
+        }),
+      });
+      if (res.ok) {
+        const data = (await res.json()) as any;
+        let text: string = data?.choices?.[0]?.message?.content?.trim() ?? "";
+        text = text.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+        const parsed = tryParse(text);
+        if (parsed) {
+          console.log(`[BossCorrection] Groq detected correction=${parsed.isCorrection}`);
+          return parsed;
+        }
+      }
+    } catch (err: any) {
+      console.warn(`[BossCorrection] Groq error: ${err.message}`);
+    }
+  }
+
+  return null;
+}
+
 /**
  * After each bot reply, analyze the full conversation in the background and
  * extract structured client insights to enrich persistent memory.

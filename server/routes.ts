@@ -4814,8 +4814,10 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
       // 3. Persist: client messages (if any) + boss reply into convHistory so Wissal
       //    can read the full context and continue from exactly where the boss left off.
+      //    Also: if the boss is correcting Wissal's last reply, auto-save the correction
+      //    so Wissal never repeats that mistake in any future conversation.
       if (bossText && bossText.trim()) {
-        loadMemory(jid).then((mem) => {
+        loadMemory(jid).then(async (mem) => {
           const existingHistory = getActiveHistory(mem);
 
           // Build the new turns: existing history + any client msgs the boss intercepted + boss reply
@@ -4835,6 +4837,42 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
           const updated = mergeHistory(mem, newTurns);
           persistMemory({ ...updated, lastSeen: new Date() });
           console.log(`[Bot] Saved boss reply to conv history for ${jid}: "${bossText.slice(0, 60)}" (total turns: ${newTurns.length})`);
+
+          // ── Auto-detect boss corrections of Wissal's previous answer ──────────
+          // Find Wissal's last genuine reply in history (not a [رد المدير]: turn,
+          // and not the placeholder "[بدأت المحادثة من طرف الصالون]").
+          const wissalLastTurn = [...existingHistory]
+            .reverse()
+            .find(
+              (t) =>
+                t.role === "model" &&
+                !t.text.startsWith("[رد المدير]:") &&
+                !t.text.startsWith("[بدأت المحادثة")
+            );
+
+          if (wissalLastTurn) {
+            try {
+              const { detectBossCorrection } = await import("./gemini");
+              const result = await detectBossCorrection(wissalLastTurn.text, bossText.trim());
+              if (result?.isCorrection && result.wrongInfo?.trim().length > 3 && result.correctInfo?.trim().length > 3) {
+                const { saveSalonComplaint } = await import("./db");
+                await saveSalonComplaint({
+                  complaintText: result.wrongInfo.trim(),
+                  complaintType: "bot_error",
+                  sourceJid: jid,
+                  sourcePhone: mem.phone || null,
+                  clientName: mem.clientName || null,
+                  isResolved: true,
+                  fixNote: result.correctInfo.trim(),
+                });
+                console.log(`[BossCorrection] Auto-saved correction for ${jid}: ❌ "${result.wrongInfo.slice(0, 60)}" → ✅ "${result.correctInfo.slice(0, 60)}"`);
+              } else if (result) {
+                console.log(`[BossCorrection] No correction detected for ${jid} (isCorrection=${result.isCorrection})`);
+              }
+            } catch (err: any) {
+              console.warn(`[BossCorrection] Detection failed for ${jid}: ${err.message}`);
+            }
+          }
         }).catch((err) => {
           console.error(`[Bot] Failed to save boss reply to history for ${jid}:`, err);
         });
