@@ -218,7 +218,7 @@ export default function Planning() {
     }
     
     const minutesSinceOpen = currentTotalMinutes - openingMinutes;
-    const slotHeight = 28;
+    const slotHeight = 44;
     const position = (minutesSinceOpen / 15) * slotHeight;
     return position;
   }, [currentTime]);
@@ -2279,8 +2279,8 @@ export default function Planning() {
           <div 
             className="grid relative"
             style={{ 
-              gridTemplateColumns: `44px repeat(${staffList.length}, minmax(80px, 1fr))`,
-              gridAutoRows: '28px'
+              gridTemplateColumns: `52px repeat(${staffList.length}, minmax(80px, 1fr))`,
+              gridAutoRows: '44px'
             }}
           >
             {/* Current Time Line - iOS Liquid Glass Style */}
@@ -2299,7 +2299,7 @@ export default function Planning() {
                   {/* Time indicator badge on left - Liquid Glass Circle */}
                   <div 
                     className="shrink-0 z-[50] flex items-center justify-center"
-                    style={{ width: '44px' }}
+                    style={{ width: '52px' }}
                   >
                     <div className="relative">
                       <div className="w-8 h-8 rounded-full liquid-gradient shadow-xl flex items-center justify-center border-2 border-white/50 live-indicator">
@@ -2351,9 +2351,9 @@ export default function Planning() {
                     style={{ gridColumn: 1, gridRow: rowNum }}
                   >
                     {isHour ? (
-                      <span className="-translate-y-[50%] block text-[11px] font-bold text-rose-400 dark:text-slate-300 tabular-nums" dir="ltr">{hour}</span>
+                      <span className="-translate-y-1/2 block text-[12px] font-bold text-rose-500 dark:text-rose-300 tabular-nums leading-none" dir="ltr">{hour}</span>
                     ) : isHalf ? (
-                      <span className="-translate-y-[50%] block text-[9px] font-medium text-rose-300/70 dark:text-slate-500 tabular-nums" dir="ltr">{hour}</span>
+                      <span className="-translate-y-1/2 block text-[10px] font-medium text-rose-300/80 dark:text-slate-500 tabular-nums leading-none" dir="ltr">{hour}</span>
                     ) : null}
                   </div>
                 );
