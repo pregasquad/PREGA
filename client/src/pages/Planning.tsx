@@ -218,10 +218,10 @@ export default function Planning() {
     }
     
     const minutesSinceOpen = currentTotalMinutes - openingMinutes;
-    const slotHeight = businessSettings?.planningSlotHeight ?? 44;
+    const slotHeight = localSlotHeight ?? (businessSettings?.planningSlotHeight ?? 44);
     const position = (minutesSinceOpen / 15) * slotHeight;
     return position;
-  }, [currentTime, businessSettings?.planningSlotHeight]);
+  }, [currentTime, businessSettings?.planningSlotHeight, localSlotHeight]);
 
   // Scroll to live line using boardRef.scrollTo for reliable control
   const scrollToLiveLine = useCallback((smooth = false, force = false) => {
@@ -317,13 +317,68 @@ export default function Planning() {
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
   const swipeThreshold = 80; // minimum px to trigger swipe
-  
+
+  // Pinch-to-zoom state
+  const pinchStartDist = useRef<number | null>(null);
+  const pinchStartHeight = useRef<number>(44);
+  const [localSlotHeight, setLocalSlotHeight] = useState<number | null>(null);
+  const [pinchHint, setPinchHint] = useState(false);
+  const pinchHintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const SLOT_SIZES = [32, 44, 60, 76];
+
+  const getPinchDist = (touches: React.TouchList) =>
+    Math.hypot(
+      touches[1].clientX - touches[0].clientX,
+      touches[1].clientY - touches[0].clientY
+    );
+
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      // Two-finger pinch starting — record distance and current height
+      pinchStartDist.current = getPinchDist(e.touches);
+      pinchStartHeight.current = localSlotHeight ?? (businessSettings?.planningSlotHeight ?? 44);
+      return;
+    }
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
+  }, [localSlotHeight, businessSettings?.planningSlotHeight]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length !== 2 || pinchStartDist.current === null) return;
+    e.preventDefault();
+    const dist = getPinchDist(e.touches);
+    const ratio = dist / pinchStartDist.current;
+    const raw = Math.round(pinchStartHeight.current * ratio);
+    // Clamp to our defined sizes
+    const clamped = Math.max(SLOT_SIZES[0], Math.min(SLOT_SIZES[SLOT_SIZES.length - 1], raw));
+    // Snap to nearest defined size
+    const snapped = SLOT_SIZES.reduce((prev, curr) =>
+      Math.abs(curr - clamped) < Math.abs(prev - clamped) ? curr : prev
+    );
+    setLocalSlotHeight(snapped);
+    // Show hint overlay briefly
+    setPinchHint(true);
+    if (pinchHintTimer.current) clearTimeout(pinchHintTimer.current);
+    pinchHintTimer.current = setTimeout(() => setPinchHint(false), 1200);
   }, []);
-  
+
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (pinchStartDist.current !== null && e.touches.length < 2) {
+      // Pinch ended — persist to server
+      const finalHeight = localSlotHeight ?? (businessSettings?.planningSlotHeight ?? 44);
+      pinchStartDist.current = null;
+      if (finalHeight !== (businessSettings?.planningSlotHeight ?? 44)) {
+        fetch("/api/business-settings", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ planningSlotHeight: finalHeight }),
+          credentials: "include",
+        }).then(() => {
+          queryClient.invalidateQueries({ queryKey: ["/api/business-settings"] });
+        }).catch(() => {});
+      }
+      return;
+    }
     if (touchStartX.current === null || touchStartY.current === null) return;
     
     const touchEndX = e.changedTouches[0].clientX;
@@ -352,7 +407,7 @@ export default function Planning() {
     
     touchStartX.current = null;
     touchStartY.current = null;
-  }, [isRtl]);
+  }, [isRtl, localSlotHeight, businessSettings?.planningSlotHeight]);
   const [favoriteIds, setFavoriteIds] = useState<number[]>(() => {
     try {
       const stored = localStorage.getItem('favoriteServiceIds');
@@ -414,7 +469,17 @@ export default function Planning() {
     queryKey: ["/api/business-settings"],
   });
 
-  const slotHeight = businessSettings?.planningSlotHeight ?? 44;
+  const slotHeight = localSlotHeight ?? (businessSettings?.planningSlotHeight ?? 44);
+
+  // Sync localSlotHeight back to null when server setting changes (so server value takes effect)
+  const prevServerHeight = useRef<number | null>(null);
+  useEffect(() => {
+    const serverH = businessSettings?.planningSlotHeight ?? 44;
+    if (prevServerHeight.current !== null && prevServerHeight.current !== serverH) {
+      setLocalSlotHeight(null);
+    }
+    prevServerHeight.current = serverH;
+  }, [businessSettings?.planningSlotHeight]);
 
   const { data: adminRoles = [] } = useQuery<Array<{id: number; name: string; role: string; permissions: string[]}>>({
     queryKey: ["/api/admin-roles"],
@@ -1763,7 +1828,7 @@ export default function Planning() {
 
   useEffect(() => {
     if (!resizingBooking) return;
-    const SLOT_H = 28;
+    const SLOT_H = slotHeight;
     const onMove = (e: PointerEvent) => {
       const deltaSlots = Math.round((e.clientY - resizeStartY.current) / SLOT_H);
       setResizeCurrentSpan(Math.max(1, resizeStartSpan.current + deltaSlots));
@@ -1903,6 +1968,20 @@ export default function Planning() {
       onTouchStart={isMobile ? handleTouchStart : undefined}
       onTouchEnd={isMobile ? handleTouchEnd : undefined}
     >
+      {/* Pinch-to-zoom hint overlay */}
+      {pinchHint && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-28 z-[100] flex justify-center">
+          <div className="liquid-gradient text-white text-sm font-semibold px-5 py-2.5 rounded-full shadow-xl flex items-center gap-2 animate-fade-in">
+            <span className="text-base">🔍</span>
+            {slotHeight === 32 && t("admin.slotCompact", { defaultValue: "صغير" })}
+            {slotHeight === 44 && t("admin.slotNormal", { defaultValue: "عادي" })}
+            {slotHeight === 60 && t("admin.slotComfortable", { defaultValue: "كبير" })}
+            {slotHeight === 76 && t("admin.slotLarge", { defaultValue: "كبير جداً" })}
+            <span className="opacity-70 text-xs font-normal">({slotHeight}px)</span>
+          </div>
+        </div>
+      )}
+
       {/* Header - Single row */}
       <div className="mb-1 shrink-0 overflow-x-auto overflow-y-visible">
         <div className="flex items-center gap-1.5 md:gap-2 w-max min-w-full">
@@ -2278,7 +2357,11 @@ export default function Planning() {
         )}
 
         {/* Scrollable content */}
-        <div ref={boardRef} className={cn("flex-1 min-h-0 overflow-auto relative free-scroll planning-scroll bg-white dark:bg-slate-900", isMobile && "pb-24")}>
+        <div
+          ref={boardRef}
+          className={cn("flex-1 min-h-0 overflow-auto relative free-scroll planning-scroll bg-white dark:bg-slate-900", isMobile && "pb-24")}
+          onTouchMove={handleTouchMove}
+        >
           <div 
             className="grid relative"
             style={{ 
