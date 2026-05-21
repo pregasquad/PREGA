@@ -348,6 +348,7 @@ export const businessSettings = pgTable("business_settings", {
   botFilterMode: varchar("bot_filter_mode", { length: 20 }).notNull().default("all"),
   botFilterNumbers: text("bot_filter_numbers"),
   bossInstructions: text("boss_instructions"),
+  planningSlotHeight: integer("planning_slot_height").notNull().default(44),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 

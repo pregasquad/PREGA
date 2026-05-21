@@ -47,6 +47,7 @@ interface BusinessSettings {
   workingDays: number[];
   autoLockEnabled: boolean;
   planningShortcuts: string[];
+  planningSlotHeight: number;
 }
 
 interface MessageTemplate {
@@ -166,7 +167,8 @@ export default function AdminSettings() {
     closingTime: "19:00",
     workingDays: [1, 2, 3, 4, 5, 6],
     autoLockEnabled: false,
-    planningShortcuts: DEFAULT_SHORTCUTS
+    planningShortcuts: DEFAULT_SHORTCUTS,
+    planningSlotHeight: 44,
   });
   const [broadcastMessage, setBroadcastMessage] = useState("");
   const [lastBroadcastMessage, setLastBroadcastMessage] = useState("");
@@ -195,6 +197,7 @@ export default function AdminSettings() {
         ...prev,
         ...businessSettings,
         planningShortcuts: businessSettings.planningShortcuts || DEFAULT_SHORTCUTS,
+        planningSlotHeight: businessSettings.planningSlotHeight ?? 44,
       }));
     }
   }, [businessSettings]);
@@ -763,6 +766,41 @@ export default function AdminSettings() {
                         <span className={`block absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-200 ${businessForm.autoLockEnabled ? 'translate-x-5' : ''}`} />
                       </button>
                       <span className="text-sm">{t("admin.autoLockEnabled")}</span>
+                    </div>
+                  </div>
+
+                  <div className="glass-subtle rounded-2xl p-5">
+                    <h3 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-primary" />
+                      {t("admin.planningSlotHeight", { defaultValue: "حجم خانات التخطيط" })}
+                    </h3>
+                    <p className="text-xs text-muted-foreground mb-4">{t("admin.planningSlotHeightDesc", { defaultValue: "اضبط ارتفاع كل خانة 15 دقيقة في شاشة التخطيط" })}</p>
+                    <div className="grid grid-cols-4 gap-2">
+                      {[
+                        { value: 32, label: t("admin.slotCompact", { defaultValue: "صغير" }) },
+                        { value: 44, label: t("admin.slotNormal", { defaultValue: "عادي" }) },
+                        { value: 60, label: t("admin.slotComfortable", { defaultValue: "كبير" }) },
+                        { value: 76, label: t("admin.slotLarge", { defaultValue: "كبير جداً" }) },
+                      ].map(({ value, label }) => (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => setBusinessForm(prev => ({ ...prev, planningSlotHeight: value }))}
+                          data-testid={`button-slot-height-${value}`}
+                          className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-xs font-medium ${
+                            businessForm.planningSlotHeight === value
+                              ? "border-primary liquid-gradient text-white shadow-md"
+                              : "border-border bg-background hover:border-primary/40"
+                          }`}
+                        >
+                          <div className="w-full space-y-0.5">
+                            <div className={`w-full rounded-sm ${businessForm.planningSlotHeight === value ? "bg-white/40" : "bg-rose-200/60"}`} style={{ height: `${Math.round(value * 0.3)}px` }} />
+                            <div className={`w-full rounded-sm ${businessForm.planningSlotHeight === value ? "bg-white/20" : "bg-rose-100/60"}`} style={{ height: `${Math.round(value * 0.3)}px` }} />
+                          </div>
+                          <span>{label}</span>
+                          <span className="opacity-60 text-[10px]">{value}px</span>
+                        </button>
+                      ))}
                     </div>
                   </div>
 

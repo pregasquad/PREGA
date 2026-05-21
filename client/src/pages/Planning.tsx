@@ -218,10 +218,10 @@ export default function Planning() {
     }
     
     const minutesSinceOpen = currentTotalMinutes - openingMinutes;
-    const slotHeight = 44;
+    const slotHeight = businessSettings?.planningSlotHeight ?? 44;
     const position = (minutesSinceOpen / 15) * slotHeight;
     return position;
-  }, [currentTime]);
+  }, [currentTime, businessSettings?.planningSlotHeight]);
 
   // Scroll to live line using boardRef.scrollTo for reliable control
   const scrollToLiveLine = useCallback((smooth = false, force = false) => {
@@ -409,9 +409,12 @@ export default function Planning() {
     workingDays?: number[];
     autoLockEnabled?: boolean;
     planningShortcuts?: string[];
+    planningSlotHeight?: number;
   }>({
     queryKey: ["/api/business-settings"],
   });
+
+  const slotHeight = businessSettings?.planningSlotHeight ?? 44;
 
   const { data: adminRoles = [] } = useQuery<Array<{id: number; name: string; role: string; permissions: string[]}>>({
     queryKey: ["/api/admin-roles"],
@@ -2280,7 +2283,7 @@ export default function Planning() {
             className="grid relative"
             style={{ 
               gridTemplateColumns: `52px repeat(${staffList.length}, minmax(80px, 1fr))`,
-              gridAutoRows: '44px'
+              gridAutoRows: `${slotHeight}px`
             }}
           >
             {/* Current Time Line - iOS Liquid Glass Style */}

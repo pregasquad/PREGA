@@ -947,6 +947,35 @@ export async function ensurePlanningShortcutsColumn(): Promise<void> {
   }
 }
 
+export async function ensurePlanningSlotHeightColumn(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      const [rows] = await connection.query(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'business_settings' AND COLUMN_NAME = 'planning_slot_height'
+      `);
+      if ((rows as any[]).length === 0) {
+        await connection.query(`ALTER TABLE business_settings ADD COLUMN planning_slot_height INT NOT NULL DEFAULT 44`);
+        console.log("Added planning_slot_height column to business_settings table");
+      }
+      connection.release();
+    } else {
+      await pool.query(`
+        DO $$ 
+        BEGIN 
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'business_settings' AND column_name = 'planning_slot_height') THEN
+            ALTER TABLE business_settings ADD COLUMN planning_slot_height INTEGER NOT NULL DEFAULT 44;
+          END IF;
+        END $$;
+      `);
+    }
+    console.log("Planning slot height column ready");
+  } catch (error) {
+    console.error("Failed to ensure planning_slot_height column:", error);
+  }
+}
+
 export async function ensureTombolaSpinsTable(): Promise<void> {
   try {
     if (dbDialect === 'mysql') {
