@@ -774,7 +774,39 @@ export default function AdminSettings() {
                       <Clock className="w-4 h-4 text-primary" />
                       {t("admin.planningSlotHeight", { defaultValue: "حجم خانات التخطيط" })}
                     </h3>
-                    <p className="text-xs text-muted-foreground mb-4">{t("admin.planningSlotHeightDesc", { defaultValue: "اضبط ارتفاع كل خانة 15 دقيقة في شاشة التخطيط" })}</p>
+                    <p className="text-xs text-muted-foreground mb-3">{t("admin.planningSlotHeightDesc", { defaultValue: "اضبط ارتفاع كل خانة 15 دقيقة في شاشة التخطيط" })}</p>
+
+                    {/* Slot height slider */}
+                    <div className="mb-4 space-y-2">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>{t("admin.slotCompact", { defaultValue: "صغير" })}</span>
+                        <span className="font-bold text-primary text-sm">{businessForm.planningSlotHeight}px</span>
+                        <span>{t("admin.slotLarge", { defaultValue: "كبير جداً" })}</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={28}
+                        max={100}
+                        step={2}
+                        value={businessForm.planningSlotHeight}
+                        onChange={(e) => setBusinessForm(prev => ({ ...prev, planningSlotHeight: Number(e.target.value) }))}
+                        data-testid="slider-slot-height"
+                        className="w-full h-2 rounded-full appearance-none cursor-pointer accent-primary bg-rose-100 dark:bg-slate-700"
+                      />
+                      {/* Live preview of slot size */}
+                      <div className="mt-2 rounded-xl overflow-hidden border border-rose-100 dark:border-slate-700">
+                        <div className="flex items-center gap-0 text-[10px] text-muted-foreground">
+                          <div className="w-10 shrink-0 bg-rose-50 dark:bg-slate-800 border-r border-rose-100 dark:border-slate-700 flex items-start justify-center px-0.5 pt-0.5 font-bold text-rose-400" style={{ height: `${businessForm.planningSlotHeight}px` }}>10:00</div>
+                          <div className="flex-1 bg-rose-100/40 dark:bg-slate-800/40 border-b border-rose-100 dark:border-slate-700" style={{ height: `${businessForm.planningSlotHeight}px` }} />
+                        </div>
+                        <div className="flex items-center gap-0 text-[10px] text-muted-foreground">
+                          <div className="w-10 shrink-0 bg-rose-50/40 dark:bg-slate-800/40 border-r border-rose-100 dark:border-slate-700 flex items-start justify-center px-0.5 pt-0.5 font-medium text-rose-400/60" style={{ height: `${businessForm.planningSlotHeight}px` }}>10:30</div>
+                          <div className="flex-1 bg-white dark:bg-slate-900 border-b border-dashed border-rose-100/40" style={{ height: `${businessForm.planningSlotHeight}px` }} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Quick presets */}
                     <div className="grid grid-cols-4 gap-2">
                       {[
                         { value: 32, label: t("admin.slotCompact", { defaultValue: "صغير" }) },
@@ -787,16 +819,12 @@ export default function AdminSettings() {
                           type="button"
                           onClick={() => setBusinessForm(prev => ({ ...prev, planningSlotHeight: value }))}
                           data-testid={`button-slot-height-${value}`}
-                          className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-xs font-medium ${
+                          className={`flex flex-col items-center gap-1 p-2 rounded-xl border-2 transition-all text-xs font-medium ${
                             businessForm.planningSlotHeight === value
                               ? "border-primary liquid-gradient text-white shadow-md"
                               : "border-border bg-background hover:border-primary/40"
                           }`}
                         >
-                          <div className="w-full space-y-0.5">
-                            <div className={`w-full rounded-sm ${businessForm.planningSlotHeight === value ? "bg-white/40" : "bg-rose-200/60"}`} style={{ height: `${Math.round(value * 0.3)}px` }} />
-                            <div className={`w-full rounded-sm ${businessForm.planningSlotHeight === value ? "bg-white/20" : "bg-rose-100/60"}`} style={{ height: `${Math.round(value * 0.3)}px` }} />
-                          </div>
                           <span>{label}</span>
                           <span className="opacity-60 text-[10px]">{value}px</span>
                         </button>

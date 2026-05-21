@@ -1946,6 +1946,21 @@ export default function Planning() {
     );
   }
 
+  // Auth error: prevent blank board flash while redirect fires
+  if (hasAuthError) {
+    return (
+      <div className="h-full loading-container liquid-gradient-subtle" dir={isRtl ? "rtl" : "ltr"}>
+        <div className="flex flex-col items-center gap-5">
+          <div className="relative">
+            <SpinningLogo size="xl" />
+            <div className="absolute inset-0 rounded-full bg-primary/20 blur-xl animate-pulse" />
+          </div>
+          <p className="text-muted-foreground font-medium">{t("common.loading")}</p>
+        </div>
+      </div>
+    );
+  }
+
   // Show empty state if no staff configured (skip if auth error - will auto-redirect)
   if (staffList.length === 0 && !hasAuthError) {
     return (
@@ -2438,6 +2453,9 @@ export default function Planning() {
                   >
                     {isHour && (
                       <span className="block text-[12px] font-bold text-rose-500 dark:text-rose-300 tabular-nums leading-none pt-0.5" dir="ltr">{hour}</span>
+                    )}
+                    {isHalf && (
+                      <span className="block text-[10px] font-medium text-rose-400/70 dark:text-rose-400/60 tabular-nums leading-none pt-0.5" dir="ltr">{hour}</span>
                     )}
                   </div>
                 );
