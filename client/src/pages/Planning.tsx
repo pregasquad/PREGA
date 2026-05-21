@@ -2339,6 +2339,7 @@ export default function Planning() {
             <div 
               key={s.id} 
               className={cn("py-2 px-0.5 font-semibold text-center text-[10px]", staffIndex < staffList.length - 1 && (isRtl ? "border-l border-slate-200 dark:border-slate-600" : "border-r border-slate-200 dark:border-slate-600"))}
+              style={{ background: `linear-gradient(180deg, ${s.color}18 0%, ${s.color}08 100%)` }}
             >
               <div className="flex flex-col items-center justify-center gap-1">
                 {s.photoUrl ? (
@@ -2364,7 +2365,7 @@ export default function Planning() {
                     {s.name.charAt(0).toUpperCase()}
                   </div>
                 )}
-                <span className="text-slate-700 dark:text-slate-200 font-bold text-[10px] leading-tight break-words max-w-[80px] truncate">{s.name}</span>
+                <span className="font-bold text-[10px] leading-tight break-words max-w-[80px] truncate" style={{ color: s.color }}>{s.name}</span>
               </div>
             </div>
           ))}
