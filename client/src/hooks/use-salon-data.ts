@@ -404,6 +404,12 @@ export function useServices() {
             return data;
           }
           if (res.status === 401) {
+            sessionStorage.clear();
+            localStorage.removeItem("user_authenticated");
+            localStorage.removeItem("current_user");
+            localStorage.removeItem("current_user_role");
+            localStorage.removeItem("current_user_permissions");
+            window.dispatchEvent(new Event("auth:session-expired"));
             throw new Error("UNAUTHORIZED_401");
           }
         } catch (e: any) {
@@ -759,6 +765,12 @@ export function useStaff() {
             return data;
           }
           if (res.status === 401) {
+            sessionStorage.clear();
+            localStorage.removeItem("user_authenticated");
+            localStorage.removeItem("current_user");
+            localStorage.removeItem("current_user_role");
+            localStorage.removeItem("current_user_permissions");
+            window.dispatchEvent(new Event("auth:session-expired"));
             throw new Error("UNAUTHORIZED_401");
           }
         } catch (e: any) {

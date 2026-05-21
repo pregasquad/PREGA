@@ -449,8 +449,8 @@ export default function Planning() {
   
   const { data: appointments = [], isLoading: loadingApps } = useAppointments(formattedDate);
   const { data: allAppointments = [] } = useAppointments();
-  const { data: staffList = [], isLoading: loadingStaff, isError: staffError } = useStaff();
-  const { data: services = [], isLoading: loadingServices, isError: servicesError } = useServices();
+  const { data: staffList = [], isLoading: loadingStaff, error: staffError } = useStaff();
+  const { data: services = [], isLoading: loadingServices, error: servicesError } = useServices();
   const { data: clients = [] } = useQuery<Array<{id: number, name: string, phone: string | null, loyaltyPoints: number, usePoints: boolean, loyaltyEnrolled: boolean, totalSpent: number, giftCardBalance: number, useGiftCardBalance: boolean}>>({
     queryKey: ["/api/clients"],
   });
