@@ -141,6 +141,13 @@ export function FirstLogin({ children }: FirstLoginProps) {
     }
   }, [isAuthenticated]);
 
+  // Listen for session-expired events from any page (no page reload needed)
+  useEffect(() => {
+    const handleSessionExpired = () => setIsAuthenticated(false);
+    window.addEventListener("auth:session-expired", handleSessionExpired);
+    return () => window.removeEventListener("auth:session-expired", handleSessionExpired);
+  }, []);
+
   const { data: dbStatus } = useQuery<DatabaseStatus>({
     queryKey: ["/api/status/database"],
     queryFn: async () => {

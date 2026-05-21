@@ -115,7 +115,8 @@ function handleSessionExpired() {
   localStorage.removeItem("current_user");
   localStorage.removeItem("current_user_role");
   localStorage.removeItem("current_user_permissions");
-  window.location.href = "/";
+  // Signal the login screen to appear via React state — no page reload, no blank screen
+  window.dispatchEvent(new Event("auth:session-expired"));
 }
 
 export async function apiRequest(
@@ -252,18 +253,12 @@ export const getQueryFn: <T>(options: {
       }
 
       if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-        // Clear session and redirect on 401
-        sessionStorage.clear();
-        localStorage.clear();
-        window.location.href = "/";
+        handleSessionExpired();
         return null;
       }
 
       if (res.status === 401) {
-        // Clear session and redirect on 401
-        sessionStorage.clear();
-        localStorage.clear();
-        window.location.href = "/";
+        handleSessionExpired();
         throw new Error("401: Unauthorized");
       }
 

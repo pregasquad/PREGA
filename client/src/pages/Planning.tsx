@@ -858,13 +858,16 @@ export default function Planning() {
     };
   }, [isDataLoading]);
 
-  // Auto-redirect to login if session expired
+  // Show login screen if session expired — no page reload (avoids blank screen)
   useEffect(() => {
     if (hasAuthError) {
       sessionStorage.clear();
       localStorage.removeItem("user_authenticated");
       localStorage.removeItem("current_user");
-      window.location.href = "/";
+      localStorage.removeItem("current_user_role");
+      localStorage.removeItem("current_user_permissions");
+      // Signal FirstLogin to reset to login screen without a full-page reload
+      window.dispatchEvent(new Event("auth:session-expired"));
     }
   }, [hasAuthError]);
 
