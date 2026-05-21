@@ -2410,7 +2410,7 @@ export default function Planning() {
                   >
                     <div className="relative">
                       <div className="w-8 h-8 rounded-full liquid-gradient shadow-xl flex items-center justify-center border-2 border-white/50 live-indicator">
-                        <Scissors className="w-4 h-4 text-white drop-shadow-md" />
+                        <Clock className="w-4 h-4 text-white drop-shadow-md" />
                       </div>
                       <div className="absolute -inset-1 rounded-full liquid-gradient blur-lg opacity-40 animate-pulse" />
                     </div>
@@ -2504,15 +2504,20 @@ export default function Planning() {
                     >
                       <div 
                         className={cn(
-                          "appointment-card h-full text-white cursor-grab active:cursor-grabbing relative rounded-md shadow-md",
+                          booking.paid
+                            ? "appointment-card h-full text-white cursor-grab active:cursor-grabbing relative rounded-md shadow-md"
+                            : "appointment-card h-full cursor-grab active:cursor-grabbing relative rounded-md shadow-sm",
                           span <= 2 ? "flex items-center gap-1 px-1.5 py-0.5" : span <= 4 ? "flex flex-col px-1.5 py-1" : "flex flex-col px-2 py-1.5",
                           isDragging && "opacity-50 scale-95",
                           isResizing && "ring-2 ring-white/60 ring-inset shadow-xl",
                           isConflicting && "ring-2 ring-amber-400 ring-inset"
                         )}
                         style={{ 
-                          background: `linear-gradient(135deg, ${s.color}ee, ${s.color}cc)`,
-                          cursor: canEdit ? 'grab' : 'default'
+                          background: booking.paid
+                            ? `linear-gradient(135deg, ${s.color}ee, ${s.color}cc)`
+                            : `linear-gradient(135deg, ${s.color}77, ${s.color}55)`,
+                          cursor: canEdit ? 'grab' : 'default',
+                          border: booking.paid ? 'none' : `1.5px solid ${s.color}bb`,
                         }}
                         draggable={canEdit && !isResizing}
                         onDragStart={(e) => handleDragStart(e, booking)}
