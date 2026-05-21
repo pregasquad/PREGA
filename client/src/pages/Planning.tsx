@@ -2340,21 +2340,19 @@ export default function Planning() {
                 return (
                   <div
                     className={cn(
-                      "sticky z-30 flex items-start justify-center pt-0",
+                      "sticky z-30 flex items-start justify-center overflow-visible",
                       isRtl ? "right-0 border-l-2" : "left-0 border-r-2",
                       isHour
-                        ? cn("bg-rose-50 dark:bg-slate-800 border-b border-rose-100 dark:border-slate-700 px-0.5", isRtl ? "border-l-rose-200 dark:border-l-slate-600" : "border-r-rose-200 dark:border-r-slate-600")
+                        ? cn("bg-rose-50 dark:bg-slate-800 border-t-2 border-t-rose-300 dark:border-t-slate-500 border-b border-b-rose-100/40 dark:border-b-slate-700/40 px-0.5", isRtl ? "border-l-rose-300 dark:border-l-slate-500" : "border-r-rose-300 dark:border-r-slate-500")
                         : isHalf
-                        ? cn("bg-rose-50/60 dark:bg-slate-800/60 border-b border-rose-100/50 dark:border-slate-700/50 px-0.5", isRtl ? "border-l-rose-100 dark:border-l-slate-700" : "border-r-rose-100 dark:border-r-slate-700")
-                        : cn("bg-rose-50/30 dark:bg-slate-800/30 border-b border-dashed border-rose-100/20 dark:border-slate-700/20 px-0.5", isRtl ? "border-l-rose-100/40 dark:border-l-slate-700/40" : "border-r-rose-100/40 dark:border-r-slate-700/40")
+                        ? cn("bg-rose-50/40 dark:bg-slate-800/40 border-t border-t-rose-200/60 dark:border-t-slate-600/60 border-b border-b-rose-100/20 dark:border-b-slate-700/20 px-0.5", isRtl ? "border-l-rose-100 dark:border-l-slate-700" : "border-r-rose-100 dark:border-r-slate-700")
+                        : cn("bg-white dark:bg-slate-900 border-b border-dashed border-rose-100/20 dark:border-slate-800/60 px-0.5", isRtl ? "border-l-rose-100/40 dark:border-l-slate-700/40" : "border-r-rose-100/40 dark:border-r-slate-700/40")
                     )}
                     style={{ gridColumn: 1, gridRow: rowNum }}
                   >
-                    {isHour ? (
-                      <span className="-translate-y-1/2 block text-[12px] font-bold text-rose-500 dark:text-rose-300 tabular-nums leading-none" dir="ltr">{hour}</span>
-                    ) : isHalf ? (
-                      <span className="-translate-y-1/2 block text-[10px] font-medium text-rose-300/80 dark:text-slate-500 tabular-nums leading-none" dir="ltr">{hour}</span>
-                    ) : null}
+                    {isHour && (
+                      <span className="block text-[12px] font-bold text-rose-500 dark:text-rose-300 tabular-nums leading-none pt-0.5" dir="ltr">{hour}</span>
+                    )}
                   </div>
                 );
               })()}
@@ -2573,12 +2571,12 @@ export default function Planning() {
                     className={cn(
                       "transition-colors duration-150 cursor-pointer",
                       isRtl ? "border-l border-rose-100 dark:border-slate-700" : "border-r border-rose-100 dark:border-slate-700",
-                      isHourSlot    && "border-b border-rose-100 dark:border-slate-700",
-                      isHalfSlot    && "border-b border-rose-100/60 dark:border-slate-700/60",
-                      isQuarterSlot && "border-b border-dashed border-rose-100/25 dark:border-slate-800/60",
+                      isHourSlot    && "border-t-2 border-t-rose-300 dark:border-t-slate-500",
+                      isHalfSlot    && "border-t border-t-rose-200/60 dark:border-t-slate-600/60",
+                      !isHourSlot && !isHalfSlot && "border-t border-dashed border-t-rose-100/20 dark:border-t-slate-800/60",
                       "hover:bg-rose-50/80 dark:hover:bg-slate-700/50",
                       isDragOver && "bg-rose-100 dark:bg-slate-700 ring-2 ring-primary/40 ring-inset",
-                      !isDragOver && (hourGroup % 2 === 0 ? "bg-white dark:bg-slate-900" : "bg-rose-50/20 dark:bg-slate-800/40")
+                      !isDragOver && (hourGroup % 2 === 0 ? "bg-white dark:bg-slate-900" : "bg-rose-50/15 dark:bg-slate-800/40")
                     )}
                     style={{ 
                       gridColumn: colNum,
