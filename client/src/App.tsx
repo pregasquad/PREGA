@@ -6,20 +6,18 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { AdminLock } from "@/components/layout/AdminLock";
 import { FirstLogin } from "@/components/layout/FirstLogin";
-import { Suspense, lazy, useEffect } from "react";
+import { Suspense, lazy, useEffect, Component, type ReactNode } from "react";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
 import { initGA } from "./lib/analytics";
 import { useAnalytics } from "./hooks/use-analytics";
 import { connectQz, initPrintSocket } from "./lib/qzPrint";
 import { saveSalariesCache } from "./lib/offlineDb";
 
-// Core pages - loaded immediately
-import Planning from "@/pages/Planning";
-import Booking from "@/pages/Booking";
-import MyBookings from "@/pages/MyBookings";
-import Charges from "@/pages/Charges";
-
-// Admin pages - lazy loaded for faster initial load
+// All pages lazy-loaded so a single page error never blanks the whole app
+const Planning = lazy(() => import("@/pages/Planning"));
+const Booking = lazy(() => import("@/pages/Booking"));
+const MyBookings = lazy(() => import("@/pages/MyBookings"));
+const Charges = lazy(() => import("@/pages/Charges"));
 const Home = lazy(() => import("@/pages/Home"));
 const Services = lazy(() => import("@/pages/Services"));
 const Reports = lazy(() => import("@/pages/Reports"));
@@ -38,7 +36,6 @@ const NotFound = lazy(() => import("@/pages/not-found"));
 const StaffPortal = lazy(() => import("@/pages/StaffPortal"));
 const Tombola = lazy(() => import("@/pages/Tombola"));
 
-// Loading fallback component with smooth fade - prevents flash
 function PageLoader() {
   return (
     <div className="loading-container min-h-[60vh] page-wrapper">
@@ -47,9 +44,42 @@ function PageLoader() {
   );
 }
 
-// Wrapper for smooth page content appearance
 function PageContent({ children }: { children: React.ReactNode }) {
   return <div className="page-content h-full flex flex-col min-h-0">{children}</div>;
+}
+
+// Global error boundary — catches any render crash and shows a message instead of blank page
+interface ErrorBoundaryState { error: Error | null }
+class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryState> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-background p-8">
+          <div className="max-w-lg w-full rounded-2xl border border-destructive/20 bg-destructive/5 p-8 text-center space-y-4">
+            <div className="text-4xl">⚠️</div>
+            <h1 className="text-xl font-bold text-destructive">حدث خطأ في التطبيق</h1>
+            <p className="text-sm text-muted-foreground font-mono break-all">
+              {this.state.error.message}
+            </p>
+            <button
+              onClick={() => { this.setState({ error: null }); window.location.href = "/"; }}
+              className="px-6 py-2 rounded-xl bg-primary text-white font-medium hover:opacity-90 transition"
+            >
+              إعادة المحاولة
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 function PermissionGuard({ children, permission }: { children: React.ReactNode, permission?: string }) {
@@ -90,18 +120,15 @@ function PermissionGuard({ children, permission }: { children: React.ReactNode, 
   return <>{children}</>;
 }
 
-// Wrapper for pages with layout
-function PageRoute({ component: Component, requireAdmin = false, permission, lazy: isLazy = false }: { component: React.ComponentType, requireAdmin?: boolean, permission?: string, lazy?: boolean }) {
-  const pageContent = isLazy ? (
+function PageRoute({ component: Component, requireAdmin = false, permission }: { component: React.ComponentType, requireAdmin?: boolean, permission?: string }) {
+  const pageContent = (
     <Suspense fallback={<PageLoader />}>
-      <PageContent>
-        <Component />
-      </PageContent>
+      <ErrorBoundary>
+        <PageContent>
+          <Component />
+        </PageContent>
+      </ErrorBoundary>
     </Suspense>
-  ) : (
-    <PageContent>
-      <Component />
-    </PageContent>
   );
 
   const content = (
@@ -129,7 +156,7 @@ function Router() {
       </Route>
 
       <Route path="/home">
-        <PageRoute component={Home} permission="view_home" lazy />
+        <PageRoute component={Home} permission="view_home" />
       </Route>
 
       <Route path="/planning">
@@ -137,15 +164,15 @@ function Router() {
       </Route>
 
       <Route path="/services">
-        <PageRoute component={Services} requireAdmin permission="view_services" lazy />
+        <PageRoute component={Services} requireAdmin permission="view_services" />
       </Route>
 
       <Route path="/reports">
-        <PageRoute component={Reports} requireAdmin permission="view_reports" lazy />
+        <PageRoute component={Reports} requireAdmin permission="view_reports" />
       </Route>
 
       <Route path="/inventory">
-        <PageRoute component={Inventory} requireAdmin permission="view_inventory" lazy />
+        <PageRoute component={Inventory} requireAdmin permission="view_inventory" />
       </Route>
 
       <Route path="/charges">
@@ -153,43 +180,43 @@ function Router() {
       </Route>
 
       <Route path="/salaries">
-        <PageRoute component={Salaries} requireAdmin permission="view_salaries" lazy />
+        <PageRoute component={Salaries} requireAdmin permission="view_salaries" />
       </Route>
 
       <Route path="/staff-commissions">
-        <PageRoute component={StaffCommissions} requireAdmin permission="manage_salaries" lazy />
+        <PageRoute component={StaffCommissions} requireAdmin permission="manage_salaries" />
       </Route>
 
       <Route path="/clients">
-        <PageRoute component={Clients} requireAdmin permission="view_clients" lazy />
+        <PageRoute component={Clients} requireAdmin permission="view_clients" />
       </Route>
 
       <Route path="/staff-performance">
-        <PageRoute component={StaffPerformance} requireAdmin permission="view_staff_performance" lazy />
+        <PageRoute component={StaffPerformance} requireAdmin permission="view_staff_performance" />
       </Route>
 
       <Route path="/staff">
-        <PageRoute component={Staff} requireAdmin permission="manage_staff" lazy />
+        <PageRoute component={Staff} requireAdmin permission="manage_staff" />
       </Route>
 
       <Route path="/whatsapp">
-        <PageRoute component={WhatsApp} requireAdmin permission="admin_settings" lazy />
+        <PageRoute component={WhatsApp} requireAdmin permission="admin_settings" />
       </Route>
 
       <Route path="/admin-settings">
-        <PageRoute component={AdminSettings} requireAdmin permission="admin_settings" lazy />
+        <PageRoute component={AdminSettings} requireAdmin permission="admin_settings" />
       </Route>
 
       <Route path="/loyalty-rewards">
-        <PageRoute component={LoyaltyRewards} requireAdmin permission="manage_business_settings" lazy />
+        <PageRoute component={LoyaltyRewards} requireAdmin permission="manage_business_settings" />
       </Route>
 
       <Route path="/packages">
-        <PageRoute component={Packages} requireAdmin permission="manage_services" lazy />
+        <PageRoute component={Packages} requireAdmin permission="manage_services" />
       </Route>
 
       <Route path="/booking-history">
-        <PageRoute component={BookingHistory} permission="view_booking_history" lazy />
+        <PageRoute component={BookingHistory} permission="view_booking_history" />
       </Route>
 
       <Route path="/tombola">
@@ -198,8 +225,17 @@ function Router() {
         </Suspense>
       </Route>
 
-      <Route path="/booking" component={Booking} />
-      <Route path="/my-bookings" component={MyBookings} />
+      <Route path="/booking">
+        <Suspense fallback={<PageLoader />}>
+          <Booking />
+        </Suspense>
+      </Route>
+
+      <Route path="/my-bookings">
+        <Suspense fallback={<PageLoader />}>
+          <MyBookings />
+        </Suspense>
+      </Route>
 
       <Route path="/staff-portal/:token">
         <Suspense fallback={<PageLoader />}>
@@ -243,9 +279,11 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
-        <FirstLogin>
-          <Router />
-        </FirstLogin>
+        <ErrorBoundary>
+          <FirstLogin>
+            <Router />
+          </FirstLogin>
+        </ErrorBoundary>
       </TooltipProvider>
     </QueryClientProvider>
   );

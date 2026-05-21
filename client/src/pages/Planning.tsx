@@ -170,6 +170,23 @@ export default function Planning() {
     };
   }, [isMobile]);
 
+  // These must be declared before any useCallback/useMemo that references them in dependency arrays
+  const [localSlotHeight, setLocalSlotHeight] = useState<number | null>(null);
+
+  const { data: businessSettings } = useQuery<{
+    loyaltyPointsPerDh: number;
+    loyaltyPointsValue: number;
+    loyaltyEnabled: boolean;
+    openingTime?: string;
+    closingTime?: string;
+    workingDays?: number[];
+    autoLockEnabled?: boolean;
+    planningShortcuts?: string[];
+    planningSlotHeight?: number;
+  }>({
+    queryKey: ["/api/business-settings"],
+  });
+
   const getCurrentTimePosition = useCallback((hoursArray: string[], openingTime?: string, closingTime?: string) => {
     if (hoursArray.length === 0) return -1;
     
@@ -321,7 +338,6 @@ export default function Planning() {
   // Pinch-to-zoom state
   const pinchStartDist = useRef<number | null>(null);
   const pinchStartHeight = useRef<number>(44);
-  const [localSlotHeight, setLocalSlotHeight] = useState<number | null>(null);
   const [pinchHint, setPinchHint] = useState(false);
   const pinchHintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const SLOT_SIZES = [32, 44, 60, 76];
@@ -455,20 +471,6 @@ export default function Planning() {
     queryKey: ["/api/clients"],
   });
   
-  const { data: businessSettings } = useQuery<{
-    loyaltyPointsPerDh: number;
-    loyaltyPointsValue: number;
-    loyaltyEnabled: boolean;
-    openingTime?: string;
-    closingTime?: string;
-    workingDays?: number[];
-    autoLockEnabled?: boolean;
-    planningShortcuts?: string[];
-    planningSlotHeight?: number;
-  }>({
-    queryKey: ["/api/business-settings"],
-  });
-
   const slotHeight = localSlotHeight ?? (businessSettings?.planningSlotHeight ?? 44);
 
   // Sync localSlotHeight back to null when server setting changes (so server value takes effect)
