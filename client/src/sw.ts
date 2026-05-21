@@ -182,17 +182,10 @@ self.addEventListener('message', (event) => {
   }
 });
 
-// Handle offline navigation
-self.addEventListener('fetch', (event) => {
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request).catch(async () => {
-        const cached = await caches.match('/');
-        return cached || new Response('Offline', { status: 503 });
-      })
-    );
-  }
-});
+// NOTE: No manual fetch handler here — Workbox's registerRoute for documents
+// (NetworkFirst above) already handles offline navigation fallback.
+// A second respondWith() call on the same fetch event throws
+// InvalidStateError and produces a blank page.
 
 self.skipWaiting();
 self.clients.claim();
