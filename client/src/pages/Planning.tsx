@@ -2331,7 +2331,7 @@ export default function Planning() {
           ref={headerRef}
           className="grid z-50 shrink-0 overflow-x-hidden bg-white dark:from-slate-800 dark:to-slate-850 border-b-2 border-slate-200 dark:border-slate-600"
           style={{ 
-            gridTemplateColumns: `44px repeat(${staffList.length}, minmax(80px, 1fr))`,
+            gridTemplateColumns: `52px repeat(${staffList.length}, minmax(80px, 1fr))`,
           }}
         >
           <div className={cn("bg-white dark:bg-slate-900 py-1 px-0.5", isRtl ? "border-l border-slate-200 dark:border-slate-600" : "border-r border-slate-200 dark:border-slate-600")}></div>
@@ -2448,13 +2448,11 @@ export default function Planning() {
                 return (
                   <div
                     className={cn(
-                      "sticky z-30 flex items-center justify-center overflow-visible",
-                      isRtl ? "right-0 border-l-2" : "left-0 border-r-2",
-                      isHour
-                        ? cn("bg-white dark:bg-slate-900 border-t-2 border-t-slate-300 dark:border-t-slate-500 px-0.5", isRtl ? "border-l-slate-300 dark:border-l-slate-500" : "border-r-slate-300 dark:border-r-slate-500")
-                        : isHalf
-                        ? cn("bg-white dark:bg-slate-900 border-t border-t-slate-200/70 dark:border-t-slate-600/60 px-0.5", isRtl ? "border-l-slate-200 dark:border-l-slate-600" : "border-r-slate-200 dark:border-r-slate-600")
-                        : cn("bg-white dark:bg-slate-900 px-0.5", isRtl ? "border-l-slate-100/40 dark:border-l-slate-700/40" : "border-r-slate-100/40 dark:border-r-slate-700/40")
+                      "sticky z-30 flex items-center justify-center overflow-visible px-0.5 bg-white dark:bg-slate-900",
+                      isRtl ? "right-0 border-l-2 border-l-slate-200 dark:border-l-slate-600" : "left-0 border-r-2 border-r-slate-200 dark:border-r-slate-600",
+                      isHour  && "border-t-2 border-t-slate-300 dark:border-t-slate-500",
+                      isHalf  && "border-t border-t-slate-200 dark:border-t-slate-600",
+                      !isHour && !isHalf && "border-t border-dashed border-t-slate-200/60 dark:border-t-slate-700/60"
                     )}
                     style={{ gridColumn: 1, gridRow: rowNum }}
                   >
@@ -2476,10 +2474,21 @@ export default function Planning() {
 
                 // For covered slots (no booking here), render empty cell with just borders
                 if (isCovered) {
+                  const covMin = Number(hour.split(":")[1]);
+                  const covIsHour = covMin === 0;
+                  const covIsHalf = covMin === 30;
+                  const covHourGroup = Math.floor(hourIndex / 4);
                   return (
                     <div
                       key={`${s.id}-${hour}-covered`}
-                      className={cn("border-b border-slate-100 dark:border-slate-800 bg-transparent pointer-events-none", staffIndex < staffList.length - 1 && (isRtl ? "border-l border-slate-200 dark:border-slate-600" : "border-r border-slate-200 dark:border-slate-600"))}
+                      className={cn(
+                        "pointer-events-none",
+                        staffIndex < staffList.length - 1 && (isRtl ? "border-l border-slate-200 dark:border-slate-600" : "border-r border-slate-200 dark:border-slate-600"),
+                        covIsHour && "border-t-2 border-t-slate-300 dark:border-t-slate-500",
+                        covIsHalf && "border-t border-t-slate-200 dark:border-t-slate-600",
+                        !covIsHour && !covIsHalf && "border-t border-dashed border-t-slate-200/60 dark:border-t-slate-700/60",
+                        covHourGroup % 2 === 0 ? "bg-white dark:bg-slate-900" : "bg-slate-50/60 dark:bg-slate-800/40"
+                      )}
                       style={{ gridColumn: colNum, gridRow: rowNum }}
                     />
                   );
@@ -2497,7 +2506,7 @@ export default function Planning() {
                   return (
                     <div
                       key={`${s.id}-${hour}`}
-                      className="p-0.5 z-10"
+                      className={cn("p-0.5 z-10", staffIndex < staffList.length - 1 && (isRtl ? "border-l border-slate-200 dark:border-slate-600" : "border-r border-slate-200 dark:border-slate-600"))}
                       style={{ 
                         gridColumn: colNum,
                         gridRow: `${rowNum} / span ${span}`
@@ -2688,8 +2697,8 @@ export default function Planning() {
                       "transition-colors duration-150 cursor-pointer",
                       staffIndex < staffList.length - 1 && (isRtl ? "border-l border-slate-200 dark:border-slate-600" : "border-r border-slate-200 dark:border-slate-600"),
                       isHourSlot    && "border-t-2 border-t-slate-300 dark:border-t-slate-500",
-                      isHalfSlot    && "border-t border-t-slate-200/70 dark:border-t-slate-600/60",
-                      !isHourSlot && !isHalfSlot && "border-t border-dashed border-t-slate-100/40 dark:border-t-slate-800/60",
+                      isHalfSlot    && "border-t border-t-slate-200 dark:border-t-slate-600",
+                      !isHourSlot && !isHalfSlot && "border-t border-dashed border-t-slate-200/60 dark:border-t-slate-700/60",
                       "hover:bg-slate-50 dark:hover:bg-slate-700/50",
                       isDragOver && "bg-primary/8 dark:bg-slate-700 ring-2 ring-primary/40 ring-inset",
                       !isDragOver && (hourGroup % 2 === 0 ? "bg-white dark:bg-slate-900" : "bg-slate-50/60 dark:bg-slate-800/40")
