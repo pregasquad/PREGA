@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { CalendarIcon, ChevronLeft, ChevronRight, Plus, Trash2, Check, X, Search, Star, RefreshCw, Sparkles, CreditCard, Settings2, Scissors, Clock, User, ChevronsUpDown, ListTodo, Bell, UserCheck, Gift, AlertCircle, AlertTriangle, Wallet, Users, Package, Lock, ShieldCheck, CheckCircle, UserMinus, ChevronDown, Pencil, ArrowDownLeft } from "lucide-react";
+import { CalendarIcon, ChevronLeft, ChevronRight, Plus, Trash2, Check, X, Search, Star, RefreshCw, Sparkles, CreditCard, Settings2, Scissors, Clock, User, ChevronsUpDown, ListTodo, Bell, UserCheck, Gift, AlertCircle, AlertTriangle, Wallet, Users, Package, Lock, ShieldCheck, CheckCircle, UserMinus, ChevronDown, Pencil, ArrowDownLeft, Undo2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
@@ -1529,6 +1529,52 @@ export default function Planning() {
     }
   };
 
+  const revertPaidRef = React.useRef<number>(0);
+  const handleRevertPaid = async (e: React.MouseEvent | React.TouchEvent, app: any) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (!canEdit) return;
+    const now = Date.now();
+    if (now - revertPaidRef.current < 1000) return;
+    revertPaidRef.current = now;
+
+    const appId = typeof app.id === "string" ? parseInt(app.id) : app.id;
+    if (appId < 0) return;
+
+    try {
+      const updateData: any = { paid: false };
+      if (app.date) updateData.date = app.date;
+      if (app.startTime) updateData.startTime = app.startTime;
+      if (app.duration) updateData.duration = app.duration;
+      if (app.service) updateData.service = app.service;
+      if (app.staff) updateData.staff = app.staff;
+      if (app.staffId) updateData.staffId = app.staffId;
+      if (app.client) updateData.client = app.client;
+      if (app.clientId) updateData.clientId = app.clientId;
+      if (app.phone) updateData.phone = app.phone;
+      if (app.total !== undefined) updateData.total = app.total;
+      if (app.price !== undefined) updateData.price = app.price;
+      if (app.servicesJson) {
+        updateData.servicesJson = typeof app.servicesJson === "string"
+          ? JSON.parse(app.servicesJson)
+          : app.servicesJson;
+      }
+
+      await apiRequest("PUT", `/api/appointments/${appId}`, updateData);
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments/all"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+      refreshSalariesBackground();
+      toast({
+        title: t("planning.paymentReverted") || "تم إلغاء الدفع",
+        description: t("planning.paymentRevertedDesc") || "تم إعادة الموعد إلى حالة غير مدفوع",
+      });
+    } catch (error) {
+      console.error("Revert payment error:", error);
+      toast({ title: t("common.error"), description: t("planning.paymentError"), variant: "destructive" });
+    }
+  };
+
   const markPaidRef = React.useRef<number>(0);
   const handleMarkAsPaid = async (e: React.MouseEvent | React.TouchEvent, app: any) => {
     e.stopPropagation();
@@ -2373,15 +2419,26 @@ export default function Planning() {
                                 Payé
                               </span>
                             ) : (
-                              <span
-                                className="relative w-6 h-6 flex items-center justify-center shrink-0"
-                                role="status"
-                                aria-label={t("common.paid")}
-                                data-testid={`status-paid-${booking.id}`}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  e.preventDefault();
+                                  handleRevertPaid(e, booking);
+                                }}
+                                onTouchEnd={(e) => {
+                                  e.stopPropagation();
+                                  e.preventDefault();
+                                  handleRevertPaid(e, booking);
+                                }}
+                                className="group relative w-7 h-7 min-w-[28px] min-h-[28px] flex items-center justify-center shrink-0 rounded-full hover:bg-red-500/20 active:bg-red-500/30 transition-colors"
+                                aria-label={t("planning.revertPayment") || "إلغاء الدفع"}
+                                title={t("planning.revertPayment") || "إلغاء الدفع"}
+                                data-testid={`button-revert-paid-${booking.id}`}
                               >
-                                <CreditCard className="w-5 h-5 text-green-400" />
-                                <Check className="w-2.5 h-2.5 text-green-400 absolute -top-0.5 -right-0.5 stroke-[3]" />
-                              </span>
+                                <CreditCard className="w-5 h-5 text-green-400 group-hover:hidden" />
+                                <Check className="w-2.5 h-2.5 text-green-400 absolute -top-0.5 -right-0.5 stroke-[3] group-hover:hidden" />
+                                <Undo2 className="w-4 h-4 text-red-400 hidden group-hover:block" />
+                              </button>
                             )
                           ) : (
                             <button
