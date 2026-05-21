@@ -32,12 +32,15 @@ import { autoPrint } from "@/lib/printReceipt";
 import { connectQz, openCashDrawer, isQzConnected, checkPrintStationAsync, remoteOpenDrawer } from "@/lib/qzPrint";
 
 const DEFAULT_HOURS = [
-  "10:00","10:30","11:00","11:30","12:00","12:30",
-  "13:00","13:30","14:00","14:30","15:00","15:30",
-  "16:00","16:30","17:00","17:30","18:00","18:30",
-  "19:00","19:30","20:00","20:30","21:00","21:30",
-  "22:00","22:30","23:00","23:30","00:00","00:30",
-  "01:00","01:30","02:00","02:30","03:00"
+  "10:00","10:15","10:30","10:45","11:00","11:15","11:30","11:45",
+  "12:00","12:15","12:30","12:45","13:00","13:15","13:30","13:45",
+  "14:00","14:15","14:30","14:45","15:00","15:15","15:30","15:45",
+  "16:00","16:15","16:30","16:45","17:00","17:15","17:30","17:45",
+  "18:00","18:15","18:30","18:45","19:00","19:15","19:30","19:45",
+  "20:00","20:15","20:30","20:45","21:00","21:15","21:30","21:45",
+  "22:00","22:15","22:30","22:45","23:00","23:15","23:30","23:45",
+  "00:00","00:15","00:30","00:45","01:00","01:15","01:30","01:45",
+  "02:00","02:15","02:30","02:45","03:00"
 ];
 
 function generateTimeSlots(openingTime: string, closingTime: string): string[] {
@@ -53,7 +56,7 @@ function generateTimeSlots(openingTime: string, closingTime: string): string[] {
     closingMinutes += 24 * 60;
   }
   
-  for (let mins = openingMinutes; mins < closingMinutes; mins += 30) {
+  for (let mins = openingMinutes; mins < closingMinutes; mins += 15) {
     const normalizedMins = mins % (24 * 60);
     const h = Math.floor(normalizedMins / 60);
     const m = normalizedMins % 60;
@@ -192,10 +195,10 @@ export default function Planning() {
       const [closeH, closeM] = closingTime.split(":").map(Number);
       closingMinutes = closeH * 60 + closeM;
     } else {
-      // Fallback to last slot + 30 if no closing time provided
+      // Fallback to last slot + 15 if no closing time provided
       const lastSlot = hoursArray[hoursArray.length - 1];
       const [lastH, lastM] = lastSlot.split(":").map(Number);
-      closingMinutes = lastH * 60 + lastM + 30;
+      closingMinutes = lastH * 60 + lastM + 15;
     }
     
     // Handle overnight windows (closing time is earlier than opening time)
@@ -215,8 +218,8 @@ export default function Planning() {
     }
     
     const minutesSinceOpen = currentTotalMinutes - openingMinutes;
-    const slotHeight = 52;
-    const position = (minutesSinceOpen / 30) * slotHeight;
+    const slotHeight = 28;
+    const position = (minutesSinceOpen / 15) * slotHeight;
     return position;
   }, [currentTime]);
 
@@ -1757,7 +1760,7 @@ export default function Planning() {
 
   useEffect(() => {
     if (!resizingBooking) return;
-    const SLOT_H = 52;
+    const SLOT_H = 28;
     const onMove = (e: PointerEvent) => {
       const deltaSlots = Math.round((e.clientY - resizeStartY.current) / SLOT_H);
       setResizeCurrentSpan(Math.max(1, resizeStartSpan.current + deltaSlots));
@@ -1765,7 +1768,7 @@ export default function Planning() {
     const onUp = (e: PointerEvent) => {
       const deltaSlots = Math.round((e.clientY - resizeStartY.current) / SLOT_H);
       const newSpan = Math.max(1, resizeStartSpan.current + deltaSlots);
-      const newDuration = newSpan * 30;
+      const newDuration = newSpan * 15;
       if (newDuration !== resizingBooking.duration) {
         resizeMutation.mutate({ id: resizingBooking.id, duration: newDuration });
       }
@@ -1817,7 +1820,7 @@ export default function Planning() {
   };
 
   const getBookingSpan = (app: any) => {
-    return Math.ceil(app.duration / 30);
+    return Math.ceil(app.duration / 15);
   };
 
   const isSlotCovered = (staffId: number, staffName: string, hour: string) => {
@@ -2277,7 +2280,7 @@ export default function Planning() {
             className="grid relative"
             style={{ 
               gridTemplateColumns: `44px repeat(${staffList.length}, minmax(80px, 1fr))`,
-              gridAutoRows: '52px'
+              gridAutoRows: '28px'
             }}
           >
             {/* Current Time Line - iOS Liquid Glass Style */}
@@ -2330,15 +2333,32 @@ export default function Planning() {
             const rowNum = hourIndex + 1; // headers are now outside the grid
             return (
             <React.Fragment key={hour}>
-              <div 
-                className={cn(
-                  "bg-rose-50 dark:bg-slate-800 border-b border-rose-100 dark:border-slate-700 px-0.5 text-[11px] font-bold text-rose-400 dark:text-slate-300 sticky z-30 flex items-start justify-center pt-0",
-                  isRtl ? "right-0 border-l-2 border-l-rose-200 dark:border-l-slate-600" : "left-0 border-r-2 border-r-rose-200 dark:border-r-slate-600"
-                )}
-                style={{ gridColumn: 1, gridRow: rowNum }}
-              >
-                <span className="-translate-y-[50%] block">{hour}</span>
-              </div>
+              {(() => {
+                const [, mm] = hour.split(":").map(Number);
+                const isHour   = mm === 0;
+                const isHalf   = mm === 30;
+                const isQuarter = mm === 15 || mm === 45;
+                return (
+                  <div
+                    className={cn(
+                      "sticky z-30 flex items-start justify-center pt-0",
+                      isRtl ? "right-0 border-l-2" : "left-0 border-r-2",
+                      isHour
+                        ? cn("bg-rose-50 dark:bg-slate-800 border-b border-rose-100 dark:border-slate-700 px-0.5", isRtl ? "border-l-rose-200 dark:border-l-slate-600" : "border-r-rose-200 dark:border-r-slate-600")
+                        : isHalf
+                        ? cn("bg-rose-50/70 dark:bg-slate-800/70 border-b border-rose-100/60 dark:border-slate-700/60 px-0.5", isRtl ? "border-l-rose-100 dark:border-l-slate-700" : "border-r-rose-100 dark:border-r-slate-700")
+                        : cn("bg-rose-50/40 dark:bg-slate-800/40 border-b border-dashed border-rose-100/30 dark:border-slate-700/30 px-0.5", isRtl ? "border-l-rose-100/50 dark:border-l-slate-700/50" : "border-r-rose-100/50 dark:border-r-slate-700/50")
+                    )}
+                    style={{ gridColumn: 1, gridRow: rowNum }}
+                  >
+                    {isHour ? (
+                      <span className="-translate-y-[50%] block text-[11px] font-bold text-rose-400 dark:text-slate-300">{hour}</span>
+                    ) : isHalf ? (
+                      <span className="-translate-y-[50%] block text-[9px] font-medium text-rose-300/80 dark:text-slate-500">:30</span>
+                    ) : null}
+                  </div>
+                );
+              })()}
 
               {staffList.map((s, staffIndex) => {
                 const colNum = staffIndex + 2; // +2 because column 1 is time labels
@@ -2359,7 +2379,7 @@ export default function Planning() {
 
                 const isResizing = resizingBooking?.id === booking?.id;
                 const span = booking ? (isResizing ? resizeCurrentSpan : getBookingSpan(booking)) : 1;
-                const liveDuration = isResizing ? resizeCurrentSpan * 30 : booking?.duration;
+                const liveDuration = isResizing ? resizeCurrentSpan * 15 : booking?.duration;
 
                 const isDragOver = dragOverSlot?.staff === s.name && dragOverSlot?.time === hour;
                 const isDragging = draggedAppointment?.id === booking?.id;
@@ -2378,7 +2398,7 @@ export default function Planning() {
                       <div 
                         className={cn(
                           "appointment-card h-full text-white cursor-grab active:cursor-grabbing relative rounded-md shadow-md",
-                          span === 1 ? "flex items-center gap-1 px-1.5 py-0.5" : span <= 2 ? "flex flex-col px-1.5 py-1" : "flex flex-col px-2 py-1.5",
+                          span <= 2 ? "flex items-center gap-1 px-1.5 py-0.5" : span <= 4 ? "flex flex-col px-1.5 py-1" : "flex flex-col px-2 py-1.5",
                           isDragging && "opacity-50 scale-95",
                           isResizing && "ring-2 ring-white/60 ring-inset shadow-xl",
                           isConflicting && "ring-2 ring-amber-400 ring-inset"
@@ -2475,12 +2495,24 @@ export default function Planning() {
                             </button>
                           );
 
-                          return span === 1 ? (
-                            <div className="relative z-10 flex items-center w-full gap-1 min-w-0 pointer-events-auto">
-                              <span className="text-[10px] font-bold bg-white/25 px-1 py-0.5 rounded shrink-0 tabular-nums">{booking.total}</span>
-                              <span className="text-[9px] opacity-90 shrink-0">{booking.startTime}</span>
-                              <span className={cn("text-[9px] shrink-0 tabular-nums", isResizing ? "opacity-100 font-bold bg-white/30 px-1 rounded" : "opacity-70")}>{liveDuration}′</span>
-                              <span className="shrink-0" style={{ marginInlineStart: 'auto' }}>{paidButton}</span>
+                          return span <= 2 ? (
+                            <div className="relative z-10 flex items-center w-full gap-1 min-w-0 pointer-events-auto overflow-hidden">
+                              {span === 1 ? (
+                                // Ultra-compact 15-min: just time + duration
+                                <>
+                                  <span className="text-[9px] opacity-90 shrink-0 tabular-nums">{booking.startTime}</span>
+                                  <span className={cn("text-[9px] shrink-0 tabular-nums", isResizing ? "opacity-100 font-bold bg-white/30 px-0.5 rounded" : "opacity-60")}>{liveDuration}′</span>
+                                  <span className="shrink-0" style={{ marginInlineStart: 'auto' }}></span>
+                                </>
+                              ) : (
+                                // 30-min compact row: total, startTime, duration, paid
+                                <>
+                                  <span className="text-[10px] font-bold bg-white/25 px-1 py-0.5 rounded shrink-0 tabular-nums">{booking.total}</span>
+                                  <span className="text-[9px] opacity-90 shrink-0">{booking.startTime}</span>
+                                  <span className={cn("text-[9px] shrink-0 tabular-nums", isResizing ? "opacity-100 font-bold bg-white/30 px-1 rounded" : "opacity-70")}>{liveDuration}′</span>
+                                  <span className="shrink-0" style={{ marginInlineStart: 'auto' }}>{paidButton}</span>
+                                </>
+                              )}
                             </div>
                           ) : (
                             <div className="relative z-10 flex flex-col h-full w-full min-h-0">
@@ -2528,15 +2560,26 @@ export default function Planning() {
                   );
                 }
 
+                // Visual hierarchy for 15-min grid:
+                // :00 → strong border, full label | :30 → medium border | :15/:45 → dotted/faint
+                const [, slotMin] = hour.split(":").map(Number);
+                const isHourSlot    = slotMin === 0;
+                const isHalfSlot    = slotMin === 30;
+                const isQuarterSlot = slotMin === 15 || slotMin === 45;
+                // Alternate background by full-hour group (every 4 slots)
+                const hourGroup = Math.floor(hourIndex / 4);
                 return (
                   <div
                     key={`${s.id}-${hour}`}
                     className={cn(
-                      "border-b border-rose-50 dark:border-slate-800 min-h-[52px] transition-colors duration-150",
+                      "transition-colors duration-150 cursor-pointer",
                       isRtl ? "border-l border-rose-100 dark:border-slate-700" : "border-r border-rose-100 dark:border-slate-700",
-                      "hover:bg-rose-50/80 dark:hover:bg-slate-700/50 cursor-pointer",
+                      isHourSlot    && "border-b border-rose-100 dark:border-slate-700",
+                      isHalfSlot    && "border-b border-rose-100/60 dark:border-slate-700/60",
+                      isQuarterSlot && "border-b border-dashed border-rose-100/25 dark:border-slate-800/60",
+                      "hover:bg-rose-50/80 dark:hover:bg-slate-700/50",
                       isDragOver && "bg-rose-100 dark:bg-slate-700 ring-2 ring-primary/40 ring-inset",
-                      hourIndex % 2 === 0 ? "bg-white dark:bg-slate-900" : "bg-rose-50/30 dark:bg-slate-800/50"
+                      !isDragOver && (hourGroup % 2 === 0 ? "bg-white dark:bg-slate-900" : "bg-rose-50/20 dark:bg-slate-800/40")
                     )}
                     style={{ 
                       gridColumn: colNum,
