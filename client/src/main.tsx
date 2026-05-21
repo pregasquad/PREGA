@@ -62,6 +62,13 @@ const updateSW = registerSW({
 async function startApp() {
   await seedQueryCache(queryClient);
   createRoot(document.getElementById("root")!).render(<App />);
+  // Hide the HTML splash loader NOW — after React is mounted and painting,
+  // so there is never a blank-white gap between loader and app UI.
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      (window as any).hideAppLoader?.();
+    });
+  });
 }
 
 startApp();

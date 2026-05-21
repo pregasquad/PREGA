@@ -94,12 +94,10 @@
             }, 300);
           }
         };
-        // Hide on load event
-        window.addEventListener('load', function() {
-          setTimeout(hideLoader, 100);
-        });
-        // Fallback: hide after 5 seconds max to prevent stuck loader
-        setTimeout(hideLoader, 5000);
+        // Expose so main.tsx can call it right after React mounts
+        window.hideAppLoader = hideLoader;
+        // Fallback: hide after 8 seconds max to prevent permanently stuck loader
+        setTimeout(hideLoader, 8000);
       })();
     </script>
   </body>
