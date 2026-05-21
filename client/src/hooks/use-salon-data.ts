@@ -403,13 +403,17 @@ export function useServices() {
             await saveToOfflineStore('services', data).catch(() => {});
             return data;
           }
-        } catch (e) {
+          if (res.status === 401) {
+            throw new Error("UNAUTHORIZED_401");
+          }
+        } catch (e: any) {
+          if (e?.message === "UNAUTHORIZED_401") throw e;
           console.log("[Offline] Network error, using cached services");
         }
       }
       const offlineData = await getFromOfflineStore<any>('services');
       if (offlineData.length > 0) return offlineData;
-      throw new Error("No services available offline");
+      return [];
     },
     staleTime: 5 * 60 * 1000,
     retry: false,
@@ -754,13 +758,17 @@ export function useStaff() {
             await saveToOfflineStore('staff', data).catch(() => {});
             return data;
           }
-        } catch (e) {
+          if (res.status === 401) {
+            throw new Error("UNAUTHORIZED_401");
+          }
+        } catch (e: any) {
+          if (e?.message === "UNAUTHORIZED_401") throw e;
           console.log("[Offline] Network error, using cached staff");
         }
       }
       const offlineData = await getFromOfflineStore<any>('staff');
       if (offlineData.length > 0) return offlineData;
-      throw new Error("No staff available offline");
+      return [];
     },
     staleTime: 5 * 60 * 1000,
     retry: false,

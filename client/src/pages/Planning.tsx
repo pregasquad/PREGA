@@ -805,7 +805,8 @@ export default function Planning() {
   // Show loading state only on initial load (not when cached data exists)
   // This prevents flashing when navigating back with cached data
   const isDataLoading = (loadingStaff && staffList.length === 0) || (loadingServices && services.length === 0);
-  const hasAuthError = (staffError || servicesError) && staffList.length === 0;
+  // Only treat as auth error on explicit 401 — not offline/network failures
+  const hasAuthError = staffError?.message === "UNAUTHORIZED_401" || servicesError?.message === "UNAUTHORIZED_401";
   const isAdmin = sessionStorage.getItem("admin_authenticated") === "true";
 
   // Sync horizontal scroll between header and board

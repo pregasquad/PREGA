@@ -56,19 +56,21 @@ const updateSW = registerSW({
   }
 });
 
-// Seed the query cache from IndexedDB before first render.
-// IndexedDB reads take ~5-20ms (local disk) vs 200-500ms for network,
-// so components see real cached data on their very first render.
+// Mount React immediately so there is never a blank screen.
+// Cache seeding runs in the background after first paint.
 async function startApp() {
-  await seedQueryCache(queryClient);
-  createRoot(document.getElementById("root")!).render(<App />);
-  // Hide the HTML splash loader NOW — after React is mounted and painting,
-  // so there is never a blank-white gap between loader and app UI.
-  requestAnimationFrame(() => {
+  try {
+    createRoot(document.getElementById("root")!).render(<App />);
+  } finally {
+    // Hide the HTML splash loader after React has painted its first frame.
     requestAnimationFrame(() => {
-      (window as any).hideAppLoader?.();
+      requestAnimationFrame(() => {
+        (window as any).hideAppLoader?.();
+      });
     });
-  });
+  }
+  // Seed IndexedDB cache in the background — does not block render.
+  seedQueryCache(queryClient).catch(() => {});
 }
 
 startApp();
