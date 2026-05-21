@@ -2338,7 +2338,7 @@ export default function Planning() {
           {staffList.map((s, staffIndex) => (
             <div 
               key={s.id} 
-              className={cn("py-2 px-0.5 font-semibold text-center text-[10px]", staffIndex < staffList.length - 1 && (isRtl ? "border-l border-slate-100 dark:border-slate-700" : "border-r border-slate-100 dark:border-slate-700"))}
+              className={cn("py-2 px-0.5 font-semibold text-center text-[10px]", staffIndex < staffList.length - 1 && (isRtl ? "border-l border-slate-200 dark:border-slate-600" : "border-r border-slate-200 dark:border-slate-600"))}
             >
               <div className="flex flex-col items-center justify-center gap-1">
                 {s.photoUrl ? (
@@ -2478,7 +2478,7 @@ export default function Planning() {
                   return (
                     <div
                       key={`${s.id}-${hour}-covered`}
-                      className={cn("border-b border-rose-50 dark:border-slate-800 bg-transparent pointer-events-none", staffIndex < staffList.length - 1 && (isRtl ? "border-l border-rose-100 dark:border-slate-700" : "border-r border-rose-100 dark:border-slate-700"))}
+                      className={cn("border-b border-slate-100 dark:border-slate-800 bg-transparent pointer-events-none", staffIndex < staffList.length - 1 && (isRtl ? "border-l border-slate-200 dark:border-slate-600" : "border-r border-slate-200 dark:border-slate-600"))}
                       style={{ gridColumn: colNum, gridRow: rowNum }}
                     />
                   );
@@ -2685,7 +2685,7 @@ export default function Planning() {
                     key={`${s.id}-${hour}`}
                     className={cn(
                       "transition-colors duration-150 cursor-pointer",
-                      staffIndex < staffList.length - 1 && (isRtl ? "border-l border-slate-100 dark:border-slate-700/60" : "border-r border-slate-100 dark:border-slate-700/60"),
+                      staffIndex < staffList.length - 1 && (isRtl ? "border-l border-slate-200 dark:border-slate-600" : "border-r border-slate-200 dark:border-slate-600"),
                       isHourSlot    && "border-t-2 border-t-slate-300 dark:border-t-slate-500",
                       isHalfSlot    && "border-t border-t-slate-200/70 dark:border-t-slate-600/60",
                       !isHourSlot && !isHalfSlot && "border-t border-dashed border-t-slate-100/40 dark:border-t-slate-800/60",
