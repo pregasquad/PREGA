@@ -2334,10 +2334,9 @@ export default function Planning() {
             return (
             <React.Fragment key={hour}>
               {(() => {
-                const [, mm] = hour.split(":").map(Number);
-                const isHour   = mm === 0;
-                const isHalf   = mm === 30;
-                const isQuarter = mm === 15 || mm === 45;
+                const mm = Number(hour.split(":")[1]);
+                const isHour = mm === 0;
+                const isHalf = mm === 30;
                 return (
                   <div
                     className={cn(
@@ -2346,15 +2345,15 @@ export default function Planning() {
                       isHour
                         ? cn("bg-rose-50 dark:bg-slate-800 border-b border-rose-100 dark:border-slate-700 px-0.5", isRtl ? "border-l-rose-200 dark:border-l-slate-600" : "border-r-rose-200 dark:border-r-slate-600")
                         : isHalf
-                        ? cn("bg-rose-50/70 dark:bg-slate-800/70 border-b border-rose-100/60 dark:border-slate-700/60 px-0.5", isRtl ? "border-l-rose-100 dark:border-l-slate-700" : "border-r-rose-100 dark:border-r-slate-700")
-                        : cn("bg-rose-50/40 dark:bg-slate-800/40 border-b border-dashed border-rose-100/30 dark:border-slate-700/30 px-0.5", isRtl ? "border-l-rose-100/50 dark:border-l-slate-700/50" : "border-r-rose-100/50 dark:border-r-slate-700/50")
+                        ? cn("bg-rose-50/60 dark:bg-slate-800/60 border-b border-rose-100/50 dark:border-slate-700/50 px-0.5", isRtl ? "border-l-rose-100 dark:border-l-slate-700" : "border-r-rose-100 dark:border-r-slate-700")
+                        : cn("bg-rose-50/30 dark:bg-slate-800/30 border-b border-dashed border-rose-100/20 dark:border-slate-700/20 px-0.5", isRtl ? "border-l-rose-100/40 dark:border-l-slate-700/40" : "border-r-rose-100/40 dark:border-r-slate-700/40")
                     )}
                     style={{ gridColumn: 1, gridRow: rowNum }}
                   >
                     {isHour ? (
-                      <span className="-translate-y-[50%] block text-[11px] font-bold text-rose-400 dark:text-slate-300">{hour}</span>
+                      <span className="-translate-y-[50%] block text-[11px] font-bold text-rose-400 dark:text-slate-300 tabular-nums" dir="ltr">{hour}</span>
                     ) : isHalf ? (
-                      <span className="-translate-y-[50%] block text-[9px] font-medium text-rose-300/80 dark:text-slate-500">:30</span>
+                      <span className="-translate-y-[50%] block text-[9px] font-medium text-rose-300/70 dark:text-slate-500 tabular-nums" dir="ltr">{hour}</span>
                     ) : null}
                   </div>
                 );
