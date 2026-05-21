@@ -448,6 +448,16 @@ export default function Planning() {
     },
   });
 
+  const revertStaffPaymentMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/staff-payments/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+      toast({ title: t("planning.paymentReverted") || "تم إلغاء الدفع" });
+    },
+  });
+
   const clearWalletDeductionMutation = useMutation({
     mutationFn: async (id: number) => {
       await apiRequest("PATCH", `/api/staff-deductions/${id}/clear`);
@@ -512,6 +522,10 @@ export default function Planning() {
     );
     const pendingTotal = pendingDeductions.reduce((sum: number, d: any) => sum + Math.max(0, d.amount - (d.paidBack || 0)), 0);
 
+    const recentPayments: any[] = staffPaymentsList
+      .sort((a: any, b: any) => new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime())
+      .slice(0, 5);
+
     return {
       staffName: s.name,
       walletRevenue,
@@ -521,6 +535,7 @@ export default function Planning() {
       lastPaymentDate,
       apptCount: walletAppts.length,
       deductions: pendingDeductions,
+      recentPayments,
     };
   }, [walletStaffId, salaryData, businessSettings]);
 
@@ -3270,6 +3285,37 @@ export default function Planning() {
                         <CheckCircle className="w-4 h-4" />
                         {t("salaries.markAsPaid")} · {fmt(walletPortalData.walletBalance)}
                       </button>
+                    )}
+
+                    {/* Recent Payments — with undo buttons */}
+                    {canManage && walletPortalData.recentPayments.length > 0 && (
+                      <div className="rounded-xl overflow-hidden border border-emerald-200/50 dark:border-emerald-800/30">
+                        <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50/80 dark:bg-emerald-950/20">
+                          <Wallet className="h-3 w-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex-1 text-start">
+                            {t("salaries.paymentHistory")}
+                          </span>
+                        </div>
+                        <div className="px-3 py-1 bg-emerald-50/30 dark:bg-emerald-950/10 divide-y divide-emerald-100/50 dark:divide-emerald-900/20">
+                          {walletPortalData.recentPayments.map((p: any) => (
+                            <div key={p.id} className="flex items-center justify-between gap-1 py-1.5">
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs font-bold tabular-nums text-emerald-600 dark:text-emerald-400">+ {fmt(p.amount)}</p>
+                                <p className="text-[10px] text-muted-foreground">{format(parseISO(p.paidAt), "d/M/yy · HH:mm")}</p>
+                              </div>
+                              <button
+                                onClick={() => revertStaffPaymentMutation.mutate(p.id)}
+                                disabled={revertStaffPaymentMutation.isPending}
+                                className="group flex items-center justify-center h-6 w-6 rounded-full hover:bg-red-100 dark:hover:bg-red-900/30 text-muted-foreground hover:text-red-500 transition-colors disabled:opacity-50"
+                                title={t("planning.revertPayment") || "إلغاء الدفع"}
+                                data-testid={`button-revert-staff-payment-${p.id}`}
+                              >
+                                <Undo2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     )}
 
                     {/* Deductions section */}

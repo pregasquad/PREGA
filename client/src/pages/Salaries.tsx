@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { DollarSign, Users, CalendarIcon, TrendingUp, Building2, RefreshCw, Plus, Trash2, Receipt, UserMinus, ChevronDown, CheckCircle, Pencil, Wallet, Briefcase, BarChart3, ArrowDownLeft, Store } from "lucide-react";
+import { DollarSign, Users, CalendarIcon, TrendingUp, Building2, RefreshCw, Plus, Trash2, Receipt, UserMinus, ChevronDown, CheckCircle, Pencil, Wallet, Briefcase, BarChart3, ArrowDownLeft, Store, Undo2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
@@ -311,6 +311,16 @@ export default function Salaries() {
       if (available) {
         await remoteOpenDrawer();
       }
+    },
+  });
+
+  const deletePaymentMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/staff-payments/${id}`);
+    },
+    onSuccess: () => {
+      refreshSalariesBackground();
+      toast({ title: t("planning.paymentReverted") || "تم إلغاء الدفع" });
     },
   });
 
@@ -1162,9 +1172,22 @@ export default function Salaries() {
                                       {format(payDate, "HH:mm")}
                                     </span>
                                   </div>
-                                  <span className="font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
-                                    {formatCurrency(p.amount)}
-                                  </span>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
+                                      {formatCurrency(p.amount)}
+                                    </span>
+                                    {p.id && (
+                                      <button
+                                        onClick={() => deletePaymentMutation.mutate(p.id)}
+                                        disabled={deletePaymentMutation.isPending}
+                                        className="flex items-center justify-center h-5 w-5 rounded-full hover:bg-red-100 dark:hover:bg-red-900/30 text-muted-foreground hover:text-red-500 transition-colors disabled:opacity-50"
+                                        title={t("planning.revertPayment") || "إلغاء الدفع"}
+                                        data-testid={`button-revert-payment-${p.id}`}
+                                      >
+                                        <Undo2 className="h-3 w-3" />
+                                      </button>
+                                    )}
+                                  </div>
                                 </div>
                               );
                             })}

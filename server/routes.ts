@@ -2568,6 +2568,15 @@ export async function registerRoutes(
     }
   });
 
+  app.delete("/api/staff-payments/:id", isPinAuthenticated, requirePermission("manage_salaries"), async (req, res) => {
+    try {
+      await storage.deleteStaffPayment(Number(req.params.id));
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to delete staff payment" });
+    }
+  });
+
   // Clients - protected routes
   app.get("/api/clients", isPinAuthenticated, async (_req, res) => {
     const items = await storage.getClients();
