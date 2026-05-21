@@ -2329,16 +2329,16 @@ export default function Planning() {
         {/* Sticky Staff Headers */}
         <div 
           ref={headerRef}
-          className="grid z-50 shrink-0 overflow-x-hidden bg-gradient-to-b from-rose-50 to-white dark:from-slate-800 dark:to-slate-850 border-b-2 border-rose-200 dark:border-slate-600"
+          className="grid z-50 shrink-0 overflow-x-hidden bg-white dark:from-slate-800 dark:to-slate-850 border-b-2 border-slate-200 dark:border-slate-600"
           style={{ 
             gridTemplateColumns: `44px repeat(${staffList.length}, minmax(80px, 1fr))`,
           }}
         >
-          <div className={cn("bg-rose-50/80 dark:bg-slate-900/80 py-1 px-0.5", isRtl ? "border-l border-rose-200 dark:border-slate-600" : "border-r border-rose-200 dark:border-slate-600")}></div>
+          <div className={cn("bg-white dark:bg-slate-900 py-1 px-0.5", isRtl ? "border-l border-slate-200 dark:border-slate-600" : "border-r border-slate-200 dark:border-slate-600")}></div>
           {staffList.map((s, staffIndex) => (
             <div 
               key={s.id} 
-              className={cn("py-2 px-0.5 font-semibold text-center text-[10px]", isRtl ? "border-l border-rose-100 dark:border-slate-700" : "border-r border-rose-100 dark:border-slate-700")}
+              className={cn("py-2 px-0.5 font-semibold text-center text-[10px]", isRtl ? "border-l border-slate-100 dark:border-slate-700" : "border-r border-slate-100 dark:border-slate-700")}
             >
               <div className="flex flex-col items-center justify-center gap-1">
                 {s.photoUrl ? (
@@ -2447,21 +2447,21 @@ export default function Planning() {
                 return (
                   <div
                     className={cn(
-                      "sticky z-30 flex items-start justify-center overflow-visible",
+                      "sticky z-30 flex items-center justify-center overflow-visible",
                       isRtl ? "right-0 border-l-2" : "left-0 border-r-2",
                       isHour
-                        ? cn("bg-rose-50 dark:bg-slate-800 border-t-2 border-t-rose-300 dark:border-t-slate-500 border-b border-b-rose-100/40 dark:border-b-slate-700/40 px-0.5", isRtl ? "border-l-rose-300 dark:border-l-slate-500" : "border-r-rose-300 dark:border-r-slate-500")
+                        ? cn("bg-white dark:bg-slate-900 border-t-2 border-t-slate-300 dark:border-t-slate-500 px-0.5", isRtl ? "border-l-slate-300 dark:border-l-slate-500" : "border-r-slate-300 dark:border-r-slate-500")
                         : isHalf
-                        ? cn("bg-rose-50/40 dark:bg-slate-800/40 border-t border-t-rose-200/60 dark:border-t-slate-600/60 border-b border-b-rose-100/20 dark:border-b-slate-700/20 px-0.5", isRtl ? "border-l-rose-100 dark:border-l-slate-700" : "border-r-rose-100 dark:border-r-slate-700")
-                        : cn("bg-white dark:bg-slate-900 border-b border-dashed border-rose-100/20 dark:border-slate-800/60 px-0.5", isRtl ? "border-l-rose-100/40 dark:border-l-slate-700/40" : "border-r-rose-100/40 dark:border-r-slate-700/40")
+                        ? cn("bg-white dark:bg-slate-900 border-t border-t-slate-200/70 dark:border-t-slate-600/60 px-0.5", isRtl ? "border-l-slate-200 dark:border-l-slate-600" : "border-r-slate-200 dark:border-r-slate-600")
+                        : cn("bg-white dark:bg-slate-900 px-0.5", isRtl ? "border-l-slate-100/40 dark:border-l-slate-700/40" : "border-r-slate-100/40 dark:border-r-slate-700/40")
                     )}
                     style={{ gridColumn: 1, gridRow: rowNum }}
                   >
                     {isHour && (
-                      <span className="block text-[12px] font-bold text-rose-500 dark:text-rose-300 tabular-nums leading-none pt-0.5" dir="ltr">{hour}</span>
+                      <span className="block text-[11px] font-bold text-slate-500 dark:text-slate-300 tabular-nums leading-none" dir="ltr">{hour}</span>
                     )}
                     {isHalf && (
-                      <span className="block text-[10px] font-medium text-rose-400/70 dark:text-rose-400/60 tabular-nums leading-none pt-0.5" dir="ltr">{hour}</span>
+                      <span className="block text-[9px] font-medium text-slate-400/80 dark:text-slate-500 tabular-nums leading-none" dir="ltr">{hour}</span>
                     )}
                   </div>
                 );
@@ -2685,13 +2685,13 @@ export default function Planning() {
                     key={`${s.id}-${hour}`}
                     className={cn(
                       "transition-colors duration-150 cursor-pointer",
-                      isRtl ? "border-l border-rose-100 dark:border-slate-700" : "border-r border-rose-100 dark:border-slate-700",
-                      isHourSlot    && "border-t-2 border-t-rose-300 dark:border-t-slate-500",
-                      isHalfSlot    && "border-t border-t-rose-200/60 dark:border-t-slate-600/60",
-                      !isHourSlot && !isHalfSlot && "border-t border-dashed border-t-rose-100/20 dark:border-t-slate-800/60",
-                      "hover:bg-rose-50/80 dark:hover:bg-slate-700/50",
-                      isDragOver && "bg-rose-100 dark:bg-slate-700 ring-2 ring-primary/40 ring-inset",
-                      !isDragOver && (hourGroup % 2 === 0 ? "bg-white dark:bg-slate-900" : "bg-rose-50/15 dark:bg-slate-800/40")
+                      isRtl ? "border-l border-slate-100 dark:border-slate-700/60" : "border-r border-slate-100 dark:border-slate-700/60",
+                      isHourSlot    && "border-t-2 border-t-slate-300 dark:border-t-slate-500",
+                      isHalfSlot    && "border-t border-t-slate-200/70 dark:border-t-slate-600/60",
+                      !isHourSlot && !isHalfSlot && "border-t border-dashed border-t-slate-100/40 dark:border-t-slate-800/60",
+                      "hover:bg-slate-50 dark:hover:bg-slate-700/50",
+                      isDragOver && "bg-primary/8 dark:bg-slate-700 ring-2 ring-primary/40 ring-inset",
+                      !isDragOver && (hourGroup % 2 === 0 ? "bg-white dark:bg-slate-900" : "bg-slate-50/60 dark:bg-slate-800/40")
                     )}
                     style={{ 
                       gridColumn: colNum,
