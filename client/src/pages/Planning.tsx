@@ -1766,20 +1766,20 @@ export default function Planning() {
   const handleCardPointerDown = useCallback((e: React.PointerEvent, booking: any, color: string) => {
     if (!canEdit || resizingBooking) return;
     if ((e.target as HTMLElement).closest('[data-resize-handle]')) return;
-    // Only main button (left click / first touch)
     if (e.button !== undefined && e.button !== 0 && e.pointerType === 'mouse') return;
 
-    // Prevent the browser from starting text selection immediately on press
-    e.preventDefault();
+    // Keep a ref to the card element so we can set pointer capture + touch-action later
+    const cardEl = e.currentTarget as HTMLElement;
+    const pointerId = e.pointerId;
 
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const rect = cardEl.getBoundingClientRect();
     const offsetX = e.clientX - rect.left;
     const offsetY = e.clientY - rect.top;
     const startX = e.clientX;
     const startY = e.clientY;
     let dragStarted = false;
+    let cancelled = false;
 
-    // Edge-scroll state
     let lastPX = e.clientX;
     let lastPY = e.clientY;
     let edgeScrollRafId: number | null = null;
@@ -1789,11 +1789,10 @@ export default function Planning() {
       const board = boardRef.current;
       if (!board || !pDragRef.current) { edgeScrollRafId = null; return; }
       const r = board.getBoundingClientRect();
-      const EDGE = 80;
-      const MAX_SPD = 14;
+      const EDGE = 80, MAX_SPD = 14;
       let sx = 0, sy = 0;
-      const dl = lastPX - r.left,  dr = r.right  - lastPX;
-      const dt = lastPY - r.top,   db = r.bottom  - lastPY;
+      const dl = lastPX - r.left, dr = r.right  - lastPX;
+      const dt = lastPY - r.top,  db = r.bottom - lastPY;
       if (dl >= 0 && dl < EDGE) sx = -Math.ceil((1 - dl / EDGE) * MAX_SPD);
       if (dr >= 0 && dr < EDGE) sx =  Math.ceil((1 - dr / EDGE) * MAX_SPD);
       if (dt >= 0 && dt < EDGE) sy = -Math.ceil((1 - dt / EDGE) * MAX_SPD);
@@ -1803,6 +1802,17 @@ export default function Planning() {
       edgeScrollRafId = requestAnimationFrame(doEdgeScroll);
     };
 
+    const cleanup = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointercancel', onCancel);
+      if (holdTimer !== null) { clearTimeout(holdTimer); holdTimer = null; }
+      if (edgeScrollRafId !== null) { cancelAnimationFrame(edgeScrollRafId); edgeScrollRafId = null; }
+      if (dragRafRef.current) { cancelAnimationFrame(dragRafRef.current); }
+      cardEl.style.touchAction = '';
+      document.body.style.userSelect = '';
+      (document.body.style as any).webkitUserSelect = '';
+    };
+
     const serviceLabel = (() => {
       try {
         const svcs = typeof booking.servicesJson === 'string' ? JSON.parse(booking.servicesJson) : booking.servicesJson;
@@ -1810,40 +1820,52 @@ export default function Planning() {
       } catch { return booking.client; }
     })();
 
-    // Activate drag at a given pointer position (called from timer OR from move threshold)
     const activateDrag = (px: number, py: number) => {
-      if (dragStarted) return;
+      if (dragStarted || cancelled) return;
       dragStarted = true;
+      // Capture pointer so the browser stops scrolling and we own all future events
+      try { cardEl.setPointerCapture(pointerId); } catch {}
+      cardEl.style.touchAction = 'none';
       window.getSelection()?.removeAllRanges();
       document.body.style.userSelect = 'none';
-      document.body.style.webkitUserSelect = 'none';
+      (document.body.style as any).webkitUserSelect = 'none';
       pDragRef.current = { appointment: booking, offsetX, offsetY, targetStaff: booking.staff, targetTime: booking.startTime };
       setDraggedAppointment(booking);
       setPDragGhost({ x: px - offsetX, y: py - offsetY, w: rect.width, h: rect.height, color, label: serviceLabel });
       edgeScrollRafId = requestAnimationFrame(doEdgeScroll);
     };
 
-    // Hold-to-drag: activate after 250 ms without lifting (works on both touch and mouse)
+    // Hold-to-drag: 250 ms press without moving → drag activates
     holdTimer = setTimeout(() => {
       holdTimer = null;
-      activateDrag(lastPX, lastPY);
+      if (!cancelled) activateDrag(lastPX, lastPY);
     }, 250);
 
     const onMove = (me: PointerEvent) => {
-      me.preventDefault();
       lastPX = me.clientX;
       lastPY = me.clientY;
 
       if (!dragStarted) {
-        // Cancel hold timer the moment the finger/pointer actually moves
-        const dist = Math.hypot(me.clientX - startX, me.clientY - startY);
-        if (dist < 4) return;   // tiny jitter — ignore
+        const dx = me.clientX - startX;
+        const dy = me.clientY - startY;
+        const dist = Math.hypot(dx, dy);
+        if (dist < 5) return; // ignore tiny jitter
+
+        // Finger moving mainly up/down → user wants to scroll, not drag — bail out
+        if (Math.abs(dy) > Math.abs(dx) * 1.8) {
+          cancelled = true;
+          cleanup();
+          return;
+        }
+        // Horizontal or diagonal movement → start drag immediately
         if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
         activateDrag(me.clientX, me.clientY);
       }
       if (!pDragRef.current) return;
 
-      // Find slot under pointer (ghost is pointer-events:none so it won't block)
+      // Only block scroll AFTER drag is confirmed
+      me.preventDefault();
+
       const el = document.elementFromPoint(me.clientX, me.clientY) as HTMLElement | null;
       const slotEl = el?.closest('[data-slot-staff]') as HTMLElement | null;
       if (slotEl?.dataset.slotStaff && slotEl?.dataset.slotTime) {
@@ -1860,19 +1882,23 @@ export default function Planning() {
       });
     };
 
+    // Browser took over (e.g. scroll gesture won) — abort drag cleanly
+    const onCancel = () => {
+      cancelled = true;
+      cleanup();
+      if (dragStarted) {
+        pDragRef.current = null;
+        setPDragGhost(null);
+        setDraggedAppointment(null);
+        setDragOverSlot(null);
+      }
+    };
+
     const onUp = async () => {
-      window.removeEventListener('pointermove', onMove);
-      if (dragRafRef.current) cancelAnimationFrame(dragRafRef.current);
-      // Cancel hold timer so quick tap never activates drag after release
-      if (holdTimer !== null) { clearTimeout(holdTimer); holdTimer = null; }
-      // Stop edge scrolling
-      if (edgeScrollRafId !== null) { cancelAnimationFrame(edgeScrollRafId); edgeScrollRafId = null; }
+      window.removeEventListener('pointerup', onUp);
+      cleanup();
 
-      // Always restore selection capability on release
-      document.body.style.userSelect = '';
-      (document.body.style as any).webkitUserSelect = '';
-
-      if (!dragStarted) return; // was a tap — let onClick fire normally
+      if (!dragStarted) return; // tap — let onClick fire normally
 
       dragJustCompleted.current = true;
       const drag = pDragRef.current;
@@ -1888,6 +1914,7 @@ export default function Planning() {
 
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp, { once: true });
+    window.addEventListener('pointercancel', onCancel, { once: true });
   }, [canEdit, resizingBooking]);
 
   // Resize appointment by dragging the bottom handle
@@ -2607,7 +2634,7 @@ export default function Planning() {
                             ? "appointment-card h-full text-white relative rounded-md shadow-md"
                             : "appointment-card h-full relative rounded-md shadow-sm",
                           span <= 2 ? "flex items-center gap-1 px-1.5 py-0.5" : span <= 4 ? "flex flex-col px-1.5 py-1" : "flex flex-col px-2 py-1.5",
-                          canEdit && !isResizing ? "cursor-grab active:cursor-grabbing touch-none" : "",
+                          canEdit && !isResizing ? "cursor-grab active:cursor-grabbing select-none" : "",
                           isDragging && "opacity-40 scale-95 saturate-50",
                           isResizing && "ring-2 ring-white/60 ring-inset shadow-xl",
                           isConflicting && "ring-2 ring-amber-400 ring-inset"
