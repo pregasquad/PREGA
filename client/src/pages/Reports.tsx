@@ -165,8 +165,9 @@ export default function Reports() {
     const totalExpenses = filteredCharges.reduce((sum: number, ch: any) => sum + Number(ch.amount || 0), 0);
     const totalOwnerWithdrawals = filteredOwnerWithdrawals.reduce((sum: number, w: any) => sum + Number(w.amount || 0), 0);
 
+    // Commissions computed only on PAID appointments — must match paidRevenue base
     let totalCommissions = 0;
-    filteredAppointments.forEach((app: any) => {
+    filteredAppointments.filter((app: any) => app.paid).forEach((app: any) => {
       totalCommissions += calcAppointmentCommission(app, services, staffList, staffCommissions);
     });
 

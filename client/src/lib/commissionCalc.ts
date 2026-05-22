@@ -31,6 +31,15 @@ interface StaffCommission {
   percentage: number;
 }
 
+function findService(services: ServiceDef[], name: string | undefined): ServiceDef | undefined {
+  if (!name) return undefined;
+  // Exact match first, then case-insensitive fallback
+  return (
+    services.find(s => s.name === name) ||
+    services.find(s => s.name.toLowerCase() === name.toLowerCase())
+  );
+}
+
 function getRate(
   service: ServiceDef | undefined,
   staffMember: StaffDef | undefined,
@@ -89,7 +98,7 @@ export function calcAppointmentCommission(
     let total = 0;
     for (const item of serviceItems) {
       const effectivePrice = Number(item.price || 0) * discountRatio;
-      const svcDef = services.find(s => s.name === item.name);
+      const svcDef = findService(services, item.name);
       const rate = getRate(svcDef, staffMember, staffCommissions);
       total += effectivePrice * (rate / 100);
     }
@@ -97,7 +106,7 @@ export function calcAppointmentCommission(
   }
 
   // Legacy single-service fallback
-  const svcDef = services.find(s => s.name === app.service);
+  const svcDef = findService(services, app.service);
   const rate = getRate(svcDef, staffMember, staffCommissions);
   return Number(app.total || 0) * (rate / 100);
 }
