@@ -3,7 +3,7 @@ import { calcAppointmentCommission } from "@/lib/commissionCalc";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Scissors, CalendarCheck, TrendingUp, Clock, Package, UserPlus, Pencil, Trash2, LogOut, AlertTriangle, Banknote, CreditCard, RefreshCw, ClipboardCheck, CheckCircle2, XCircle, CircleDot, ArrowUpRight, ArrowDownRight, Minus, Bell, BellRing, ChevronDown, ChevronUp } from "lucide-react";
-import { format, startOfToday, subDays } from "date-fns";
+import { format, startOfToday, subDays, parseISO } from "date-fns";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -445,8 +445,10 @@ export default function Home() {
   }, [charges, todayDate]);
 
   const todayOwnerWithdrawals = useMemo(() => {
-    const todayW = ownerWithdrawalsData.filter((w: any) => w.date === todayDate);
-    return todayW.reduce((sum: number, w: any) => sum + (w.amount || 0), 0);
+    const todayW = ownerWithdrawalsData.filter((w: any) => {
+      try { return format(parseISO(w.date), "yyyy-MM-dd") === todayDate; } catch { return w.date === todayDate; }
+    });
+    return todayW.reduce((sum: number, w: any) => sum + Number(w.amount || 0), 0);
   }, [ownerWithdrawalsData, todayDate]);
 
   const salonPortion = todayStats.paidRevenue - todayStats.totalCommissions;

@@ -671,7 +671,7 @@ export const ownerWithdrawals = mysqlTable("owner_withdrawals", {
 
 export const insertOwnerWithdrawalSchema = createInsertSchema(ownerWithdrawals).omit({ id: true, createdAt: true }).extend({
   amount: z.number().min(0, "Amount must be non-negative"),
-  date: z.string().min(1, "Date is required"),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be yyyy-MM-dd"),
   notes: z.string().optional().nullable(),
 });
 export type OwnerWithdrawal = typeof ownerWithdrawals.$inferSelect;

@@ -170,7 +170,7 @@ export default function Reports() {
       totalCommissions += calcAppointmentCommission(app, services, staffList, staffCommissions);
     });
 
-    const salonPortion = totalRevenue - totalCommissions;
+    const salonPortion = paidRevenue - totalCommissions;
     const netProfit = salonPortion - totalExpenses - totalOwnerWithdrawals;
     const totalAppointments = filteredAppointments.length;
 

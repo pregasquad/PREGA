@@ -8,7 +8,7 @@ import { setupAuth, registerAuthRoutes, isPinAuthenticated, requirePermission, c
 import { vapidPublicKey, sendPushNotification, checkAndNotifyExpiringProducts, checkAndNotifyLowStock as broadcastLowStockNotifications, sendClosingReminderNow } from "./push";
 import { db, schema, pool, dbDialect, isDatabaseOffline, checkDatabaseConnection, getBotMemory, saveBotMemory, type BotClientMemory } from "./db";
 import { eq } from "drizzle-orm";
-import { insertAdminRoleSchema, ROLE_PERMISSIONS } from "@shared/schema";
+import { insertAdminRoleSchema, ROLE_PERMISSIONS, insertOwnerWithdrawalSchema } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import multer from "multer";
 import { offlineStorage } from "./offline-storage";
@@ -2388,7 +2388,11 @@ export async function registerRoutes(
 
   app.post("/api/owner-withdrawals", isPinAuthenticated, requirePermission("manage_expenses"), async (req, res) => {
     try {
-      const item = await storage.createOwnerWithdrawal(req.body);
+      const parsed = insertOwnerWithdrawalSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid withdrawal data", errors: parsed.error.flatten() });
+      }
+      const item = await storage.createOwnerWithdrawal(parsed.data);
       res.status(201).json(item);
     } catch (err) {
       console.error("Error creating owner withdrawal:", err);

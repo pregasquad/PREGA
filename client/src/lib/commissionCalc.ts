@@ -77,12 +77,21 @@ export function calcAppointmentCommission(
   }
 
   if (serviceItems && serviceItems.length > 0) {
-    // Multi-service: sum per-service commissions
+    // Multi-service: sum per-service commissions.
+    // If a discount was applied (app.total < sum of item prices), distribute it
+    // proportionally across services so commissions reflect actual charged amounts.
+    const sumPrices = serviceItems.reduce((s, i) => s + Number(i.price || 0), 0);
+    const appTotal = Number(app.total || 0);
+    const discountRatio = sumPrices > 0 && appTotal >= 0 && appTotal < sumPrices
+      ? appTotal / sumPrices
+      : 1;
+
     let total = 0;
     for (const item of serviceItems) {
+      const effectivePrice = Number(item.price || 0) * discountRatio;
       const svcDef = services.find(s => s.name === item.name);
       const rate = getRate(svcDef, staffMember, staffCommissions);
-      total += Number(item.price || 0) * (rate / 100);
+      total += effectivePrice * (rate / 100);
     }
     return total;
   }

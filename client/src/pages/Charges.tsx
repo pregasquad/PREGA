@@ -487,7 +487,7 @@ export default function Charges() {
                       <Wallet className="w-3.5 h-3.5 text-amber-600" />
                       {t("ownerWithdrawals.myWithdrawals")}
                     </span>
-                    <span className="text-sm font-semibold text-amber-700 dark:text-amber-400">- {totalWithdrawals} {t("common.currency")}</span>
+                    <span className="text-sm font-semibold text-amber-700 dark:text-amber-400">- {totalWithdrawals.toFixed(0)} {t("common.currency")}</span>
                   </div>
 
                   {/* Charges row */}
@@ -496,7 +496,7 @@ export default function Charges() {
                       <TrendingDown className="w-3.5 h-3.5 text-destructive" />
                       {t("expenses.totalExpenses")}
                     </span>
-                    <span className="text-sm font-semibold text-destructive">- {totalCharges} {t("common.currency")}</span>
+                    <span className="text-sm font-semibold text-destructive">- {totalCharges.toFixed(0)} {t("common.currency")}</span>
                   </div>
 
                   {/* Net result */}
@@ -527,7 +527,7 @@ export default function Charges() {
                       {filteredWithdrawals.map((w: any) => (
                         <div key={w.id} className="p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg flex justify-between items-center gap-2">
                           <div className="flex-1 min-w-0">
-                            <div className="text-sm font-semibold text-amber-700 dark:text-amber-400">{w.amount} {t("common.currency")}</div>
+                            <div className="text-sm font-semibold text-amber-700 dark:text-amber-400">{Number(w.amount).toFixed(0)} {t("common.currency")}</div>
                             <div className="text-xs text-muted-foreground">{w.date}</div>
                             {w.notes && <div className="text-xs text-muted-foreground truncate">{w.notes}</div>}
                           </div>
@@ -666,7 +666,7 @@ export default function Charges() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-4xl font-bold text-destructive">{totalCharges} {t("common.currency")}</p>
+            <p className="text-4xl font-bold text-destructive">{totalCharges.toFixed(0)} {t("common.currency")}</p>
           </CardContent>
         </Card>
 
@@ -679,7 +679,7 @@ export default function Charges() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-4xl font-bold text-amber-600 dark:text-amber-400">{totalWithdrawals} {t("common.currency")}</p>
+              <p className="text-4xl font-bold text-amber-600 dark:text-amber-400">{totalWithdrawals.toFixed(0)} {t("common.currency")}</p>
             </CardContent>
           </Card>
         )}

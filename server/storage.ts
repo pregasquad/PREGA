@@ -785,10 +785,10 @@ export class DatabaseStorage implements IStorage {
       if (!insertId) throw new Error("Failed to get insert ID");
       const [created] = await db().select().from(s.ownerWithdrawals).where(eq(s.ownerWithdrawals.id, insertId));
       if (!created) throw new Error("Failed to retrieve created withdrawal");
-      return created;
+      return { ...created, amount: Number(created.amount || 0) };
     }
     const [created] = await db().insert(s.ownerWithdrawals).values(withdrawal).returning();
-    return created;
+    return { ...created, amount: Number(created.amount || 0) };
   }
 
   async deleteOwnerWithdrawal(id: number): Promise<void> {
