@@ -1800,6 +1800,9 @@ export default function Planning() {
     // Only main button (left click / first touch)
     if (e.button !== undefined && e.button !== 0 && e.pointerType === 'mouse') return;
 
+    // Prevent the browser from starting text selection immediately on press
+    e.preventDefault();
+
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const offsetX = e.clientX - rect.left;
     const offsetY = e.clientY - rect.top;
@@ -1815,10 +1818,17 @@ export default function Planning() {
     })();
 
     const onMove = (me: PointerEvent) => {
+      // Always block text selection while the pointer is held down
+      me.preventDefault();
+
       if (!dragStarted) {
         const dist = Math.hypot(me.clientX - startX, me.clientY - startY);
         if (dist < 8) return;
         dragStarted = true;
+        // Kill any selection that managed to form during the threshold window
+        window.getSelection()?.removeAllRanges();
+        document.body.style.userSelect = 'none';
+        document.body.style.webkitUserSelect = 'none';
         pDragRef.current = { appointment: booking, offsetX, offsetY, targetStaff: booking.staff, targetTime: booking.startTime };
         setDraggedAppointment(booking);
         setPDragGhost({ x: me.clientX - offsetX, y: me.clientY - offsetY, w: rect.width, h: rect.height, color, label: serviceLabel });
@@ -1845,6 +1855,10 @@ export default function Planning() {
     const onUp = async () => {
       window.removeEventListener('pointermove', onMove);
       if (dragRafRef.current) cancelAnimationFrame(dragRafRef.current);
+
+      // Always restore selection capability on release
+      document.body.style.userSelect = '';
+      (document.body.style as any).webkitUserSelect = '';
 
       if (!dragStarted) return; // was a tap — let onClick fire normally
 
