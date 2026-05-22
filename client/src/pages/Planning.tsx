@@ -326,9 +326,11 @@ export default function Planning() {
   const [dragOverSlot, setDragOverSlot] = useState<{staff: string, time: string} | null>(null);
   const [resizingBooking, setResizingBooking] = useState<any>(null);
   // Smooth pointer-based drag ghost
+  // pDragGhost only holds static appearance data — position is updated directly on the DOM element
   const [pDragGhost, setPDragGhost] = useState<{
-    x: number; y: number; w: number; h: number; color: string; label: string;
+    w: number; h: number; color: string; label: string;
   } | null>(null);
+  const ghostElRef = useRef<HTMLDivElement>(null);
   const pDragRef = useRef<{
     appointment: any; offsetX: number; offsetY: number;
     targetStaff: string; targetTime: string;
@@ -1768,7 +1770,6 @@ export default function Planning() {
     if ((e.target as HTMLElement).closest('[data-resize-handle]')) return;
     if (e.button !== undefined && e.button !== 0 && e.pointerType === 'mouse') return;
 
-    // Keep a ref to the card element so we can set pointer capture + touch-action later
     const cardEl = e.currentTarget as HTMLElement;
     const pointerId = e.pointerId;
 
@@ -1785,6 +1786,13 @@ export default function Planning() {
     let edgeScrollRafId: number | null = null;
     let holdTimer: ReturnType<typeof setTimeout> | null = null;
 
+    // Move ghost directly via DOM — no React re-render on every frame
+    const moveGhost = (px: number, py: number) => {
+      const el = ghostElRef.current;
+      if (!el) return;
+      el.style.transform = `translate3d(${px - offsetX}px, ${py - offsetY}px, 0)`;
+    };
+
     const doEdgeScroll = () => {
       const board = boardRef.current;
       if (!board || !pDragRef.current) { edgeScrollRafId = null; return; }
@@ -1799,15 +1807,19 @@ export default function Planning() {
       if (db >= 0 && db < EDGE) sy =  Math.ceil((1 - db / EDGE) * MAX_SPD);
       if (sx !== 0) board.scrollLeft += sx;
       if (sy !== 0) board.scrollTop  += sy;
+      // Keep ghost aligned while the board auto-scrolls
+      moveGhost(lastPX, lastPY);
       edgeScrollRafId = requestAnimationFrame(doEdgeScroll);
     };
 
     const cleanup = () => {
       window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
       window.removeEventListener('pointercancel', onCancel);
       if (holdTimer !== null) { clearTimeout(holdTimer); holdTimer = null; }
       if (edgeScrollRafId !== null) { cancelAnimationFrame(edgeScrollRafId); edgeScrollRafId = null; }
-      if (dragRafRef.current) { cancelAnimationFrame(dragRafRef.current); }
+      if (dragRafRef.current) { cancelAnimationFrame(dragRafRef.current); dragRafRef.current = null; }
+      try { cardEl.releasePointerCapture(pointerId); } catch {}
       cardEl.style.touchAction = '';
       document.body.style.userSelect = '';
       (document.body.style as any).webkitUserSelect = '';
@@ -1823,7 +1835,7 @@ export default function Planning() {
     const activateDrag = (px: number, py: number) => {
       if (dragStarted || cancelled) return;
       dragStarted = true;
-      // Capture pointer so the browser stops scrolling and we own all future events
+      // Capture pointer — browser routes all events here and stops scroll
       try { cardEl.setPointerCapture(pointerId); } catch {}
       cardEl.style.touchAction = 'none';
       window.getSelection()?.removeAllRanges();
@@ -1831,17 +1843,23 @@ export default function Planning() {
       (document.body.style as any).webkitUserSelect = 'none';
       pDragRef.current = { appointment: booking, offsetX, offsetY, targetStaff: booking.staff, targetTime: booking.startTime };
       setDraggedAppointment(booking);
-      setPDragGhost({ x: px - offsetX, y: py - offsetY, w: rect.width, h: rect.height, color, label: serviceLabel });
+      // Mount ghost (appearance only — position is set directly on DOM below)
+      setPDragGhost({ w: rect.width, h: rect.height, color, label: serviceLabel });
+      // Position ghost immediately via rAF (DOM node exists after next paint)
+      requestAnimationFrame(() => moveGhost(px, py));
       edgeScrollRafId = requestAnimationFrame(doEdgeScroll);
     };
 
-    // Hold-to-drag: 250 ms press without moving → drag activates
+    // Hold-to-drag: 280 ms press without significant movement → activate
     holdTimer = setTimeout(() => {
       holdTimer = null;
       if (!cancelled) activateDrag(lastPX, lastPY);
-    }, 250);
+    }, 280);
 
     const onMove = (me: PointerEvent) => {
+      // Must call preventDefault before default scroll handler runs (passive: false)
+      if (dragStarted) me.preventDefault();
+
       lastPX = me.clientX;
       lastPY = me.clientY;
 
@@ -1849,23 +1867,24 @@ export default function Planning() {
         const dx = me.clientX - startX;
         const dy = me.clientY - startY;
         const dist = Math.hypot(dx, dy);
-        if (dist < 5) return; // ignore tiny jitter
+        if (dist < 6) return; // ignore tiny jitter
 
-        // Finger moving mainly up/down → user wants to scroll, not drag — bail out
-        if (Math.abs(dy) > Math.abs(dx) * 1.8) {
+        // Strongly vertical movement before hold timer fires → let browser scroll
+        if (Math.abs(dy) > Math.abs(dx) * 2.5 && dist < 20) {
           cancelled = true;
           cleanup();
           return;
         }
-        // Horizontal or diagonal movement → start drag immediately
+
+        // Any other movement that passes the threshold → start drag immediately
         if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
         activateDrag(me.clientX, me.clientY);
+        return;
       }
+
       if (!pDragRef.current) return;
 
-      // Only block scroll AFTER drag is confirmed
-      me.preventDefault();
-
+      // Hit-test under cursor (ghost is pointer-events:none so it's transparent to this)
       const el = document.elementFromPoint(me.clientX, me.clientY) as HTMLElement | null;
       const slotEl = el?.closest('[data-slot-staff]') as HTMLElement | null;
       if (slotEl?.dataset.slotStaff && slotEl?.dataset.slotTime) {
@@ -1874,11 +1893,11 @@ export default function Planning() {
         setDragOverSlot({ staff: slotEl.dataset.slotStaff, time: slotEl.dataset.slotTime });
       }
 
-      const nx = me.clientX - offsetX;
-      const ny = me.clientY - offsetY;
+      // Move ghost directly — no React state update, no re-render
       if (dragRafRef.current) cancelAnimationFrame(dragRafRef.current);
       dragRafRef.current = requestAnimationFrame(() => {
-        setPDragGhost(prev => prev ? { ...prev, x: nx, y: ny } : null);
+        moveGhost(me.clientX, me.clientY);
+        dragRafRef.current = null;
       });
     };
 
@@ -1895,7 +1914,6 @@ export default function Planning() {
     };
 
     const onUp = async () => {
-      window.removeEventListener('pointerup', onUp);
       cleanup();
 
       if (!dragStarted) return; // tap — let onClick fire normally
@@ -1912,7 +1930,8 @@ export default function Planning() {
       }
     };
 
-    window.addEventListener('pointermove', onMove);
+    // passive: false is REQUIRED so preventDefault() actually stops the browser scroll
+    window.addEventListener('pointermove', onMove, { passive: false });
     window.addEventListener('pointerup', onUp, { once: true });
     window.addEventListener('pointercancel', onCancel, { once: true });
   }, [canEdit, resizingBooking]);
@@ -2836,16 +2855,18 @@ export default function Planning() {
         </div>
       </div>
 
-      {/* Smooth drag ghost — follows pointer/finger exactly */}
+      {/* Smooth drag ghost — position driven by direct DOM manipulation (no React re-render per frame) */}
       {pDragGhost && (
         <div
+          ref={ghostElRef}
           className="fixed z-[9999] pointer-events-none select-none drag-ghost-enter"
           style={{
-            left: pDragGhost.x,
-            top: pDragGhost.y,
+            left: 0,
+            top: 0,
             width: pDragGhost.w,
             height: Math.max(pDragGhost.h, 36),
-            willChange: 'transform, left, top',
+            willChange: 'transform',
+            transform: 'translate3d(-9999px,-9999px,0)', // hidden until first moveGhost()
           }}
         >
           <div
