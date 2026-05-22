@@ -1810,17 +1810,18 @@ export default function Planning() {
     const startY = e.clientY;
     let dragStarted = false;
 
-    // Edge-scroll state — live pointer coords updated every pointermove
+    // Edge-scroll state
     let lastPX = e.clientX;
     let lastPY = e.clientY;
     let edgeScrollRafId: number | null = null;
+    let holdTimer: ReturnType<typeof setTimeout> | null = null;
 
     const doEdgeScroll = () => {
       const board = boardRef.current;
       if (!board || !pDragRef.current) { edgeScrollRafId = null; return; }
       const r = board.getBoundingClientRect();
-      const EDGE = 80;   // px from edge to activate
-      const MAX_SPD = 14; // px per frame at the very edge
+      const EDGE = 80;
+      const MAX_SPD = 14;
       let sx = 0, sy = 0;
       const dl = lastPX - r.left,  dr = r.right  - lastPX;
       const dt = lastPY - r.top,   db = r.bottom  - lastPY;
@@ -1840,25 +1841,36 @@ export default function Planning() {
       } catch { return booking.client; }
     })();
 
+    // Activate drag at a given pointer position (called from timer OR from move threshold)
+    const activateDrag = (px: number, py: number) => {
+      if (dragStarted) return;
+      dragStarted = true;
+      window.getSelection()?.removeAllRanges();
+      document.body.style.userSelect = 'none';
+      document.body.style.webkitUserSelect = 'none';
+      pDragRef.current = { appointment: booking, offsetX, offsetY, targetStaff: booking.staff, targetTime: booking.startTime };
+      setDraggedAppointment(booking);
+      setPDragGhost({ x: px - offsetX, y: py - offsetY, w: rect.width, h: rect.height, color, label: serviceLabel });
+      edgeScrollRafId = requestAnimationFrame(doEdgeScroll);
+    };
+
+    // Hold-to-drag: activate after 250 ms without lifting (works on both touch and mouse)
+    holdTimer = setTimeout(() => {
+      holdTimer = null;
+      activateDrag(lastPX, lastPY);
+    }, 250);
+
     const onMove = (me: PointerEvent) => {
-      // Always block text selection while the pointer is held down
       me.preventDefault();
       lastPX = me.clientX;
       lastPY = me.clientY;
 
       if (!dragStarted) {
+        // Cancel hold timer the moment the finger/pointer actually moves
         const dist = Math.hypot(me.clientX - startX, me.clientY - startY);
-        if (dist < 8) return;
-        dragStarted = true;
-        // Kill any selection that managed to form during the threshold window
-        window.getSelection()?.removeAllRanges();
-        document.body.style.userSelect = 'none';
-        document.body.style.webkitUserSelect = 'none';
-        pDragRef.current = { appointment: booking, offsetX, offsetY, targetStaff: booking.staff, targetTime: booking.startTime };
-        setDraggedAppointment(booking);
-        setPDragGhost({ x: me.clientX - offsetX, y: me.clientY - offsetY, w: rect.width, h: rect.height, color, label: serviceLabel });
-        // Start the edge-scroll loop
-        edgeScrollRafId = requestAnimationFrame(doEdgeScroll);
+        if (dist < 4) return;   // tiny jitter — ignore
+        if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
+        activateDrag(me.clientX, me.clientY);
       }
       if (!pDragRef.current) return;
 
@@ -1882,6 +1894,8 @@ export default function Planning() {
     const onUp = async () => {
       window.removeEventListener('pointermove', onMove);
       if (dragRafRef.current) cancelAnimationFrame(dragRafRef.current);
+      // Cancel hold timer so quick tap never activates drag after release
+      if (holdTimer !== null) { clearTimeout(holdTimer); holdTimer = null; }
       // Stop edge scrolling
       if (edgeScrollRafId !== null) { cancelAnimationFrame(edgeScrollRafId); edgeScrollRafId = null; }
 
