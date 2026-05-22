@@ -325,11 +325,11 @@ export default function Planning() {
   const [draggedAppointment, setDraggedAppointment] = useState<any>(null);
   const [dragOverSlot, setDragOverSlot] = useState<{staff: string, time: string} | null>(null);
   const [resizingBooking, setResizingBooking] = useState<any>(null);
-  // Smooth pointer-based drag ghost
-  // pDragGhost only holds static appearance data — position is updated directly on the DOM element
+  // Hold-to-drag ghost (appearance only — position set directly on DOM)
   const [pDragGhost, setPDragGhost] = useState<{
     w: number; h: number; color: string; label: string;
   } | null>(null);
+  const [holdingCardId, setHoldingCardId] = useState<number | null>(null);
   const ghostElRef = useRef<HTMLDivElement>(null);
   const pDragRef = useRef<{
     appointment: any; offsetX: number; offsetY: number;
@@ -1764,136 +1764,142 @@ export default function Planning() {
     }
   };
 
-  // Smooth pointer-based drag — works on both mouse and touch
+  // ─── Hold-to-drag: user must hold 500 ms before drag activates ─────────────
+  // Phase 1 (hold): scroll is completely free — listeners are passive, nothing blocked.
+  // Phase 2 (drag): pointer captured + touchmove blocked on board → clean drag.
   const handleCardPointerDown = useCallback((e: React.PointerEvent, booking: any, color: string) => {
     if (!canEdit || resizingBooking) return;
     if ((e.target as HTMLElement).closest('[data-resize-handle]')) return;
-    if (e.button !== undefined && e.button !== 0 && e.pointerType === 'mouse') return;
+    // Ignore non-primary mouse buttons
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
 
     const cardEl = e.currentTarget as HTMLElement;
     const pointerId = e.pointerId;
-
+    const startX = e.clientX;
+    const startY = e.clientY;
     const rect = cardEl.getBoundingClientRect();
     const offsetX = e.clientX - rect.left;
     const offsetY = e.clientY - rect.top;
-    const startX = e.clientX;
-    const startY = e.clientY;
-    let dragStarted = false;
-    let cancelled = false;
 
+    let dragActive = false;
+    let cancelled = false;
     let lastPX = e.clientX;
     let lastPY = e.clientY;
     let edgeScrollRafId: number | null = null;
-    let holdTimer: ReturnType<typeof setTimeout> | null = null;
 
-    // Move ghost directly via DOM — no React re-render on every frame
+    // ── Ghost position helper (no React re-render) ──
     const moveGhost = (px: number, py: number) => {
       const el = ghostElRef.current;
       if (!el) return;
       el.style.transform = `translate3d(${px - offsetX}px, ${py - offsetY}px, 0)`;
     };
 
+    // ── Edge-auto-scroll loop while dragging ──
     const doEdgeScroll = () => {
       const board = boardRef.current;
-      if (!board || !pDragRef.current) { edgeScrollRafId = null; return; }
+      if (!board || !dragActive) { edgeScrollRafId = null; return; }
       const r = board.getBoundingClientRect();
-      const EDGE = 80, MAX_SPD = 14;
+      const EDGE = 80, SPD = 14;
       let sx = 0, sy = 0;
-      const dl = lastPX - r.left, dr = r.right  - lastPX;
-      const dt = lastPY - r.top,  db = r.bottom - lastPY;
-      if (dl >= 0 && dl < EDGE) sx = -Math.ceil((1 - dl / EDGE) * MAX_SPD);
-      if (dr >= 0 && dr < EDGE) sx =  Math.ceil((1 - dr / EDGE) * MAX_SPD);
-      if (dt >= 0 && dt < EDGE) sy = -Math.ceil((1 - dt / EDGE) * MAX_SPD);
-      if (db >= 0 && db < EDGE) sy =  Math.ceil((1 - db / EDGE) * MAX_SPD);
-      if (sx !== 0) board.scrollLeft += sx;
-      if (sy !== 0) board.scrollTop  += sy;
-      // Keep ghost aligned while the board auto-scrolls
+      if (lastPX - r.left  < EDGE) sx = -Math.ceil((1 - (lastPX - r.left)  / EDGE) * SPD);
+      if (r.right - lastPX < EDGE) sx =  Math.ceil((1 - (r.right - lastPX) / EDGE) * SPD);
+      if (lastPY - r.top   < EDGE) sy = -Math.ceil((1 - (lastPY - r.top)   / EDGE) * SPD);
+      if (r.bottom - lastPY < EDGE) sy =  Math.ceil((1 - (r.bottom - lastPY) / EDGE) * SPD);
+      if (sx) board.scrollLeft += sx;
+      if (sy) board.scrollTop  += sy;
       moveGhost(lastPX, lastPY);
       edgeScrollRafId = requestAnimationFrame(doEdgeScroll);
     };
 
+    // ── Block touch scroll on the board while dragging ──
+    const blockTouchScroll = (te: TouchEvent) => te.preventDefault();
+
+    // ── Full cleanup ──
     const cleanup = () => {
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointermove', onMoveHold);
+      window.removeEventListener('pointermove', onMoveDrag);
+      window.removeEventListener('pointerup',   onUp);
       window.removeEventListener('pointercancel', onCancel);
-      if (holdTimer !== null) { clearTimeout(holdTimer); holdTimer = null; }
-      if (edgeScrollRafId !== null) { cancelAnimationFrame(edgeScrollRafId); edgeScrollRafId = null; }
+      boardRef.current?.removeEventListener('touchmove', blockTouchScroll);
+      if (holdTimerRef !== null) { clearTimeout(holdTimerRef); }
+      if (edgeScrollRafId !== null) cancelAnimationFrame(edgeScrollRafId);
       if (dragRafRef.current) { cancelAnimationFrame(dragRafRef.current); dragRafRef.current = null; }
       try { cardEl.releasePointerCapture(pointerId); } catch {}
-      cardEl.style.touchAction = '';
       document.body.style.userSelect = '';
       (document.body.style as any).webkitUserSelect = '';
+      setHoldingCardId(null);
     };
 
     const serviceLabel = (() => {
       try {
-        const svcs = typeof booking.servicesJson === 'string' ? JSON.parse(booking.servicesJson) : booking.servicesJson;
+        const svcs = typeof booking.servicesJson === 'string'
+          ? JSON.parse(booking.servicesJson) : booking.servicesJson;
         return svcs?.[0]?.name || booking.service || booking.client;
       } catch { return booking.client; }
     })();
 
-    const activateDrag = (px: number, py: number) => {
-      if (dragStarted || cancelled) return;
-      dragStarted = true;
-      // Capture pointer — browser routes all events here and stops scroll
+    // ── Activate drag after hold completes ──
+    const activateDrag = () => {
+      if (dragActive || cancelled) return;
+      dragActive = true;
+
+      // Phase 2: capture pointer so all future events route here
       try { cardEl.setPointerCapture(pointerId); } catch {}
-      cardEl.style.touchAction = 'none';
-      window.getSelection()?.removeAllRanges();
+      // Block touch scroll on the board (effective even mid-gesture)
+      boardRef.current?.addEventListener('touchmove', blockTouchScroll, { passive: false });
       document.body.style.userSelect = 'none';
       (document.body.style as any).webkitUserSelect = 'none';
-      pDragRef.current = { appointment: booking, offsetX, offsetY, targetStaff: booking.staff, targetTime: booking.startTime };
+      window.getSelection()?.removeAllRanges();
+
+      // Haptic pulse on mobile
+      try { (navigator as any).vibrate?.(40); } catch {}
+
+      pDragRef.current = {
+        appointment: booking, offsetX, offsetY,
+        targetStaff: booking.staff, targetTime: booking.startTime,
+      };
+      setHoldingCardId(null);
       setDraggedAppointment(booking);
-      // Mount ghost (appearance only — position is set directly on DOM below)
       setPDragGhost({ w: rect.width, h: rect.height, color, label: serviceLabel });
-      // Position ghost immediately via rAF (DOM node exists after next paint)
-      requestAnimationFrame(() => moveGhost(px, py));
+      // Position ghost after React mounts it
+      requestAnimationFrame(() => moveGhost(lastPX, lastPY));
+
+      // Switch from passive hold-listener to active drag-listener
+      window.removeEventListener('pointermove', onMoveHold);
+      window.addEventListener('pointermove', onMoveDrag, { passive: false });
+
       edgeScrollRafId = requestAnimationFrame(doEdgeScroll);
     };
 
-    // Hold-to-drag: 280 ms press without significant movement → activate
-    holdTimer = setTimeout(() => {
-      holdTimer = null;
-      if (!cancelled) activateDrag(lastPX, lastPY);
-    }, 280);
-
-    const onMove = (me: PointerEvent) => {
-      // Must call preventDefault before default scroll handler runs (passive: false)
-      if (dragStarted) me.preventDefault();
-
+    // ── Phase 1: hold listener — passive, scroll is FREE ──
+    const onMoveHold = (me: PointerEvent) => {
       lastPX = me.clientX;
       lastPY = me.clientY;
-
-      if (!dragStarted) {
-        const dx = me.clientX - startX;
-        const dy = me.clientY - startY;
-        const dist = Math.hypot(dx, dy);
-        if (dist < 6) return; // ignore tiny jitter
-
-        // Strongly vertical movement before hold timer fires → let browser scroll
-        if (Math.abs(dy) > Math.abs(dx) * 2.5 && dist < 20) {
-          cancelled = true;
-          cleanup();
-          return;
-        }
-
-        // Any other movement that passes the threshold → start drag immediately
-        if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
-        activateDrag(me.clientX, me.clientY);
-        return;
+      // Any movement > 10 px cancels hold → user wants to scroll
+      const dist = Math.hypot(me.clientX - startX, me.clientY - startY);
+      if (dist > 10) {
+        cancelled = true;
+        cleanup();
       }
+    };
 
+    // ── Phase 2: drag listener — non-passive, blocks scroll ──
+    const onMoveDrag = (me: PointerEvent) => {
+      me.preventDefault();
+      lastPX = me.clientX;
+      lastPY = me.clientY;
       if (!pDragRef.current) return;
 
-      // Hit-test under cursor (ghost is pointer-events:none so it's transparent to this)
+      // Hit-test to find slot under cursor (ghost is pointer-events:none)
       const el = document.elementFromPoint(me.clientX, me.clientY) as HTMLElement | null;
       const slotEl = el?.closest('[data-slot-staff]') as HTMLElement | null;
       if (slotEl?.dataset.slotStaff && slotEl?.dataset.slotTime) {
         pDragRef.current.targetStaff = slotEl.dataset.slotStaff;
-        pDragRef.current.targetTime = slotEl.dataset.slotTime;
+        pDragRef.current.targetTime  = slotEl.dataset.slotTime;
         setDragOverSlot({ staff: slotEl.dataset.slotStaff, time: slotEl.dataset.slotTime });
       }
 
-      // Move ghost directly — no React state update, no re-render
+      // Update ghost position directly on DOM — zero React re-renders
       if (dragRafRef.current) cancelAnimationFrame(dragRafRef.current);
       dragRafRef.current = requestAnimationFrame(() => {
         moveGhost(me.clientX, me.clientY);
@@ -1901,11 +1907,11 @@ export default function Planning() {
       });
     };
 
-    // Browser took over (e.g. scroll gesture won) — abort drag cleanly
+    // ── Cancel (browser/OS stole the pointer) ──
     const onCancel = () => {
       cancelled = true;
       cleanup();
-      if (dragStarted) {
+      if (dragActive) {
         pDragRef.current = null;
         setPDragGhost(null);
         setDraggedAppointment(null);
@@ -1913,10 +1919,15 @@ export default function Planning() {
       }
     };
 
+    // ── Release ──
     const onUp = async () => {
+      const wasDragging = dragActive;
       cleanup();
 
-      if (!dragStarted) return; // tap — let onClick fire normally
+      if (!wasDragging) {
+        // Short press without drag completing → let native click fire normally
+        return;
+      }
 
       dragJustCompleted.current = true;
       const drag = pDragRef.current;
@@ -1930,9 +1941,17 @@ export default function Planning() {
       }
     };
 
-    // passive: false is REQUIRED so preventDefault() actually stops the browser scroll
-    window.addEventListener('pointermove', onMove, { passive: false });
-    window.addEventListener('pointerup', onUp, { once: true });
+    // Show the hold ring on the card immediately
+    setHoldingCardId(booking.id);
+
+    // Start 500 ms hold timer — only activates drag if finger/cursor stays still
+    const holdTimerRef = setTimeout(() => {
+      if (!cancelled) activateDrag();
+    }, 500);
+
+    // Phase 1 listeners (passive — scroll is completely free during hold)
+    window.addEventListener('pointermove', onMoveHold, { passive: true });
+    window.addEventListener('pointerup',   onUp,       { once: true });
     window.addEventListener('pointercancel', onCancel, { once: true });
   }, [canEdit, resizingBooking]);
 
@@ -2655,6 +2674,7 @@ export default function Planning() {
                           span <= 2 ? "flex items-center gap-1 px-1.5 py-0.5" : span <= 4 ? "flex flex-col px-1.5 py-1" : "flex flex-col px-2 py-1.5",
                           canEdit && !isResizing ? "cursor-grab active:cursor-grabbing select-none" : "",
                           isDragging && "opacity-40 scale-95 saturate-50",
+                          holdingCardId === booking.id && "scale-[1.03] brightness-110",
                           isResizing && "ring-2 ring-white/60 ring-inset shadow-xl",
                           isConflicting && "ring-2 ring-amber-400 ring-inset"
                         )}
@@ -2664,12 +2684,24 @@ export default function Planning() {
                             : `linear-gradient(135deg, ${s.color}77, ${s.color}55)`,
                           cursor: canEdit ? 'grab' : 'default',
                           border: booking.paid ? 'none' : `1.5px solid ${s.color}bb`,
-                          transition: 'opacity 0.15s, transform 0.15s, filter 0.15s',
+                          transition: 'opacity 0.15s, transform 0.15s, filter 0.15s, scale 0.15s',
                         }}
                         onPointerDown={(e) => { if (canEdit && !isResizing) handleCardPointerDown(e, booking, s.color); }}
                         onClick={(e) => { if (!isResizing && !dragJustCompleted.current) handleAppointmentClick(e, booking); dragJustCompleted.current = false; }}
                       >
                         <div className="water-shimmer absolute inset-0 opacity-30" />
+                        {/* Hold-to-drag ring — animates in while user holds */}
+                        {holdingCardId === booking.id && (
+                          <div className="absolute inset-0 rounded-md pointer-events-none z-30 overflow-hidden">
+                            <div
+                              className="absolute inset-0 rounded-md"
+                              style={{
+                                boxShadow: `inset 0 0 0 2.5px white, 0 0 12px 3px ${s.color}99`,
+                                animation: 'hold-ring-pulse 0.5s ease-out forwards',
+                              }}
+                            />
+                          </div>
+                        )}
                         {isConflicting && (
                           <div className="absolute top-0.5 right-0.5 z-20 pointer-events-none">
                             <div className="bg-amber-400 rounded-full p-0.5 shadow-md">
