@@ -341,9 +341,8 @@ export default function Planning() {
   const pageRef = useRef<HTMLDivElement>(null);
   
   // Swipe gesture state for mobile date navigation
-  const touchStartX = useRef<number | null>(null);
-  const touchStartY = useRef<number | null>(null);
-  const swipeThreshold = 80; // minimum px to trigger swipe
+  const swipeDateStartX = useRef<number | null>(null);
+  const swipeThreshold = 60; // minimum px to trigger date swipe
 
   // Pinch-to-zoom state
   const pinchStartDist = useRef<number | null>(null);
@@ -365,8 +364,6 @@ export default function Planning() {
       pinchStartHeight.current = localSlotHeight ?? (businessSettings?.planningSlotHeight ?? 44);
       return;
     }
-    touchStartX.current = e.touches[0].clientX;
-    touchStartY.current = e.touches[0].clientY;
   }, [localSlotHeight, businessSettings?.planningSlotHeight]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
@@ -405,34 +402,6 @@ export default function Planning() {
       }
       return;
     }
-    if (touchStartX.current === null || touchStartY.current === null) return;
-    
-    const touchEndX = e.changedTouches[0].clientX;
-    const touchEndY = e.changedTouches[0].clientY;
-    const deltaX = touchEndX - touchStartX.current;
-    const deltaY = touchEndY - touchStartY.current;
-    
-    // Only trigger if horizontal swipe is greater than vertical (avoid scroll conflicts)
-    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > swipeThreshold) {
-      if (isRtl) {
-        // RTL: swipe left = previous day, swipe right = next day
-        if (deltaX < 0) {
-          setDate(d => addDays(d, -1));
-        } else {
-          setDate(d => addDays(d, 1));
-        }
-      } else {
-        // LTR: swipe right = previous day, swipe left = next day  
-        if (deltaX > 0) {
-          setDate(d => addDays(d, -1));
-        } else {
-          setDate(d => addDays(d, 1));
-        }
-      }
-    }
-    
-    touchStartX.current = null;
-    touchStartY.current = null;
   }, [isRtl, localSlotHeight, businessSettings?.planningSlotHeight]);
   const [favoriteIds, setFavoriteIds] = useState<number[]>(() => {
     try {
@@ -2142,26 +2111,40 @@ export default function Planning() {
             {stats.total}
           </div>
 
-          {/* Date nav */}
-          <Button variant="ghost" size="icon" className="h-8 w-8 md:h-9 md:w-9 rounded-full p-0 touch-manipulation" onClick={() => setDate(d => addDays(d, -1))} data-testid="button-prev-day">
-            {isRtl ? <ChevronRight className="w-4 h-4 md:w-5 md:h-5" /> : <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" />}
-          </Button>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="ghost" className="h-8 px-2 md:h-9 md:px-3 text-xs md:text-sm font-medium rounded-full touch-manipulation flex flex-col items-center gap-0 leading-none" data-testid="button-date-picker">
-                <span className="text-[9px] md:hidden text-muted-foreground font-normal -mb-0.5">
-                  {format(date, "EEE")}
-                </span>
-                <span>{format(date, "dd/MM")}</span>
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 rounded-2xl glass-card shadow-xl" align="end">
-              <Calendar mode="single" selected={date} onSelect={(d) => d && setDate(d)} initialFocus />
-            </PopoverContent>
-          </Popover>
-          <Button variant="ghost" size="icon" className="h-8 w-8 md:h-9 md:w-9 rounded-full p-0 touch-manipulation" onClick={() => setDate(d => addDays(d, 1))} data-testid="button-next-day">
-            {isRtl ? <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" /> : <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />}
-          </Button>
+          {/* Date nav — swipe left/right here to change day */}
+          <div
+            className="flex items-center gap-0.5 select-none touch-pan-y"
+            data-testid="date-swipe-area"
+            onTouchStart={(e) => { swipeDateStartX.current = e.touches[0].clientX; }}
+            onTouchEnd={(e) => {
+              if (swipeDateStartX.current === null) return;
+              const dx = e.changedTouches[0].clientX - swipeDateStartX.current;
+              swipeDateStartX.current = null;
+              if (Math.abs(dx) < swipeThreshold) return;
+              if (isRtl) { dx < 0 ? setDate(d => addDays(d, -1)) : setDate(d => addDays(d, 1)); }
+              else       { dx > 0 ? setDate(d => addDays(d, -1)) : setDate(d => addDays(d, 1)); }
+            }}
+          >
+            <Button variant="ghost" size="icon" className="h-8 w-8 md:h-9 md:w-9 rounded-full p-0 touch-manipulation" onClick={() => setDate(d => addDays(d, -1))} data-testid="button-prev-day">
+              {isRtl ? <ChevronRight className="w-4 h-4 md:w-5 md:h-5" /> : <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" />}
+            </Button>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" className="h-8 px-2 md:h-9 md:px-3 text-xs md:text-sm font-medium rounded-full touch-manipulation flex flex-col items-center gap-0 leading-none" data-testid="button-date-picker">
+                  <span className="text-[9px] md:hidden text-muted-foreground font-normal -mb-0.5">
+                    {format(date, "EEE")}
+                  </span>
+                  <span>{format(date, "dd/MM")}</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 rounded-2xl glass-card shadow-xl" align="end">
+                <Calendar mode="single" selected={date} onSelect={(d) => d && setDate(d)} initialFocus />
+              </PopoverContent>
+            </Popover>
+            <Button variant="ghost" size="icon" className="h-8 w-8 md:h-9 md:w-9 rounded-full p-0 touch-manipulation" onClick={() => setDate(d => addDays(d, 1))} data-testid="button-next-day">
+              {isRtl ? <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" /> : <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />}
+            </Button>
+          </div>
 
           {!isToday && (
             <Button 
