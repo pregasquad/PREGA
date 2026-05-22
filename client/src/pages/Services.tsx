@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Tag, Scissors, Edit2, Package, RefreshCw, X, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Minus, Trash2, Tag, Scissors, Edit2, Package, RefreshCw, X, ChevronDown, ChevronRight } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -20,14 +20,77 @@ import type { Product, Service, Category } from "@shared/schema";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 
+const linkedProductItemSchema = z.object({ productId: z.number().int(), quantity: z.number().int().min(1).default(1) });
+type LinkedProductItem = { productId: number; quantity: number };
+
 const serviceFormSchema = insertServiceSchema.extend({
   price: z.coerce.number(),
   duration: z.coerce.number(),
   linkedProductId: z.coerce.number().optional().nullable(),
-  linkedProductIds: z.array(z.number()).default([]),
+  linkedProductIds: z.array(linkedProductItemSchema).default([]),
   commissionPercent: z.coerce.number().min(0).max(100).default(50),
   emoji: z.string().max(10).optional().nullable(),
 });
+
+function normalizeLinkedProducts(raw: any): LinkedProductItem[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((item: any) =>
+    typeof item === "number" ? { productId: item, quantity: 1 } : { productId: item.productId, quantity: item.quantity ?? 1 }
+  );
+}
+
+function LinkedProductPicker({ value, onChange, products }: {
+  value: LinkedProductItem[];
+  onChange: (v: LinkedProductItem[]) => void;
+  products: Product[];
+}) {
+  const linked = value || [];
+  const isLinked = (id: number) => linked.some(l => l.productId === id);
+  const getQty = (id: number) => linked.find(l => l.productId === id)?.quantity ?? 1;
+
+  const toggle = (id: number, checked: boolean) => {
+    if (checked) onChange([...linked, { productId: id, quantity: 1 }]);
+    else onChange(linked.filter(l => l.productId !== id));
+  };
+  const setQty = (id: number, delta: number) => {
+    onChange(linked.map(l => l.productId === id ? { ...l, quantity: Math.max(1, l.quantity + delta) } : l));
+  };
+
+  if (products.length === 0) return <p className="text-sm text-muted-foreground">لا توجد منتجات</p>;
+
+  return (
+    <div className="space-y-1.5 max-h-44 overflow-y-auto border rounded-md p-2">
+      {products.map(p => (
+        <div key={p.id} className={`flex items-center gap-2 rounded-md px-1.5 py-1 transition-colors ${isLinked(p.id) ? "bg-primary/8" : ""}`}>
+          <Checkbox
+            id={`lp-${p.id}`}
+            checked={isLinked(p.id)}
+            onCheckedChange={(checked) => toggle(p.id, !!checked)}
+          />
+          <label htmlFor={`lp-${p.id}`} className="text-sm flex-1 cursor-pointer leading-tight">
+            {p.name}
+            <span className="text-muted-foreground text-xs ml-1">({p.quantity} متوفر)</span>
+          </label>
+          {isLinked(p.id) && (
+            <div className="flex items-center gap-1 shrink-0">
+              <button type="button" data-testid={`button-qty-dec-${p.id}`}
+                onClick={() => setQty(p.id, -1)}
+                className="w-6 h-6 rounded border border-border flex items-center justify-center hover:bg-muted transition-colors">
+                <Minus className="w-3 h-3" />
+              </button>
+              <span className="w-6 text-center text-sm font-semibold tabular-nums">{getQty(p.id)}</span>
+              <button type="button" data-testid={`button-qty-inc-${p.id}`}
+                onClick={() => setQty(p.id, 1)}
+                className="w-6 h-6 rounded border border-border flex items-center justify-center hover:bg-muted transition-colors">
+                <Plus className="w-3 h-3" />
+              </button>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function Services() {
   const { t, i18n } = useTranslation();
@@ -97,7 +160,7 @@ export default function Services() {
 
   const sForm = useForm({
     resolver: zodResolver(serviceFormSchema),
-    defaultValues: { name: "", price: 0, duration: 30, category: "", linkedProductId: null, linkedProductIds: [] as number[], commissionPercent: 50, isStartingPrice: false, emoji: "" }
+    defaultValues: { name: "", price: 0, duration: 30, category: "", linkedProductId: null, linkedProductIds: [] as LinkedProductItem[], commissionPercent: 50, isStartingPrice: false, emoji: "" }
   });
 
   const cForm = useForm({
@@ -225,20 +288,29 @@ export default function Services() {
                                   {service.name}
                                 </h4>
                                 <p className="text-xs text-muted-foreground">{service.duration} {t("common.minutes")} • {service.isStartingPrice ? `${t("services.startingFrom")} ` : ''}{service.price} DH • {t("services.commission")} {service.commissionPercent ?? 50}%</p>
-                                {(((service.linkedProductIds as number[] | null | undefined) || []).length > 0 || service.linkedProductId) && (
-                                  <div className="text-xs text-primary flex items-center gap-1 mt-1 flex-wrap">
-                                    <Package className="w-3 h-3" />
-                                    {((service.linkedProductIds as number[] | null | undefined) || []).length > 0 
-                                      ? ((service.linkedProductIds as number[]) || []).map(id => products?.find(p => p.id === id)?.name).filter(Boolean).join(", ")
-                                      : products?.find(p => p.id === service.linkedProductId)?.name || t("services.linkedProduct")
-                                    }
-                                  </div>
-                                )}
+                                {(() => {
+                                  const items = normalizeLinkedProducts(service.linkedProductIds);
+                                  const legacyId = service.linkedProductId;
+                                  const allItems = items.length > 0 ? items : (legacyId ? [{ productId: legacyId, quantity: 1 }] : []);
+                                  if (allItems.length === 0) return null;
+                                  return (
+                                    <div className="text-xs text-primary flex items-center gap-1 mt-1 flex-wrap">
+                                      <Package className="w-3 h-3" />
+                                      {allItems.map(({ productId, quantity }) => {
+                                        const prod = products?.find(p => p.id === productId);
+                                        return prod ? `${prod.name} ×${quantity}` : null;
+                                      }).filter(Boolean).join(" · ")}
+                                    </div>
+                                  );
+                                })()}
                               </div>
                               <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <Button variant="ghost" size="icon" data-testid={`button-edit-service-${service.id}`} onClick={() => {
                                   setEditingService(service);
-                                  editSForm.reset(service);
+                                  editSForm.reset({
+                                    ...service,
+                                    linkedProductIds: normalizeLinkedProducts(service.linkedProductIds),
+                                  });
                                 }}>
                                   <Edit2 className="w-4 h-4" />
                                 </Button>
@@ -348,31 +420,11 @@ export default function Services() {
                       <Package className="w-4 h-4" />
                       {t("services.linkedProducts")} ({t("services.optional")})
                     </FormLabel>
-                    <div className="space-y-2 max-h-32 overflow-y-auto border rounded-md p-2">
-                      {products?.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">{t("services.noProductsAvailable")}</p>
-                      ) : (
-                        products?.map((p) => (
-                          <div key={p.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`product-${p.id}`}
-                              checked={(field.value || []).includes(p.id)}
-                              onCheckedChange={(checked) => {
-                                const current = field.value || [];
-                                if (checked) {
-                                  field.onChange([...current, p.id]);
-                                } else {
-                                  field.onChange(current.filter((id: number) => id !== p.id));
-                                }
-                              }}
-                            />
-                            <label htmlFor={`product-${p.id}`} className="text-sm cursor-pointer">
-                              {p.name} ({p.quantity} {t("services.inStock")})
-                            </label>
-                          </div>
-                        ))
-                      )}
-                    </div>
+                    <LinkedProductPicker
+                      value={field.value as LinkedProductItem[]}
+                      onChange={field.onChange}
+                      products={products ?? []}
+                    />
                     <p className="text-xs text-muted-foreground">{t("services.autoDeductNote")}</p>
                   </FormItem>
                 )}
@@ -473,31 +525,12 @@ export default function Services() {
                       <Package className="w-4 h-4" />
                       {t("services.linkedProducts")}
                     </FormLabel>
-                    <div className="space-y-2 max-h-32 overflow-y-auto border rounded-md p-2">
-                      {products?.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">{t("services.noProductsAvailable")}</p>
-                      ) : (
-                        products?.map((p) => (
-                          <div key={p.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`edit-product-${p.id}`}
-                              checked={(field.value || []).includes(p.id)}
-                              onCheckedChange={(checked) => {
-                                const current = field.value || [];
-                                if (checked) {
-                                  field.onChange([...current, p.id]);
-                                } else {
-                                  field.onChange(current.filter((id: number) => id !== p.id));
-                                }
-                              }}
-                            />
-                            <label htmlFor={`edit-product-${p.id}`} className="text-sm cursor-pointer">
-                              {p.name} ({p.quantity} {t("services.inStock")})
-                            </label>
-                          </div>
-                        ))
-                      )}
-                    </div>
+                    <LinkedProductPicker
+                      value={field.value as LinkedProductItem[]}
+                      onChange={field.onChange}
+                      products={products ?? []}
+                    />
+                    <p className="text-xs text-muted-foreground">{t("services.autoDeductNote")}</p>
                   </FormItem>
                 )}
               />

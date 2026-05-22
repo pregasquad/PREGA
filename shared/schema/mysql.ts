@@ -110,7 +110,7 @@ export const services = mysqlTable("services", {
   duration: int("duration").notNull(),
   category: text("category").notNull(),
   linkedProductId: int("linked_product_id"),
-  linkedProductIds: json("linked_product_ids").$type<number[]>().default([]),
+  linkedProductIds: json("linked_product_ids").$type<{productId: number; quantity: number}[]>().default([]),
   commissionPercent: double("commission_percent").notNull().default(50),
   loyaltyPointsMultiplier: int("loyalty_points_multiplier").notNull().default(1),
   isStartingPrice: boolean("is_starting_price").notNull().default(false),
@@ -219,7 +219,10 @@ export const insertAppointmentSchema = createInsertSchema(appointments).omit({ i
   service: z.string().optional().nullable(),
   servicesJson: z.array(serviceItemSchema).optional().nullable(),
 });
-export const insertServiceSchema = createInsertSchema(services).omit({ id: true });
+export const linkedProductItemSchema = z.object({ productId: z.number().int(), quantity: z.number().int().min(1).default(1) });
+export const insertServiceSchema = createInsertSchema(services).omit({ id: true }).extend({
+  linkedProductIds: z.array(linkedProductItemSchema).default([]),
+});
 export const insertCategorySchema = createInsertSchema(categories).omit({ id: true });
 export const insertExpenseCategorySchema = createInsertSchema(expenseCategories).omit({ id: true });
 export const insertStaffSchema = createInsertSchema(staff).omit({ id: true }).extend({

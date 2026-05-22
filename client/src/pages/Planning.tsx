@@ -1124,32 +1124,40 @@ export default function Planning() {
     // First pass: check ALL stock availability before decrementing any
     const stockDecrements: Array<{productId: number, newQuantity: number, productName: string}> = [];
     const productQuantities: Record<number, {current: number, name: string}> = {};
-    
+
+    // Build a unified list of {productId, quantity} from all services to check
+    const allProductNeeds: Array<{productId: number, quantity: number}> = [];
     for (const selectedService of servicesToCheck) {
-      if (selectedService?.linkedProductId) {
-        try {
-          // Get current stock if we haven't already
-          if (!productQuantities[selectedService.linkedProductId]) {
-            const res = await apiRequest("GET", `/api/products/${selectedService.linkedProductId}`);
-            const product = await res.json();
-            productQuantities[selectedService.linkedProductId] = { current: product.quantity, name: product.name };
-          }
-          
-          // Track the decrement needed
-          const productInfo = productQuantities[selectedService.linkedProductId];
-          const newQuantity = productInfo.current - 1;
-          
-          if (newQuantity < 0) {
-            alert(`⚠️ المخزون غير كافٍ لـ ${productInfo.name}`);
-            return;
-          }
-          
-          // Update local tracking and queue the decrement
-          productQuantities[selectedService.linkedProductId].current = newQuantity;
-          stockDecrements.push({ productId: selectedService.linkedProductId, newQuantity, productName: productInfo.name });
-        } catch (e) {
-          console.error("Stock check failed:", e);
+      // Prefer linkedProductIds (with quantities), fall back to legacy linkedProductId
+      const rawIds = (selectedService as any)?.linkedProductIds;
+      const linkedItems: Array<{productId: number, quantity: number}> = Array.isArray(rawIds) && rawIds.length > 0
+        ? rawIds.map((item: any) => typeof item === "number" ? { productId: item, quantity: 1 } : { productId: item.productId, quantity: item.quantity ?? 1 })
+        : ((selectedService as any)?.linkedProductId ? [{ productId: (selectedService as any).linkedProductId, quantity: 1 }] : []);
+
+      for (const { productId, quantity } of linkedItems) {
+        const existing = allProductNeeds.find(n => n.productId === productId);
+        if (existing) existing.quantity += quantity;
+        else allProductNeeds.push({ productId, quantity });
+      }
+    }
+
+    for (const { productId, quantity } of allProductNeeds) {
+      try {
+        if (!productQuantities[productId]) {
+          const res = await apiRequest("GET", `/api/products/${productId}`);
+          const product = await res.json();
+          productQuantities[productId] = { current: product.quantity, name: product.name };
         }
+        const productInfo = productQuantities[productId];
+        const newQuantity = productInfo.current - quantity;
+        if (newQuantity < 0) {
+          alert(`⚠️ المخزون غير كافٍ لـ ${productInfo.name} (متوفر: ${productInfo.current}، مطلوب: ${quantity})`);
+          return;
+        }
+        productQuantities[productId].current = newQuantity;
+        stockDecrements.push({ productId, newQuantity, productName: productInfo.name });
+      } catch (e) {
+        console.error("Stock check failed:", e);
       }
     }
     
