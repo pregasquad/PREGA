@@ -449,7 +449,7 @@ export default function Home() {
     return todayW.reduce((sum: number, w: any) => sum + (w.amount || 0), 0);
   }, [ownerWithdrawalsData, todayDate]);
 
-  const salonPortion = todayStats.totalRevenue - todayStats.totalCommissions;
+  const salonPortion = todayStats.paidRevenue - todayStats.totalCommissions;
   const netProfit = salonPortion - todayExpenses - todayOwnerWithdrawals;
 
   const closingChecklist = useMemo(() => {
