@@ -325,6 +325,16 @@ export default function Planning() {
   const [draggedAppointment, setDraggedAppointment] = useState<any>(null);
   const [dragOverSlot, setDragOverSlot] = useState<{staff: string, time: string} | null>(null);
   const [resizingBooking, setResizingBooking] = useState<any>(null);
+  // Smooth pointer-based drag ghost
+  const [pDragGhost, setPDragGhost] = useState<{
+    x: number; y: number; w: number; h: number; color: string; label: string;
+  } | null>(null);
+  const pDragRef = useRef<{
+    appointment: any; offsetX: number; offsetY: number;
+    targetStaff: string; targetTime: string;
+  } | null>(null);
+  const dragRafRef = useRef<number | null>(null);
+  const dragJustCompleted = useRef(false);
   const resizeStartY = useRef<number>(0);
   const resizeStartSpan = useRef<number>(1);
   const [resizeCurrentSpan, setResizeCurrentSpan] = useState<number>(1);
@@ -1746,53 +1756,17 @@ export default function Planning() {
     }
   };
 
-  const handleDragStart = (e: React.DragEvent, appointment: any) => {
-    if (!canEdit) {
-      e.preventDefault();
-      return;
-    }
-    setDraggedAppointment(appointment);
-    e.dataTransfer.effectAllowed = "move";
-    e.dataTransfer.setData("text/plain", appointment.id.toString());
-  };
-
-  const handleDragEnd = () => {
-    setDraggedAppointment(null);
-    setDragOverSlot(null);
-  };
-
-  const handleDragOver = (e: React.DragEvent, staffName: string, time: string) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-    setDragOverSlot({ staff: staffName, time });
-  };
-
-  const handleDragLeave = () => {
-    setDragOverSlot(null);
-  };
-
-  const handleDrop = async (e: React.DragEvent, staffName: string, newTime: string) => {
-    e.preventDefault();
-    setDragOverSlot(null);
-    
-    if (!canEdit || !draggedAppointment) return;
-    
+  // Shared drop executor (used by pointer drag)
+  const handleDropExec = async (appointment: any, staffName: string, newTime: string) => {
     const staffMember = staffList.find(s => s.name === staffName);
     if (!staffMember) return;
-
-    // Parse servicesJson if it's a string (from API response)
-    let parsedServicesJson = draggedAppointment.servicesJson;
+    let parsedServicesJson = appointment.servicesJson;
     if (typeof parsedServicesJson === 'string') {
-      try {
-        parsedServicesJson = JSON.parse(parsedServicesJson);
-      } catch {
-        parsedServicesJson = null;
-      }
+      try { parsedServicesJson = JSON.parse(parsedServicesJson); } catch { parsedServicesJson = null; }
     }
-
     try {
-      const updateData = {
-        ...draggedAppointment,
+      await apiRequest("PUT", `/api/appointments/${appointment.id}`, {
+        ...appointment,
         servicesJson: parsedServicesJson,
         staff: staffName,
         staffId: staffMember.id,
@@ -1800,22 +1774,87 @@ export default function Planning() {
         updatedAt: new Date().toISOString(),
         _store: 'appointments',
         _offlineUpdatedAt: new Date().toISOString(),
-      };
-      await apiRequest("PUT", `/api/appointments/${draggedAppointment.id}`, updateData);
+      });
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/appointments/all"] });
       queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
-      toast({ 
-        title: t("planning.appointmentMoved"), 
-        description: `${draggedAppointment.client} → ${staffName} @ ${newTime}` 
-      });
+      toast({ title: t("planning.appointmentMoved"), description: `${appointment.client} → ${staffName} @ ${newTime}` });
       playSuccessSound();
-    } catch (error) {
+    } catch {
       toast({ title: t("common.error"), description: t("planning.moveError"), variant: "destructive" });
     }
-    
-    setDraggedAppointment(null);
   };
+
+  // Smooth pointer-based drag — works on both mouse and touch
+  const handleCardPointerDown = useCallback((e: React.PointerEvent, booking: any, color: string) => {
+    if (!canEdit || resizingBooking) return;
+    if ((e.target as HTMLElement).closest('[data-resize-handle]')) return;
+    // Only main button (left click / first touch)
+    if (e.button !== undefined && e.button !== 0 && e.pointerType === 'mouse') return;
+
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const offsetX = e.clientX - rect.left;
+    const offsetY = e.clientY - rect.top;
+    const startX = e.clientX;
+    const startY = e.clientY;
+    let dragStarted = false;
+
+    const serviceLabel = (() => {
+      try {
+        const svcs = typeof booking.servicesJson === 'string' ? JSON.parse(booking.servicesJson) : booking.servicesJson;
+        return svcs?.[0]?.name || booking.service || booking.client;
+      } catch { return booking.client; }
+    })();
+
+    const onMove = (me: PointerEvent) => {
+      if (!dragStarted) {
+        const dist = Math.hypot(me.clientX - startX, me.clientY - startY);
+        if (dist < 8) return;
+        dragStarted = true;
+        pDragRef.current = { appointment: booking, offsetX, offsetY, targetStaff: booking.staff, targetTime: booking.startTime };
+        setDraggedAppointment(booking);
+        setPDragGhost({ x: me.clientX - offsetX, y: me.clientY - offsetY, w: rect.width, h: rect.height, color, label: serviceLabel });
+      }
+      if (!pDragRef.current) return;
+
+      // Find slot under pointer (ghost is pointer-events:none so it won't block)
+      const el = document.elementFromPoint(me.clientX, me.clientY) as HTMLElement | null;
+      const slotEl = el?.closest('[data-slot-staff]') as HTMLElement | null;
+      if (slotEl?.dataset.slotStaff && slotEl?.dataset.slotTime) {
+        pDragRef.current.targetStaff = slotEl.dataset.slotStaff;
+        pDragRef.current.targetTime = slotEl.dataset.slotTime;
+        setDragOverSlot({ staff: slotEl.dataset.slotStaff, time: slotEl.dataset.slotTime });
+      }
+
+      const nx = me.clientX - offsetX;
+      const ny = me.clientY - offsetY;
+      if (dragRafRef.current) cancelAnimationFrame(dragRafRef.current);
+      dragRafRef.current = requestAnimationFrame(() => {
+        setPDragGhost(prev => prev ? { ...prev, x: nx, y: ny } : null);
+      });
+    };
+
+    const onUp = async () => {
+      window.removeEventListener('pointermove', onMove);
+      if (dragRafRef.current) cancelAnimationFrame(dragRafRef.current);
+
+      if (!dragStarted) return; // was a tap — let onClick fire normally
+
+      dragJustCompleted.current = true;
+      const drag = pDragRef.current;
+      pDragRef.current = null;
+      setPDragGhost(null);
+      setDraggedAppointment(null);
+      setDragOverSlot(null);
+
+      if (drag && (drag.targetStaff !== drag.appointment.staff || drag.targetTime !== drag.appointment.startTime)) {
+        await handleDropExec(drag.appointment, drag.targetStaff, drag.targetTime);
+      }
+    };
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp, { once: true });
+  }, [canEdit, resizingBooking]);
 
   // Resize appointment by dragging the bottom handle
   const resizeMutation = useMutation({
@@ -2482,7 +2521,7 @@ export default function Planning() {
                     <div
                       key={`${s.id}-${hour}-covered`}
                       className={cn(
-                        "pointer-events-none",
+                        "",
                         staffIndex < staffList.length - 1 && (isRtl ? "border-l border-slate-200 dark:border-slate-600" : "border-r border-slate-200 dark:border-slate-600"),
                         covIsHour && "border-t-2 border-t-slate-300 dark:border-t-slate-500",
                         covIsHalf && "border-t border-t-slate-200 dark:border-t-slate-600",
@@ -2490,6 +2529,8 @@ export default function Planning() {
                         covHourGroup % 2 === 0 ? "bg-white dark:bg-slate-900" : "bg-slate-50/60 dark:bg-slate-800/40"
                       )}
                       style={{ gridColumn: colNum, gridRow: rowNum }}
+                      data-slot-staff={s.name}
+                      data-slot-time={hour}
                     />
                   );
                 }
@@ -2515,10 +2556,11 @@ export default function Planning() {
                       <div 
                         className={cn(
                           booking.paid
-                            ? "appointment-card h-full text-white cursor-grab active:cursor-grabbing relative rounded-md shadow-md"
-                            : "appointment-card h-full cursor-grab active:cursor-grabbing relative rounded-md shadow-sm",
+                            ? "appointment-card h-full text-white relative rounded-md shadow-md"
+                            : "appointment-card h-full relative rounded-md shadow-sm",
                           span <= 2 ? "flex items-center gap-1 px-1.5 py-0.5" : span <= 4 ? "flex flex-col px-1.5 py-1" : "flex flex-col px-2 py-1.5",
-                          isDragging && "opacity-50 scale-95",
+                          canEdit && !isResizing ? "cursor-grab active:cursor-grabbing touch-none" : "",
+                          isDragging && "opacity-40 scale-95 saturate-50",
                           isResizing && "ring-2 ring-white/60 ring-inset shadow-xl",
                           isConflicting && "ring-2 ring-amber-400 ring-inset"
                         )}
@@ -2528,11 +2570,10 @@ export default function Planning() {
                             : `linear-gradient(135deg, ${s.color}77, ${s.color}55)`,
                           cursor: canEdit ? 'grab' : 'default',
                           border: booking.paid ? 'none' : `1.5px solid ${s.color}bb`,
+                          transition: 'opacity 0.15s, transform 0.15s, filter 0.15s',
                         }}
-                        draggable={canEdit && !isResizing}
-                        onDragStart={(e) => handleDragStart(e, booking)}
-                        onDragEnd={handleDragEnd}
-                        onClick={(e) => { if (!isResizing) handleAppointmentClick(e, booking); }}
+                        onPointerDown={(e) => { if (canEdit && !isResizing) handleCardPointerDown(e, booking, s.color); }}
+                        onClick={(e) => { if (!isResizing && !dragJustCompleted.current) handleAppointmentClick(e, booking); dragJustCompleted.current = false; }}
                       >
                         <div className="water-shimmer absolute inset-0 opacity-30" />
                         {isConflicting && (
@@ -2662,6 +2703,7 @@ export default function Planning() {
                         {/* Resize handle — drag to adjust appointment duration */}
                         {canEdit && (
                           <div
+                            data-resize-handle="true"
                             className="absolute bottom-0 left-0 right-0 h-4 flex items-end justify-center pb-0.5 z-30 cursor-ns-resize touch-none"
                             onPointerDown={(e) => {
                               e.stopPropagation();
@@ -2707,9 +2749,8 @@ export default function Planning() {
                       gridColumn: colNum,
                       gridRow: rowNum
                     }}
-                    onDragOver={(e) => handleDragOver(e, s.name, hour)}
-                    onDragLeave={handleDragLeave}
-                    onDrop={(e) => handleDrop(e, s.name, hour)}
+                    data-slot-staff={s.name}
+                    data-slot-time={hour}
                     onClick={() => handleSlotClick(s.name, hour)}
                   />
                 );
@@ -2719,6 +2760,35 @@ export default function Planning() {
           </div>
         </div>
       </div>
+
+      {/* Smooth drag ghost — follows pointer/finger exactly */}
+      {pDragGhost && (
+        <div
+          className="fixed z-[9999] pointer-events-none select-none drag-ghost-enter"
+          style={{
+            left: pDragGhost.x,
+            top: pDragGhost.y,
+            width: pDragGhost.w,
+            height: Math.max(pDragGhost.h, 36),
+            willChange: 'transform, left, top',
+          }}
+        >
+          <div
+            className="h-full w-full rounded-lg flex flex-col justify-center px-2 py-1 overflow-hidden"
+            style={{
+              background: `linear-gradient(135deg, ${pDragGhost.color}f0, ${pDragGhost.color}cc)`,
+              border: `2px solid white`,
+              boxShadow: `0 16px 40px ${pDragGhost.color}55, 0 4px 12px rgba(0,0,0,0.25), 0 0 0 1px ${pDragGhost.color}88`,
+              transform: 'scale(1.06) rotate(-1.5deg)',
+            }}
+          >
+            <div className="absolute inset-0 water-shimmer opacity-40" />
+            <span className="relative z-10 text-white font-bold text-[11px] leading-tight truncate drop-shadow-sm">
+              {pDragGhost.label}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Appointment Dialog - iOS Liquid Glass */}
       <Dialog open={isDialogOpen} onOpenChange={(open) => {
