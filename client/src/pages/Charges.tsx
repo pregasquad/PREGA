@@ -1,4 +1,5 @@
 import { useState, useRef, useMemo, useEffect } from "react";
+import { calcAppointmentCommission } from "@/lib/commissionCalc";
 import { getWorkDayDate } from "@/lib/workday";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, startOfMonth, endOfMonth, parseISO, isWithinInterval, subMonths, addMonths } from "date-fns";
@@ -376,26 +377,14 @@ export default function Charges() {
     let totalCommissions = 0;
     let totalRevenue = 0;
     for (const app of monthApts) {
-      const total = Number(app.total || 0);
-      totalRevenue += total;
-      const service = (services as any[]).find((s: any) => s.name === app.service);
-      let commissionRate = service?.commissionPercent ?? 50;
-      if (service) {
-        const staffMember = (staffList as any[]).find((s: any) => s.name === app.staff || s.id === app.staffId);
-        if (staffMember) {
-          const customComm = (staffCommissions as any[]).find(
-            (c: any) => c.staffId === staffMember.id && c.serviceId === service.id
-          );
-          if (customComm) commissionRate = customComm.percentage;
-        }
-      }
-      totalCommissions += total * (commissionRate / 100);
+      totalRevenue += Number(app.total || 0);
+      totalCommissions += calcAppointmentCommission(app, services, staffList, staffCommissions);
     }
     return totalRevenue - totalCommissions;
   }, [appointments, monthStart, monthEnd, services, staffList, staffCommissions]);
 
-  const totalCharges = filteredCharges.reduce((sum: number, c: any) => sum + c.amount, 0);
-  const totalWithdrawals = filteredWithdrawals.reduce((sum: number, w: any) => sum + w.amount, 0);
+  const totalCharges = filteredCharges.reduce((sum: number, c: any) => sum + Number(c.amount || 0), 0);
+  const totalWithdrawals = filteredWithdrawals.reduce((sum: number, w: any) => sum + Number(w.amount || 0), 0);
   const netRemaining = monthRevenue - totalWithdrawals - totalCharges;
 
   return (

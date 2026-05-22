@@ -1,4 +1,5 @@
 import { useAppointments, useStaff, useServices, useClients, useCategories, useBusinessSettings } from "@/hooks/use-salon-data";
+import { calcAppointmentCommission } from "@/lib/commissionCalc";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Scissors, CalendarCheck, TrendingUp, Clock, Package, UserPlus, Pencil, Trash2, LogOut, AlertTriangle, Banknote, CreditCard, RefreshCw, ClipboardCheck, CheckCircle2, XCircle, CircleDot, ArrowUpRight, ArrowDownRight, Minus, Bell, BellRing, ChevronDown, ChevronUp } from "lucide-react";
@@ -429,18 +430,10 @@ export default function Home() {
     const paidRevenue = appointments.filter((app: any) => app.paid).reduce((sum, app: any) => sum + (app.total || 0), 0);
     const unpaidRevenue = totalRevenue - paidRevenue;
 
+    // Commissions computed only on PAID appointments — unpaid cash isn't in the register yet
     let totalCommissions = 0;
-    appointments.forEach((app: any) => {
-      const service = services.find((s: any) => s.name === app.service);
-      let commissionRate = service?.commissionPercent ?? 50;
-      if (service) {
-        const staffMember = staff.find((s: any) => s.name === app.staff || s.id === app.staffId);
-        if (staffMember) {
-          const customComm = staffCommissions.find(c => c.staffId === staffMember.id && c.serviceId === service.id);
-          if (customComm) commissionRate = customComm.percentage;
-        }
-      }
-      totalCommissions += (app.total || 0) * (commissionRate / 100);
+    appointments.filter((app: any) => app.paid).forEach((app: any) => {
+      totalCommissions += calcAppointmentCommission(app, services, staff, staffCommissions);
     });
 
     return { totalRevenue, paidRevenue, unpaidRevenue, totalCommissions, count: appointments.length };

@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from "react";
+import { calcAppointmentCommission } from "@/lib/commissionCalc";
 import { getWorkDayDate } from "@/lib/workday";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -166,16 +167,7 @@ export default function Reports() {
 
     let totalCommissions = 0;
     filteredAppointments.forEach((app: any) => {
-      const service = services.find((s: any) => s.name === app.service);
-      let commissionRate = service?.commissionPercent ?? 50;
-      if (service) {
-        const staffMember = staffList.find((s: any) => s.name === app.staff || s.id === app.staffId);
-        if (staffMember) {
-          const customComm = staffCommissions.find(c => c.staffId === staffMember.id && c.serviceId === service.id);
-          if (customComm) commissionRate = customComm.percentage;
-        }
-      }
-      totalCommissions += Number(app.total || 0) * (commissionRate / 100);
+      totalCommissions += calcAppointmentCommission(app, services, staffList, staffCommissions);
     });
 
     const salonPortion = totalRevenue - totalCommissions;
