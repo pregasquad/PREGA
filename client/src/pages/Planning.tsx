@@ -1810,6 +1810,29 @@ export default function Planning() {
     const startY = e.clientY;
     let dragStarted = false;
 
+    // Edge-scroll state — live pointer coords updated every pointermove
+    let lastPX = e.clientX;
+    let lastPY = e.clientY;
+    let edgeScrollRafId: number | null = null;
+
+    const doEdgeScroll = () => {
+      const board = boardRef.current;
+      if (!board || !pDragRef.current) { edgeScrollRafId = null; return; }
+      const r = board.getBoundingClientRect();
+      const EDGE = 80;   // px from edge to activate
+      const MAX_SPD = 14; // px per frame at the very edge
+      let sx = 0, sy = 0;
+      const dl = lastPX - r.left,  dr = r.right  - lastPX;
+      const dt = lastPY - r.top,   db = r.bottom  - lastPY;
+      if (dl >= 0 && dl < EDGE) sx = -Math.ceil((1 - dl / EDGE) * MAX_SPD);
+      if (dr >= 0 && dr < EDGE) sx =  Math.ceil((1 - dr / EDGE) * MAX_SPD);
+      if (dt >= 0 && dt < EDGE) sy = -Math.ceil((1 - dt / EDGE) * MAX_SPD);
+      if (db >= 0 && db < EDGE) sy =  Math.ceil((1 - db / EDGE) * MAX_SPD);
+      if (sx !== 0) board.scrollLeft += sx;
+      if (sy !== 0) board.scrollTop  += sy;
+      edgeScrollRafId = requestAnimationFrame(doEdgeScroll);
+    };
+
     const serviceLabel = (() => {
       try {
         const svcs = typeof booking.servicesJson === 'string' ? JSON.parse(booking.servicesJson) : booking.servicesJson;
@@ -1820,6 +1843,8 @@ export default function Planning() {
     const onMove = (me: PointerEvent) => {
       // Always block text selection while the pointer is held down
       me.preventDefault();
+      lastPX = me.clientX;
+      lastPY = me.clientY;
 
       if (!dragStarted) {
         const dist = Math.hypot(me.clientX - startX, me.clientY - startY);
@@ -1832,6 +1857,8 @@ export default function Planning() {
         pDragRef.current = { appointment: booking, offsetX, offsetY, targetStaff: booking.staff, targetTime: booking.startTime };
         setDraggedAppointment(booking);
         setPDragGhost({ x: me.clientX - offsetX, y: me.clientY - offsetY, w: rect.width, h: rect.height, color, label: serviceLabel });
+        // Start the edge-scroll loop
+        edgeScrollRafId = requestAnimationFrame(doEdgeScroll);
       }
       if (!pDragRef.current) return;
 
@@ -1855,6 +1882,8 @@ export default function Planning() {
     const onUp = async () => {
       window.removeEventListener('pointermove', onMove);
       if (dragRafRef.current) cancelAnimationFrame(dragRafRef.current);
+      // Stop edge scrolling
+      if (edgeScrollRafId !== null) { cancelAnimationFrame(edgeScrollRafId); edgeScrollRafId = null; }
 
       // Always restore selection capability on release
       document.body.style.userSelect = '';
