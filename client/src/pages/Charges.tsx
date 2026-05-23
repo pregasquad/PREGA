@@ -1,5 +1,4 @@
 import { useState, useRef, useMemo, useEffect } from "react";
-import { calcAppointmentCommission } from "@/lib/commissionCalc";
 import { getWorkDayDate } from "@/lib/workday";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, startOfMonth, endOfMonth, parseISO, isWithinInterval, subMonths, addMonths } from "date-fns";
@@ -15,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, TrendingDown, FolderPlus, RefreshCw, ChevronLeft, ChevronRight, Calendar, Paperclip, X, Image, FileText, Wallet, TrendingUp, ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
 import { autoPrintExpense } from "@/lib/printReceipt";
-import { useBusinessSettings, useStaff, useServices } from "@/hooks/use-salon-data";
+import { useBusinessSettings } from "@/hooks/use-salon-data";
 import { refreshSalariesBackground } from "@/lib/salariesRefresher";
 
 const DEFAULT_CHARGE_TYPES_KEYS = [
@@ -85,14 +84,10 @@ export default function Charges() {
     queryKey: ["/api/owner-withdrawals"],
   });
 
-  const { data: appointments = [] } = useQuery<any[]>({
-    queryKey: ["/api/appointments"],
-  });
-
-  const { data: staffList = [] } = useStaff();
-  const { data: services = [] } = useServices();
-  const { data: staffCommissions = [] } = useQuery<any[]>({
-    queryKey: ["/api/staff-commissions"],
+  // Use the same data source as Salaries so salonPortion is always identical
+  const { data: salaryData } = useQuery<any>({
+    queryKey: ["/api/salaries/compute"],
+    staleTime: 0,
   });
 
   const defaultChargeTypes = DEFAULT_CHARGE_TYPES_KEYS.map(item => ({
@@ -366,22 +361,49 @@ export default function Charges() {
     }
   });
 
+  // Mirror Salaries.tsx exactly: same data, same staff-resolution, same commission lookup
   const monthRevenue = useMemo(() => {
-    const monthApts = (appointments as any[]).filter((a: any) => {
+    const allAppointments: any[] = salaryData?.appointments ?? [];
+    const allStaff: any[] = salaryData?.staff ?? [];
+    const allServices: any[] = salaryData?.services ?? [];
+    const allStaffCommissions: any[] = salaryData?.staffCommissions ?? [];
+
+    const getServiceCommission = (serviceName: string, staffName: string): number => {
+      const service = allServices.find((s: any) => s.name === serviceName);
+      if (!service) return 50;
+      if (staffName) {
+        const staffMember = allStaff.find((s: any) => s.name === staffName);
+        if (staffMember) {
+          const custom = allStaffCommissions.find(
+            (c: any) => c.staffId === staffMember.id && c.serviceId === service.id
+          );
+          if (custom != null) return custom.percentage;
+        }
+      }
+      return service.commissionPercent ?? 50;
+    };
+
+    const monthApts = allAppointments.filter((a: any) => {
       if (!a.paid || !a.date) return false;
       try {
         return isWithinInterval(parseISO(a.date), { start: monthStart, end: monthEnd });
       } catch { return false; }
     });
 
-    let totalCommissions = 0;
     let totalRevenue = 0;
+    let totalCommissions = 0;
     for (const app of monthApts) {
+      const resolvedStaff = app.staffId
+        ? allStaff.find((s: any) => s.id === Number(app.staffId))
+        : allStaff.find((s: any) => s.name === app.staff);
+      const staffName = resolvedStaff?.name || app.staff || "";
+      const serviceName = app.service || "";
+      const rate = getServiceCommission(serviceName, staffName);
       totalRevenue += Number(app.total || 0);
-      totalCommissions += calcAppointmentCommission(app, services, staffList, staffCommissions);
+      totalCommissions += Number(app.total || 0) * (rate / 100);
     }
     return totalRevenue - totalCommissions;
-  }, [appointments, monthStart, monthEnd, services, staffList, staffCommissions]);
+  }, [salaryData, monthStart, monthEnd]);
 
   const totalCharges = filteredCharges.reduce((sum: number, c: any) => sum + Number(c.amount || 0), 0);
   const totalWithdrawals = filteredWithdrawals.reduce((sum: number, w: any) => sum + Number(w.amount || 0), 0);

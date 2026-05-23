@@ -2139,6 +2139,130 @@ export async function ensureOwnerWithdrawalsTable(): Promise<void> {
   }
 }
 
+// Comprehensive migration: add ALL missing columns to the staff table (Postgres only)
+export async function ensureStaffColumnsPostgres(): Promise<void> {
+  if (dbDialect === 'mysql') return;
+  try {
+    await pool.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='staff' AND column_name='photo_url') THEN
+          ALTER TABLE staff ADD COLUMN photo_url TEXT;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='staff' AND column_name='categories') THEN
+          ALTER TABLE staff ADD COLUMN categories TEXT;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='staff' AND column_name='public_token') THEN
+          ALTER TABLE staff ADD COLUMN public_token TEXT;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='staff' AND column_name='gender') THEN
+          ALTER TABLE staff ADD COLUMN gender VARCHAR(10) NOT NULL DEFAULT 'female';
+        END IF;
+      END $$;
+    `);
+    console.log("Staff columns ready (Postgres)");
+  } catch (error) {
+    console.error("Failed to ensure staff columns (Postgres):", error);
+  }
+}
+
+// Compatibility alias for index.ts import
+export const ensureStaffPhotoUrlColumn = ensureStaffColumnsPostgres;
+
+// Comprehensive migration: add ALL possibly-missing columns across all tables (Postgres only)
+export async function ensureLoyaltyColumnsInSettings(): Promise<void> {
+  if (dbDialect === 'mysql') return;
+  try {
+    // --- business_settings ---
+    await pool.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='business_settings' AND column_name='maps_link') THEN ALTER TABLE business_settings ADD COLUMN maps_link TEXT; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='business_settings' AND column_name='logo') THEN ALTER TABLE business_settings ADD COLUMN logo TEXT; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='business_settings' AND column_name='address') THEN ALTER TABLE business_settings ADD COLUMN address TEXT; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='business_settings' AND column_name='phone') THEN ALTER TABLE business_settings ADD COLUMN phone VARCHAR(50); END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='business_settings' AND column_name='email') THEN ALTER TABLE business_settings ADD COLUMN email VARCHAR(255); END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='business_settings' AND column_name='working_days') THEN ALTER TABLE business_settings ADD COLUMN working_days JSONB NOT NULL DEFAULT '[1,2,3,4,5,6]'; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='business_settings' AND column_name='loyalty_enabled') THEN ALTER TABLE business_settings ADD COLUMN loyalty_enabled BOOLEAN NOT NULL DEFAULT TRUE; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='business_settings' AND column_name='loyalty_points_per_dh') THEN ALTER TABLE business_settings ADD COLUMN loyalty_points_per_dh INTEGER NOT NULL DEFAULT 1; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='business_settings' AND column_name='loyalty_points_value') THEN ALTER TABLE business_settings ADD COLUMN loyalty_points_value DOUBLE PRECISION NOT NULL DEFAULT 0.1; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='business_settings' AND column_name='referral_bonus_points') THEN ALTER TABLE business_settings ADD COLUMN referral_bonus_points INTEGER NOT NULL DEFAULT 100; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='business_settings' AND column_name='referral_bonus_referee') THEN ALTER TABLE business_settings ADD COLUMN referral_bonus_referee INTEGER NOT NULL DEFAULT 50; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='business_settings' AND column_name='cancellation_hours') THEN ALTER TABLE business_settings ADD COLUMN cancellation_hours INTEGER NOT NULL DEFAULT 24; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='business_settings' AND column_name='auto_lock_enabled') THEN ALTER TABLE business_settings ADD COLUMN auto_lock_enabled BOOLEAN NOT NULL DEFAULT FALSE; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='business_settings' AND column_name='planning_shortcuts') THEN ALTER TABLE business_settings ADD COLUMN planning_shortcuts JSONB NOT NULL DEFAULT '["services","clients","salaries","inventory"]'; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='business_settings' AND column_name='tts_voice') THEN ALTER TABLE business_settings ADD COLUMN tts_voice VARCHAR(50) NOT NULL DEFAULT 'Aoede'; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='business_settings' AND column_name='tts_enabled') THEN ALTER TABLE business_settings ADD COLUMN tts_enabled BOOLEAN NOT NULL DEFAULT TRUE; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='business_settings' AND column_name='lina_personality') THEN ALTER TABLE business_settings ADD COLUMN lina_personality TEXT NOT NULL DEFAULT '["warm"]'; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='business_settings' AND column_name='bot_enabled') THEN ALTER TABLE business_settings ADD COLUMN bot_enabled BOOLEAN NOT NULL DEFAULT TRUE; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='business_settings' AND column_name='bot_filter_mode') THEN ALTER TABLE business_settings ADD COLUMN bot_filter_mode VARCHAR(20) NOT NULL DEFAULT 'all'; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='business_settings' AND column_name='bot_filter_numbers') THEN ALTER TABLE business_settings ADD COLUMN bot_filter_numbers TEXT; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='business_settings' AND column_name='boss_instructions') THEN ALTER TABLE business_settings ADD COLUMN boss_instructions TEXT; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='business_settings' AND column_name='planning_slot_height') THEN ALTER TABLE business_settings ADD COLUMN planning_slot_height INTEGER NOT NULL DEFAULT 44; END IF;
+      END $$;
+    `);
+    console.log("Business settings columns ready (Postgres)");
+  } catch (error) {
+    console.error("Failed to ensure business_settings columns:", error);
+  }
+
+  try {
+    // --- services ---
+    await pool.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='services' AND column_name='linked_product_ids') THEN ALTER TABLE services ADD COLUMN linked_product_ids JSONB DEFAULT '[]'; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='services' AND column_name='loyalty_points_multiplier') THEN ALTER TABLE services ADD COLUMN loyalty_points_multiplier INTEGER NOT NULL DEFAULT 1; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='services' AND column_name='is_starting_price') THEN ALTER TABLE services ADD COLUMN is_starting_price BOOLEAN NOT NULL DEFAULT FALSE; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='services' AND column_name='max_price') THEN ALTER TABLE services ADD COLUMN max_price DOUBLE PRECISION; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='services' AND column_name='emoji') THEN ALTER TABLE services ADD COLUMN emoji VARCHAR(10); END IF;
+      END $$;
+    `);
+    console.log("Services columns ready (Postgres)");
+  } catch (error) {
+    console.error("Failed to ensure services columns:", error);
+  }
+
+  try {
+    // --- clients ---
+    await pool.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='clients' AND column_name='loyalty_points') THEN ALTER TABLE clients ADD COLUMN loyalty_points INTEGER NOT NULL DEFAULT 0; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='clients' AND column_name='loyalty_enrolled') THEN ALTER TABLE clients ADD COLUMN loyalty_enrolled BOOLEAN NOT NULL DEFAULT FALSE; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='clients' AND column_name='use_points') THEN ALTER TABLE clients ADD COLUMN use_points BOOLEAN NOT NULL DEFAULT FALSE; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='clients' AND column_name='gift_card_balance') THEN ALTER TABLE clients ADD COLUMN gift_card_balance DOUBLE PRECISION NOT NULL DEFAULT 0; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='clients' AND column_name='use_gift_card_balance') THEN ALTER TABLE clients ADD COLUMN use_gift_card_balance BOOLEAN NOT NULL DEFAULT FALSE; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='clients' AND column_name='total_visits') THEN ALTER TABLE clients ADD COLUMN total_visits INTEGER NOT NULL DEFAULT 0; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='clients' AND column_name='total_spent') THEN ALTER TABLE clients ADD COLUMN total_spent DOUBLE PRECISION NOT NULL DEFAULT 0; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='clients' AND column_name='referred_by') THEN ALTER TABLE clients ADD COLUMN referred_by INTEGER; END IF;
+      END $$;
+    `);
+    console.log("Clients columns ready (Postgres)");
+  } catch (error) {
+    console.error("Failed to ensure clients columns:", error);
+  }
+
+  try {
+    // --- appointments extra columns (beyond what existing ensure fns cover) ---
+    await pool.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='appointments' AND column_name='loyalty_points_earned') THEN ALTER TABLE appointments ADD COLUMN loyalty_points_earned INTEGER DEFAULT 0; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='appointments' AND column_name='loyalty_discount_amount') THEN ALTER TABLE appointments ADD COLUMN loyalty_discount_amount DOUBLE PRECISION DEFAULT 0; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='appointments' AND column_name='loyalty_points_redeemed') THEN ALTER TABLE appointments ADD COLUMN loyalty_points_redeemed INTEGER DEFAULT 0; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='appointments' AND column_name='gift_card_discount_amount') THEN ALTER TABLE appointments ADD COLUMN gift_card_discount_amount DOUBLE PRECISION DEFAULT 0; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='appointments' AND column_name='phone') THEN ALTER TABLE appointments ADD COLUMN phone TEXT; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='appointments' AND column_name='discount_amount') THEN ALTER TABLE appointments ADD COLUMN discount_amount DOUBLE PRECISION DEFAULT 0; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='appointments' AND column_name='discount_reason') THEN ALTER TABLE appointments ADD COLUMN discount_reason TEXT; END IF;
+      END $$;
+    `);
+    console.log("Appointments extra columns ready (Postgres)");
+  } catch (error) {
+    console.error("Failed to ensure appointments extra columns:", error);
+  }
+}
+
 export async function ensureBusinessSettingsRow(): Promise<void> {
   try {
     const currentDb = db;
