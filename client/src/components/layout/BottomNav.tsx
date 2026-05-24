@@ -125,18 +125,18 @@ export function BottomNav() {
         className="md:hidden fixed bottom-0 left-0 right-0 z-50"
         style={{
           paddingBottom: "env(safe-area-inset-bottom)",
-          background: "rgba(2,12,27,0.88)",
+          background: "rgba(38,18,28,0.92)",
           backdropFilter: "blur(20px)",
           WebkitBackdropFilter: "blur(20px)",
-          borderTop: "1px solid rgba(125,211,252,0.12)",
-          boxShadow: "0 -8px 32px rgba(0,100,200,0.12)",
+          borderTop: "1px solid rgba(237,89,145,0.15)",
+          boxShadow: "0 -8px 32px rgba(237,89,145,0.1)",
         }}
         data-testid="bottom-nav"
       >
         {/* Top water shimmer line */}
         <div
           className="absolute top-0 left-0 right-0 h-px pointer-events-none"
-          style={{ background: "linear-gradient(90deg, transparent 0%, rgba(56,189,248,0.4) 30%, rgba(125,211,252,0.6) 50%, rgba(56,189,248,0.4) 70%, transparent 100%)" }}
+          style={{ background: "linear-gradient(90deg, transparent 0%, rgba(237,89,145,0.4) 30%, rgba(237,89,145,0.65) 50%, rgba(237,89,145,0.4) 70%, transparent 100%)" }}
         />
 
         <div className="flex items-stretch h-16">
@@ -149,7 +149,7 @@ export function BottomNav() {
                 type="button"
                 onClick={() => handleNavClick(tab.route)}
                 className="flex-1 flex flex-col items-center justify-center gap-1 relative transition-all duration-200"
-                style={{ color: isActive ? "#7dd3fc" : "rgba(148,163,184,0.65)" }}
+                style={{ color: isActive ? "#f472b6" : "rgba(148,163,184,0.65)" }}
                 data-testid={`bottom-nav-${tab.key}`}
               >
                 {/* Glass water active pill */}
@@ -157,9 +157,9 @@ export function BottomNav() {
                   <span
                     className="absolute inset-x-1.5 inset-y-1 rounded-xl pointer-events-none"
                     style={{
-                      background: "linear-gradient(180deg, rgba(56,189,248,0.18) 0%, rgba(14,165,233,0.06) 100%)",
-                      border: "1px solid rgba(125,211,252,0.22)",
-                      boxShadow: "0 0 14px rgba(56,189,248,0.18), inset 0 1px 0 rgba(255,255,255,0.07)",
+                      background: "linear-gradient(180deg, rgba(237,89,145,0.22) 0%, rgba(237,89,145,0.06) 100%)",
+                      border: "1px solid rgba(237,89,145,0.28)",
+                      boxShadow: "0 0 14px rgba(237,89,145,0.2), inset 0 1px 0 rgba(255,255,255,0.1)",
                     }}
                   />
                 )}
@@ -168,8 +168,8 @@ export function BottomNav() {
                   <span
                     className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-b-full"
                     style={{
-                      background: "linear-gradient(90deg, transparent, #38bdf8, transparent)",
-                      boxShadow: "0 0 8px #38bdf8",
+                      background: "linear-gradient(90deg, transparent, #f472b6, transparent)",
+                      boxShadow: "0 0 8px #f472b6",
                     }}
                   />
                 )}
@@ -178,13 +178,13 @@ export function BottomNav() {
                   style={{
                     transform: isActive ? "scale(1.15) translateY(-1px)" : "scale(1)",
                     transition: "transform 0.2s",
-                    filter: isActive ? "drop-shadow(0 0 5px rgba(56,189,248,0.8))" : "none",
+                    filter: isActive ? "drop-shadow(0 0 5px rgba(237,89,145,0.8))" : "none",
                   }}
                   strokeWidth={isActive ? 2.5 : 1.75}
                 />
                 <span
                   className="text-[10px] font-medium leading-none relative"
-                  style={{ textShadow: isActive ? "0 0 8px rgba(56,189,248,0.7)" : "none" }}
+                  style={{ textShadow: isActive ? "0 0 8px rgba(237,89,145,0.7)" : "none" }}
                 >
                   {t(tab.labelKey)}
                 </span>
@@ -197,16 +197,16 @@ export function BottomNav() {
             type="button"
             onClick={() => setMoreOpen(true)}
             className="flex-1 flex flex-col items-center justify-center gap-1 relative transition-all duration-200"
-            style={{ color: isMoreActive ? "#7dd3fc" : "rgba(148,163,184,0.65)" }}
+            style={{ color: isMoreActive ? "#f472b6" : "rgba(148,163,184,0.65)" }}
             data-testid="bottom-nav-more"
           >
             {isMoreActive && (
               <span
                 className="absolute inset-x-1.5 inset-y-1 rounded-xl pointer-events-none"
                 style={{
-                  background: "linear-gradient(180deg, rgba(56,189,248,0.18) 0%, rgba(14,165,233,0.06) 100%)",
-                  border: "1px solid rgba(125,211,252,0.22)",
-                  boxShadow: "0 0 14px rgba(56,189,248,0.18), inset 0 1px 0 rgba(255,255,255,0.07)",
+                  background: "linear-gradient(180deg, rgba(237,89,145,0.22) 0%, rgba(237,89,145,0.06) 100%)",
+                  border: "1px solid rgba(237,89,145,0.28)",
+                  boxShadow: "0 0 14px rgba(237,89,145,0.2), inset 0 1px 0 rgba(255,255,255,0.1)",
                 }}
               />
             )}
@@ -214,8 +214,8 @@ export function BottomNav() {
               <span
                 className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-b-full"
                 style={{
-                  background: "linear-gradient(90deg, transparent, #38bdf8, transparent)",
-                  boxShadow: "0 0 8px #38bdf8",
+                  background: "linear-gradient(90deg, transparent, #f472b6, transparent)",
+                  boxShadow: "0 0 8px #f472b6",
                 }}
               />
             )}
@@ -223,7 +223,7 @@ export function BottomNav() {
               <MoreHorizontal
                 className="w-5 h-5"
                 strokeWidth={isMoreActive ? 2.5 : 1.75}
-                style={{ filter: isMoreActive ? "drop-shadow(0 0 5px rgba(56,189,248,0.8))" : "none" }}
+                style={{ filter: isMoreActive ? "drop-shadow(0 0 5px rgba(237,89,145,0.8))" : "none" }}
               />
               {hasBadge && (
                 <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full border border-background" />
@@ -231,7 +231,7 @@ export function BottomNav() {
             </div>
             <span
               className="text-[10px] font-medium leading-none relative"
-              style={{ textShadow: isMoreActive ? "0 0 8px rgba(56,189,248,0.7)" : "none" }}
+              style={{ textShadow: isMoreActive ? "0 0 8px rgba(237,89,145,0.7)" : "none" }}
             >
               {t("nav.more")}
             </span>
