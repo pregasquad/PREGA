@@ -432,79 +432,106 @@ export default function Charges() {
   }, [salaryData, monthStart, monthEnd]);
 
   // Products budget: remaining % after manual staff commission + 50% salon share
-  // Only applies to appointments where staff has a MANUAL commission override
-  const monthProductsBudget = useMemo(() => {
+  // Returns BOTH this month's budget and cumulative (from start date) for carry-over
+  const productsBudgetData = useMemo(() => {
     const allAppointments: any[] = salaryData?.appointments ?? [];
     const allStaff: any[] = salaryData?.staff ?? [];
     const allServices: any[] = salaryData?.services ?? [];
     const allStaffCommissions: any[] = salaryData?.staffCommissions ?? [];
 
-    const monthApts = allAppointments.filter((a: any) => {
-      if (!a.paid || !a.date) return false;
-      try {
-        // Only count from feature activation date onward
-        return a.date >= productsStartDate && isWithinInterval(parseISO(a.date), { start: monthStart, end: monthEnd });
-      } catch { return false; }
-    });
+    const monthEndStr = format(monthEnd, "yyyy-MM-dd");
 
-    let budget = 0;
+    const calcBudgetForApts = (apts: any[]): number => {
+      let budget = 0;
+      for (const app of apts) {
+        const resolvedStaff = app.staffId
+          ? allStaff.find((s: any) => s.id === Number(app.staffId))
+          : allStaff.find((s: any) => s.name === app.staff);
 
-    for (const app of monthApts) {
-      const resolvedStaff = app.staffId
-        ? allStaff.find((s: any) => s.id === Number(app.staffId))
-        : allStaff.find((s: any) => s.name === app.staff);
+        let serviceItems: Array<{ name: string; price: number }> | null = null;
+        if (app.servicesJson) {
+          try {
+            const parsed = typeof app.servicesJson === "string" ? JSON.parse(app.servicesJson) : app.servicesJson;
+            if (Array.isArray(parsed) && parsed.length > 0) serviceItems = parsed;
+          } catch { serviceItems = null; }
+        }
 
-      // Try multi-service (servicesJson) first
-      let serviceItems: Array<{ name: string; price: number }> | null = null;
-      if (app.servicesJson) {
-        try {
-          const parsed = typeof app.servicesJson === "string" ? JSON.parse(app.servicesJson) : app.servicesJson;
-          if (Array.isArray(parsed) && parsed.length > 0) serviceItems = parsed;
-        } catch { serviceItems = null; }
-      }
-
-      if (serviceItems && serviceItems.length > 0) {
-        const sumPrices = serviceItems.reduce((s: number, i: any) => s + Number(i.price || 0), 0);
-        const appTotal = Number(app.total || 0);
-        const discountRatio = sumPrices > 0 && appTotal >= 0 && appTotal < sumPrices ? appTotal / sumPrices : 1;
-
-        for (const item of serviceItems) {
-          const effectivePrice = Number(item.price || 0) * discountRatio;
-          const svcDef = allServices.find((s: any) => s.name === item.name);
+        if (serviceItems && serviceItems.length > 0) {
+          const sumPrices = serviceItems.reduce((s: number, i: any) => s + Number(i.price || 0), 0);
+          const appTotal = Number(app.total || 0);
+          const discountRatio = sumPrices > 0 && appTotal >= 0 && appTotal < sumPrices ? appTotal / sumPrices : 1;
+          for (const item of serviceItems) {
+            const effectivePrice = Number(item.price || 0) * discountRatio;
+            const svcDef = allServices.find((s: any) => s.name === item.name);
+            if (!svcDef || !resolvedStaff) continue;
+            const manualComm = allStaffCommissions.find(
+              (c: any) => c.staffId === resolvedStaff.id && c.serviceId === svcDef.id
+            );
+            if (manualComm) {
+              budget += effectivePrice * (Math.max(0, 100 - manualComm.percentage - 50) / 100);
+            }
+          }
+        } else {
+          const svcDef = allServices.find((s: any) => s.name === (app.service || ""));
           if (!svcDef || !resolvedStaff) continue;
           const manualComm = allStaffCommissions.find(
             (c: any) => c.staffId === resolvedStaff.id && c.serviceId === svcDef.id
           );
           if (manualComm) {
-            const remaining = Math.max(0, 100 - manualComm.percentage - 50);
-            budget += effectivePrice * (remaining / 100);
+            budget += Number(app.total || 0) * (Math.max(0, 100 - manualComm.percentage - 50) / 100);
           }
         }
-      } else {
-        // Single-service fallback
-        const svcDef = allServices.find((s: any) => s.name === (app.service || ""));
-        if (!svcDef || !resolvedStaff) continue;
-        const manualComm = allStaffCommissions.find(
-          (c: any) => c.staffId === resolvedStaff.id && c.serviceId === svcDef.id
-        );
-        if (manualComm) {
-          const remaining = Math.max(0, 100 - manualComm.percentage - 50);
-          budget += Number(app.total || 0) * (remaining / 100);
-        }
       }
-    }
+      return budget;
+    };
 
-    return budget;
+    const isValidPaid = (a: any) => !!(a.paid && a.date);
+
+    // This month only (from productsStartDate if it falls within the month)
+    const monthApts = allAppointments.filter((a: any) => {
+      if (!isValidPaid(a)) return false;
+      try { return a.date >= productsStartDate && isWithinInterval(parseISO(a.date), { start: monthStart, end: monthEnd }); }
+      catch { return false; }
+    });
+
+    // Cumulative: from productsStartDate to end of selected month (carry-over source)
+    const cumulativeApts = allAppointments.filter((a: any) => {
+      if (!isValidPaid(a)) return false;
+      return a.date >= productsStartDate && a.date <= monthEndStr;
+    });
+
+    return {
+      monthly: calcBudgetForApts(monthApts),
+      cumulative: calcBudgetForApts(cumulativeApts),
+    };
   }, [salaryData, monthStart, monthEnd, productsStartDate]);
+
+  const monthProductsBudget = productsBudgetData.monthly;
+  const cumulativeProductsBudget = productsBudgetData.cumulative;
 
   const totalCharges = filteredCharges.reduce((sum: number, c: any) => sum + Number(c.amount || 0), 0);
   const totalWithdrawals = filteredWithdrawals.reduce((sum: number, w: any) => sum + Number(w.amount || 0), 0);
   const netRemaining = monthRevenue - totalWithdrawals - totalCharges;
 
-  // Product charges = charges with type "Produit" from activation date onward, in selected month
+  // This month's product charges (for the detail list)
   const productCharges = filteredCharges.filter((c: any) => c.type === "Produit" && c.date >= productsStartDate);
   const totalProductCharges = productCharges.reduce((sum: number, c: any) => sum + Number(c.amount || 0), 0);
-  const productBudgetRemaining = monthProductsBudget - totalProductCharges;
+
+  // Cumulative product charges from start date to end of selected month (for carry-over balance)
+  const monthEndStr = format(monthEnd, "yyyy-MM-dd");
+  const totalCumulativeProductCharges = (charges as any[])
+    .filter((c: any) => c.type === "Produit" && c.date >= productsStartDate && c.date <= monthEndStr)
+    .reduce((sum: number, c: any) => sum + Number(c.amount || 0), 0);
+
+  // Carry-over balance = all accumulated budget minus all accumulated spending
+  const carryOverBalance = cumulativeProductsBudget - totalCumulativeProductCharges;
+  // Previous months carry-over (balance before this month)
+  const prevMonthEndStr = format(new Date(monthStart.getFullYear(), monthStart.getMonth(), 0), "yyyy-MM-dd");
+  const prevCumulativeBudget = productsBudgetData.cumulative - monthProductsBudget;
+  const prevCumulativeSpending = (charges as any[])
+    .filter((c: any) => c.type === "Produit" && c.date >= productsStartDate && c.date <= prevMonthEndStr)
+    .reduce((sum: number, c: any) => sum + Number(c.amount || 0), 0);
+  const carryOver = prevCumulativeBudget - prevCumulativeSpending;
 
   const handleProductSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -833,24 +860,41 @@ export default function Charges() {
             {/* Budget summary */}
             <div className="p-3 bg-muted/40 rounded-lg border space-y-2">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">ملخص البجت</p>
+
+              {/* Carry-over from previous months */}
+              {carryOver !== 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">رصيد الشهور السابقة</span>
+                  <span className={`text-sm font-semibold ${carryOver >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"}`}>
+                    {carryOver >= 0 ? "+" : ""}{carryOver.toFixed(0)} {t("common.currency")}
+                  </span>
+                </div>
+              )}
+
+              {/* This month's new budget */}
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">البجت المحسوب</span>
+                <span className="text-sm text-muted-foreground">بجت هذا الشهر</span>
                 <span className="text-sm font-semibold text-violet-600 dark:text-violet-400">
                   + {monthProductsBudget.toFixed(0)} {t("common.currency")}
                 </span>
               </div>
+
+              {/* This month's spending */}
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">المشتريات هذا الشهر</span>
+                <span className="text-sm text-muted-foreground">مشتريات هذا الشهر</span>
                 <span className="text-sm font-semibold text-destructive">
                   - {totalProductCharges.toFixed(0)} {t("common.currency")}
                 </span>
               </div>
-              <div className={`flex items-center justify-between pt-1.5 border-t mt-1 ${productBudgetRemaining >= 0 ? "border-violet-300/40" : "border-red-300/40"}`}>
-                <span className="text-sm font-bold">الباقي</span>
-                <span className={`text-base font-bold ${productBudgetRemaining >= 0 ? "text-violet-600 dark:text-violet-400" : "text-destructive"}`}>
-                  {productBudgetRemaining.toFixed(0)} {t("common.currency")}
+
+              {/* Carry-over balance = the true remaining */}
+              <div className={`flex items-center justify-between pt-1.5 border-t mt-1 ${carryOverBalance >= 0 ? "border-violet-300/40" : "border-red-300/40"}`}>
+                <span className="text-sm font-bold">الرصيد المتراكم</span>
+                <span className={`text-base font-bold ${carryOverBalance >= 0 ? "text-violet-600 dark:text-violet-400" : "text-destructive"}`}>
+                  {carryOverBalance.toFixed(0)} {t("common.currency")}
                 </span>
               </div>
+
               <p className="text-xs text-muted-foreground pt-1 border-t mt-1">
                 يبدأ الحساب من: <span className="font-semibold">{productsStartDate}</span>
               </p>
