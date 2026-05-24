@@ -125,18 +125,18 @@ export function BottomNav() {
         className="md:hidden fixed bottom-0 left-0 right-0 z-50"
         style={{
           paddingBottom: "env(safe-area-inset-bottom)",
-          background: "rgba(38,18,28,0.92)",
-          backdropFilter: "blur(20px)",
-          WebkitBackdropFilter: "blur(20px)",
-          borderTop: "1px solid rgba(237,89,145,0.15)",
-          boxShadow: "0 -8px 32px rgba(237,89,145,0.1)",
+          background: "rgba(255, 245, 250, 0.88)",
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)",
+          borderTop: "1px solid rgba(237,89,145,0.18)",
+          boxShadow: "0 -4px 24px rgba(214,51,132,0.08), 0 -1px 0 rgba(255,255,255,0.8) inset",
         }}
         data-testid="bottom-nav"
       >
         {/* Top water shimmer line */}
         <div
           className="absolute top-0 left-0 right-0 h-px pointer-events-none"
-          style={{ background: "linear-gradient(90deg, transparent 0%, rgba(237,89,145,0.4) 30%, rgba(237,89,145,0.65) 50%, rgba(237,89,145,0.4) 70%, transparent 100%)" }}
+          style={{ background: "linear-gradient(90deg, transparent 0%, rgba(237,89,145,0.5) 30%, rgba(237,89,145,0.75) 50%, rgba(237,89,145,0.5) 70%, transparent 100%)" }}
         />
 
         <div className="flex items-stretch h-16">
@@ -149,7 +149,7 @@ export function BottomNav() {
                 type="button"
                 onClick={() => handleNavClick(tab.route)}
                 className="flex-1 flex flex-col items-center justify-center gap-1 relative transition-all duration-200"
-                style={{ color: isActive ? "#f472b6" : "rgba(148,163,184,0.65)" }}
+                style={{ color: isActive ? "#db2777" : "rgba(120,80,110,0.75)" }}
                 data-testid={`bottom-nav-${tab.key}`}
               >
                 {/* Glass water active pill */}
@@ -197,7 +197,7 @@ export function BottomNav() {
             type="button"
             onClick={() => setMoreOpen(true)}
             className="flex-1 flex flex-col items-center justify-center gap-1 relative transition-all duration-200"
-            style={{ color: isMoreActive ? "#f472b6" : "rgba(148,163,184,0.65)" }}
+            style={{ color: isMoreActive ? "#db2777" : "rgba(120,80,110,0.75)" }}
             data-testid="bottom-nav-more"
           >
             {isMoreActive && (
