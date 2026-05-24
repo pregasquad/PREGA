@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, TrendingDown, FolderPlus, RefreshCw, ChevronLeft, ChevronRight, Calendar, Paperclip, X, Image, FileText, Wallet, TrendingUp, ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Trash2, TrendingDown, FolderPlus, RefreshCw, ChevronLeft, ChevronRight, Calendar, Paperclip, X, Image, FileText, Wallet, TrendingUp, ArrowRight, ChevronDown, ChevronUp, ShoppingBag } from "lucide-react";
 import { autoPrintExpense } from "@/lib/printReceipt";
 import { useBusinessSettings } from "@/hooks/use-salon-data";
 import { refreshSalariesBackground } from "@/lib/salariesRefresher";
@@ -59,6 +59,8 @@ export default function Charges() {
     }
   }, [salonSettings?.openingTime, salonSettings?.closingTime]);
   const [withdrawalNotes, setWithdrawalNotes] = useState("");
+  const [productName, setProductName] = useState("");
+  const [productAmount, setProductAmount] = useState("");
 
   const getLocale = () => {
     switch (i18n.language) {
@@ -183,6 +185,21 @@ export default function Charges() {
       queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
       refreshSalariesBackground();
       toast({ title: t("expenses.expenseDeleted") });
+    },
+  });
+
+  const createProductMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/charges", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/charges"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+      refreshSalariesBackground();
+      setProductName("");
+      setProductAmount("");
+      toast({ title: t("expenses.expenseAdded") });
     },
   });
 
@@ -405,9 +422,95 @@ export default function Charges() {
     return totalRevenue - totalCommissions;
   }, [salaryData, monthStart, monthEnd]);
 
+  // Products budget: remaining % after manual staff commission + 50% salon share
+  // Only applies to appointments where staff has a MANUAL commission override
+  const monthProductsBudget = useMemo(() => {
+    const allAppointments: any[] = salaryData?.appointments ?? [];
+    const allStaff: any[] = salaryData?.staff ?? [];
+    const allServices: any[] = salaryData?.services ?? [];
+    const allStaffCommissions: any[] = salaryData?.staffCommissions ?? [];
+
+    const monthApts = allAppointments.filter((a: any) => {
+      if (!a.paid || !a.date) return false;
+      try {
+        return isWithinInterval(parseISO(a.date), { start: monthStart, end: monthEnd });
+      } catch { return false; }
+    });
+
+    let budget = 0;
+
+    for (const app of monthApts) {
+      const resolvedStaff = app.staffId
+        ? allStaff.find((s: any) => s.id === Number(app.staffId))
+        : allStaff.find((s: any) => s.name === app.staff);
+
+      // Try multi-service (servicesJson) first
+      let serviceItems: Array<{ name: string; price: number }> | null = null;
+      if (app.servicesJson) {
+        try {
+          const parsed = typeof app.servicesJson === "string" ? JSON.parse(app.servicesJson) : app.servicesJson;
+          if (Array.isArray(parsed) && parsed.length > 0) serviceItems = parsed;
+        } catch { serviceItems = null; }
+      }
+
+      if (serviceItems && serviceItems.length > 0) {
+        const sumPrices = serviceItems.reduce((s: number, i: any) => s + Number(i.price || 0), 0);
+        const appTotal = Number(app.total || 0);
+        const discountRatio = sumPrices > 0 && appTotal >= 0 && appTotal < sumPrices ? appTotal / sumPrices : 1;
+
+        for (const item of serviceItems) {
+          const effectivePrice = Number(item.price || 0) * discountRatio;
+          const svcDef = allServices.find((s: any) => s.name === item.name);
+          if (!svcDef || !resolvedStaff) continue;
+          const manualComm = allStaffCommissions.find(
+            (c: any) => c.staffId === resolvedStaff.id && c.serviceId === svcDef.id
+          );
+          if (manualComm) {
+            const remaining = Math.max(0, 100 - manualComm.percentage - 50);
+            budget += effectivePrice * (remaining / 100);
+          }
+        }
+      } else {
+        // Single-service fallback
+        const svcDef = allServices.find((s: any) => s.name === (app.service || ""));
+        if (!svcDef || !resolvedStaff) continue;
+        const manualComm = allStaffCommissions.find(
+          (c: any) => c.staffId === resolvedStaff.id && c.serviceId === svcDef.id
+        );
+        if (manualComm) {
+          const remaining = Math.max(0, 100 - manualComm.percentage - 50);
+          budget += Number(app.total || 0) * (remaining / 100);
+        }
+      }
+    }
+
+    return budget;
+  }, [salaryData, monthStart, monthEnd]);
+
   const totalCharges = filteredCharges.reduce((sum: number, c: any) => sum + Number(c.amount || 0), 0);
   const totalWithdrawals = filteredWithdrawals.reduce((sum: number, w: any) => sum + Number(w.amount || 0), 0);
   const netRemaining = monthRevenue - totalWithdrawals - totalCharges;
+
+  // Product charges = charges with type "Produit" in the selected month
+  const productCharges = filteredCharges.filter((c: any) => c.type === "Produit");
+  const totalProductCharges = productCharges.reduce((sum: number, c: any) => sum + Number(c.amount || 0), 0);
+  const productBudgetRemaining = monthProductsBudget - totalProductCharges;
+
+  const handleProductSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!productName || !productAmount || !date) {
+      toast({ title: t("expenses.fillAllFields"), variant: "destructive" });
+      return;
+    }
+    createProductMutation.mutate({
+      type: "Produit",
+      name: productName,
+      amount: Number(productAmount),
+      date: date,
+      attachment: null,
+      attachmentName: null,
+    });
+  };
 
   return (
     <div className="flex flex-col gap-4 md:gap-6 p-2 md:p-4 animate-fade-in" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
@@ -706,6 +809,116 @@ export default function Charges() {
           </Card>
         )}
       </div>
+
+      {/* ── Products Budget Card ─────────────────────────────────── */}
+      <Card className="border-violet-200 dark:border-violet-800">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-violet-700 dark:text-violet-400">
+            <ShoppingBag className="w-5 h-5" />
+            بجت المنتجات
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Budget summary */}
+            <div className="p-3 bg-muted/40 rounded-lg border space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">ملخص البجت</p>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">البجت المحسوب</span>
+                <span className="text-sm font-semibold text-violet-600 dark:text-violet-400">
+                  + {monthProductsBudget.toFixed(0)} {t("common.currency")}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">المشتريات هذا الشهر</span>
+                <span className="text-sm font-semibold text-destructive">
+                  - {totalProductCharges.toFixed(0)} {t("common.currency")}
+                </span>
+              </div>
+              <div className={`flex items-center justify-between pt-1.5 border-t mt-1 ${productBudgetRemaining >= 0 ? "border-violet-300/40" : "border-red-300/40"}`}>
+                <span className="text-sm font-bold">الباقي</span>
+                <span className={`text-base font-bold ${productBudgetRemaining >= 0 ? "text-violet-600 dark:text-violet-400" : "text-destructive"}`}>
+                  {productBudgetRemaining.toFixed(0)} {t("common.currency")}
+                </span>
+              </div>
+              {monthProductsBudget === 0 && (
+                <p className="text-xs text-muted-foreground pt-1">
+                  البجت يتحسب تلقائياً من الرندي اللي فيهم كوميسيو يدوي للستاف
+                </p>
+              )}
+            </div>
+
+            {/* Quick-add product purchase form */}
+            <form onSubmit={handleProductSubmit} className="space-y-3">
+              <div className="space-y-1">
+                <Label className="text-sm">اسم المنتج</Label>
+                <Input
+                  value={productName}
+                  onChange={(e) => setProductName(e.target.value)}
+                  placeholder="مثلاً: شامبو، صبغة..."
+                  data-testid="input-product-name"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-sm">{t("expenses.amount")} ({t("common.currency")})</Label>
+                <Input
+                  type="number"
+                  value={productAmount}
+                  onChange={(e) => setProductAmount(e.target.value)}
+                  placeholder="0"
+                  data-testid="input-product-amount"
+                />
+              </div>
+              <Button
+                type="submit"
+                className="w-full bg-violet-600 hover:bg-violet-700 text-white"
+                disabled={createProductMutation.isPending}
+                data-testid="button-submit-product"
+              >
+                <Plus className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
+                إضافة منتج
+              </Button>
+            </form>
+          </div>
+
+          {/* Product purchases list */}
+          <div className="space-y-2 mt-2">
+            {productCharges.map((charge: any) => (
+              <div
+                key={charge.id}
+                className="p-3 bg-violet-50 dark:bg-violet-950/20 rounded-lg flex justify-between items-center gap-2"
+                data-testid={`row-product-${charge.id}`}
+              >
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm font-medium truncate block">{charge.name}</span>
+                  <span className="text-xs text-muted-foreground">{charge.date}</span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-sm font-semibold text-violet-700 dark:text-violet-400">
+                    {Number(charge.amount).toFixed(0)} {t("common.currency")}
+                  </span>
+                  {isAdmin && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive"
+                      onClick={() => deleteMutation.mutate(charge.id)}
+                      data-testid={`button-delete-product-${charge.id}`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+            {productCharges.length === 0 && (
+              <p className="text-center text-muted-foreground py-4 text-sm">
+                ما كاين شي منتجات مشتراة هذا الشهر
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       <Card className="flex-1">
         <CardHeader>
