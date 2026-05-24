@@ -43,6 +43,7 @@ export default function Charges() {
   const isAdmin = sessionStorage.getItem("current_user_role") === "owner";
   const { data: salonSettings } = useBusinessSettings();
   const [withdrawalsExpanded, setWithdrawalsExpanded] = useState(false);
+  const [chargesListExpanded, setChargesListExpanded] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const [withdrawalAmount, setWithdrawalAmount] = useState("");
@@ -594,6 +595,92 @@ export default function Charges() {
         </div>
       </div>
 
+      {/* ── Owner Withdrawals (admin only) — TOP ── */}
+      {isAdmin && (
+        <div className="p-5 dark:bg-white/5" style={{ ...glassCard, border: "1px solid rgba(217,119,6,0.2)" }}>
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+              <Wallet className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+            </div>
+            <h2 className="font-semibold text-base text-amber-700 dark:text-amber-400">{t("ownerWithdrawals.title")}</h2>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <form onSubmit={handleWithdrawalSubmit} className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">{t("ownerWithdrawals.amount")}</Label>
+                  <Input type="number" value={withdrawalAmount} onChange={(e) => setWithdrawalAmount(e.target.value)} placeholder="0" className="h-9 text-sm bg-white/60 dark:bg-white/5 border-white/50 dark:border-white/10" data-testid="input-withdrawal-amount" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">{t("common.date")}</Label>
+                  <Input type="date" value={withdrawalDate} onChange={(e) => setWithdrawalDate(e.target.value)} className="h-9 text-sm bg-white/60 dark:bg-white/5 border-white/50 dark:border-white/10" data-testid="input-withdrawal-date" />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">{t("ownerWithdrawals.notes")}</Label>
+                <Textarea value={withdrawalNotes} onChange={(e) => setWithdrawalNotes(e.target.value)} placeholder={t("ownerWithdrawals.notesPlaceholder")} rows={2} className="text-sm bg-white/60 dark:bg-white/5 border-white/50 dark:border-white/10 resize-none" data-testid="input-withdrawal-notes" />
+              </div>
+              <Button type="submit" className="w-full h-9 bg-amber-600 hover:bg-amber-700 text-white" disabled={createWithdrawalMutation.isPending} data-testid="button-submit-withdrawal">
+                <Plus className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
+                {t("ownerWithdrawals.addWithdrawal")}
+              </Button>
+            </form>
+
+            <div className="space-y-3">
+              {/* Caisse breakdown */}
+              <div className="p-3.5 bg-amber-50/70 dark:bg-amber-950/20 rounded-xl border border-amber-100/60 dark:border-amber-800/20 space-y-2">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("ownerWithdrawals.caisseBreakdown")}</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground flex items-center gap-1"><TrendingUp className="w-3 h-3 text-emerald-500" />{t("salaries.salonShare")}</span>
+                  <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">+ {monthRevenue.toFixed(0)} {t("common.currency")}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground flex items-center gap-1"><Wallet className="w-3 h-3 text-amber-600" />{t("ownerWithdrawals.myWithdrawals")}</span>
+                  <span className="text-xs font-bold text-amber-700 dark:text-amber-400">- {totalWithdrawals.toFixed(0)} {t("common.currency")}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground flex items-center gap-1"><TrendingDown className="w-3 h-3 text-destructive" />{t("expenses.totalExpenses")}</span>
+                  <span className="text-xs font-bold text-destructive">- {totalCharges.toFixed(0)} {t("common.currency")}</span>
+                </div>
+                <div className={`flex items-center justify-between pt-2 border-t ${netRemaining >= 0 ? "border-emerald-200/50" : "border-red-200/50"}`}>
+                  <span className="text-sm font-bold">{t("reports.netProfit")}</span>
+                  <span className={`text-base font-bold ${netRemaining >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"}`}>
+                    {netRemaining.toFixed(0)} {t("common.currency")}
+                  </span>
+                </div>
+              </div>
+
+              {/* Withdrawals list */}
+              <div>
+                <Button variant="ghost" size="sm" className="w-full flex items-center justify-between text-xs text-muted-foreground h-8 px-2" onClick={() => setWithdrawalsExpanded(!withdrawalsExpanded)} data-testid="button-toggle-withdrawals">
+                  <span>{t("ownerWithdrawals.myWithdrawals")} ({filteredWithdrawals.length})</span>
+                  {withdrawalsExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                </Button>
+                {withdrawalsExpanded && (
+                  <div className="space-y-1.5 max-h-40 overflow-y-auto mt-1">
+                    {filteredWithdrawals.map((w: any) => (
+                      <div key={w.id} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50/80 dark:bg-amber-950/20 border border-amber-100/50 dark:border-amber-800/20">
+                        <div className="flex-1 min-w-0">
+                          <span className="text-xs font-bold text-amber-700 dark:text-amber-400">{Number(w.amount).toFixed(0)} {t("common.currency")}</span>
+                          <span className="text-[10px] text-muted-foreground ltr:ml-2 rtl:mr-2">{w.date}</span>
+                          {w.notes && <p className="text-[10px] text-muted-foreground truncate">{w.notes}</p>}
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 text-destructive/70 hover:text-destructive" onClick={() => deleteWithdrawalMutation.mutate(w.id)} data-testid={`button-delete-withdrawal-${w.id}`}>
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    ))}
+                    {filteredWithdrawals.length === 0 && (
+                      <p className="text-center text-xs text-muted-foreground py-3">{t("ownerWithdrawals.noWithdrawals")}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Stats Row ── */}
       <div className={`grid gap-3 ${isAdmin ? "grid-cols-3" : "grid-cols-1"}`}>
         <div className="p-4 dark:bg-red-950/20" style={glassCard}>
@@ -715,48 +802,60 @@ export default function Charges() {
         </div>
 
         {/* Expense List */}
-        <div className="p-5 dark:bg-white/5" style={glassCard}>
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 rounded-xl bg-destructive/10 flex items-center justify-center">
+        <div className="dark:bg-white/5 overflow-hidden" style={glassCard}>
+          {/* Collapsible header */}
+          <button
+            type="button"
+            onClick={() => setChargesListExpanded(v => !v)}
+            className="w-full flex items-center gap-2 p-5 text-start"
+            data-testid="button-toggle-charges-list"
+          >
+            <div className="w-8 h-8 rounded-xl bg-destructive/10 flex items-center justify-center shrink-0">
               <TrendingDown className="w-4 h-4 text-destructive" />
             </div>
-            <h2 className="font-semibold text-base">{t("expenses.expenseList")}</h2>
-            <span className="ms-auto text-xs text-muted-foreground bg-muted/50 rounded-full px-2 py-0.5">{filteredCharges.length}</span>
-          </div>
-          <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
-            {filteredCharges.map((charge: any) => (
-              <div key={charge.id} className="flex items-center gap-2 p-3 rounded-xl bg-red-50/80 dark:bg-red-950/20 border border-red-100/60 dark:border-red-800/20" data-testid={`row-expense-${charge.id}`}>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-sm font-medium truncate">{charge.name}</span>
-                    <span className="text-[10px] px-1.5 py-0.5 bg-red-100 dark:bg-red-900/50 rounded-full text-red-700 dark:text-red-300 shrink-0">
-                      {chargeTypes.find((t: any) => t.name === charge.type)?.label || charge.type}
-                    </span>
+            <h2 className="font-semibold text-base flex-1">{t("expenses.expenseList")}</h2>
+            <span className="text-xs text-muted-foreground bg-muted/50 rounded-full px-2 py-0.5">{filteredCharges.length}</span>
+            {chargesListExpanded
+              ? <ChevronUp className="w-4 h-4 text-muted-foreground ms-1" />
+              : <ChevronDown className="w-4 h-4 text-muted-foreground ms-1" />}
+          </button>
+
+          {chargesListExpanded && (
+            <div className="px-5 pb-5 space-y-2 max-h-[360px] overflow-y-auto">
+              {filteredCharges.map((charge: any) => (
+                <div key={charge.id} className="flex items-center gap-2 p-3 rounded-xl bg-red-50/80 dark:bg-red-950/20 border border-red-100/60 dark:border-red-800/20" data-testid={`row-expense-${charge.id}`}>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-sm font-medium truncate">{charge.name}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 bg-red-100 dark:bg-red-900/50 rounded-full text-red-700 dark:text-red-300 shrink-0">
+                        {chargeTypes.find((t: any) => t.name === charge.type)?.label || charge.type}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-sm font-bold text-red-600 dark:text-red-400">{charge.amount} {t("common.currency")}</span>
+                      <span className="text-xs text-muted-foreground">{charge.date}</span>
+                      {charge.attachment && (
+                        <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setPreviewAttachment({data: charge.attachment, name: charge.attachmentName || 'attachment'})} data-testid={`button-view-attachment-${charge.id}`}>
+                          <Paperclip className="w-3 h-3 text-muted-foreground" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-sm font-bold text-red-600 dark:text-red-400">{charge.amount} {t("common.currency")}</span>
-                    <span className="text-xs text-muted-foreground">{charge.date}</span>
-                    {charge.attachment && (
-                      <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setPreviewAttachment({data: charge.attachment, name: charge.attachmentName || 'attachment'})} data-testid={`button-view-attachment-${charge.id}`}>
-                        <Paperclip className="w-3 h-3 text-muted-foreground" />
-                      </Button>
-                    )}
-                  </div>
+                  {isAdmin && (
+                    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-destructive/70 hover:text-destructive" onClick={() => deleteMutation.mutate(charge.id)} data-testid={`button-delete-expense-${charge.id}`}>
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  )}
                 </div>
-                {isAdmin && (
-                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-destructive/70 hover:text-destructive" onClick={() => deleteMutation.mutate(charge.id)} data-testid={`button-delete-expense-${charge.id}`}>
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
-                )}
-              </div>
-            ))}
-            {filteredCharges.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-10 text-muted-foreground gap-2">
-                <TrendingDown className="w-8 h-8 opacity-20" />
-                <p className="text-sm">{t("expenses.noExpensesForPeriod")}</p>
-              </div>
-            )}
-          </div>
+              ))}
+              {filteredCharges.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-10 text-muted-foreground gap-2">
+                  <TrendingDown className="w-8 h-8 opacity-20" />
+                  <p className="text-sm">{t("expenses.noExpensesForPeriod")}</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -843,92 +942,6 @@ export default function Charges() {
           </div>
         </div>
       </div>
-
-      {/* ── Owner Withdrawals (admin only) ── */}
-      {isAdmin && (
-        <div className="p-5 dark:bg-white/5" style={{ ...glassCard, border: "1px solid rgba(217,119,6,0.2)" }}>
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-              <Wallet className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-            </div>
-            <h2 className="font-semibold text-base text-amber-700 dark:text-amber-400">{t("ownerWithdrawals.title")}</h2>
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <form onSubmit={handleWithdrawalSubmit} className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium">{t("ownerWithdrawals.amount")}</Label>
-                  <Input type="number" value={withdrawalAmount} onChange={(e) => setWithdrawalAmount(e.target.value)} placeholder="0" className="h-9 text-sm bg-white/60 dark:bg-white/5 border-white/50 dark:border-white/10" data-testid="input-withdrawal-amount" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium">{t("common.date")}</Label>
-                  <Input type="date" value={withdrawalDate} onChange={(e) => setWithdrawalDate(e.target.value)} className="h-9 text-sm bg-white/60 dark:bg-white/5 border-white/50 dark:border-white/10" data-testid="input-withdrawal-date" />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium">{t("ownerWithdrawals.notes")}</Label>
-                <Textarea value={withdrawalNotes} onChange={(e) => setWithdrawalNotes(e.target.value)} placeholder={t("ownerWithdrawals.notesPlaceholder")} rows={2} className="text-sm bg-white/60 dark:bg-white/5 border-white/50 dark:border-white/10 resize-none" data-testid="input-withdrawal-notes" />
-              </div>
-              <Button type="submit" className="w-full h-9 bg-amber-600 hover:bg-amber-700 text-white" disabled={createWithdrawalMutation.isPending} data-testid="button-submit-withdrawal">
-                <Plus className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
-                {t("ownerWithdrawals.addWithdrawal")}
-              </Button>
-            </form>
-
-            <div className="space-y-3">
-              {/* Caisse breakdown */}
-              <div className="p-3.5 bg-amber-50/70 dark:bg-amber-950/20 rounded-xl border border-amber-100/60 dark:border-amber-800/20 space-y-2">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("ownerWithdrawals.caisseBreakdown")}</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground flex items-center gap-1"><TrendingUp className="w-3 h-3 text-emerald-500" />{t("salaries.salonShare")}</span>
-                  <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">+ {monthRevenue.toFixed(0)} {t("common.currency")}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground flex items-center gap-1"><Wallet className="w-3 h-3 text-amber-600" />{t("ownerWithdrawals.myWithdrawals")}</span>
-                  <span className="text-xs font-bold text-amber-700 dark:text-amber-400">- {totalWithdrawals.toFixed(0)} {t("common.currency")}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground flex items-center gap-1"><TrendingDown className="w-3 h-3 text-destructive" />{t("expenses.totalExpenses")}</span>
-                  <span className="text-xs font-bold text-destructive">- {totalCharges.toFixed(0)} {t("common.currency")}</span>
-                </div>
-                <div className={`flex items-center justify-between pt-2 border-t ${netRemaining >= 0 ? "border-emerald-200/50" : "border-red-200/50"}`}>
-                  <span className="text-sm font-bold">{t("reports.netProfit")}</span>
-                  <span className={`text-base font-bold ${netRemaining >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"}`}>
-                    {netRemaining.toFixed(0)} {t("common.currency")}
-                  </span>
-                </div>
-              </div>
-
-              {/* Withdrawals list */}
-              <div>
-                <Button variant="ghost" size="sm" className="w-full flex items-center justify-between text-xs text-muted-foreground h-8 px-2" onClick={() => setWithdrawalsExpanded(!withdrawalsExpanded)} data-testid="button-toggle-withdrawals">
-                  <span>{t("ownerWithdrawals.myWithdrawals")} ({filteredWithdrawals.length})</span>
-                  {withdrawalsExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                </Button>
-                {withdrawalsExpanded && (
-                  <div className="space-y-1.5 max-h-40 overflow-y-auto mt-1">
-                    {filteredWithdrawals.map((w: any) => (
-                      <div key={w.id} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50/80 dark:bg-amber-950/20 border border-amber-100/50 dark:border-amber-800/20">
-                        <div className="flex-1 min-w-0">
-                          <span className="text-xs font-bold text-amber-700 dark:text-amber-400">{Number(w.amount).toFixed(0)} {t("common.currency")}</span>
-                          <span className="text-[10px] text-muted-foreground ltr:ml-2 rtl:mr-2">{w.date}</span>
-                          {w.notes && <p className="text-[10px] text-muted-foreground truncate">{w.notes}</p>}
-                        </div>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 text-destructive/70 hover:text-destructive" onClick={() => deleteWithdrawalMutation.mutate(w.id)} data-testid={`button-delete-withdrawal-${w.id}`}>
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    ))}
-                    {filteredWithdrawals.length === 0 && (
-                      <p className="text-center text-xs text-muted-foreground py-3">{t("ownerWithdrawals.noWithdrawals")}</p>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {previewAttachment && (
         <div
