@@ -1875,9 +1875,9 @@ export default function Planning() {
     const onMoveHold = (me: PointerEvent) => {
       lastPX = me.clientX;
       lastPY = me.clientY;
-      // Any movement > 10 px cancels hold → user wants to scroll
+      // Any movement > 15 px cancels hold → user wants to scroll
       const dist = Math.hypot(me.clientX - startX, me.clientY - startY);
-      if (dist > 10) {
+      if (dist > 15) {
         cancelled = true;
         cleanup();
       }
@@ -2685,6 +2685,7 @@ export default function Planning() {
                           cursor: canEdit ? 'grab' : 'default',
                           border: booking.paid ? 'none' : `1.5px solid ${s.color}bb`,
                           transition: 'opacity 0.15s, transform 0.15s, filter 0.15s, scale 0.15s',
+                          touchAction: canEdit && !isResizing ? 'none' : 'auto',
                         }}
                         onPointerDown={(e) => { if (canEdit && !isResizing) handleCardPointerDown(e, booking, s.color); }}
                         onClick={(e) => { if (!isResizing && !dragJustCompleted.current) handleAppointmentClick(e, booking); dragJustCompleted.current = false; }}
