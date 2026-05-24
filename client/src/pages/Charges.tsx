@@ -62,6 +62,15 @@ export default function Charges() {
   const [productName, setProductName] = useState("");
   const [productAmount, setProductAmount] = useState("");
 
+  // Feature activation date — set once to today on first use, never changes after that
+  const [productsStartDate] = useState<string>(() => {
+    const stored = localStorage.getItem("productsFeatureStartDate");
+    if (stored) return stored;
+    const today = format(new Date(), "yyyy-MM-dd");
+    localStorage.setItem("productsFeatureStartDate", today);
+    return today;
+  });
+
   const getLocale = () => {
     switch (i18n.language) {
       case "fr": return fr;
@@ -433,7 +442,8 @@ export default function Charges() {
     const monthApts = allAppointments.filter((a: any) => {
       if (!a.paid || !a.date) return false;
       try {
-        return isWithinInterval(parseISO(a.date), { start: monthStart, end: monthEnd });
+        // Only count from feature activation date onward
+        return a.date >= productsStartDate && isWithinInterval(parseISO(a.date), { start: monthStart, end: monthEnd });
       } catch { return false; }
     });
 
@@ -485,14 +495,14 @@ export default function Charges() {
     }
 
     return budget;
-  }, [salaryData, monthStart, monthEnd]);
+  }, [salaryData, monthStart, monthEnd, productsStartDate]);
 
   const totalCharges = filteredCharges.reduce((sum: number, c: any) => sum + Number(c.amount || 0), 0);
   const totalWithdrawals = filteredWithdrawals.reduce((sum: number, w: any) => sum + Number(w.amount || 0), 0);
   const netRemaining = monthRevenue - totalWithdrawals - totalCharges;
 
-  // Product charges = charges with type "Produit" in the selected month
-  const productCharges = filteredCharges.filter((c: any) => c.type === "Produit");
+  // Product charges = charges with type "Produit" from activation date onward, in selected month
+  const productCharges = filteredCharges.filter((c: any) => c.type === "Produit" && c.date >= productsStartDate);
   const totalProductCharges = productCharges.reduce((sum: number, c: any) => sum + Number(c.amount || 0), 0);
   const productBudgetRemaining = monthProductsBudget - totalProductCharges;
 
@@ -841,11 +851,9 @@ export default function Charges() {
                   {productBudgetRemaining.toFixed(0)} {t("common.currency")}
                 </span>
               </div>
-              {monthProductsBudget === 0 && (
-                <p className="text-xs text-muted-foreground pt-1">
-                  البجت يتحسب تلقائياً من الرندي اللي فيهم كوميسيو يدوي للستاف
-                </p>
-              )}
+              <p className="text-xs text-muted-foreground pt-1 border-t mt-1">
+                يبدأ الحساب من: <span className="font-semibold">{productsStartDate}</span>
+              </p>
             </div>
 
             {/* Quick-add product purchase form */}
