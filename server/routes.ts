@@ -3052,6 +3052,66 @@ export async function registerRoutes(
     }
   });
 
+  // ── Bot Test: Send a message to Wissal and get a reply ───────────────────
+  app.post("/api/bot/test", isPinAuthenticated, async (req, res) => {
+    try {
+      const { message, history } = z.object({
+        message: z.string().min(1),
+        history: z.array(z.object({ role: z.enum(["user", "model"]), text: z.string() })).default([]),
+      }).parse(req.body);
+
+      const { askGemini } = await import("./gemini");
+      const { getResolvedComplaints, getBossInstructions } = await import("./db");
+
+      const [bizSettings, allServices, allStaff, allResolved, bossInstructions] = await Promise.all([
+        storage.getBusinessSettings().catch(() => undefined),
+        storage.getServices().catch(() => []),
+        storage.getStaff().catch(() => []),
+        getResolvedComplaints().catch(() => []),
+        getBossInstructions().catch(() => []),
+      ]);
+
+      const serviceList = (allServices || []).map((s: any) => ({
+        name: s.name, price: s.price, duration: s.duration,
+        category: s.category, isStartingPrice: !!s.isStartingPrice,
+      }));
+      const staffMemberList = (allStaff || []).map((s: any) => ({
+        name: s.name, gender: s.gender || "female",
+      }));
+      const resolvedComplaints = allResolved.filter((rc) => rc.complaintType !== "bot_error" && rc.fixNote);
+      const botCorrections = allResolved.filter((rc) => rc.complaintType === "bot_error" && rc.fixNote);
+
+      const salonCtx = {
+        name: bizSettings?.businessName || "PREGASQUAD",
+        address: bizSettings?.address || undefined,
+        mapsLink: (bizSettings as any)?.mapsLink || undefined,
+        phone: bizSettings?.phone || undefined,
+        openingTime: bizSettings?.openingTime || undefined,
+        closingTime: bizSettings?.closingTime || undefined,
+        currency: bizSettings?.currencySymbol || "DH",
+        services: serviceList,
+        staffMembers: staffMemberList,
+        isNewConversation: history.length === 0,
+        resolvedComplaints: resolvedComplaints.map((rc) => ({ complaint: rc.complaintText, fix: rc.fixNote! })),
+        botCorrections: botCorrections.map((bc) => ({ wrongInfo: bc.complaintText, correctInfo: bc.fixNote! })),
+        bossInstructions: bossInstructions.length > 0 ? bossInstructions : undefined,
+        personality: (() => {
+          try {
+            const raw = (bizSettings as any)?.linaPersonality;
+            if (!raw) return ["warm"];
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) && parsed.length > 0 ? parsed : ["warm"];
+          } catch { return ["warm"]; }
+        })(),
+      };
+
+      const { reply, newHistory } = await askGemini(message, salonCtx, history);
+      res.json({ reply, history: newHistory });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // ── Boss Mode: Chat with Wissal as the salon owner ────────────────────────
   function parseBossInstructions(raw: string | null | undefined): string[] {
     if (!raw) return [];
