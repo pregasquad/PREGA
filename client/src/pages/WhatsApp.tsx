@@ -48,8 +48,6 @@ import {
   Crown,
   Settings2,
   BookMarked,
-  FlaskConical,
-  RotateCcw,
 } from "lucide-react";
 
 interface WAStatus {
@@ -860,10 +858,6 @@ export default function WhatsApp() {
           <TabsTrigger value="boss" className="flex-1 rounded-lg gap-2" data-testid="tab-boss-mode">
             <Crown className="w-4 h-4" />
             كلم وصال
-          </TabsTrigger>
-          <TabsTrigger value="test" className="flex-1 rounded-lg gap-2" data-testid="tab-bot-test">
-            <FlaskConical className="w-4 h-4" />
-            جربي وصال
           </TabsTrigger>
         </TabsList>
 
@@ -2506,134 +2500,7 @@ export default function WhatsApp() {
           </div>
 
         </TabsContent>
-
-        {/* ══ TEST BOT TAB ══ */}
-        <TabsContent value="test" className="mt-0">
-          <BotTestChat />
-        </TabsContent>
-
       </Tabs>
-    </div>
-  );
-}
-
-function BotTestChat() {
-  const [messages, setMessages] = useState<{ role: "user" | "bot"; text: string }[]>([]);
-  const [history, setHistory] = useState<{ role: "user" | "model"; text: string }[]>([]);
-  const [input, setInput] = useState("");
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const testMutation = useMutation({
-    mutationFn: async (msg: string) => {
-      const res = await apiRequest("POST", "/api/bot/test", { message: msg, history });
-      return res.json() as Promise<{ reply: string; history: { role: "user" | "model"; text: string }[] }>;
-    },
-    onSuccess: (data) => {
-      setMessages((prev) => [...prev, { role: "bot", text: data.reply || "…" }]);
-      setHistory(data.history);
-    },
-  });
-
-  const send = () => {
-    const msg = input.trim();
-    if (!msg || testMutation.isPending) return;
-    setMessages((prev) => [...prev, { role: "user", text: msg }]);
-    setInput("");
-    testMutation.mutate(msg);
-  };
-
-  const reset = () => {
-    setMessages([]);
-    setHistory([]);
-    setInput("");
-  };
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, testMutation.isPending]);
-
-  return (
-    <div className="glass-card rounded-2xl overflow-hidden flex flex-col" style={{ height: "calc(100vh - 320px)", minHeight: 400 }} dir="rtl">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border/30" style={{ background: "rgba(34,197,94,0.08)" }}>
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-emerald-500/20 flex items-center justify-center">
-            <Bot className="w-4 h-4 text-emerald-400" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-foreground">وصال</p>
-            <p className="text-xs text-muted-foreground">مساعدة الصالون</p>
-          </div>
-        </div>
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={reset}
-          className="gap-1.5 text-xs text-muted-foreground hover:text-foreground rounded-xl"
-          data-testid="button-reset-bot-test"
-        >
-          <RotateCcw className="w-3.5 h-3.5" />
-          محادثة جديدة
-        </Button>
-      </div>
-
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3" style={{ background: "rgba(0,0,0,0.04)" }}>
-        {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full gap-2 text-center">
-            <FlaskConical className="w-8 h-8 text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground/60">ابعثي رسالة وشوفي كيفاش غادي تجاوب وصال</p>
-          </div>
-        )}
-        {messages.map((m, i) => (
-          <div key={i} className={`flex ${m.role === "user" ? "justify-start" : "justify-end"}`}>
-            <div
-              className={`max-w-[80%] px-3.5 py-2 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
-                m.role === "user"
-                  ? "bg-background/80 border border-border/30 text-foreground rounded-tr-sm"
-                  : "bg-emerald-500/15 border border-emerald-500/20 text-foreground rounded-tl-sm"
-              }`}
-              data-testid={`msg-${m.role}-${i}`}
-            >
-              {m.text}
-            </div>
-          </div>
-        ))}
-        {testMutation.isPending && (
-          <div className="flex justify-end">
-            <div className="bg-emerald-500/15 border border-emerald-500/20 rounded-2xl rounded-tl-sm px-4 py-2.5 flex gap-1 items-center">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: "0ms" }} />
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: "150ms" }} />
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: "300ms" }} />
-            </div>
-          </div>
-        )}
-        <div ref={bottomRef} />
-      </div>
-
-      {/* Input */}
-      <div className="px-3 py-3 border-t border-border/30 flex items-center gap-2">
-        <Button
-          size="icon"
-          onClick={send}
-          disabled={!input.trim() || testMutation.isPending}
-          className="h-9 w-9 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 flex-shrink-0"
-          data-testid="button-send-bot-test"
-        >
-          <Send className="w-3.5 h-3.5" style={{ transform: "scaleX(-1)" }} />
-        </Button>
-        <input
-          ref={inputRef}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && send()}
-          placeholder="اكتبي رسالة كأنك عميلة…"
-          className="flex-1 bg-background/60 border border-border/30 rounded-xl px-3.5 py-2 text-sm outline-none focus:border-emerald-500/40 transition-colors"
-          data-testid="input-bot-test-message"
-          dir="auto"
-        />
-      </div>
     </div>
   );
 }
