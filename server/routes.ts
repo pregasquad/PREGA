@@ -5497,6 +5497,10 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
             })),
             bossInstructions: bossInstructions.length > 0 ? bossInstructions : undefined,
             planningSnapshot,
+            currentTime: (() => {
+              const now = new Date();
+              return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+            })(),
             personality: (() => {
               try {
                 const raw = (bizSettings as any)?.linaPersonality;
