@@ -20,6 +20,7 @@ import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import type { Staff, Appointment, Service, StaffGoal } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useBusinessSettings } from "@/hooks/use-salon-data";
+import { calcAppointmentCommission } from "@/lib/commissionCalc";
 
 
 export default function StaffPerformance() {
@@ -118,22 +119,16 @@ export default function StaffPerformance() {
 
   const calculateStaffStats = useCallback((staffId: number, staffName: string) => {
     const staffAppts = monthAppointments.filter((a) => a.staffId === staffId || (!a.staffId && a.staff === staffName));
+    // Financial metrics on paid appointments only
+    const paidStaffAppts = staffAppts.filter(a => a.paid);
     let totalRevenue = 0;
     let totalCommission = 0;
     const serviceBreakdown: Record<string, { count: number; revenue: number }> = {};
 
-    for (const appt of staffAppts) {
+    for (const appt of paidStaffAppts) {
       totalRevenue += appt.total;
       const serviceName = appt.service || "Unknown";
-      const service = serviceMap.get(serviceName);
-      let commissionRate = service?.commissionPercent || 50;
-      if (service) {
-        const customComm = staffCommissions.find(c => c.staffId === staffId && c.serviceId === service.id);
-        if (customComm) {
-          commissionRate = customComm.percentage;
-        }
-      }
-      totalCommission += (appt.total * commissionRate) / 100;
+      totalCommission += calcAppointmentCommission(appt, services, staffList, staffCommissions);
 
       if (!serviceBreakdown[serviceName]) {
         serviceBreakdown[serviceName] = { count: 0, revenue: 0 };
@@ -144,12 +139,12 @@ export default function StaffPerformance() {
 
     return {
       staffName,
-      totalAppointments: staffAppts.length,
+      totalAppointments: staffAppts.length, // total count (paid + unpaid) for scheduling visibility
       totalRevenue,
       totalCommission,
       serviceBreakdown,
     };
-  }, [monthAppointments, serviceMap, staffCommissions]);
+  }, [monthAppointments, serviceMap, staffCommissions, services, staffList]);
 
   const allStaffStats = useMemo(() => 
     staffList.map((s) => calculateStaffStats(s.id, s.name)),

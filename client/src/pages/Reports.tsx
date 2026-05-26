@@ -250,8 +250,26 @@ export default function Reports() {
     services.forEach((s: any) => { serviceToCategory[s.name] = s.category || "Other"; });
     const catRevenue: Record<string, number> = {};
     filteredAppointments.forEach(app => {
-      const cat = serviceToCategory[app.service || ""] || "Other";
-      catRevenue[cat] = (catRevenue[cat] || 0) + Number(app.total || 0);
+      const appTotal = Number(app.total || 0);
+      // For multi-service appointments, split revenue across categories using servicesJson
+      let serviceItems: { name: string; price: number }[] | null = null;
+      if (app.servicesJson) {
+        try {
+          const parsed = typeof app.servicesJson === "string" ? JSON.parse(app.servicesJson) : app.servicesJson;
+          if (Array.isArray(parsed) && parsed.length > 0) serviceItems = parsed;
+        } catch { serviceItems = null; }
+      }
+      if (serviceItems && serviceItems.length > 0) {
+        const sumPrices = serviceItems.reduce((s, i) => s + Number(i.price || 0), 0);
+        const discountRatio = sumPrices > 0 && appTotal >= 0 && appTotal < sumPrices ? appTotal / sumPrices : 1;
+        for (const item of serviceItems) {
+          const cat = serviceToCategory[item.name] || "Other";
+          catRevenue[cat] = (catRevenue[cat] || 0) + Number(item.price || 0) * discountRatio;
+        }
+      } else {
+        const cat = serviceToCategory[app.service || ""] || "Other";
+        catRevenue[cat] = (catRevenue[cat] || 0) + appTotal;
+      }
     });
     return Object.entries(catRevenue)
       .map(([name, value]) => ({ name, value }))

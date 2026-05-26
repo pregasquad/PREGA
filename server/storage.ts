@@ -77,7 +77,7 @@ export interface IStorage extends IAuthStorage {
   updateClient(id: number, client: Partial<InsertClient>): Promise<Client>;
   deleteClient(id: number): Promise<void>;
   updateClientLoyalty(id: number, points: number, spent: number): Promise<Client>;
-  subtractClientLoyalty(id: number, points: number): Promise<Client>;
+  subtractClientLoyalty(id: number, points: number, spent?: number): Promise<Client>;
   restoreClientLoyaltyPoints(id: number, points: number): Promise<Client>;
   updateClientGiftCardBalance(id: number, amount: number): Promise<Client>;
   getClientAppointments(clientId: number): Promise<Appointment[]>;
@@ -663,16 +663,21 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
-  async subtractClientLoyalty(id: number, points: number): Promise<Client> {
+  async subtractClientLoyalty(id: number, points: number, spent?: number): Promise<Client> {
     const s = schema();
     const [client] = await db().select().from(s.clients).where(eq(s.clients.id, id));
     if (!client) throw new Error("Client not found");
     
     const newPoints = Math.max(0, client.loyaltyPoints - points);
+    // Also reverse totalVisits and totalSpent so lifetime stats stay accurate on unpay/delete
+    const newVisits = Math.max(0, (client.totalVisits ?? 0) - 1);
+    const newSpent  = Math.max(0, Number(client.totalSpent ?? 0) - (spent ?? 0));
     
     if (isMySQL()) {
       await db().update(s.clients).set({
         loyaltyPoints: newPoints,
+        totalVisits: newVisits,
+        totalSpent: newSpent,
       }).where(eq(s.clients.id, id));
       const [updated] = await db().select().from(s.clients).where(eq(s.clients.id, id));
       if (!updated) throw new Error("Failed to update client loyalty");
@@ -680,6 +685,8 @@ export class DatabaseStorage implements IStorage {
     }
     const [updated] = await db().update(s.clients).set({
       loyaltyPoints: newPoints,
+      totalVisits: newVisits,
+      totalSpent: newSpent,
     }).where(eq(s.clients.id, id)).returning();
     return updated;
   }
@@ -901,8 +908,9 @@ export class DatabaseStorage implements IStorage {
     
     const [client] = await db().select().from(s.clients).where(eq(s.clients.id, redemption.clientId));
     if (client) {
+      // Guard: never let points go below zero
       await db().update(s.clients).set({
-        loyaltyPoints: client.loyaltyPoints - redemption.pointsUsed,
+        loyaltyPoints: Math.max(0, client.loyaltyPoints - redemption.pointsUsed),
       }).where(eq(s.clients.id, redemption.clientId));
     }
     
@@ -922,6 +930,9 @@ export class DatabaseStorage implements IStorage {
         lte(s.appointments.date, endDate)
       ));
     
+    // Financial metrics must only use paid appointments
+    const paidAppts = appts.filter((a: any) => a.paid);
+
     const allServices = await db().select().from(s.services);
     const serviceMap: Map<string, any> = new Map(allServices.map((svc: any) => [svc.name, svc]));
     
@@ -937,19 +948,46 @@ export class DatabaseStorage implements IStorage {
     let totalRevenue = 0;
     let totalCommission = 0;
     
-    for (const appt of appts) {
+    for (const appt of paidAppts) {
       const amount = Number(appt.total || 0);
       totalRevenue += amount;
-      const service = serviceMap.get(appt.service);
-      let commissionRate = Number(service?.commissionPercent || 50);
-      if (service && customCommissions.has(service.id)) {
-        commissionRate = customCommissions.get(service.id)!;
+
+      // Parse servicesJson for multi-service commission accuracy
+      let commission = 0;
+      let serviceItems: { name: string; price: number }[] | null = null;
+      if (appt.servicesJson) {
+        try {
+          const parsed = typeof appt.servicesJson === 'string' ? JSON.parse(appt.servicesJson) : appt.servicesJson;
+          if (Array.isArray(parsed) && parsed.length > 0) serviceItems = parsed;
+        } catch { serviceItems = null; }
       }
-      totalCommission += (amount * commissionRate) / 100;
+
+      if (serviceItems && serviceItems.length > 0) {
+        const sumPrices = serviceItems.reduce((acc, i) => acc + Number(i.price || 0), 0);
+        const discountRatio = sumPrices > 0 && amount >= 0 && amount < sumPrices ? amount / sumPrices : 1;
+        for (const item of serviceItems) {
+          const effectivePrice = Number(item.price || 0) * discountRatio;
+          // Case-insensitive fallback mirrors frontend findService() in commissionCalc.ts
+          const svc = serviceMap.get(item.name) ||
+            [...serviceMap.values()].find((s: any) => s.name.toLowerCase() === (item.name || "").toLowerCase());
+          let rate = Number(svc?.commissionPercent ?? 50);
+          if (svc && customCommissions.has(svc.id)) rate = customCommissions.get(svc.id)!;
+          commission += effectivePrice * (rate / 100);
+        }
+      } else {
+        const service = serviceMap.get(appt.service) ||
+          [...serviceMap.values()].find((s: any) => s.name.toLowerCase() === (appt.service || "").toLowerCase());
+        let commissionRate = Number(service?.commissionPercent || 50);
+        if (service && customCommissions.has(service.id)) {
+          commissionRate = customCommissions.get(service.id)!;
+        }
+        commission = amount * commissionRate / 100;
+      }
+      totalCommission += commission;
     }
     
     return {
-      totalAppointments: appts.length,
+      totalAppointments: appts.length, // total count (paid + unpaid) for scheduling visibility
       totalRevenue,
       totalCommission,
     };

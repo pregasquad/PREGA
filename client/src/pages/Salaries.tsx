@@ -24,6 +24,7 @@ import { connectQz, openCashDrawer, isQzConnected, checkPrintStationAsync, remot
 import type { Staff, Service, Appointment, Charge, StaffDeduction, StaffPayment, SalonPayment } from "@shared/schema";
 import { saveSalariesCache } from "@/lib/offlineDb";
 import { refreshSalariesBackground } from "@/lib/salariesRefresher";
+import { calcAppointmentCommission } from "@/lib/commissionCalc";
 
 type PeriodType = "day" | "week" | "month" | "custom";
 
@@ -187,6 +188,12 @@ export default function Salaries() {
   const staffPayments = salaryData?.staffPayments ?? [];
   const salonPayments = salaryData?.salonPayments ?? [];
   const refetchAppointments = () => queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+
+  // Owner withdrawals — needed for accurate net profit (consistent with Reports and Home)
+  const { data: ownerWithdrawalsData = [] } = useQuery<any[]>({
+    queryKey: ["/api/owner-withdrawals"],
+    staleTime: 30_000,
+  });
 
   const createChargeMutation = useMutation({
     mutationFn: async (charge: typeof newCharge) => {
@@ -421,10 +428,10 @@ export default function Salaries() {
         };
       }
       
-      const commissionPercent = getServiceCommission(serviceName, staffName);
-      const commission = ((apt.total || 0) * commissionPercent) / 100;
-      
-      earnings[staffName].totalRevenue += (apt.total || 0);
+      const commission = calcAppointmentCommission(apt, services, staff, staffCommissions);
+      const aptTotal = apt.total || 0;
+
+      earnings[staffName].totalRevenue += aptTotal;
       earnings[staffName].totalCommission += commission;
       earnings[staffName].appointmentsCount += 1;
 
@@ -432,7 +439,7 @@ export default function Salaries() {
         earnings[staffName].services[serviceName] = { count: 0, revenue: 0, commission: 0 };
       }
       earnings[staffName].services[serviceName].count += 1;
-      earnings[staffName].services[serviceName].revenue += (apt.total || 0);
+      earnings[staffName].services[serviceName].revenue += aptTotal;
       earnings[staffName].services[serviceName].commission += commission;
     });
 
@@ -477,7 +484,15 @@ export default function Salaries() {
   const totalPaidBack = paidBackDeductions.reduce((sum, d) => sum + d.amount, 0);
   const totalPending = pendingDeductions.reduce((sum, d) => sum + getRemainingAmount(d), 0);
   const totalExpenses = filteredCharges.reduce((sum, c) => sum + c.amount, 0);
-  const netProfit = salonPortion - totalExpenses;
+  const filteredOwnerWithdrawals = ownerWithdrawalsData.filter((w: any) => {
+    try {
+      const wDate = parseISO(w.date);
+      return (isAfter(wDate, startOfDay(start)) || isEqual(wDate, startOfDay(start))) &&
+             (isBefore(wDate, endOfDay(end)) || isEqual(wDate, endOfDay(end)));
+    } catch { return false; }
+  });
+  const totalOwnerWithdrawals = filteredOwnerWithdrawals.reduce((sum: number, w: any) => sum + Number(w.amount || 0), 0);
+  const netProfit = salonPortion - totalExpenses - totalOwnerWithdrawals;
   const netStaffPayable = staff.reduce((total, s) => {
     const earning = staffEarnings.find(e => e.name === s.name);
     const staffCommission = earning ? earning.totalCommission : 0;
@@ -536,14 +551,8 @@ export default function Salaries() {
     let walletApptCount = walletAppointments.length;
 
     walletAppointments.forEach(apt => {
-      const staffMember = apt.staffId
-        ? staff.find(s => s.id === Number(apt.staffId))
-        : staff.find(s => s.name === apt.staff);
-      const staffName = staffMember?.name || apt.staff || "Unknown";
-      const serviceName = apt.service || "Unknown";
-      const commissionPercent = getServiceCommission(serviceName, staffName);
       const total = apt.total || 0;
-      const commission = (total * commissionPercent) / 100;
+      const commission = calcAppointmentCommission(apt, services, staff, staffCommissions);
       walletRevenue += total;
       walletCommissions += commission;
     });
@@ -601,9 +610,8 @@ export default function Salaries() {
 
     walletAppointments.forEach(apt => {
       const serviceName = apt.service || "Unknown";
-      const commissionPercent = getServiceCommission(serviceName, s.name);
       const total = apt.total || 0;
-      const commission = (total * commissionPercent) / 100;
+      const commission = calcAppointmentCommission(apt, services, staff, staffCommissions);
       walletRevenue += total;
       walletCommission += commission;
       if (!walletServices[serviceName]) {
