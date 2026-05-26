@@ -4668,9 +4668,17 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
   function detectLanguage(text: string): string {
     const arabicChars  = (text.match(/[\u0600-\u06FF]/g) || []).length;
     const latinChars   = (text.match(/[a-zA-Z]/g) || []).length;
-    const darijaLatin  = /\b(bghit|wach|dial|taman|ndir|kifach|mnin|fain|kayn|hna|dyal|zloul|ana|nta|hiya|huwa|3ref|3reft|wash|gha|mashi|bzzaf|chhal|makayn|ola|wla|ndir|diri|nhar|liyam|smiyti|ismi)\b/i;
+
+    // Arabizi signal: digits 3 7 9 5 6 used as Arabic letters (ع ح ق خ غ)
+    // e.g. "ch3r", "7it", "9al", "3ref", "b7al" — extremely strong Darija indicator
+    const arabiziDigits = /[a-zA-Z][3795680][a-zA-Z]|[a-zA-Z]{2,}[3795680]|[3795680][a-zA-Z]{2,}/;
+    if (arabiziDigits.test(text)) return "darija";
+
     if (arabicChars > 3) return arabicChars > latinChars * 1.5 ? "arabic" : "darija";
+
+    const darijaLatin = /\b(bghit|bghiti|wach|wash|wach|dial|dyal|taman|ndir|diri|kifach|mnin|fain|kayn|kaynchi|makainch|hna|hna|zloul|ana|nta|nti|hiya|huwa|3ref|3reft|gha|mashi|bzzaf|bzaf|bchhal|chhal|makayn|ola|wla|nhar|liyam|smiyti|ismi|safi|wakha|mzyan|mzien|chno|fach|katsbro|dfar|zaid|ghali|zwina|zwine|daba|rah|lik|liha|lihom|biha|bih|had|dak|kolchi|kulchi|koulchi|mchin|imchin|bzf|machi|makach|kayen|bhal|b7al|3la|kima|kif|raki|raki|rani|rani|nrdi|nchof|ndir|nkol|bladi|bled|drari|bnat|rajel|mra|weld|bnt|khti|khoya|lalla|sidi|7it|9al|9alet|9alek|7aja|7wali|5dem|5dma|3yit|3iya|3awdni|3awed)\b/i;
     if (darijaLatin.test(text)) return "darija";
+
     if (latinChars > 3) return "french";
     return "unknown";
   }
