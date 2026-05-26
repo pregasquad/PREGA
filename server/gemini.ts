@@ -6,10 +6,11 @@ const GEMINI_BASE = REPLIT_GEMINI_BASE || "https://generativelanguage.googleapis
 const GROQ_BASE = "https://api.groq.com/openai/v1";
 
 const MODEL_CASCADE = [
-  "gemini-3.1-flash-lite",   // GA release (preview shut down May 25 2026)
-  "gemini-3.5-flash",        // GA release (replaces gemini-3-flash-preview, released May 19 2026)
-  "gemini-2.5-flash",        // stable fallback
-  "gemini-1.5-flash",        // last resort (gemini-2.0-flash shuts down June 1 2026)
+  "gemini-3.1-flash-lite",  // GA — fast, cost-efficient (preview shut down May 25 2026)
+  "gemini-3.5-flash",       // GA — most capable flash (released May 19 2026)
+  "gemini-3-flash",         // GA — production default
+  "gemini-2.5-flash",       // GA — stable fallback
+  "gemini-2.5-flash-lite",  // GA — cheapest fallback
 ];
 
 // Models confirmed unavailable (404) — skipped instantly with no delay
@@ -504,13 +505,12 @@ async function callGroq(
 /**
  * Transcribe a voice note (audio buffer as base64).
  *
- * Confirmed audio-capable Gemini models (from official docs, all support
- * Text/Image/Video/Audio/PDF inline input):
- *   gemini-2.5-flash-lite   — fastest, lowest cost          ✅ audio
- *   gemini-2.5-flash        — best price/perf balance        ✅ audio
- *   gemini-3-flash-preview  — newest gen (used in audio docs)✅ audio
- *   gemini-3.1-flash-lite-preview — frontier-class lite      ✅ audio
- *   gemini-1.5-flash        — proven, well-tested fallback   ✅ audio
+ * Confirmed audio-capable Gemini models (all support multimodal input):
+ *   gemini-3.1-flash-lite   — fastest, GA (preview shut down May 25 2026) ✅
+ *   gemini-3.5-flash        — most capable, GA (released May 19 2026)     ✅
+ *   gemini-3-flash          — production default, GA                       ✅
+ *   gemini-2.5-flash        — stable fallback                              ✅
+ *   gemini-2.5-flash-lite   — cheapest fallback                            ✅
  *
  * Final fallback: Groq Whisper large-v3-turbo (STT-only model, very fast).
  */
@@ -523,11 +523,11 @@ export async function transcribeAudio(
 
   // ── 1. Gemini cascade — try from fastest to most capable ─────────────────
   const TRANSCRIPTION_MODELS = [
-    "gemini-2.5-flash-lite",          // fastest current-gen, confirmed audio ✅
-    "gemini-2.5-flash",               // more capable if lite fails           ✅
-    "gemini-3-flash-preview",         // newest gen, shown in audio docs      ✅
-    "gemini-3.1-flash-lite-preview",  // frontier-class lite preview          ✅
-    "gemini-1.5-flash",               // proven STT fallback                  ✅
+    "gemini-3.1-flash-lite",  // GA — fastest, cost-efficient                ✅
+    "gemini-3.5-flash",       // GA — most capable (released May 19 2026)    ✅
+    "gemini-3-flash",         // GA — production default                     ✅
+    "gemini-2.5-flash",       // GA — stable fallback                        ✅
+    "gemini-2.5-flash-lite",  // GA — cheapest fallback                      ✅
   ];
 
   const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
@@ -801,7 +801,7 @@ export async function detectBossCorrection(
 
   // Fix 4: small cascade (lite → 2.5-flash → 1.5-flash) so a single unavailable model
   // doesn't silently kill correction detection
-  const CORRECTION_CASCADE = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-1.5-flash"];
+  const CORRECTION_CASCADE = ["gemini-3.1-flash-lite", "gemini-2.5-flash", "gemini-2.5-flash-lite"];
   if (apiKey) {
     const now = Date.now();
     for (const model of CORRECTION_CASCADE) {
