@@ -5676,7 +5676,12 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
           await stopTypingPresence(remoteJid);
 
           // AI now handles the full first-message greeting via the prompt
-          const finalReply = aiReply;
+          // Strip any [رد المدير]: prefix that the AI may have mimicked from history
+          const finalReply = aiReply
+            .split("\n")
+            .map((line) => line.replace(/^\s*\[رد المدير\]\s*:\s*/u, ""))
+            .join("\n")
+            .trim();
 
           // ── Respond in kind: voice note → voice note, text → text ────────
           const batchHasVoice = msgs.some((m) => m.isVoice);
