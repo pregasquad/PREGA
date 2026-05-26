@@ -6,11 +6,10 @@ const GEMINI_BASE = REPLIT_GEMINI_BASE || "https://generativelanguage.googleapis
 const GROQ_BASE = "https://api.groq.com/openai/v1";
 
 const MODEL_CASCADE = [
-  "gemini-3.1-flash-lite-preview",
-  "gemini-3-flash-preview",
-  "gemini-2.5-flash",
-  "gemini-2.0-flash",
-  "gemini-1.5-flash",
+  "gemini-3.1-flash-lite",   // GA release (preview shut down May 25 2026)
+  "gemini-3.5-flash",        // GA release (replaces gemini-3-flash-preview, released May 19 2026)
+  "gemini-2.5-flash",        // stable fallback
+  "gemini-1.5-flash",        // last resort (gemini-2.0-flash shuts down June 1 2026)
 ];
 
 // Models confirmed unavailable (404) — skipped instantly with no delay
