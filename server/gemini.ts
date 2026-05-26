@@ -6,8 +6,8 @@ const GEMINI_BASE = REPLIT_GEMINI_BASE || "https://generativelanguage.googleapis
 const GROQ_BASE = "https://api.groq.com/openai/v1";
 
 const MODEL_CASCADE = [
-  "gemini-2.5-flash-lite",
   "gemini-2.5-flash",
+  "gemini-2.5-flash-lite-preview-06-17",
   "gemini-2.0-flash",
   "gemini-1.5-flash",
 ];
@@ -389,7 +389,7 @@ async function callGemini(
   const body = JSON.stringify({
     systemInstruction: { parts: [{ text: systemPrompt }] },
     contents,
-    generationConfig: { maxOutputTokens: 300, temperature: 0.75 },
+    generationConfig: { maxOutputTokens: 450, temperature: 0.75 },
   });
 
   let response!: Response;
