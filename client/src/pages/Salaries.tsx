@@ -844,6 +844,17 @@ export default function Salaries() {
             <p className="text-xl font-bold tabular-nums" data-testid="text-salon-share">{formatCurrency(salonPortion)} <span className="text-sm font-normal text-muted-foreground">DH</span></p>
           </CardContent>
         </Card>
+        <Card className="glass-card" data-testid="stat-owner-withdrawals">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2 mb-1.5">
+              <div className="w-7 h-7 rounded-lg bg-orange-500/15 flex items-center justify-center">
+                <ArrowDownLeft className="h-3.5 w-3.5 text-orange-600" />
+              </div>
+              <p className="text-xs text-muted-foreground">{t("salaries.ownerWithdrawals") || "مسحوبات الصاحبة"}</p>
+            </div>
+            <p className="text-xl font-bold tabular-nums text-orange-600 dark:text-orange-400" data-testid="text-owner-withdrawals">{formatCurrency(totalOwnerWithdrawals)} <span className="text-sm font-normal text-muted-foreground">DH</span></p>
+          </CardContent>
+        </Card>
         <Card className="glass-card" data-testid="stat-appointments">
           <CardContent className="p-3">
             <div className="flex items-center gap-2 mb-1.5">
@@ -883,6 +894,12 @@ export default function Salaries() {
                 <span className="text-muted-foreground">{t("salaries.totalExpenses")}</span>
                 <span className="font-semibold tabular-nums text-red-600 dark:text-red-400">- {formatCurrency(totalExpenses)} DH</span>
               </div>
+              {totalOwnerWithdrawals > 0 && (
+                <div className="flex justify-between items-baseline text-sm">
+                  <span className="text-muted-foreground">{t("salaries.ownerWithdrawals") || "مسحوبات الصاحبة"}</span>
+                  <span className="font-semibold tabular-nums text-orange-600 dark:text-orange-400">- {formatCurrency(totalOwnerWithdrawals)} DH</span>
+                </div>
+              )}
               <div className="border-t border-border/50 my-1" />
               <div className="flex justify-between items-baseline">
                 <span className="text-sm font-bold">{t("salaries.salonNetProfit")}</span>
