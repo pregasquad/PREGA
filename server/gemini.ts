@@ -6,11 +6,15 @@ const GEMINI_BASE = REPLIT_GEMINI_BASE || "https://generativelanguage.googleapis
 const GROQ_BASE = "https://api.groq.com/openai/v1";
 
 const MODEL_CASCADE = [
+  "gemini-3.1-flash-lite-preview",
+  "gemini-3-flash-preview",
   "gemini-2.5-flash",
-  "gemini-2.5-flash-lite-preview-06-17",
   "gemini-2.0-flash",
   "gemini-1.5-flash",
 ];
+
+// Models confirmed unavailable (404) — skipped instantly with no delay
+const notFoundModels = new Set<string>();
 
 // All reliable free-tier Groq text-generation models, ordered best-quality first
 const GROQ_CASCADE = [
@@ -423,8 +427,8 @@ async function callGemini(
       return { reply: null, isQuotaError: false, isTruncated: false };
     }
     if (status === 404) {
-      console.warn(`[Gemini] ${model} not found (404) — skipping`);
-      return { reply: null, isQuotaError: false, isTruncated: false };
+      console.warn(`[Gemini] ${model} not found (404) — marking permanently unavailable`);
+      return { reply: null, isQuotaError: false, isTruncated: false, isNotFound: true };
     }
     const errBody = await response.text();
     console.error(`[Gemini] ${model} error ${status}: ${errBody.slice(0, 300)}`);
@@ -1067,6 +1071,11 @@ export async function askGemini(
     for (let i = 0; i < MODEL_CASCADE.length; i++) {
       const model = MODEL_CASCADE[i];
 
+      // Skip models confirmed as unavailable (404) — no API call, no delay
+      if (notFoundModels.has(model)) {
+        continue;
+      }
+
       // Skip model if it's still in its per-model cooldown
       if (modelCooldowns[model] && now < modelCooldowns[model]) {
         const secs = Math.ceil((modelCooldowns[model] - now) / 1000);
@@ -1075,7 +1084,7 @@ export async function askGemini(
       }
 
       try {
-        const { reply, isQuotaError, isTruncated } = await callGemini(
+        const { reply, isQuotaError, isTruncated, isNotFound } = await callGemini(
           model, userMessage, systemPrompt, apiKey, history, imageBase64, imageMimeType
         );
 
@@ -1090,6 +1099,13 @@ export async function askGemini(
             { role: "model", text: reply },
           ];
           return { reply, newHistory };
+        }
+
+        // 404 — model doesn't exist, cache it so future calls skip it instantly
+        if (isNotFound) {
+          notFoundModels.add(model);
+          console.warn(`[Gemini] ${model} cached as unavailable — future calls skip it instantly`);
+          continue;
         }
 
         if (isQuotaError) {
