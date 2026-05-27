@@ -116,7 +116,8 @@ async function ensureWhatsAppClient(
   pushName: string | null | undefined,
   emitFn?: (event: string, data: unknown) => void
 ): Promise<void> {
-  if (!normalizedPhone || normalizedPhone.length < 7) return;
+  // Reject anything that's clearly not a phone number (too short or LID-length ≥14 digits)
+  if (!normalizedPhone || normalizedPhone.length < 7 || normalizedPhone.replace(/[^0-9]/g, "").length >= 14) return;
 
   // Chain onto any in-flight upsert for the same phone to prevent duplicates
   const previous = _clientUpsertLock.get(normalizedPhone) ?? Promise.resolve();
@@ -2945,31 +2946,57 @@ export async function registerRoutes(
 
       let created = 0;
       let updated = 0;
+      let cleaned = 0;
 
       const emit = (event: string, data: unknown) => io.emit(event, data);
 
+      // 0. Clean up bogus clients created from @lid JIDs (name === phone AND phone ≥ 14 digits)
+      //    Real phone numbers are ≤ 13 digits (E.164 in practice). LIDs are 14-15 digit numeric IDs.
+      const allClientsForCleanup = await storage.getClients();
+      for (const c of allClientsForCleanup) {
+        const p = (c.phone || "").replace(/[^0-9]/g, "");
+        const n = (c.name || "").replace(/[^0-9]/g, "");
+        // Bogus: phone is 14+ digits (LID), name equals phone (no real name was resolved), 0 visits, 0 spent
+        if (p.length >= 14 && n === p && c.name === c.phone && (c.totalVisits ?? 0) === 0 && Number(c.totalSpent ?? 0) === 0) {
+          await storage.deleteClient(c.id);
+          cleaned++;
+        }
+      }
+      if (cleaned > 0) console.log(`[sync-clients] Cleaned up ${cleaned} bogus @lid clients`);
+
       // 1. Sync from bot_client_memory (real WhatsApp contacts who chatted)
       for (const mem of memories) {
-        // Only use entries that have a real phone resolved (skip raw @lid numeric IDs)
-        const rawPhone = mem.phone || mem.jid.replace("@s.whatsapp.net", "").replace("@lid", "");
+        // @lid JIDs: ONLY use if a real phone was already resolved — never fall back to the raw LID number
+        if (mem.jid.endsWith("@lid")) {
+          if (!mem.phone) continue; // No real phone resolved yet — skip entirely
+          const normalized = normalizePhone(mem.phone);
+          if (!normalized || normalized.length < 7 || normalized.length > 13) continue;
+          const before = await storage.getClientByPhone(normalized);
+          await ensureWhatsAppClient(normalized, mem.clientName, emit);
+          const after = await storage.getClientByPhone(normalized);
+          if (!before && after) created++;
+          else if (before && (!before.name || before.name === before.phone) && after?.name && after.name !== after.phone) updated++;
+          continue;
+        }
+
+        // @s.whatsapp.net JIDs — extract phone from JID, must be a sane length
+        const rawPhone = mem.phone || mem.jid.replace("@s.whatsapp.net", "");
         const normalized = normalizePhone(rawPhone);
-        if (!normalized || normalized.length < 7) continue;
-        // Skip obviously-LID numbers (long numeric IDs that are not phone numbers)
-        if (normalized.length > 15) continue;
+        if (!normalized || normalized.length < 7 || normalized.length > 13) continue;
 
         const before = await storage.getClientByPhone(normalized);
         await ensureWhatsAppClient(normalized, mem.clientName, emit);
         const after = await storage.getClientByPhone(normalized);
 
         if (!before && after) created++;
-        else if (before && !before.name && after?.name) updated++;
+        else if (before && (!before.name || before.name === before.phone) && after?.name && after.name !== after.phone) updated++;
       }
 
       // 2. Sync from appointments (clients who booked even without chatting)
       for (const apt of appointments) {
         if (!apt.phone) continue;
         const normalized = normalizePhone(apt.phone);
-        if (!normalized || normalized.length < 7 || normalized.length > 15) continue;
+        if (!normalized || normalized.length < 7 || normalized.length > 13) continue;
 
         const before = await storage.getClientByPhone(normalized);
         await ensureWhatsAppClient(normalized, apt.client || null, emit);
@@ -2978,7 +3005,7 @@ export async function registerRoutes(
         if (!before && after) created++;
       }
 
-      res.json({ ok: true, created, updated });
+      res.json({ ok: true, created, updated, cleaned });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }

@@ -144,12 +144,13 @@ export default function Clients() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Sync failed");
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      const parts = [];
+      if (data.created > 0) parts.push(`${data.created} added`);
+      if (data.updated > 0) parts.push(`${data.updated} updated`);
+      if (data.cleaned > 0) parts.push(`${data.cleaned} bogus numbers removed`);
       toast({
-        title: t("clients.whatsappSync", "WhatsApp Sync"),
-        description: t("clients.whatsappSyncResult", "{{created}} added, {{updated}} updated", {
-          created: data.created,
-          updated: data.updated,
-        }),
+        title: "WhatsApp Sync",
+        description: parts.length > 0 ? parts.join(", ") : "Already up to date",
       });
     } catch (err: any) {
       toast({ title: t("common.error", "Error"), description: err.message, variant: "destructive" });
