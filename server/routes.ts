@@ -6,7 +6,7 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import { setupAuth, registerAuthRoutes, isPinAuthenticated, requirePermission, checkRateLimit, recordFailedAttempt, clearAttempts } from "./replit_integrations/auth";
 import { vapidPublicKey, sendPushNotification, checkAndNotifyExpiringProducts, checkAndNotifyLowStock as broadcastLowStockNotifications, sendClosingReminderNow } from "./push";
-import { db, schema, pool, dbDialect, isDatabaseOffline, checkDatabaseConnection, getBotMemory, saveBotMemory, type BotClientMemory } from "./db";
+import { db, schema, pool, dbDialect, isDatabaseOffline, checkDatabaseConnection, getBotMemory, saveBotMemory, type BotClientMemory, saveBroadcastLog, getLastBroadcastLog } from "./db";
 import { eq } from "drizzle-orm";
 import { insertAdminRoleSchema, ROLE_PERMISSIONS, insertOwnerWithdrawalSchema } from "@shared/schema";
 import bcrypt from "bcryptjs";
@@ -3496,6 +3496,12 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
         job.done = true;
         job.finishedAt = Date.now();
         lastBroadcastResult = { ...job, jobId };
+        // Persist to DB so it survives server restarts
+        saveBroadcastLog({
+          message: job.message, total: job.total, sent: job.sent, failed: job.failed,
+          sentClients: job.sentClients, failedClients: job.failedClients,
+          startedAt: job.startedAt, finishedAt: job.finishedAt,
+        }).catch(() => {});
       })();
     } catch (err: any) {
       res.status(400).json({ success: false, error: err.message });
@@ -3503,9 +3509,13 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
   });
 
   // Broadcast job progress polling
-  app.get("/api/notifications/broadcast/:jobId", isPinAuthenticated, (req, res) => {
+  app.get("/api/notifications/broadcast/:jobId", isPinAuthenticated, async (req, res) => {
     if (req.params.jobId === "last") {
-      if (!lastBroadcastResult) return res.json(null);
+      // Return in-memory result if available, otherwise load from DB
+      if (lastBroadcastResult) return res.json(lastBroadcastResult);
+      const dbResult = await getLastBroadcastLog();
+      if (!dbResult) return res.json(null);
+      lastBroadcastResult = { ...dbResult, jobId: "db" };
       return res.json(lastBroadcastResult);
     }
     const job = broadcastJobs.get(req.params.jobId);

@@ -2339,6 +2339,122 @@ export async function ensureHolidaysColumn(): Promise<void> {
   }
 }
 
+// ── Broadcast logs table ──────────────────────────────────────────────────────
+export async function ensureBroadcastLogsTable(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      try {
+        await connection.query(`
+          CREATE TABLE IF NOT EXISTS broadcast_logs (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            message TEXT NOT NULL,
+            total INT NOT NULL DEFAULT 0,
+            sent INT NOT NULL DEFAULT 0,
+            failed INT NOT NULL DEFAULT 0,
+            sent_clients JSON NULL,
+            failed_clients JSON NULL,
+            started_at BIGINT NOT NULL,
+            finished_at BIGINT NULL
+          )
+        `);
+      } finally {
+        connection.release();
+      }
+    } else {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS broadcast_logs (
+          id SERIAL PRIMARY KEY,
+          message TEXT NOT NULL,
+          total INT NOT NULL DEFAULT 0,
+          sent INT NOT NULL DEFAULT 0,
+          failed INT NOT NULL DEFAULT 0,
+          sent_clients JSONB NULL,
+          failed_clients JSONB NULL,
+          started_at BIGINT NOT NULL,
+          finished_at BIGINT NULL
+        )
+      `);
+    }
+    console.log("Broadcast logs table ready");
+  } catch (error) {
+    console.error("Failed to ensure broadcast_logs table:", error);
+  }
+}
+
+export async function saveBroadcastLog(log: {
+  message: string; total: number; sent: number; failed: number;
+  sentClients: any[]; failedClients: any[]; startedAt: number; finishedAt: number;
+}): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      try {
+        await connection.query(
+          `INSERT INTO broadcast_logs (message, total, sent, failed, sent_clients, failed_clients, started_at, finished_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [log.message, log.total, log.sent, log.failed,
+           JSON.stringify(log.sentClients), JSON.stringify(log.failedClients),
+           log.startedAt, log.finishedAt]
+        );
+      } finally {
+        connection.release();
+      }
+    } else {
+      await pool.query(
+        `INSERT INTO broadcast_logs (message, total, sent, failed, sent_clients, failed_clients, started_at, finished_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [log.message, log.total, log.sent, log.failed,
+         JSON.stringify(log.sentClients), JSON.stringify(log.failedClients),
+         log.startedAt, log.finishedAt]
+      );
+    }
+  } catch (error) {
+    console.error("Failed to save broadcast log:", error);
+  }
+}
+
+export async function getLastBroadcastLog(): Promise<any | null> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      try {
+        const [rows] = await connection.query(
+          `SELECT * FROM broadcast_logs ORDER BY finished_at DESC LIMIT 1`
+        );
+        const row = (rows as any[])[0];
+        if (!row) return null;
+        return {
+          message: row.message, total: row.total, sent: row.sent, failed: row.failed,
+          sentClients: typeof row.sent_clients === 'string' ? JSON.parse(row.sent_clients) : (row.sent_clients || []),
+          failedClients: typeof row.failed_clients === 'string' ? JSON.parse(row.failed_clients) : (row.failed_clients || []),
+          errors: (typeof row.failed_clients === 'string' ? JSON.parse(row.failed_clients) : (row.failed_clients || [])).slice(0,10).map((c: any) => `${c.name}: ${c.error}`),
+          startedAt: Number(row.started_at), finishedAt: Number(row.finished_at), done: true,
+        };
+      } finally {
+        connection.release();
+      }
+    } else {
+      const result = await pool.query(
+        `SELECT * FROM broadcast_logs ORDER BY finished_at DESC LIMIT 1`
+      );
+      const row = result.rows?.[0];
+      if (!row) return null;
+      const sentClients = row.sent_clients || [];
+      const failedClients = row.failed_clients || [];
+      return {
+        message: row.message, total: row.total, sent: row.sent, failed: row.failed,
+        sentClients, failedClients,
+        errors: failedClients.slice(0,10).map((c: any) => `${c.name}: ${c.error}`),
+        startedAt: Number(row.started_at), finishedAt: Number(row.finished_at), done: true,
+      };
+    }
+  } catch (error) {
+    console.error("Failed to get last broadcast log:", error);
+    return null;
+  }
+}
+
 export async function ensurePaypalOrderIdColumn(): Promise<void> {
   try {
     if (dbDialect === 'mysql') {
