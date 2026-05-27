@@ -5501,6 +5501,15 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
           // ── Build 20-day planning snapshot for availability checking ────
           const ARABIC_DAYS = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+          const { getMoroccanHolidayForDate } = await import("./morocco-holidays");
+          // Also build a set of custom salon holidays for fast lookup
+          const customHolidaySet = new Set<string>((() => {
+            try {
+              const raw = (bizSettings as any)?.holidays;
+              if (!raw) return [];
+              return Array.isArray(raw) ? raw : JSON.parse(raw);
+            } catch { return []; }
+          })());
           const planningSnapshot = (() => {
             const days = [];
             for (let i = 0; i < 20; i++) {
@@ -5517,7 +5526,15 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
                 const endTime = `${String(Math.floor(endMin / 60)).padStart(2,"0")}:${String(endMin % 60).padStart(2,"0")}`;
                 return { time: startTime, endTime, staff: a.staff || a.staffName || "?", service: a.service || a.serviceName || "?", duration: dur };
               }).sort((a: any, b: any) => a.time.localeCompare(b.time));
-              days.push({ date: dateStr, dayLabel, bookedSlots });
+              // Detect holiday for this day (Moroccan national + custom salon)
+              const moroccanHoliday = getMoroccanHolidayForDate(dateStr);
+              const customHoliday = customHolidaySet.has(dateStr);
+              const holidayName = customHoliday
+                ? "عطلة الصالون"
+                : moroccanHoliday
+                ? `${moroccanHoliday.emoji} ${moroccanHoliday.nameAr}`
+                : undefined;
+              days.push({ date: dateStr, dayLabel, bookedSlots, holiday: holidayName });
             }
             return days;
           })();
