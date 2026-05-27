@@ -809,27 +809,45 @@ export default function AdminSettings() {
                         {t("admin.addHolidays", { defaultValue: "إضافة الأيام" })}
                       </button>
                       {(businessForm.holidays || []).length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-2 max-h-40 overflow-y-auto">
-                          {(businessForm.holidays || []).map(date => (
-                            <span
-                              key={date}
-                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-destructive/10 text-destructive text-xs font-medium border border-destructive/20"
-                            >
-                              <CalendarOff className="w-3 h-3" />
-                              {new Date(date + "T12:00:00").toLocaleDateString("ar-MA", { day: "numeric", month: "long" })}
-                              <button
-                                type="button"
-                                onClick={() => setBusinessForm(prev => ({
-                                  ...prev,
-                                  holidays: (prev.holidays || []).filter(d => d !== date)
-                                }))}
-                                className="ml-1 hover:text-destructive/60 transition-colors"
-                                data-testid={`button-remove-holiday-${date}`}
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
+                        <div className="mt-2 space-y-2">
+                          {/* Summary bar */}
+                          <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-destructive/8 border border-destructive/15">
+                            <span className="text-xs font-medium text-destructive flex items-center gap-1.5">
+                              <CalendarOff className="w-3.5 h-3.5" />
+                              {(businessForm.holidays || []).length} {t("admin.closedDays", { defaultValue: "يوم مغلق" })}
                             </span>
-                          ))}
+                            <button
+                              type="button"
+                              onClick={() => setBusinessForm(prev => ({ ...prev, holidays: [] }))}
+                              className="text-[11px] text-destructive/70 hover:text-destructive font-medium flex items-center gap-1 transition-colors"
+                              data-testid="button-clear-holidays"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              {t("admin.clearAll", { defaultValue: "مسح الكل" })}
+                            </button>
+                          </div>
+                          {/* Chips */}
+                          <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto">
+                            {(businessForm.holidays || []).map(date => (
+                              <span
+                                key={date}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-destructive/10 text-destructive text-xs font-medium border border-destructive/20"
+                              >
+                                {new Date(date + "T12:00:00").toLocaleDateString("ar-MA", { day: "numeric", month: "long" })}
+                                <button
+                                  type="button"
+                                  onClick={() => setBusinessForm(prev => ({
+                                    ...prev,
+                                    holidays: (prev.holidays || []).filter(d => d !== date)
+                                  }))}
+                                  className="hover:text-destructive/60 transition-colors"
+                                  data-testid={`button-remove-holiday-${date}`}
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </span>
+                            ))}
+                          </div>
                         </div>
                       )}
                     </div>
