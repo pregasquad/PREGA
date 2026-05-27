@@ -2315,7 +2315,9 @@ export async function ensureHolidaysColumn(): Promise<void> {
           WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'business_settings' AND COLUMN_NAME = 'holidays'
         `);
         if ((rows as any[]).length === 0) {
-          await connection.query(`ALTER TABLE business_settings ADD COLUMN holidays JSON NOT NULL DEFAULT ('[]')`);
+          // TiDB/MySQL don't support DEFAULT ('[]') expression for JSON — add nullable then fill
+          await connection.query(`ALTER TABLE business_settings ADD COLUMN holidays JSON NULL`);
+          await connection.query(`UPDATE business_settings SET holidays = '[]' WHERE holidays IS NULL`);
           console.log("Added holidays column to business_settings");
         }
       } finally {
