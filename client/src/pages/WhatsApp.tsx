@@ -162,6 +162,8 @@ export default function WhatsApp() {
   const [broadcastMsg, setBroadcastMsg] = useState("");
   const [broadcastJobId, setBroadcastJobId] = useState<string | null>(null);
   const [broadcastDone, setBroadcastDone] = useState(false);
+  const [broadcastTab, setBroadcastTab] = useState<"compose" | "last">("compose");
+  const [lastSearch, setLastSearch] = useState("");
   const [selectedVoice, setSelectedVoice] = useState("Aoede");
   const [selectedPersonalities, setSelectedPersonalities] = useState<string[]>(["warm"]);
 
@@ -817,10 +819,19 @@ export default function WhatsApp() {
     refetchInterval: 1500,
   });
 
+  // Fetch last broadcast result
+  const { data: lastBroadcast, refetch: refetchLast } = useQuery({
+    queryKey: ["/api/notifications/broadcast/last"],
+    queryFn: () =>
+      fetch("/api/notifications/broadcast/last", { credentials: "include" }).then((r) => r.json()),
+    enabled: broadcastOpen,
+  });
+
   // When job done, fire toast and stop polling
   useEffect(() => {
     if (broadcastProgress?.done && !broadcastDone) {
       setBroadcastDone(true);
+      refetchLast();
       toast({
         title:
           broadcastProgress.failed > 0
@@ -1298,106 +1309,234 @@ export default function WhatsApp() {
             <span className="font-semibold text-sm">Broadcast</span>
             <p className="text-xs text-muted-foreground mt-0.5">{clientsWithPhone.length} clients with phone</p>
           </div>
+          {lastBroadcast && (
+            <Badge variant="outline" className="text-[10px] mr-1 shrink-0">
+              آخر إرسال: {lastBroadcast.sent}/{lastBroadcast.total}
+            </Badge>
+          )}
           {broadcastOpen ? (
             <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" />
           ) : (
             <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
           )}
         </button>
+
         {broadcastOpen && (
-          <div className="border-t border-border/30 p-5 space-y-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground uppercase tracking-wider">
-                Message — use{" "}
-                <code className="bg-muted px-1 rounded text-[11px]">{"{name}"}</code> for client name
-              </Label>
-              <Textarea
-                placeholder={"مرحباً {name}! نذكركم بعروضنا الجديدة… 💅"}
-                value={broadcastMsg}
-                onChange={(e) => setBroadcastMsg(e.target.value)}
-                rows={4}
-                dir="rtl"
-                disabled={!!broadcastJobId && !broadcastDone}
-                data-testid="textarea-broadcast-message"
-              />
+          <div className="border-t border-border/30">
+            {/* Tab switcher */}
+            <div className="flex border-b border-border/30">
+              <button
+                onClick={() => setBroadcastTab("compose")}
+                className={`flex-1 py-2.5 text-xs font-medium transition-colors flex items-center justify-center gap-1.5 ${broadcastTab === "compose" ? "text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground"}`}
+                data-testid="tab-broadcast-compose"
+              >
+                <MessageCircle className="w-3.5 h-3.5" /> إرسال رسالة
+              </button>
+              <button
+                onClick={() => setBroadcastTab("last")}
+                className={`flex-1 py-2.5 text-xs font-medium transition-colors flex items-center justify-center gap-1.5 ${broadcastTab === "last" ? "text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground"}`}
+                data-testid="tab-broadcast-last"
+              >
+                <Clock className="w-3.5 h-3.5" /> آخر إرسال
+                {lastBroadcast && <span className="bg-primary/15 text-primary rounded-full px-1.5 py-0.5 text-[10px]">{lastBroadcast.sent}</span>}
+              </button>
             </div>
 
-            {/* Progress bar — shown while job is running */}
-            {broadcastJobId && broadcastProgress && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>
-                    {broadcastDone ? (
-                      broadcastProgress.failed > 0 ? (
-                        <span className="text-amber-400">⚠️ اكتمل — {broadcastProgress.sent} مُرسلة، {broadcastProgress.failed} فشلت</span>
-                      ) : (
-                        <span className="text-emerald-400">✅ اكتمل — كل الرسائل أُرسلت</span>
-                      )
-                    ) : (
-                      <span className="flex items-center gap-1.5">
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                        جاري الإرسال… {broadcastProgress.sent + broadcastProgress.failed}/{broadcastProgress.total}
-                      </span>
-                    )}
-                  </span>
-                  <span>{broadcastProgress.total > 0 ? Math.round(((broadcastProgress.sent + broadcastProgress.failed) / broadcastProgress.total) * 100) : 0}%</span>
-                </div>
-                <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-                  <div
-                    className={`h-2 rounded-full transition-all duration-500 ${broadcastDone && broadcastProgress.failed === 0 ? "bg-emerald-500" : broadcastDone ? "bg-amber-500" : "liquid-gradient"}`}
-                    style={{ width: `${broadcastProgress.total > 0 ? Math.round(((broadcastProgress.sent + broadcastProgress.failed) / broadcastProgress.total) * 100) : 0}%` }}
+            {/* ── COMPOSE TAB ── */}
+            {broadcastTab === "compose" && (
+              <div className="p-5 space-y-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider">
+                    Message — use{" "}
+                    <code className="bg-muted px-1 rounded text-[11px]">{"{name}"}</code> for client name
+                  </Label>
+                  <Textarea
+                    placeholder={"مرحباً {name}! نذكركم بعروضنا الجديدة… 💅"}
+                    value={broadcastMsg}
+                    onChange={(e) => setBroadcastMsg(e.target.value)}
+                    rows={4}
+                    dir="rtl"
+                    disabled={!!broadcastJobId && !broadcastDone}
+                    data-testid="textarea-broadcast-message"
                   />
                 </div>
-                {broadcastProgress.failed > 0 && broadcastProgress.errors?.length > 0 && (
-                  <div className="text-xs text-destructive/80 bg-destructive/10 rounded-lg p-2 space-y-0.5 max-h-24 overflow-y-auto">
-                    {broadcastProgress.errors.map((e: string, i: number) => (
-                      <div key={i}>• {e}</div>
-                    ))}
+
+                {/* Progress bar */}
+                {broadcastJobId && broadcastProgress && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>
+                        {broadcastDone ? (
+                          broadcastProgress.failed > 0 ? (
+                            <span className="text-amber-400">⚠️ اكتمل — {broadcastProgress.sent} مُرسلة، {broadcastProgress.failed} فشلت</span>
+                          ) : (
+                            <span className="text-emerald-400">✅ اكتمل — كل الرسائل أُرسلت</span>
+                          )
+                        ) : (
+                          <span className="flex items-center gap-1.5">
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            جاري الإرسال… {broadcastProgress.sent + broadcastProgress.failed}/{broadcastProgress.total}
+                          </span>
+                        )}
+                      </span>
+                      <span>{broadcastProgress.total > 0 ? Math.round(((broadcastProgress.sent + broadcastProgress.failed) / broadcastProgress.total) * 100) : 0}%</span>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                      <div
+                        className={`h-2 rounded-full transition-all duration-500 ${broadcastDone && broadcastProgress.failed === 0 ? "bg-emerald-500" : broadcastDone ? "bg-amber-500" : "liquid-gradient"}`}
+                        style={{ width: `${broadcastProgress.total > 0 ? Math.round(((broadcastProgress.sent + broadcastProgress.failed) / broadcastProgress.total) * 100) : 0}%` }}
+                      />
+                    </div>
+                    {broadcastProgress.failed > 0 && broadcastProgress.errors?.length > 0 && (
+                      <div className="text-xs text-destructive/80 bg-destructive/10 rounded-lg p-2 space-y-0.5 max-h-20 overflow-y-auto">
+                        {broadcastProgress.errors.map((e: string, i: number) => (
+                          <div key={i}>• {e}</div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
+
+                <div className="flex gap-2">
+                  <Button
+                    className="flex-1 liquid-gradient text-white"
+                    onClick={() => {
+                      setBroadcastJobId(null);
+                      setBroadcastDone(false);
+                      broadcastMutation.mutate();
+                    }}
+                    disabled={
+                      !connected ||
+                      !broadcastMsg.trim() ||
+                      clientsWithPhone.length === 0 ||
+                      broadcastMutation.isPending ||
+                      (!!broadcastJobId && !broadcastDone)
+                    }
+                    data-testid="button-send-broadcast"
+                  >
+                    {broadcastMutation.isPending || (!!broadcastJobId && !broadcastDone) ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <MessageCircle className="w-4 h-4 mr-2" />
+                    )}
+                    {!connected
+                      ? "Connect WhatsApp first"
+                      : broadcastMutation.isPending || (!!broadcastJobId && !broadcastDone)
+                      ? "جاري الإرسال…"
+                      : `Broadcast to ${clientsWithPhone.length} clients`}
+                  </Button>
+                  {broadcastDone && (
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => { setBroadcastJobId(null); setBroadcastDone(false); setBroadcastMsg(""); }}
+                      title="إعادة تعيين"
+                      data-testid="button-reset-broadcast"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
 
-            <div className="flex gap-2">
-              <Button
-                className="flex-1 liquid-gradient text-white"
-                onClick={() => {
-                  setBroadcastJobId(null);
-                  setBroadcastDone(false);
-                  broadcastMutation.mutate();
-                }}
-                disabled={
-                  !connected ||
-                  !broadcastMsg.trim() ||
-                  clientsWithPhone.length === 0 ||
-                  broadcastMutation.isPending ||
-                  (!!broadcastJobId && !broadcastDone)
-                }
-                data-testid="button-send-broadcast"
-              >
-                {broadcastMutation.isPending || (!!broadcastJobId && !broadcastDone) ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            {/* ── LAST SEND TAB ── */}
+            {broadcastTab === "last" && (
+              <div className="p-5 space-y-3">
+                {!lastBroadcast ? (
+                  <p className="text-center text-sm text-muted-foreground py-6">لا يوجد إرسال سابق بعد</p>
                 ) : (
-                  <MessageCircle className="w-4 h-4 mr-2" />
+                  <>
+                    {/* Summary */}
+                    <div className="bg-muted/40 rounded-xl p-3 space-y-1.5">
+                      <div className="text-xs text-muted-foreground italic line-clamp-2 text-right" dir="rtl">"{lastBroadcast.message}"</div>
+                      <div className="flex items-center gap-3 text-xs pt-1">
+                        <span className="flex items-center gap-1 text-emerald-400"><CheckCircle2 className="w-3.5 h-3.5" />{lastBroadcast.sent} أُرسلت</span>
+                        {lastBroadcast.failed > 0 && <span className="flex items-center gap-1 text-destructive"><AlertCircle className="w-3.5 h-3.5" />{lastBroadcast.failed} فشلت</span>}
+                        <span className="text-muted-foreground ml-auto">
+                          {lastBroadcast.finishedAt ? new Date(lastBroadcast.finishedAt).toLocaleString("ar-MA") : ""}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Search */}
+                    <div className="relative">
+                      <Input
+                        placeholder="بحث باسم أو رقم…"
+                        value={lastSearch}
+                        onChange={(e) => setLastSearch(e.target.value)}
+                        className="text-sm pl-8"
+                        dir="rtl"
+                        data-testid="input-last-broadcast-search"
+                      />
+                      <Hash className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-muted-foreground" />
+                    </div>
+
+                    {/* Tabs: sent / failed */}
+                    <div className="space-y-2">
+                      {/* Sent list */}
+                      {lastBroadcast.sentClients?.length > 0 && (
+                        <div>
+                          <p className="text-[11px] text-emerald-400 font-medium uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" /> الأرقام التي استلمت الرسالة ({lastBroadcast.sentClients.length})
+                          </p>
+                          <div className="space-y-1 max-h-64 overflow-y-auto pr-1">
+                            {lastBroadcast.sentClients
+                              .filter((c: any) =>
+                                !lastSearch ||
+                                c.name?.toLowerCase().includes(lastSearch.toLowerCase()) ||
+                                c.phone?.includes(lastSearch)
+                              )
+                              .map((c: any) => (
+                                <div key={c.id} className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-emerald-500/5 border border-emerald-500/15">
+                                  <div className="w-7 h-7 rounded-full bg-emerald-500/15 flex items-center justify-center shrink-0">
+                                    <User className="w-3.5 h-3.5 text-emerald-400" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-medium truncate">{c.name}</p>
+                                    <p className="text-[11px] text-muted-foreground" dir="ltr">{c.phone}</p>
+                                  </div>
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Failed list */}
+                      {lastBroadcast.failedClients?.length > 0 && (
+                        <div className="mt-2">
+                          <p className="text-[11px] text-destructive font-medium uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                            <AlertCircle className="w-3 h-3" /> فشل الإرسال ({lastBroadcast.failedClients.length})
+                          </p>
+                          <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
+                            {lastBroadcast.failedClients
+                              .filter((c: any) =>
+                                !lastSearch ||
+                                c.name?.toLowerCase().includes(lastSearch.toLowerCase()) ||
+                                c.phone?.includes(lastSearch)
+                              )
+                              .map((c: any) => (
+                                <div key={c.id} className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-destructive/5 border border-destructive/15">
+                                  <div className="w-7 h-7 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
+                                    <User className="w-3.5 h-3.5 text-destructive" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-medium truncate">{c.name}</p>
+                                    <p className="text-[11px] text-muted-foreground" dir="ltr">{c.phone}</p>
+                                    <p className="text-[10px] text-destructive/70 truncate">{c.error}</p>
+                                  </div>
+                                  <AlertCircle className="w-3.5 h-3.5 text-destructive shrink-0" />
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </>
                 )}
-                {!connected
-                  ? "Connect WhatsApp first"
-                  : broadcastMutation.isPending || (!!broadcastJobId && !broadcastDone)
-                  ? `جاري الإرسال…`
-                  : `Broadcast to ${clientsWithPhone.length} clients`}
-              </Button>
-              {broadcastDone && (
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => { setBroadcastJobId(null); setBroadcastDone(false); setBroadcastMsg(""); }}
-                  title="إعادة تعيين"
-                  data-testid="button-reset-broadcast"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                </Button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         )}
       </div>

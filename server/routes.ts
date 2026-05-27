@@ -19,16 +19,22 @@ import fs from "fs";
 import path from "path";
 
 // ── In-memory broadcast job store ─────────────────────────────────────────────
+interface BroadcastClient { id: number; name: string; phone: string; }
 interface BroadcastJob {
   total: number;
   sent: number;
   failed: number;
   done: boolean;
+  message: string;
   errors: string[];
-  failedClients: { id: number; name: string; phone: string; error: string }[];
+  sentClients: BroadcastClient[];
+  failedClients: (BroadcastClient & { error: string })[];
   startedAt: number;
+  finishedAt?: number;
 }
 const broadcastJobs = new Map<string, BroadcastJob>();
+// Keep the last completed broadcast result forever (until next broadcast)
+let lastBroadcastResult: (BroadcastJob & { jobId: string }) | null = null;
 // Cleanup jobs older than 30 minutes
 setInterval(() => {
   const cutoff = Date.now() - 30 * 60 * 1000;
@@ -3459,7 +3465,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
       // Create job and return immediately
       const jobId = crypto.randomUUID();
-      const job: BroadcastJob = { total: targetClients.length, sent: 0, failed: 0, done: false, errors: [], failedClients: [], startedAt: Date.now() };
+      const job: BroadcastJob = { total: targetClients.length, sent: 0, failed: 0, done: false, message, errors: [], sentClients: [], failedClients: [], startedAt: Date.now() };
       broadcastJobs.set(jobId, job);
       res.json({ success: true, jobId, total: targetClients.length });
 
@@ -3471,6 +3477,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
             const result = await sendWhatsAppMessage(client.phone!, personalizedMessage);
             if (result.success) {
               job.sent++;
+              job.sentClients.push({ id: client.id, name: client.name, phone: client.phone! });
             } else {
               job.failed++;
               const errorMsg = result.error || "Unknown error";
@@ -3487,6 +3494,8 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
           await new Promise(resolve => setTimeout(resolve, 800));
         }
         job.done = true;
+        job.finishedAt = Date.now();
+        lastBroadcastResult = { ...job, jobId };
       })();
     } catch (err: any) {
       res.status(400).json({ success: false, error: err.message });
@@ -3495,9 +3504,13 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
   // Broadcast job progress polling
   app.get("/api/notifications/broadcast/:jobId", isPinAuthenticated, (req, res) => {
+    if (req.params.jobId === "last") {
+      if (!lastBroadcastResult) return res.json(null);
+      return res.json(lastBroadcastResult);
+    }
     const job = broadcastJobs.get(req.params.jobId);
     if (!job) return res.status(404).json({ error: "Job not found" });
-    res.json({ sent: job.sent, failed: job.failed, total: job.total, done: job.done, errors: job.errors, failedClients: job.failedClients });
+    res.json({ sent: job.sent, failed: job.failed, total: job.total, done: job.done, errors: job.errors, sentClients: job.sentClients, failedClients: job.failedClients });
   });
 
   // Check Baileys connection status (legacy endpoint kept for compatibility)
