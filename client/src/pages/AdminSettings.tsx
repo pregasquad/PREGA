@@ -16,7 +16,7 @@ import {
   CreditCard, Building2, Clock, Save, Camera, Loader2, RefreshCw,
   MessageCircle, Send, Lock, LayoutGrid, Sparkles,
   Search, Check, X, Phone, AlertTriangle, CheckCircle2,
-  BookTemplate
+  BookTemplate, CalendarOff, Plus
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
@@ -45,6 +45,7 @@ interface BusinessSettings {
   openingTime: string;
   closingTime: string;
   workingDays: number[];
+  holidays: string[];
   autoLockEnabled: boolean;
   planningShortcuts: string[];
   planningSlotHeight: number;
@@ -166,10 +167,12 @@ export default function AdminSettings() {
     openingTime: "09:00",
     closingTime: "19:00",
     workingDays: [1, 2, 3, 4, 5, 6],
+    holidays: [],
     autoLockEnabled: false,
     planningShortcuts: DEFAULT_SHORTCUTS,
     planningSlotHeight: 44,
   });
+  const [newHolidayDate, setNewHolidayDate] = useState("");
   const [broadcastMessage, setBroadcastMessage] = useState("");
   const [lastBroadcastMessage, setLastBroadcastMessage] = useState("");
   const [broadcastResult, setBroadcastResult] = useState<{sent: number, failed: number, total: number, failedClients: {id: number, name: string, phone: string, error: string}[]} | null>(null);
@@ -745,6 +748,65 @@ export default function AdminSettings() {
                           );
                         })}
                       </div>
+                    </div>
+
+                    {/* Holidays / Days Off */}
+                    <div className="mt-4 space-y-2">
+                      <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                        <CalendarOff className="w-3.5 h-3.5" />
+                        {t("admin.holidays", { defaultValue: "أيام العطل والإجازات" })}
+                      </Label>
+                      <p className="text-xs text-muted-foreground">{t("admin.holidaysDesc", { defaultValue: "الصالون مسدود في هذه الأيام — البوت يخبر العملاء تلقائياً" })}</p>
+                      <div className="flex gap-2 mt-2">
+                        <Input
+                          type="date"
+                          value={newHolidayDate}
+                          onChange={e => setNewHolidayDate(e.target.value)}
+                          className="rounded-xl border-border/50 h-10 flex-1"
+                          data-testid="input-holiday-date"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!newHolidayDate) return;
+                            if ((businessForm.holidays || []).includes(newHolidayDate)) return;
+                            setBusinessForm(prev => ({
+                              ...prev,
+                              holidays: [...(prev.holidays || []), newHolidayDate].sort()
+                            }));
+                            setNewHolidayDate("");
+                          }}
+                          className="px-3 py-2 rounded-xl liquid-gradient text-white text-xs font-medium flex items-center gap-1.5 shadow-md shadow-primary/20"
+                          data-testid="button-add-holiday"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          {t("common.add", { defaultValue: "إضافة" })}
+                        </button>
+                      </div>
+                      {(businessForm.holidays || []).length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {(businessForm.holidays || []).map(date => (
+                            <span
+                              key={date}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-destructive/10 text-destructive text-xs font-medium border border-destructive/20"
+                            >
+                              <CalendarOff className="w-3 h-3" />
+                              {new Date(date + "T12:00:00").toLocaleDateString("ar-MA", { day: "numeric", month: "long", year: "numeric" })}
+                              <button
+                                type="button"
+                                onClick={() => setBusinessForm(prev => ({
+                                  ...prev,
+                                  holidays: (prev.holidays || []).filter(d => d !== date)
+                                }))}
+                                className="ml-1 hover:text-destructive/60 transition-colors"
+                                data-testid={`button-remove-holiday-${date}`}
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
 

@@ -76,6 +76,7 @@ export interface SalonContext {
   upcomingAppointment?: { date: string; time: string; service: string } | null;
   planningSnapshot?: PlanningDay[]; // next 20 days of booked slots
   currentTime?: string; // "HH:MM" — the actual current server time
+  holidays?: string[]; // "YYYY-MM-DD" dates when salon is closed
 }
 
 export interface ConversationTurn {
@@ -97,7 +98,8 @@ function buildSystemPrompt(ctx: SalonContext): string {
   const correctionsKey = (ctx.botCorrections || []).map(c => c.wrongInfo).join("|");
   const complaintsKey = (ctx.resolvedComplaints || []).map(c => c.complaint).join("|");
   const planningKey = (ctx.planningSnapshot || []).map(d => `${d.date}:${d.bookedSlots.length}`).join(",");
-  const key = `${ctx.name}|${ctx.currency}|${ctx.services.length}|${staffKey}|${memKey}|${ctx.isNewConversation ? "new" : "returning"}|${bossKey}|${correctionsKey}|${complaintsKey}|${(ctx.personality ?? ["warm"]).join(",")}|${planningKey}`;
+  const holidayKey = (ctx.holidays || []).join(",");
+  const key = `${ctx.name}|${ctx.currency}|${ctx.services.length}|${staffKey}|${memKey}|${ctx.isNewConversation ? "new" : "returning"}|${bossKey}|${correctionsKey}|${complaintsKey}|${(ctx.personality ?? ["warm"]).join(",")}|${planningKey}|${holidayKey}`;
 
   if (key === cachedPromptKey) return cachedPrompt;
 
@@ -113,7 +115,7 @@ function buildSystemPrompt(ctx: SalonContext): string {
           .map(
             ([cat, svcs]) =>
               `【${cat}】\n` +
-              svcs.map((s) => `  • ${(s as any).emoji ? (s as any).emoji + " " : ""}${s.name} : ${s.isStartingPrice ? `à partir de ${s.price}` : s.price} ${ctx.currency || "DH"}`).join("\n")
+              [...svcs].sort((a, b) => a.price - b.price).map((s) => `  • ${(s as any).emoji ? (s as any).emoji + " " : ""}${s.name} : ${s.isStartingPrice ? `à partir de ${s.price}` : s.price} ${ctx.currency || "DH"}`).join("\n")
           )
           .join("\n\n")
       : "  (liste non disponible)";
@@ -167,6 +169,9 @@ ${ctx.bossInstructions.map((inst, i) => `${i + 1}. ${inst}`).join("\n")}
 ${ctx.address ? `العنوان: ${ctx.address}` : ""}
 ${ctx.mapsLink ? `رابط Google Maps: ${ctx.mapsLink}` : ""}
 ${ctx.openingTime && ctx.closingTime ? `أوقات العمل: ${ctx.openingTime} – ${ctx.closingTime}` : ""}
+${ctx.holidays && ctx.holidays.length > 0 ? `🔴 أيام العطل والإجازات (الصالون مغلق فيها تماماً — ما تقبلي فيها أي حجز):
+${ctx.holidays.map(h => `  • ${h}`).join("\n")}
+⚠️ إذا العميلة طلبت موعد في يوم عطلة → قوليها بلطف: "عزيزتي، الصالون مسدود هاد اليوم بسبب العطلة 🌸 واش نقدر نحجزك يوم آخر؟"` : ""}
 انستغرام: @pregasquad.women
 • لو سألو عن العنوان أو "فين كاينين" أو "location" → عطيهم العنوان الكامل${ctx.mapsLink ? ` مع رابط Google Maps: ${ctx.mapsLink}` : ""} مباشرة
 • لو سألو عن انستغرام → "حسابنا: @pregasquad.women 📸"

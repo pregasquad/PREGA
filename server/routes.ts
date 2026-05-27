@@ -5577,6 +5577,15 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
                 return Array.isArray(parsed) && parsed.length > 0 ? parsed : ["warm"];
               } catch { return ["warm"]; }
             })(),
+            holidays: (() => {
+              try {
+                const raw = (bizSettings as any)?.holidays;
+                if (!raw) return [];
+                if (Array.isArray(raw)) return raw as string[];
+                const parsed = JSON.parse(raw);
+                return Array.isArray(parsed) ? parsed : [];
+              } catch { return []; }
+            })(),
           };
 
           // Single AI call with merged context from all buffered messages

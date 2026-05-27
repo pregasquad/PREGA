@@ -336,6 +336,7 @@ export const businessSettings = pgTable("business_settings", {
   openingTime: varchar("opening_time", { length: 10 }).notNull().default("09:00"),
   closingTime: varchar("closing_time", { length: 10 }).notNull().default("19:00"),
   workingDays: json("working_days").$type<number[]>().notNull().default([1, 2, 3, 4, 5, 6]),
+  holidays: json("holidays").$type<string[]>().notNull().default([]),
   loyaltyEnabled: boolean("loyalty_enabled").notNull().default(true),
   loyaltyPointsPerDh: integer("loyalty_points_per_dh").notNull().default(1),
   loyaltyPointsValue: doublePrecision("loyalty_points_value").notNull().default(0.1),

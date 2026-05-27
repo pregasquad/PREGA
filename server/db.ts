@@ -2305,6 +2305,38 @@ export async function ensureBusinessSettingsRow(): Promise<void> {
   }
 }
 
+export async function ensureHolidaysColumn(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      try {
+        const [rows] = await connection.query(`
+          SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'business_settings' AND COLUMN_NAME = 'holidays'
+        `);
+        if ((rows as any[]).length === 0) {
+          await connection.query(`ALTER TABLE business_settings ADD COLUMN holidays JSON NOT NULL DEFAULT ('[]')`);
+          console.log("Added holidays column to business_settings");
+        }
+      } finally {
+        connection.release();
+      }
+    } else {
+      await pool.query(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'business_settings' AND column_name = 'holidays') THEN
+            ALTER TABLE business_settings ADD COLUMN holidays JSONB NOT NULL DEFAULT '[]';
+          END IF;
+        END $$;
+      `);
+    }
+    console.log("Holidays column ready");
+  } catch (error) {
+    console.error("Failed to ensure holidays column:", error);
+  }
+}
+
 export async function ensurePaypalOrderIdColumn(): Promise<void> {
   try {
     if (dbDialect === 'mysql') {
