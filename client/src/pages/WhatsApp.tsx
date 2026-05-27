@@ -160,6 +160,8 @@ export default function WhatsApp() {
     "مرحباً! هذه رسالة اختبار من صالون PREGASQUAD 💅"
   );
   const [broadcastMsg, setBroadcastMsg] = useState("");
+  const [broadcastJobId, setBroadcastJobId] = useState<string | null>(null);
+  const [broadcastDone, setBroadcastDone] = useState(false);
   const [selectedVoice, setSelectedVoice] = useState("Aoede");
   const [selectedPersonalities, setSelectedPersonalities] = useState<string[]>(["warm"]);
 
@@ -797,18 +799,41 @@ export default function WhatsApp() {
         message: broadcastMsg,
       }).then((r) => r.json()),
     onSuccess: (data) => {
-      toast({
-        title:
-          data.failed > 0
-            ? `Sent ${data.sent}/${data.total}`
-            : `All ${data.sent} messages sent!`,
-        description: data.failed > 0 ? `${data.failed} failed` : "Broadcast complete.",
-        variant: data.failed > 0 ? "destructive" : "default",
-      });
+      if (data.jobId) {
+        setBroadcastJobId(data.jobId);
+        setBroadcastDone(false);
+      }
     },
     onError: (err: any) =>
       toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
+
+  // Poll broadcast job progress
+  const { data: broadcastProgress } = useQuery({
+    queryKey: ["/api/notifications/broadcast", broadcastJobId],
+    queryFn: () =>
+      fetch(`/api/notifications/broadcast/${broadcastJobId}`, { credentials: "include" }).then((r) => r.json()),
+    enabled: !!broadcastJobId && !broadcastDone,
+    refetchInterval: 1500,
+  });
+
+  // When job done, fire toast and stop polling
+  useEffect(() => {
+    if (broadcastProgress?.done && !broadcastDone) {
+      setBroadcastDone(true);
+      toast({
+        title:
+          broadcastProgress.failed > 0
+            ? `أُرسلت ${broadcastProgress.sent}/${broadcastProgress.total}`
+            : `✅ تم إرسال كل الرسائل (${broadcastProgress.sent})`,
+        description:
+          broadcastProgress.failed > 0
+            ? `${broadcastProgress.failed} رسائل فشلت`
+            : "Broadcast complete.",
+        variant: broadcastProgress.failed > 0 ? "destructive" : "default",
+      });
+    }
+  }, [broadcastProgress?.done]);
 
   function resetPairing() {
     shownErrorRef.current = null;
@@ -1292,29 +1317,87 @@ export default function WhatsApp() {
                 onChange={(e) => setBroadcastMsg(e.target.value)}
                 rows={4}
                 dir="rtl"
+                disabled={!!broadcastJobId && !broadcastDone}
+                data-testid="textarea-broadcast-message"
               />
             </div>
-            <Button
-              className="w-full liquid-gradient text-white"
-              onClick={() => broadcastMutation.mutate()}
-              disabled={
-                !connected ||
-                !broadcastMsg.trim() ||
-                clientsWithPhone.length === 0 ||
-                broadcastMutation.isPending
-              }
-            >
-              {broadcastMutation.isPending ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <MessageCircle className="w-4 h-4 mr-2" />
+
+            {/* Progress bar — shown while job is running */}
+            {broadcastJobId && broadcastProgress && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>
+                    {broadcastDone ? (
+                      broadcastProgress.failed > 0 ? (
+                        <span className="text-amber-400">⚠️ اكتمل — {broadcastProgress.sent} مُرسلة، {broadcastProgress.failed} فشلت</span>
+                      ) : (
+                        <span className="text-emerald-400">✅ اكتمل — كل الرسائل أُرسلت</span>
+                      )
+                    ) : (
+                      <span className="flex items-center gap-1.5">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        جاري الإرسال… {broadcastProgress.sent + broadcastProgress.failed}/{broadcastProgress.total}
+                      </span>
+                    )}
+                  </span>
+                  <span>{broadcastProgress.total > 0 ? Math.round(((broadcastProgress.sent + broadcastProgress.failed) / broadcastProgress.total) * 100) : 0}%</span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                  <div
+                    className={`h-2 rounded-full transition-all duration-500 ${broadcastDone && broadcastProgress.failed === 0 ? "bg-emerald-500" : broadcastDone ? "bg-amber-500" : "liquid-gradient"}`}
+                    style={{ width: `${broadcastProgress.total > 0 ? Math.round(((broadcastProgress.sent + broadcastProgress.failed) / broadcastProgress.total) * 100) : 0}%` }}
+                  />
+                </div>
+                {broadcastProgress.failed > 0 && broadcastProgress.errors?.length > 0 && (
+                  <div className="text-xs text-destructive/80 bg-destructive/10 rounded-lg p-2 space-y-0.5 max-h-24 overflow-y-auto">
+                    {broadcastProgress.errors.map((e: string, i: number) => (
+                      <div key={i}>• {e}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <Button
+                className="flex-1 liquid-gradient text-white"
+                onClick={() => {
+                  setBroadcastJobId(null);
+                  setBroadcastDone(false);
+                  broadcastMutation.mutate();
+                }}
+                disabled={
+                  !connected ||
+                  !broadcastMsg.trim() ||
+                  clientsWithPhone.length === 0 ||
+                  broadcastMutation.isPending ||
+                  (!!broadcastJobId && !broadcastDone)
+                }
+                data-testid="button-send-broadcast"
+              >
+                {broadcastMutation.isPending || (!!broadcastJobId && !broadcastDone) ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                )}
+                {!connected
+                  ? "Connect WhatsApp first"
+                  : broadcastMutation.isPending || (!!broadcastJobId && !broadcastDone)
+                  ? `جاري الإرسال…`
+                  : `Broadcast to ${clientsWithPhone.length} clients`}
+              </Button>
+              {broadcastDone && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => { setBroadcastJobId(null); setBroadcastDone(false); setBroadcastMsg(""); }}
+                  title="إعادة تعيين"
+                  data-testid="button-reset-broadcast"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </Button>
               )}
-              {!connected
-                ? "Connect WhatsApp first"
-                : broadcastMutation.isPending
-                ? "Sending…"
-                : `Broadcast to ${clientsWithPhone.length} clients`}
-            </Button>
+            </div>
           </div>
         )}
       </div>

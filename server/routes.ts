@@ -18,6 +18,25 @@ import fs from "fs";
 
 import path from "path";
 
+// ── In-memory broadcast job store ─────────────────────────────────────────────
+interface BroadcastJob {
+  total: number;
+  sent: number;
+  failed: number;
+  done: boolean;
+  errors: string[];
+  failedClients: { id: number; name: string; phone: string; error: string }[];
+  startedAt: number;
+}
+const broadcastJobs = new Map<string, BroadcastJob>();
+// Cleanup jobs older than 30 minutes
+setInterval(() => {
+  const cutoff = Date.now() - 30 * 60 * 1000;
+  for (const [id, job] of broadcastJobs) {
+    if (job.startedAt < cutoff) broadcastJobs.delete(id);
+  }
+}, 5 * 60 * 1000);
+
 // Initialize Supabase client (only if URL is a valid HTTP/HTTPS URL)
 const supabaseUrl = process.env.SUPABASE_URL || "";
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || "";
@@ -3393,7 +3412,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
     }
   });
 
-  // Bulk WhatsApp broadcast to selected clients (or all if none specified)
+  // Bulk WhatsApp broadcast — starts async job, returns jobId immediately
   app.post("/api/notifications/broadcast", isPinAuthenticated, requirePermission("admin_settings"), async (req, res) => {
     try {
       const { sendWhatsAppMessage } = await import("./baileys");
@@ -3401,59 +3420,57 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
         message: z.string().min(1, "Message is required"),
         clientIds: z.array(z.number()).optional(),
       }).parse(req.body);
-      
+
       const clients = await storage.getClients();
       let targetClients = clients.filter(c => c.phone && c.phone.trim() !== '');
-      
-      // If specific client IDs provided, filter to only those clients
       if (clientIds && clientIds.length > 0) {
         targetClients = targetClients.filter(c => clientIds.includes(c.id));
       }
-      
       if (targetClients.length === 0) {
         return res.status(400).json({ success: false, error: "No clients with phone numbers found" });
       }
-      
-      let sent = 0;
-      let failed = 0;
-      const errors: string[] = [];
-      const failedClients: { id: number; name: string; phone: string; error: string }[] = [];
-      
-      for (const client of targetClients) {
-        try {
-          const personalizedMessage = message.replace(/\{name\}/gi, client.name);
-          const result = await sendWhatsAppMessage(client.phone!, personalizedMessage);
-          
-          if (result.success) {
-            sent++;
-          } else {
-            failed++;
-            const errorMsg = result.error || "Unknown error";
-            errors.push(`${client.name}: ${errorMsg}`);
-            failedClients.push({ id: client.id, name: client.name, phone: client.phone!, error: errorMsg });
+
+      // Create job and return immediately
+      const jobId = crypto.randomUUID();
+      const job: BroadcastJob = { total: targetClients.length, sent: 0, failed: 0, done: false, errors: [], failedClients: [], startedAt: Date.now() };
+      broadcastJobs.set(jobId, job);
+      res.json({ success: true, jobId, total: targetClients.length });
+
+      // Run in background — do NOT await
+      (async () => {
+        for (const client of targetClients) {
+          try {
+            const personalizedMessage = message.replace(/\{name\}/gi, client.name);
+            const result = await sendWhatsAppMessage(client.phone!, personalizedMessage);
+            if (result.success) {
+              job.sent++;
+            } else {
+              job.failed++;
+              const errorMsg = result.error || "Unknown error";
+              if (job.errors.length < 10) job.errors.push(`${client.name}: ${errorMsg}`);
+              job.failedClients.push({ id: client.id, name: client.name, phone: client.phone!, error: errorMsg });
+            }
+          } catch (err: any) {
+            job.failed++;
+            const errorMsg = err.message || "Unknown error";
+            if (job.errors.length < 10) job.errors.push(`${client.name}: ${errorMsg}`);
+            job.failedClients.push({ id: client.id, name: client.name, phone: client.phone!, error: errorMsg });
           }
-          
-          // Small delay to avoid rate limiting
-          await new Promise(resolve => setTimeout(resolve, 500));
-        } catch (err: any) {
-          failed++;
-          const errorMsg = err.message || "Unknown error";
-          errors.push(`${client.name}: ${errorMsg}`);
-          failedClients.push({ id: client.id, name: client.name, phone: client.phone!, error: errorMsg });
+          // Delay to avoid WhatsApp rate limiting
+          await new Promise(resolve => setTimeout(resolve, 800));
         }
-      }
-      
-      res.json({ 
-        success: true, 
-        sent, 
-        failed, 
-        total: targetClients.length,
-        errors: errors.slice(0, 5),
-        failedClients
-      });
+        job.done = true;
+      })();
     } catch (err: any) {
       res.status(400).json({ success: false, error: err.message });
     }
+  });
+
+  // Broadcast job progress polling
+  app.get("/api/notifications/broadcast/:jobId", isPinAuthenticated, (req, res) => {
+    const job = broadcastJobs.get(req.params.jobId);
+    if (!job) return res.status(404).json({ error: "Job not found" });
+    res.json({ sent: job.sent, failed: job.failed, total: job.total, done: job.done, errors: job.errors, failedClients: job.failedClients });
   });
 
   // Check Baileys connection status (legacy endpoint kept for compatibility)
