@@ -4026,8 +4026,27 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
   app.patch("/api/business-settings", isPinAuthenticated, requirePermission("manage_business_settings"), async (req, res) => {
     try {
-      const settings = await storage.updateBusinessSettings(req.body);
-      res.json(settings);
+      // Strip read-only fields and fix types that differ between GET (parsed) and DB (raw)
+      const { id, updatedAt, bossInstructions, holidays, workingDays, planningShortcuts, ...rest } = req.body;
+      const sanitized: Record<string, any> = { ...rest };
+      // bossInstructions: GET returns parsed array → store back as JSON string
+      if (bossInstructions !== undefined) {
+        sanitized.bossInstructions = Array.isArray(bossInstructions)
+          ? JSON.stringify(bossInstructions)
+          : bossInstructions;
+      }
+      // JSON array columns — pass through as-is (Drizzle handles serialization)
+      if (holidays !== undefined) sanitized.holidays = Array.isArray(holidays) ? holidays : [];
+      if (workingDays !== undefined) sanitized.workingDays = Array.isArray(workingDays) ? workingDays : [];
+      if (planningShortcuts !== undefined) sanitized.planningShortcuts = Array.isArray(planningShortcuts) ? planningShortcuts : [];
+
+      const settings = await storage.updateBusinessSettings(sanitized);
+      // Return bossInstructions parsed so the frontend keeps its array shape
+      const { bossInstructions: bi, ...settingsRest } = settings as any;
+      res.json({
+        ...settingsRest,
+        bossInstructions: bi ? (() => { try { return JSON.parse(bi); } catch { return []; } })() : [],
+      });
     } catch (err: any) {
       res.status(400).json({ message: err.message });
     }

@@ -172,7 +172,7 @@ export default function AdminSettings() {
     planningShortcuts: DEFAULT_SHORTCUTS,
     planningSlotHeight: 44,
   });
-  const [newHolidayDate, setNewHolidayDate] = useState("");
+  const [holidayRange, setHolidayRange] = useState({ from: "", to: "" });
   const [broadcastMessage, setBroadcastMessage] = useState("");
   const [lastBroadcastMessage, setLastBroadcastMessage] = useState("");
   const [broadcastResult, setBroadcastResult] = useState<{sent: number, failed: number, total: number, failedClients: {id: number, name: string, phone: string, error: string}[]} | null>(null);
@@ -757,41 +757,66 @@ export default function AdminSettings() {
                         {t("admin.holidays", { defaultValue: "أيام العطل والإجازات" })}
                       </Label>
                       <p className="text-xs text-muted-foreground">{t("admin.holidaysDesc", { defaultValue: "الصالون مسدود في هذه الأيام — البوت يخبر العملاء تلقائياً" })}</p>
-                      <div className="flex gap-2 mt-2">
-                        <Input
-                          type="date"
-                          value={newHolidayDate}
-                          onChange={e => setNewHolidayDate(e.target.value)}
-                          className="rounded-xl border-border/50 h-10 flex-1"
-                          data-testid="input-holiday-date"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!newHolidayDate) return;
-                            if ((businessForm.holidays || []).includes(newHolidayDate)) return;
-                            setBusinessForm(prev => ({
-                              ...prev,
-                              holidays: [...(prev.holidays || []), newHolidayDate].sort()
-                            }));
-                            setNewHolidayDate("");
-                          }}
-                          className="px-3 py-2 rounded-xl liquid-gradient text-white text-xs font-medium flex items-center gap-1.5 shadow-md shadow-primary/20"
-                          data-testid="button-add-holiday"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                          {t("common.add", { defaultValue: "إضافة" })}
-                        </button>
+                      {/* Range picker */}
+                      <div className="grid grid-cols-2 gap-2 mt-2">
+                        <div className="space-y-1">
+                          <span className="text-[10px] text-muted-foreground font-medium">{t("admin.holidayFrom", { defaultValue: "من" })}</span>
+                          <Input
+                            type="date"
+                            value={holidayRange.from}
+                            onChange={e => setHolidayRange(prev => ({ ...prev, from: e.target.value, to: prev.to < e.target.value ? e.target.value : prev.to }))}
+                            className="rounded-xl border-border/50 h-10"
+                            data-testid="input-holiday-from"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <span className="text-[10px] text-muted-foreground font-medium">{t("admin.holidayTo", { defaultValue: "إلى" })}</span>
+                          <Input
+                            type="date"
+                            value={holidayRange.to}
+                            min={holidayRange.from}
+                            onChange={e => setHolidayRange(prev => ({ ...prev, to: e.target.value }))}
+                            className="rounded-xl border-border/50 h-10"
+                            data-testid="input-holiday-to"
+                          />
+                        </div>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!holidayRange.from) return;
+                          const end = holidayRange.to || holidayRange.from;
+                          const existing = new Set(businessForm.holidays || []);
+                          const dates: string[] = [];
+                          const cur = new Date(holidayRange.from + "T12:00:00");
+                          const last = new Date(end + "T12:00:00");
+                          while (cur <= last) {
+                            const d = cur.toISOString().split("T")[0];
+                            if (!existing.has(d)) dates.push(d);
+                            cur.setDate(cur.getDate() + 1);
+                          }
+                          if (dates.length === 0) return;
+                          setBusinessForm(prev => ({
+                            ...prev,
+                            holidays: [...(prev.holidays || []), ...dates].sort()
+                          }));
+                          setHolidayRange({ from: "", to: "" });
+                        }}
+                        className="w-full px-3 py-2 rounded-xl liquid-gradient text-white text-xs font-medium flex items-center justify-center gap-1.5 shadow-md shadow-primary/20 mt-1"
+                        data-testid="button-add-holiday"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        {t("admin.addHolidays", { defaultValue: "إضافة الأيام" })}
+                      </button>
                       {(businessForm.holidays || []).length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-2">
+                        <div className="flex flex-wrap gap-2 mt-2 max-h-40 overflow-y-auto">
                           {(businessForm.holidays || []).map(date => (
                             <span
                               key={date}
                               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-destructive/10 text-destructive text-xs font-medium border border-destructive/20"
                             >
                               <CalendarOff className="w-3 h-3" />
-                              {new Date(date + "T12:00:00").toLocaleDateString("ar-MA", { day: "numeric", month: "long", year: "numeric" })}
+                              {new Date(date + "T12:00:00").toLocaleDateString("ar-MA", { day: "numeric", month: "long" })}
                               <button
                                 type="button"
                                 onClick={() => setBusinessForm(prev => ({
