@@ -850,7 +850,7 @@ export default function Salaries() {
               <div className="w-7 h-7 rounded-lg bg-orange-500/15 flex items-center justify-center">
                 <ArrowDownLeft className="h-3.5 w-3.5 text-orange-600" />
               </div>
-              <p className="text-xs text-muted-foreground">{t("salaries.ownerWithdrawals") || "مسحوبات الصاحبة"}</p>
+              <p className="text-xs text-muted-foreground">{t("ownerWithdrawals.title")}</p>
             </div>
             <p className="text-xl font-bold tabular-nums text-orange-600 dark:text-orange-400" data-testid="text-owner-withdrawals">{formatCurrency(totalOwnerWithdrawals)} <span className="text-sm font-normal text-muted-foreground">DH</span></p>
           </CardContent>
@@ -896,7 +896,7 @@ export default function Salaries() {
               </div>
               {totalOwnerWithdrawals > 0 && (
                 <div className="flex justify-between items-baseline text-sm">
-                  <span className="text-muted-foreground">{t("salaries.ownerWithdrawals") || "مسحوبات الصاحبة"}</span>
+                  <span className="text-muted-foreground">{t("ownerWithdrawals.title")}</span>
                   <span className="font-semibold tabular-nums text-orange-600 dark:text-orange-400">- {formatCurrency(totalOwnerWithdrawals)} DH</span>
                 </div>
               )}

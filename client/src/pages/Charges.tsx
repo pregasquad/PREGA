@@ -1,4 +1,5 @@
 import { useState, useRef, useMemo, useEffect } from "react";
+import { calcAppointmentCommission } from "@/lib/commissionCalc";
 import { getWorkDayDate } from "@/lib/workday";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, startOfMonth, endOfMonth, parseISO, isWithinInterval, subMonths, addMonths } from "date-fns";
@@ -388,27 +389,12 @@ export default function Charges() {
     }
   });
 
-  // Mirror Salaries.tsx exactly: same data, same staff-resolution, same commission lookup
+  // Mirror Salaries.tsx exactly: same data, same calcAppointmentCommission logic
   const monthRevenue = useMemo(() => {
     const allAppointments: any[] = salaryData?.appointments ?? [];
     const allStaff: any[] = salaryData?.staff ?? [];
     const allServices: any[] = salaryData?.services ?? [];
     const allStaffCommissions: any[] = salaryData?.staffCommissions ?? [];
-
-    const getServiceCommission = (serviceName: string, staffName: string): number => {
-      const service = allServices.find((s: any) => s.name === serviceName);
-      if (!service) return 50;
-      if (staffName) {
-        const staffMember = allStaff.find((s: any) => s.name === staffName);
-        if (staffMember) {
-          const custom = allStaffCommissions.find(
-            (c: any) => c.staffId === staffMember.id && c.serviceId === service.id
-          );
-          if (custom != null) return custom.percentage;
-        }
-      }
-      return service.commissionPercent ?? 50;
-    };
 
     const monthApts = allAppointments.filter((a: any) => {
       if (!a.paid || !a.date) return false;
@@ -420,14 +406,8 @@ export default function Charges() {
     let totalRevenue = 0;
     let totalCommissions = 0;
     for (const app of monthApts) {
-      const resolvedStaff = app.staffId
-        ? allStaff.find((s: any) => s.id === Number(app.staffId))
-        : allStaff.find((s: any) => s.name === app.staff);
-      const staffName = resolvedStaff?.name || app.staff || "";
-      const serviceName = app.service || "";
-      const rate = getServiceCommission(serviceName, staffName);
       totalRevenue += Number(app.total || 0);
-      totalCommissions += Number(app.total || 0) * (rate / 100);
+      totalCommissions += calcAppointmentCommission(app, allServices, allStaff, allStaffCommissions);
     }
     return totalRevenue - totalCommissions;
   }, [salaryData, monthStart, monthEnd]);
