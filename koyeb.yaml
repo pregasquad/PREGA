@@ -30,10 +30,8 @@ services:
         value: "8080"
       - key: NODE_ENV
         value: production
-      - key: DB_DIALECT
-        value: mysql
-      - key: MYSQL_URL
-        secret: MYSQL_URL
+      - key: DATABASE_URL
+        secret: DATABASE_URL
 
   - name: prega
     type: web
