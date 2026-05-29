@@ -1,0 +1,221 @@
+From https://github.com/pregasquad/PREGA
+ * branch            a179cca335638932340c60ce5df3a5f201450da1 -> FETCH_HEAD
+HEAD is now at a179cca Improve dynamic import handling for server modules
+Starting Docker daemon...
+Waiting for the Docker daemon to start...
+done
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 1.07kB done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/node:24-slim
+#2 DONE 5.7s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 2B done
+#3 DONE 0.0s
+
+#4 [internal] load build context
+#4 DONE 0.0s
+
+#5 [base 1/8] FROM docker.io/library/node:24-slim@sha256:242549cd46785b480c832479a730f4f2a20865d61ea2e404fdb2a5c3d3b73ecf
+#5 resolve docker.io/library/node:24-slim@sha256:242549cd46785b480c832479a730f4f2a20865d61ea2e404fdb2a5c3d3b73ecf done
+#5 DONE 0.0s
+
+#6 [auth] k-e7439398-3c51-4910-ae36-64250f99e91e/2e832d5a-5224-456c-9d97-81a2f4b02a1c-cache:pull token for registry01.prod.koyeb.com
+#6 DONE 0.0s
+
+#7 importing cache manifest from registry01.prod.koyeb.com/k-e7439398-3c51-4910-ae36-64250f99e91e/2e832d5a-5224-456c-9d97-81a2f4b02a1c-cache:latest
+#7 inferred cache manifest type: application/vnd.oci.image.manifest.v1+json done
+#7 DONE 1.0s
+
+#4 [internal] load build context
+#4 transferring context: 1.52MB 0.0s done
+#4 DONE 0.1s
+
+#8 [base 3/8] WORKDIR /app
+#8 CACHED
+
+#9 [base 4/8] COPY pnpm-workspace.yaml pnpm-lock.yaml package.json .npmrc ./
+#9 CACHED
+
+#10 [base 2/8] RUN corepack enable && corepack prepare pnpm@10.26.1 --activate
+#10 CACHED
+
+#11 [base 5/8] COPY lib/ lib/
+#11 sha256:d51fb50dab4436e571a6793eacc367e0557a2c2a2fb5ba1b5ac01f0e944d7325 0B / 20.54kB 0.2s
+#11 sha256:d51fb50dab4436e571a6793eacc367e0557a2c2a2fb5ba1b5ac01f0e944d7325 20.54kB / 20.54kB 0.3s done
+#11 sha256:fe50315d325c0df0f159119c68f149e9e6e8df6f09f0aa21763baa2012f69308 163.54kB / 163.54kB 0.2s done
+#11 sha256:38945bd06ece82b6d5bdfe31064ecc78bad68726001d5c9ca620fc583b9feaf9 0B / 86B 0.2s
+#11 sha256:0249975f1eaaed34ee41c9a3553887de156d218f6ded5b4d07300254403a87fb 3.90MB / 3.90MB 0.2s done
+#11 sha256:38945bd06ece82b6d5bdfe31064ecc78bad68726001d5c9ca620fc583b9feaf9 86B / 86B 0.3s done
+#11 sha256:06d464f614a98416f8f326dcd40292b0a96bf6a56a6fba9e2f98ed770cdacf11 0B / 449B 0.2s
+#11 sha256:06d464f614a98416f8f326dcd40292b0a96bf6a56a6fba9e2f98ed770cdacf11 449B / 449B 0.2s done
+#11 sha256:fd9ebe571a4c6247cf36f5dc278866dc2527bd9c9812d5733e9f0b6cc603ecb6 1.53MB / 1.53MB 0.2s done
+#11 sha256:9bea510bd805f72c63e2d093c23fca1da9b02127c4849c121b6117a45d4d2ba7 3.31kB / 3.31kB 0.2s done
+#11 sha256:e008f534e95cab9dfc584b72c1beb5ccd5b4e7b6b73973a6fd6791f0d8e2ac29 0B / 50.09MB 0.2s
+#11 sha256:ba15ba1676177388eeb18ff1b78beb30143773fd0b7b6a002faec9dbad5bbc58 0B / 24.00MB 0.2s
+#11 sha256:e008f534e95cab9dfc584b72c1beb5ccd5b4e7b6b73973a6fd6791f0d8e2ac29 9.44MB / 50.09MB 0.3s
+#11 sha256:ba15ba1676177388eeb18ff1b78beb30143773fd0b7b6a002faec9dbad5bbc58 13.47MB / 24.00MB 0.3s
+#11 sha256:e008f534e95cab9dfc584b72c1beb5ccd5b4e7b6b73973a6fd6791f0d8e2ac29 50.09MB / 50.09MB 0.5s
+#11 sha256:ba15ba1676177388eeb18ff1b78beb30143773fd0b7b6a002faec9dbad5bbc58 24.00MB / 24.00MB 0.5s
+#11 sha256:e008f534e95cab9dfc584b72c1beb5ccd5b4e7b6b73973a6fd6791f0d8e2ac29 50.09MB / 50.09MB 0.7s done
+#11 sha256:ba15ba1676177388eeb18ff1b78beb30143773fd0b7b6a002faec9dbad5bbc58 24.00MB / 24.00MB 0.6s done
+#11 extracting sha256:ba15ba1676177388eeb18ff1b78beb30143773fd0b7b6a002faec9dbad5bbc58
+#11 extracting sha256:ba15ba1676177388eeb18ff1b78beb30143773fd0b7b6a002faec9dbad5bbc58 0.4s done
+#11 extracting sha256:9bea510bd805f72c63e2d093c23fca1da9b02127c4849c121b6117a45d4d2ba7
+#11 extracting sha256:9bea510bd805f72c63e2d093c23fca1da9b02127c4849c121b6117a45d4d2ba7 done
+#11 extracting sha256:e008f534e95cab9dfc584b72c1beb5ccd5b4e7b6b73973a6fd6791f0d8e2ac29
+#11 extracting sha256:e008f534e95cab9dfc584b72c1beb5ccd5b4e7b6b73973a6fd6791f0d8e2ac29 0.7s done
+#11 DONE 2.1s
+
+#11 [base 5/8] COPY lib/ lib/
+#11 extracting sha256:fd9ebe571a4c6247cf36f5dc278866dc2527bd9c9812d5733e9f0b6cc603ecb6 0.0s done
+#11 extracting sha256:06d464f614a98416f8f326dcd40292b0a96bf6a56a6fba9e2f98ed770cdacf11 done
+#11 extracting sha256:0249975f1eaaed34ee41c9a3553887de156d218f6ded5b4d07300254403a87fb
+#11 extracting sha256:0249975f1eaaed34ee41c9a3553887de156d218f6ded5b4d07300254403a87fb 0.2s done
+#11 extracting sha256:38945bd06ece82b6d5bdfe31064ecc78bad68726001d5c9ca620fc583b9feaf9
+#11 extracting sha256:38945bd06ece82b6d5bdfe31064ecc78bad68726001d5c9ca620fc583b9feaf9 done
+#11 extracting sha256:fe50315d325c0df0f159119c68f149e9e6e8df6f09f0aa21763baa2012f69308 done
+#11 extracting sha256:d51fb50dab4436e571a6793eacc367e0557a2c2a2fb5ba1b5ac01f0e944d7325 done
+#11 DONE 2.3s
+
+#12 [base 6/8] COPY artifacts/api-server/ artifacts/api-server/
+#12 DONE 1.4s
+
+#13 [base 7/8] RUN --mount=type=cache,id=pnpm,target=/pnpm/store     pnpm install --frozen-lockfile --filter @workspace/api-server...
+#13 0.470 Scope: 3 of 6 workspace projects
+#13 0.551 Lockfile is up to date, resolution step is skipped
+#13 0.599 Progress: resolved 1, reused 0, downloaded 0, added 0
+#13 0.653 .                                        | +433 ++++++++++++++++++++++++++++++++
+#13 1.214 
+#13 1.214    ╭──────────────────────────────────────────────╮
+#13 1.214    │                                              │
+#13 1.214    │     Update available! 10.26.1 → 11.5.0.      │
+#13 1.214    │     Changelog: https://pnpm.io/v/11.5.0      │
+#13 1.214    │   To update, run: corepack use pnpm@11.5.0   │
+#13 1.214    │                                              │
+#13 1.214    ╰──────────────────────────────────────────────╯
+#13 1.214 
+#13 1.605 Progress: resolved 433, reused 0, downloaded 99, added 88
+#13 2.469 Progress: resolved 433, reused 0, downloaded 433, added 433, done
+#13 2.560 .../node_modules/protobufjs postinstall$ node scripts/postinstall
+#13 2.561 .../node_modules/ffmpeg-static install$ node install.js
+#13 2.562 .../es5-ext@0.10.64/node_modules/es5-ext postinstall$  node -e "try{require('./_postinstall')}catch(e){}" || exit 0
+#13 2.582 .../node_modules/better-sqlite3 install$ prebuild-install || node-gyp rebuild --release
+#13 2.592 .../esbuild@0.27.3/node_modules/esbuild postinstall$ node install.js
+#13 2.609 .../node_modules/protobufjs postinstall: Done
+#13 2.625 .../es5-ext@0.10.64/node_modules/es5-ext postinstall: Done
+#13 2.648 .../esbuild@0.27.3/node_modules/esbuild postinstall: Done
+#13 2.674 .../node_modules/better-sqlite3 install: (node:48) [DEP0176] DeprecationWarning: fs.R_OK is deprecated, use fs.constants.R_OK instead
+#13 2.674 .../node_modules/better-sqlite3 install: (Use `node --trace-deprecation ...` to show where the warning was created)
+#13 2.762 .../node_modules/better-sqlite3 install: Done
+#13 3.199 .../node_modules/ffmpeg-static install: Done
+#13 3.442 .../node_modules/@google/genai preinstall$ echo 'preinstall: no-op'
+#13 3.448 .../node_modules/@google/genai preinstall: preinstall: no-op
+#13 3.448 .../node_modules/@google/genai preinstall: Done
+#13 3.451 .../node_modules/@whiskeysockets/baileys preinstall$ node ./engine-requirements.js
+#13 3.492 .../node_modules/@whiskeysockets/baileys preinstall: Done
+#13 4.655 . preinstall$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+#13 4.684 . preinstall: Done
+#13 4.781 Done in 4.6s using pnpm v10.26.1
+#13 DONE 7.5s
+
+#14 [base 8/8] RUN pnpm --filter @workspace/api-server run build
+#14 0.444 
+#14 0.444 > @workspace/api-server@0.0.0 build /app/artifacts/api-server
+#14 0.444 > node ./build.mjs
+#14 0.444 
+#14 0.487 ▲ [WARNING] Cannot find base config file "../../tsconfig.base.json" [tsconfig.json]
+#14 0.487 
+#14 0.487     tsconfig.json:2:13:
+#14 0.487       2 │   "extends": "../../tsconfig.base.json",
+#14 0.487         ╵              ~~~~~~~~~~~~~~~~~~~~~~~~~~
+#14 0.487 
+#14 0.521 ▲ [WARNING] Cannot find base config file "../../tsconfig.base.json" [tsconfig.json]
+#14 0.521 
+#14 0.521     ../../lib/db/tsconfig.json:2:13:
+#14 0.521       2 │   "extends": "../../tsconfig.base.json",
+#14 0.521         ╵              ~~~~~~~~~~~~~~~~~~~~~~~~~~
+#14 0.521 
+#14 0.731 2 warnings
+#14 0.732 
+#14 0.732   dist/index.mjs                   3.5mb ⚠️
+#14 0.732   dist/chunk-BMB4VLQO.mjs        169.9kb
+#14 0.732   dist/lib-DW6KLBML.mjs          144.6kb
+#14 0.732   dist/chunk-E4BS2ZKE.mjs        128.0kb
+#14 0.732   dist/chunk-ZMSB6DHV.mjs        121.3kb
+#14 0.732   dist/chunk-IQXW2ARB.mjs        117.7kb
+#14 0.732   dist/chunk-23GD4VPN.mjs        102.3kb
+#14 0.732   dist/mysql2-6RLH5R47.mjs        99.7kb
+#14 0.732   dist/chunk-CUJ4IDQN.mjs         96.6kb
+#14 0.732   dist/pino-pretty.mjs            87.7kb
+#14 0.732   dist/chunk-NQ2LH2QI.mjs         41.0kb
+#14 0.732   dist/chunk-O3Z5FPQP.mjs         33.4kb
+#14 0.732   dist/baileys.mjs                29.9kb
+#14 0.732   dist/schema-mysql.mjs           29.0kb
+#14 0.732   dist/chunk-447JBDAK.mjs         21.9kb
+#14 0.732   dist/pino-worker.mjs             9.0kb
+#14 0.732   dist/chunk-76UHQPCH.mjs          5.8kb
+#14 0.732   dist/db-AJ34Z5D5.mjs             4.2kb
+#14 0.732   dist/thread-stream-worker.mjs    4.2kb
+#14 0.732   dist/drizzle-orm-QLCE42EV.mjs    3.9kb
+#14 0.732   ...and 44 more output files...
+#14 0.732 
+#14 0.732 ⚡ Done in 246ms
+#14 DONE 0.9s
+
+#15 [runner 2/7] WORKDIR /app
+#15 sha256:b22a2431aaa91c699dc7b4b1e53ca03b24cbe78dcba453f0719e497419e062b0 0B / 84B 0.2s
+#15 sha256:b22a2431aaa91c699dc7b4b1e53ca03b24cbe78dcba453f0719e497419e062b0 84B / 84B 0.2s done
+#15 extracting sha256:b22a2431aaa91c699dc7b4b1e53ca03b24cbe78dcba453f0719e497419e062b0 done
+#15 DONE 0.2s
+
+#16 [runner 3/7] COPY --from=base /app/node_modules ./node_modules
+#16 DONE 7.4s
+
+#17 [runner 4/7] COPY --from=base /app/lib ./lib
+#17 DONE 0.1s
+
+#18 [runner 5/7] COPY --from=base /app/artifacts/api-server/dist ./artifacts/api-server/dist
+#18 DONE 0.1s
+
+#19 [runner 6/7] COPY --from=base /app/artifacts/api-server/node_modules ./artifacts/api-server/node_modules
+#19 DONE 0.0s
+
+#20 [runner 7/7] COPY --from=base /app/artifacts/api-server/package.json ./artifacts/api-server/package.json
+#20 DONE 0.0s
+
+#21 exporting to image
+#21 exporting layers
+#21 exporting layers 1.5s done
+#21 ...
+
+#22 [auth] k-e7439398-3c51-4910-ae36-64250f99e91e/2e832d5a-5224-456c-9d97-81a2f4b02a1c:pull,push token for registry01.prod.koyeb.com
+#22 DONE 0.0s
+
+#21 exporting to image
+#21 exporting manifest sha256:11c91b43b4b53b5c80368a2ba5b1b4146432b8decfb00023f7bcc088ec09d1c0 done
+#21 exporting config sha256:d2201f4396368039bda2a242565b3113c99008322362e246be67fc1c8504c87b done
+#21 pushing layers
+#21 pushing layers 3.9s done
+#21 pushing manifest for registry01.prod.koyeb.com/k-e7439398-3c51-4910-ae36-64250f99e91e/2e832d5a-5224-456c-9d97-81a2f4b02a1c:latest@sha256:11c91b43b4b53b5c80368a2ba5b1b4146432b8decfb00023f7bcc088ec09d1c0
+#21 pushing manifest for registry01.prod.koyeb.com/k-e7439398-3c51-4910-ae36-64250f99e91e/2e832d5a-5224-456c-9d97-81a2f4b02a1c:latest@sha256:11c91b43b4b53b5c80368a2ba5b1b4146432b8decfb00023f7bcc088ec09d1c0 1.3s done
+#21 pushing layers 0.5s done
+#21 pushing manifest for registry01.prod.koyeb.com/k-e7439398-3c51-4910-ae36-64250f99e91e/2e832d5a-5224-456c-9d97-81a2f4b02a1c:1d7e083e-bbfe-4dcd-8dc2-229aa2924b9d@sha256:11c91b43b4b53b5c80368a2ba5b1b4146432b8decfb00023f7bcc088ec09d1c0
+#21 pushing manifest for registry01.prod.koyeb.com/k-e7439398-3c51-4910-ae36-64250f99e91e/2e832d5a-5224-456c-9d97-81a2f4b02a1c:1d7e083e-bbfe-4dcd-8dc2-229aa2924b9d@sha256:11c91b43b4b53b5c80368a2ba5b1b4146432b8decfb00023f7bcc088ec09d1c0 0.5s done
+#21 DONE 8.9s
+
+#23 exporting cache to registry
+#23 preparing build cache for export
+#23 writing layer sha256:0249975f1eaaed34ee41c9a3553887de156d218f6ded5b4d07300254403a87fb
+#23 ...
+
+#24 [auth] k-e7439398-3c51-4910-ae36-64250f99e91e/2e832d5a-5224-456c-9d97-81a2f4b02a1c-cache:pull,push token for registry01.prod.koyeb.com
+#24 DONE 0.0s
+
+#23 exporting cache to registry
+#23 writing layer sha256:0249975f1eaaed34ee41c9a3553887de156d218f6ded5b4d07300254403a87fb done
+#23 writing layer sha256:06d464f614a98416f8f326dcd40292b0a96bf6a56a6fba9e2f98ed770cdacf11
+#23 writing layer sha256:06d464f614a98416f8f326dcd40292b0a96bf6a56a6fba9e2f98ed770cdacf11 done
+#23 writing layer sha256:0c9bb11542b82126f54bc679437ee2fd7d041d919fa249f1a297f8c0630cd34c
