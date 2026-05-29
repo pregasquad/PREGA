@@ -1540,6 +1540,16 @@ export async function registerRoutes(
     res.json(items);
   });
 
+  // Get appointments by date range (for reports — avoids fetching entire history)
+  app.get("/api/appointments/range", isPinAuthenticated, async (req, res) => {
+    const { startDate, endDate } = z.object({
+      startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    }).parse(req.query);
+    const items = await storage.getAppointmentsByDateRange(startDate, endDate);
+    res.json(items);
+  });
+
   // Get all appointments (for salaries calculation)
   app.get("/api/appointments/all", isPinAuthenticated, async (req, res) => {
     const items = await storage.getAppointments();

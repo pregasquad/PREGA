@@ -3,7 +3,7 @@ import { calcAppointmentCommission } from "@/lib/commissionCalc";
 import { getWorkDayDate } from "@/lib/workday";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAppointments, useStaff, useServices, useBusinessSettings } from "@/hooks/use-salon-data";
+import { useStaff, useServices, useBusinessSettings } from "@/hooks/use-salon-data";
 import { formatCurrency } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
@@ -92,7 +92,31 @@ export default function Reports() {
       setCustomRange({ from: workDay, to: workDay });
     }
   }, [bSettings?.openingTime, bSettings?.closingTime]);
-  const { data: appointments = [] } = useAppointments();
+
+  const dateRange = useMemo(() => {
+    if (viewMode === "weekly") {
+      return { start: startOfWeek(selectedDate, { weekStartsOn: 1 }), end: endOfWeek(selectedDate, { weekStartsOn: 1 }) };
+    } else if (viewMode === "monthly") {
+      return { start: startOfMonth(selectedDate), end: endOfMonth(selectedDate) };
+    } else {
+      return {
+        start: customRange?.from ? startOfDay(customRange.from) : startOfDay(new Date()),
+        end: customRange?.to ? endOfDay(customRange.to) : endOfDay(new Date())
+      };
+    }
+  }, [viewMode, selectedDate, customRange]);
+
+  const rangeStartStr = format(dateRange.start, "yyyy-MM-dd");
+  const rangeEndStr = format(dateRange.end, "yyyy-MM-dd");
+
+  const { data: appointments = [] } = useQuery<any[]>({
+    queryKey: ["/api/appointments/range", rangeStartStr, rangeEndStr],
+    queryFn: async () => {
+      const res = await fetch(`/api/appointments/range?startDate=${rangeStartStr}&endDate=${rangeEndStr}`, { credentials: "include" });
+      if (!res.ok) throw new Error(`${res.status}`);
+      return res.json();
+    },
+  });
   const { data: staffList = [] } = useStaff();
   const { data: services = [] } = useServices();
   const { data: charges = [] } = useQuery<any[]>({ queryKey: ["/api/charges"] });
@@ -113,26 +137,7 @@ export default function Reports() {
     t("reports.thu"), t("reports.fri"), t("reports.sat")
   ], [t]);
 
-  const dateRange = useMemo(() => {
-    if (viewMode === "weekly") {
-      return { start: startOfWeek(selectedDate, { weekStartsOn: 1 }), end: endOfWeek(selectedDate, { weekStartsOn: 1 }) };
-    } else if (viewMode === "monthly") {
-      return { start: startOfMonth(selectedDate), end: endOfMonth(selectedDate) };
-    } else {
-      return {
-        start: customRange?.from ? startOfDay(customRange.from) : startOfDay(new Date()),
-        end: customRange?.to ? endOfDay(customRange.to) : endOfDay(new Date())
-      };
-    }
-  }, [viewMode, selectedDate, customRange]);
-
-  const filteredAppointments = useMemo(() => {
-    return appointments.filter(app => {
-      try {
-        return isWithinInterval(parseISO(app.date), { start: dateRange.start, end: dateRange.end });
-      } catch { return false; }
-    });
-  }, [appointments, dateRange]);
+  const filteredAppointments = appointments;
 
   const filteredCharges = useMemo(() => {
     return (charges || []).filter((ch: any) => {

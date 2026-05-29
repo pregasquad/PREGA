@@ -1,0 +1,148 @@
+Build ready to start ▶️
+>> Cloning github.com/pregasquad/PREGA.git commit sha 1eafc969b714fc7fab9f902c2bdf53ce032d540b into /builder/workspace
+Initialized empty Git repository in /builder/workspace/.git/
+From https://github.com/pregasquad/PREGA
+ * branch            1eafc969b714fc7fab9f902c2bdf53ce032d540b -> FETCH_HEAD
+HEAD is now at 1eafc96 Add missing workbox packages and configure API proxy for deployment
+Starting Docker daemon...
+Waiting for the Docker daemon to start...
+done
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 1.02kB done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/node:24-slim
+#2 DONE 2.5s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 2B done
+#3 DONE 0.0s
+
+#4 [internal] load build context
+#4 DONE 0.0s
+
+#5 [base 1/8] FROM docker.io/library/node:24-slim@sha256:242549cd46785b480c832479a730f4f2a20865d61ea2e404fdb2a5c3d3b73ecf
+#5 resolve docker.io/library/node:24-slim@sha256:242549cd46785b480c832479a730f4f2a20865d61ea2e404fdb2a5c3d3b73ecf done
+#5 DONE 0.0s
+
+#6 [auth] k-e7439398-3c51-4910-ae36-64250f99e91e/2e832d5a-5224-456c-9d97-81a2f4b02a1c-cache:pull token for registry01.prod.koyeb.com
+#6 DONE 0.0s
+
+#7 importing cache manifest from registry01.prod.koyeb.com/k-e7439398-3c51-4910-ae36-64250f99e91e/2e832d5a-5224-456c-9d97-81a2f4b02a1c-cache:latest
+#7 inferred cache manifest type: application/vnd.oci.image.manifest.v1+json done
+#7 DONE 0.4s
+
+#4 [internal] load build context
+#4 transferring context: 1.52MB 0.0s done
+#4 DONE 0.1s
+
+#5 [base 1/8] FROM docker.io/library/node:24-slim@sha256:242549cd46785b480c832479a730f4f2a20865d61ea2e404fdb2a5c3d3b73ecf
+#5 sha256:06d464f614a98416f8f326dcd40292b0a96bf6a56a6fba9e2f98ed770cdacf11 449B / 449B 0.1s done
+#5 sha256:b2b95943836ce3dea08d21af828b011a0645bdca70cd53536131ccd295ef3def 1.71MB / 1.71MB 0.2s done
+#5 sha256:e008f534e95cab9dfc584b72c1beb5ccd5b4e7b6b73973a6fd6791f0d8e2ac29 0B / 50.09MB 0.2s
+#5 sha256:068fedd6b0f109b8186d00d49327b6fc6747c428fd3c9a8739424ff5f38d7531 0B / 28.23MB 0.2s
+#5 sha256:9bea510bd805f72c63e2d093c23fca1da9b02127c4849c121b6117a45d4d2ba7 3.31kB / 3.31kB 0.1s done
+#5 sha256:e008f534e95cab9dfc584b72c1beb5ccd5b4e7b6b73973a6fd6791f0d8e2ac29 7.34MB / 50.09MB 0.5s
+#5 sha256:068fedd6b0f109b8186d00d49327b6fc6747c428fd3c9a8739424ff5f38d7531 6.29MB / 28.23MB 0.3s
+#5 sha256:e008f534e95cab9dfc584b72c1beb5ccd5b4e7b6b73973a6fd6791f0d8e2ac29 12.58MB / 50.09MB 0.6s
+#5 sha256:068fedd6b0f109b8186d00d49327b6fc6747c428fd3c9a8739424ff5f38d7531 11.53MB / 28.23MB 0.5s
+#5 sha256:e008f534e95cab9dfc584b72c1beb5ccd5b4e7b6b73973a6fd6791f0d8e2ac29 17.83MB / 50.09MB 0.8s
+#5 sha256:068fedd6b0f109b8186d00d49327b6fc6747c428fd3c9a8739424ff5f38d7531 18.87MB / 28.23MB 0.6s
+#5 sha256:e008f534e95cab9dfc584b72c1beb5ccd5b4e7b6b73973a6fd6791f0d8e2ac29 24.12MB / 50.09MB 0.9s
+#5 sha256:068fedd6b0f109b8186d00d49327b6fc6747c428fd3c9a8739424ff5f38d7531 24.12MB / 28.23MB 0.8s
+#5 sha256:e008f534e95cab9dfc584b72c1beb5ccd5b4e7b6b73973a6fd6791f0d8e2ac29 37.75MB / 50.09MB 1.1s
+#5 sha256:068fedd6b0f109b8186d00d49327b6fc6747c428fd3c9a8739424ff5f38d7531 28.23MB / 28.23MB 1.0s done
+#5 extracting sha256:068fedd6b0f109b8186d00d49327b6fc6747c428fd3c9a8739424ff5f38d7531
+#5 sha256:e008f534e95cab9dfc584b72c1beb5ccd5b4e7b6b73973a6fd6791f0d8e2ac29 50.09MB / 50.09MB 1.2s
+#5 sha256:e008f534e95cab9dfc584b72c1beb5ccd5b4e7b6b73973a6fd6791f0d8e2ac29 50.09MB / 50.09MB 1.4s done
+#5 extracting sha256:068fedd6b0f109b8186d00d49327b6fc6747c428fd3c9a8739424ff5f38d7531 0.4s done
+#5 extracting sha256:9bea510bd805f72c63e2d093c23fca1da9b02127c4849c121b6117a45d4d2ba7 done
+#5 extracting sha256:e008f534e95cab9dfc584b72c1beb5ccd5b4e7b6b73973a6fd6791f0d8e2ac29
+#5 extracting sha256:e008f534e95cab9dfc584b72c1beb5ccd5b4e7b6b73973a6fd6791f0d8e2ac29 0.6s done
+#5 DONE 2.1s
+
+#5 [base 1/8] FROM docker.io/library/node:24-slim@sha256:242549cd46785b480c832479a730f4f2a20865d61ea2e404fdb2a5c3d3b73ecf
+#5 extracting sha256:b2b95943836ce3dea08d21af828b011a0645bdca70cd53536131ccd295ef3def 0.0s done
+#5 extracting sha256:06d464f614a98416f8f326dcd40292b0a96bf6a56a6fba9e2f98ed770cdacf11 done
+#5 DONE 2.2s
+
+#8 [runner 2/7] WORKDIR /app
+#8 DONE 0.9s
+
+#9 [base 2/8] RUN corepack enable && corepack prepare pnpm@latest --activate
+#9 0.317 Preparing pnpm@latest for immediate activation...
+#9 DONE 0.9s
+
+#10 [base 3/8] WORKDIR /app
+#10 DONE 0.0s
+
+#11 [base 4/8] COPY pnpm-workspace.yaml pnpm-lock.yaml package.json .npmrc ./
+#11 DONE 0.0s
+
+#12 [base 5/8] COPY lib/ lib/
+#12 DONE 0.0s
+
+#13 [base 6/8] COPY artifacts/api-server/ artifacts/api-server/
+#13 DONE 0.0s
+
+#14 [base 7/8] RUN --mount=type=cache,id=pnpm,target=/pnpm/store     pnpm install --frozen-lockfile --filter @workspace/api-server... 2>&1 | tail -5
+#14 8.081 Progress: resolved 433, reused 0, downloaded 433, added 433, done
+#14 8.081 . preinstall$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+#14 8.081 . preinstall: Use pnpm instead
+#14 8.081 . preinstall: Failed
+#14 8.081 [ELIFECYCLE] Command failed with exit code 1.
+#14 DONE 9.9s
+
+#15 [base 8/8] RUN pnpm --filter @workspace/api-server run build
+#15 0.690 Scope: all 6 workspace projects
+#15 0.843 Progress: resolved 1, reused 0, downloaded 0, added 0
+#15 0.859 artifacts/api-server                     | [WARN] deprecated @types/bcryptjs@3.0.0
+#15 1.844 Progress: resolved 312, reused 0, downloaded 288, added 0
+#15 2.458 [WARN] 5 deprecated subdependencies found: node-domexception@1.0.0, prebuild-install@7.1.3, scmp@2.1.0, uuid@8.3.2, uuid@9.0.1
+#15 2.472 Packages: +122
+#15 2.472 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#15 2.518 Progress: resolved 556, reused 0, downloaded 555, added 122, done
+#15 2.909 . preinstall$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+#15 2.929 . preinstall: Done
+#15 2.953 [WARN] Issues with peer dependencies found. Run "pnpm peers check" to list them.
+#15 2.954 
+#15 3.002 [ERR_PNPM_IGNORED_BUILDS] Ignored build scripts: @google/genai@2.6.0, @whiskeysockets/baileys@7.0.0-rc13, better-sqlite3@12.10.0, es5-ext@0.10.64, esbuild@0.27.3, ffmpeg-static@5.3.0, protobufjs@7.6.1
+#15 3.002 
+#15 3.002 Run "pnpm approve-builds" to pick which dependencies should be allowed to run scripts.
+#15 3.113 [ERROR] Command failed with exit code 1: /usr/local/bin/node /root/.cache/node/corepack/v1/pnpm/11.5.0/bin/pnpm.mjs install
+#15 3.113 
+#15 3.113 pnpm: Command failed with exit code 1: /usr/local/bin/node /root/.cache/node/corepack/v1/pnpm/11.5.0/bin/pnpm.mjs install
+#15 3.113     at getFinalError (file:///root/.cache/node/corepack/v1/pnpm/11.5.0/dist/pnpm.mjs:3761:14)
+#15 3.113     at makeError (file:///root/.cache/node/corepack/v1/pnpm/11.5.0/dist/pnpm.mjs:6068:21)
+#15 3.113     at getSyncResult (file:///root/.cache/node/corepack/v1/pnpm/11.5.0/dist/pnpm.mjs:7912:10)
+#15 3.113     at spawnSubprocessSync (file:///root/.cache/node/corepack/v1/pnpm/11.5.0/dist/pnpm.mjs:7872:14)
+#15 3.113     at execaCoreSync (file:///root/.cache/node/corepack/v1/pnpm/11.5.0/dist/pnpm.mjs:7802:23)
+#15 3.113     at callBoundExeca (file:///root/.cache/node/corepack/v1/pnpm/11.5.0/dist/pnpm.mjs:10330:23)
+#15 3.113     at boundExeca (file:///root/.cache/node/corepack/v1/pnpm/11.5.0/dist/pnpm.mjs:10307:49)
+#15 3.113     at sync (file:///root/.cache/node/corepack/v1/pnpm/11.5.0/dist/pnpm.mjs:10466:10)
+#15 3.113     at runPnpmCli (file:///root/.cache/node/corepack/v1/pnpm/11.5.0/dist/pnpm.mjs:217979:5)
+#15 3.113     at runDepsStatusCheck (file:///root/.cache/node/corepack/v1/pnpm/11.5.0/dist/pnpm.mjs:219711:7)
+#15 ERROR: process "/bin/sh -c pnpm --filter @workspace/api-server run build" did not complete successfully: exit code: 1
+------
+ > [base 8/8] RUN pnpm --filter @workspace/api-server run build:
+3.113     at getFinalError (file:///root/.cache/node/corepack/v1/pnpm/11.5.0/dist/pnpm.mjs:3761:14)
+3.113     at makeError (file:///root/.cache/node/corepack/v1/pnpm/11.5.0/dist/pnpm.mjs:6068:21)
+3.113     at getSyncResult (file:///root/.cache/node/corepack/v1/pnpm/11.5.0/dist/pnpm.mjs:7912:10)
+3.113     at spawnSubprocessSync (file:///root/.cache/node/corepack/v1/pnpm/11.5.0/dist/pnpm.mjs:7872:14)
+3.113     at execaCoreSync (file:///root/.cache/node/corepack/v1/pnpm/11.5.0/dist/pnpm.mjs:7802:23)
+3.113     at callBoundExeca (file:///root/.cache/node/corepack/v1/pnpm/11.5.0/dist/pnpm.mjs:10330:23)
+3.113     at boundExeca (file:///root/.cache/node/corepack/v1/pnpm/11.5.0/dist/pnpm.mjs:10307:49)
+3.113     at sync (file:///root/.cache/node/corepack/v1/pnpm/11.5.0/dist/pnpm.mjs:10466:10)
+3.113     at runPnpmCli (file:///root/.cache/node/corepack/v1/pnpm/11.5.0/dist/pnpm.mjs:217979:5)
+3.113     at runDepsStatusCheck (file:///root/.cache/node/corepack/v1/pnpm/11.5.0/dist/pnpm.mjs:219711:7)
+------
+Dockerfile:15
+--------------------
+  13 |         pnpm install --frozen-lockfile --filter @workspace/api-server... 2>&1 | tail -5
+  14 |     
+  15 | >>> RUN pnpm --filter @workspace/api-server run build
+  16 |     
+  17 |     FROM node:24-slim AS runner
+--------------------
+error: failed to solve: process "/bin/sh -c pnpm --filter @workspace/api-server run build" did not complete successfully: exit code: 1
+Build failed ❌

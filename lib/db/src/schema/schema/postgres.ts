@@ -102,7 +102,12 @@ export const appointments = pgTable("appointments", {
   bookingStatus: varchar("booking_status", { length: 20 }).default("pending"),
   privateRoom: boolean("private_room").default(false).notNull(),
   paypalOrderId: text("paypal_order_id"),
-});
+},
+(table) => [
+  index("idx_appointments_date").on(table.date),
+  index("idx_appointments_staff_id").on(table.staffId),
+  index("idx_appointments_client_id").on(table.clientId),
+]);
 
 export const services = pgTable("services", {
   id: serial("id").primaryKey(),
@@ -154,7 +159,10 @@ export const charges = pgTable("charges", {
   attachment: text("attachment"),
   attachmentName: text("attachment_name"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+},
+(table) => [
+  index("idx_charges_date").on(table.date),
+]);
 
 export const insertChargeSchema = createInsertSchema(charges).omit({ id: true, createdAt: true }).extend({
   type: z.string().min(1, "Type is required"),
