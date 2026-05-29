@@ -102,9 +102,17 @@ setInterval(async () => {
     }
 
     const { sendWhatsAppMessage, formatJid } = await import("./baileys");
-    const jid = formatJid(ownerPhone);
-    await sendWhatsAppMessage(jid, msg);
-    console.log(`[DailySummary] Sent to ${ownerPhone} at ${currentTime}`);
+    // Support multiple recipients separated by comma (e.g. "212600000000,212700000000")
+    const recipients = ownerPhone.split(",").map((p: string) => p.trim()).filter(Boolean);
+    for (const phone of recipients) {
+      try {
+        const jid = formatJid(phone);
+        await sendWhatsAppMessage(jid, msg);
+        console.log(`[DailySummary] Sent to ${phone} at ${currentTime}`);
+      } catch (sendErr: any) {
+        console.error(`[DailySummary] Failed to send to ${phone}:`, sendErr.message);
+      }
+    }
   } catch (err: any) {
     console.error("[DailySummary] Error:", err.message);
   }

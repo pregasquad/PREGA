@@ -579,12 +579,15 @@ export default function WhatsApp() {
   });
 
   const [summaryPhone, setSummaryPhone] = useState("");
+  const [summaryPhone2, setSummaryPhone2] = useState("");
   const [summaryTime, setSummaryTime] = useState("20:00");
   const summaryEnabled = (bizSettings as any)?.dailySummaryEnabled === true;
 
   useEffect(() => {
     if (bizSettings) {
-      setSummaryPhone((bizSettings as any).ownerPhone || "");
+      const phones = ((bizSettings as any).ownerPhone || "").split(",").map((p: string) => p.trim());
+      setSummaryPhone(phones[0] || "");
+      setSummaryPhone2(phones[1] || "");
       setSummaryTime((bizSettings as any).dailySummaryTime || "20:00");
     }
   }, [bizSettings]);
@@ -1057,7 +1060,7 @@ export default function WhatsApp() {
           <div className="space-y-2 pt-1 border-t border-border/20">
             <div className="flex gap-2">
               <div className="flex-1">
-                <label className="text-xs text-muted-foreground mb-1 block">رقم المدير/المديرة (واتساب)</label>
+                <label className="text-xs text-muted-foreground mb-1 block">الرقم الأول (صاحبة الصالون)</label>
                 <Input
                   data-testid="input-summary-phone"
                   placeholder="212600000000"
@@ -1078,17 +1081,29 @@ export default function WhatsApp() {
                 />
               </div>
             </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">الرقم الثاني — اختياري (مدير آخر / شريك)</label>
+              <Input
+                data-testid="input-summary-phone2"
+                placeholder="212700000000 — اختياري"
+                value={summaryPhone2}
+                onChange={(e) => setSummaryPhone2(e.target.value)}
+                className="h-9 text-sm rounded-xl"
+                dir="ltr"
+              />
+            </div>
             <Button
               data-testid="button-save-summary"
               size="sm"
               disabled={saveSummaryMutation.isPending}
-              onClick={() =>
+              onClick={() => {
+                const combined = [summaryPhone, summaryPhone2].filter(Boolean).join(",");
                 saveSummaryMutation.mutate({
-                  ownerPhone: summaryPhone,
+                  ownerPhone: combined,
                   dailySummaryEnabled: true,
                   dailySummaryTime: summaryTime,
-                })
-              }
+                });
+              }}
               className="w-full rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30"
               variant="ghost"
             >
