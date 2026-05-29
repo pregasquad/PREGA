@@ -249,7 +249,7 @@ export async function sendAppointmentReminder(
   const salon = salonName || 'PREGASQUAD';
   const message = `مرحباً ${clientName}! 💇‍♀️
 
-⏳ تذكير: موعدك بعد 45 دقيقة!
+⏳ تذكير: rendez-vousك بعد 45 دقيقة!
 
 📅 التاريخ: ${appointmentDate}
 ⏰ الوقت: ${appointmentTime}
@@ -306,7 +306,7 @@ export async function sendWaitlistNotification(
   const salon = salonName || 'PREGASQUAD';
   const message = `مرحباً ${clientName}! 🎉
 
-أخبار سارة! أصبح لدينا موعد متاح:
+أخبار سارة! أصبح لدينا rendez-vous متاح:
 📅 التاريخ: ${availableDate}
 ⏰ الوقت: ${availableTime}
 
@@ -332,7 +332,7 @@ export async function sendGiftCardNotification(
 💳 رمز البطاقة: ${giftCardCode}
 💰 القيمة: ${amount} درهم
 
-يمكنك استخدام هذه البطاقة في موعدك القادم.
+يمكنك استخدام هذه البطاقة في rendez-vousك القادم.
 شكراً لك! 💕`;
 
   return sendWhatsAppMessage(recipientPhone, message);

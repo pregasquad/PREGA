@@ -295,7 +295,7 @@ export async function checkAndSendRebookingReminders(): Promise<void> {
         msg = `Bonjour${name} 🌸\n\nCela fait un moment qu'on ne vous a pas vue chez ${salonName} — vous nous manquez ! 💖\n\nSi vous souhaitez reprendre soin de vous, on est là pour vous accueillir avec plaisir 😊${bookingUrl ? `\n\n📲 Réservez ici : ${bookingUrl}` : ""}`;
       } else {
         // Darija / Arabic default
-        msg = `مرحبا${name} 🌸\n\nوحشتينا بزاف! مزال ما جيتيش لـ${salonName} 💖\n\nكنا غير نتمنى تكوني بخير — وكي تحبي ترجعي كنا مستنياك هنا 😊${bookingUrl ? `\n\n📲 حجزي موعدك هنا: ${bookingUrl}` : ""}`;
+        msg = `مرحبا${name} 🌸\n\nوحشتينا بزاف! مزال ما جيتيش لـ${salonName} 💖\n\nكنا غير نتمنى تكوني بخير — وكي تحبي ترجعي كنا مستنياك هنا 😊${bookingUrl ? `\n\n📲 حجزي rendez-vousك هنا: ${bookingUrl}` : ""}`;
       }
 
       try {

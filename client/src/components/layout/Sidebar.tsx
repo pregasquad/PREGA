@@ -218,7 +218,7 @@ export function Sidebar() {
       if (apt.bookingStatus === "confirmed") {
         playNotificationSound();
         toast({
-          title: `✅ ${clientFirstName} أكدات الموعد!`,
+          title: `✅ ${clientFirstName} أكدات الrendez-vous!`,
           description: apt.service
             ? `${apt.service}${apt.startTime ? ` — ${apt.startTime}` : ""}`
             : "تأكيد عبر واتساب",
@@ -226,14 +226,14 @@ export function Sidebar() {
         });
       } else if (apt.bookingStatus === "cancelled") {
         toast({
-          title: `❌ ${clientFirstName} ألغات الموعد`,
+          title: `❌ ${clientFirstName} ألغات الrendez-vous`,
           description: apt.service || "إلغاء عبر واتساب",
           variant: "destructive",
           duration: 6000,
         });
       } else if (apt.bookingStatus === "modify_requested") {
         toast({
-          title: `🔄 ${clientFirstName} طلبات تغيير الموعد`,
+          title: `🔄 ${clientFirstName} طلبات تغيير الrendez-vous`,
           description: apt.service || "طلب تعديل عبر واتساب",
           duration: 6000,
         });

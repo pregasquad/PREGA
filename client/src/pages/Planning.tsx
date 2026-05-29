@@ -1648,7 +1648,7 @@ export default function Planning() {
       refreshSalariesBackground();
       toast({
         title: t("planning.paymentReverted") || "تم إلغاء الدفع",
-        description: t("planning.paymentRevertedDesc") || "تم إعادة الموعد إلى حالة غير مدفوع",
+        description: t("planning.paymentRevertedDesc") || "تم إعادة الrendez-vous إلى حالة غير مدفوع",
       });
     } catch (error) {
       console.error("Revert payment error:", error);

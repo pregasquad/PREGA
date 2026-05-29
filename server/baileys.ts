@@ -822,14 +822,14 @@ export async function sendBotConfirmed(
       jid,
       isFrench
         ? `Avec plaisir ${firstName} 🌸\n\nC'est bon ! Ton rendez-vous pour "${serviceName}" est confirmé ${relativeDate} à ${time} inch'Allah. On t'attend avec impatience 🌸✨`
-        : `العفو يا ${firstName}، هانية حبيبتي! 🌸\n\nصافي، الموعد ديالك لـ "${serviceName}" تأكد ${relativeDate} إن شاء الله مع ${time}. نتسناوك تنورينا في الصالون، ومرحبا بيك 🌸✨`
+        : `العفو يا ${firstName}، هانية حبيبتي! 🌸\n\nصافي، الrendez-vous ديالك لـ "${serviceName}" تأكد ${relativeDate} إن شاء الله مع ${time}. نتسناوك تنورينا في الصالون، ومرحبا بيك 🌸✨`
     );
   } else {
     await sendWhatsAppMessage(
       jid,
       isFrench
         ? "Merci pour ta confirmation ! 🌸\nTon rendez-vous est confirmé ✅\nOn a hâte de te voir. N'hésite pas si tu as des questions 💖"
-        : "شكراً لتأكيدك! 🌸\nموعدك مؤكد ✅\nنتطلع لرؤيتك. أي سؤال راسليني هنا 💖"
+        : "شكراً لتأكيدك! 🌸\nrendez-vousك مؤكد ✅\nنتطلع لرؤيتك. أي سؤال راسليني هنا 💖"
     );
   }
 }
@@ -843,7 +843,7 @@ export async function sendBotCancelled(jid: string, language?: string): Promise<
     jid,
     isFrench
       ? "Ton rendez-vous a bien été annulé ✅\nSi tu souhaites réserver à un autre moment, dis-le moi et l'équipe te contactera 🌸\nOn espère te revoir bientôt 💖"
-      : "تم إلغاء موعدك ✅\nإذا أردتِ حجز وقت آخر، أخبريني وسيتواصل معكِ الفريق 🌸\nنتمنى نراكِ قريباً 💖"
+      : "تم إلغاء rendez-vousك ✅\nإذا أردتِ حجز وقت آخر، أخبريني وسيتواصل معكِ الفريق 🌸\nنتمنى نراكِ قريباً 💖"
   );
 }
 
@@ -880,7 +880,7 @@ export async function sendAppointmentReminder(
   const salon = salonName || "PREGASQUAD";
   const msg = language === "french"
     ? `Bonjour ${clientName} ! 💇‍♀️\n\n⏳ Rappel : votre rendez-vous est bientôt !\n\n📅 ${appointmentDate}\n⏰ ${appointmentTime}\n💅 ${serviceName}\n\nNous avons hâte de vous accueillir chez ${salon} ! 🌸`
-    : `مرحباً ${clientName}! 💇‍♀️\n\n⏳ تذكير: موعدك بعد قليل!\n\n📅 ${appointmentDate}\n⏰ ${appointmentTime}\n💅 ${serviceName}\n\nنتطلع لرؤيتك في ${salon}! 🌸`;
+    : `مرحباً ${clientName}! 💇‍♀️\n\n⏳ تذكير: rendez-vousك بعد قليل!\n\n📅 ${appointmentDate}\n⏰ ${appointmentTime}\n💅 ${serviceName}\n\nنتطلع لرؤيتك في ${salon}! 🌸`;
   return sendWhatsAppMessage(clientPhone, msg);
 }
 
@@ -893,7 +893,7 @@ export async function sendBookingConfirmation(
   const relativeDate = formatRelativeDate(appointmentDate);
   const msg = language === "french"
     ? `Bonjour ${firstName} 🌸\n\nVotre rendez-vous a bien été confirmé ✅\n\n📋 Prestation : ${serviceName}\n📅 Date : ${relativeDate}\n⏰ Heure : ${appointmentTime}\n\nNous avons hâte de vous accueillir 💕`
-    : `مرحبا ${firstName} 🌸\n\nتم تأكيد موعدك بنجاح ✅\n\n📋 الخدمة: ${serviceName}\n📅 التاريخ: ${relativeDate}\n⏰ الوقت: ${appointmentTime}\n\nنتطلع لاستقبالك 💕`;
+    : `مرحبا ${firstName} 🌸\n\nتم تأكيد rendez-vousك بنجاح ✅\n\n📋 الخدمة: ${serviceName}\n📅 التاريخ: ${relativeDate}\n⏰ الوقت: ${appointmentTime}\n\nنتطلع لاستقبالك 💕`;
   return sendWhatsAppMessage(clientPhone, msg);
 }
 
@@ -904,7 +904,7 @@ export async function sendWaitlistNotification(
   const salon = salonName || "PREGASQUAD";
   return sendWhatsAppMessage(
     clientPhone,
-    `مرحباً ${clientName}! 🎉\n\nموعد متاح:\n📅 ${availableDate}\n⏰ ${availableTime}\n\n${salon} 💕`
+    `مرحباً ${clientName}! 🎉\n\nrendez-vous متاح:\n📅 ${availableDate}\n⏰ ${availableTime}\n\n${salon} 💕`
   );
 }
 
@@ -915,7 +915,7 @@ export async function sendGiftCardNotification(
   const from = senderName ? `من ${senderName}` : "";
   return sendWhatsAppMessage(
     recipientPhone,
-    `مرحباً ${recipientName}! 🎁\n\nبطاقة هدية ${from}!\n💳 ${giftCardCode}\n💰 ${amount} درهم\n\nاستخدمها في موعدك القادم 💕`
+    `مرحباً ${recipientName}! 🎁\n\nبطاقة هدية ${from}!\n💳 ${giftCardCode}\n💰 ${amount} درهم\n\nاستخدمها في rendez-vousك القادم 💕`
   );
 }
 

@@ -5419,7 +5419,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
                 const imgResult = await generateImage(mergedText, salonName);
                 await stopTypingPresence(remoteJid);
                 if (imgResult) {
-                  const caption = "هذا مثال على ما تقصدينه 🌸\nراسليني إذا أعجبك الشكل ونحددوا موعدك 💖";
+                  const caption = "هذا مثال على ما تقصدينه 🌸\nراسليني إذا أعجبك الشكل ونحددوا rendez-vousك 💖";
                   await sendWhatsAppImageBuffer(remoteJid, imgResult.base64, imgResult.mimeType, caption);
                   console.log(`[Bot] Generated image sent to ${remoteJid} via ${imgResult.model}`);
                 } else {
