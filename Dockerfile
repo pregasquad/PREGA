@@ -1,7 +1,7 @@
 FROM node:24-slim AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@10.26.1 --activate
 
 WORKDIR /app
 
@@ -9,8 +9,10 @@ COPY pnpm-workspace.yaml pnpm-lock.yaml package.json .npmrc ./
 COPY lib/ lib/
 COPY artifacts/api-server/ artifacts/api-server/
 
+ENV npm_config_user_agent="pnpm/10.26.1 node/v24.0.0 linux x64"
+
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile --filter @workspace/api-server... 2>&1 | tail -5
+    pnpm install --frozen-lockfile --filter @workspace/api-server...
 
 RUN pnpm --filter @workspace/api-server run build
 
