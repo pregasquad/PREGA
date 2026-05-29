@@ -1,0 +1,76 @@
+import { createRoot } from "react-dom/client";
+import { registerSW } from 'virtual:pwa-register';
+import App from "./App";
+import "./index.css";
+import "./i18n/config";
+import { initDatabaseStatusCheck } from "./lib/databaseStatus";
+import { syncPendingChanges, refreshAndCacheData, startAutoSync } from "./lib/syncService";
+import { queryClient } from "./lib/queryClient";
+import { seedQueryCache } from "./lib/cacheSeeder";
+
+initDatabaseStatusCheck();
+
+// Start auto-sync for offline changes
+startAutoSync(30000);
+
+// Listen for sync messages from service worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', async (event) => {
+    if (event.data?.type === 'SYNC_REQUIRED') {
+      console.log('[App] Sync requested by service worker');
+      await syncPendingChanges();
+      await refreshAndCacheData();
+    }
+  });
+}
+
+// Restore session from local storage before app render to prevent 401s
+if (typeof window !== 'undefined') {
+  const localAuth = localStorage.getItem("user_authenticated") === "true";
+  const sessionAuth = sessionStorage.getItem("user_authenticated") === "true";
+  const wasLoggedOut = sessionStorage.getItem("explicit_logout") === "true" || 
+                       localStorage.getItem("explicit_logout") === "true";
+  
+  if (localAuth && !sessionAuth && !wasLoggedOut) {
+    sessionStorage.setItem("user_authenticated", "true");
+    sessionStorage.setItem("current_user", localStorage.getItem("current_user") || "");
+    sessionStorage.setItem("current_user_role", localStorage.getItem("current_user_role") || "");
+    sessionStorage.setItem("current_user_permissions", localStorage.getItem("current_user_permissions") || "[]");
+  }
+}
+
+// Register PWA service worker with auto-update
+const updateSW = registerSW({
+  onNeedRefresh() {
+    // Auto-update when new version available
+    updateSW(true);
+  },
+  onOfflineReady() {
+    console.log('App is ready to work offline');
+  },
+  onRegistered(registration) {
+    console.log('Service Worker registered with scope:', registration?.scope);
+  },
+  onRegisterError(error) {
+    console.error('Service Worker registration failed:', error);
+  }
+});
+
+// Mount React immediately so there is never a blank screen.
+// Cache seeding runs in the background after first paint.
+async function startApp() {
+  try {
+    createRoot(document.getElementById("root")!).render(<App />);
+  } finally {
+    // Hide the HTML splash loader after React has painted its first frame.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        (window as any).hideAppLoader?.();
+      });
+    });
+  }
+  // Seed IndexedDB cache in the background — does not block render.
+  seedQueryCache(queryClient).catch(() => {});
+}
+
+startApp();

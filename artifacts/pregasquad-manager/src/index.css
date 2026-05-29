@@ -1,0 +1,838 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=SF+Pro+Display:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Smooth scrolling class for programmatic scrolls only */
+.smooth-scroll {
+  scroll-behavior: smooth;
+}
+
+/* Free scrolling for interactive areas like the planning board */
+.free-scroll {
+  scroll-behavior: auto !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-x pan-y;
+}
+
+:root {
+  --font-sans: 'Inter', sans-serif;
+  --font-display: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+
+  /* iOS 26 Liquid Glass Theme - Light Mode (Baby Pink) */
+  --background: 340 30% 98%;
+  --foreground: 340 20% 12%;
+  
+  /* Card: Frosted glass effect base */
+  --card: 0 0% 100%;
+  --card-foreground: 340 20% 12%;
+  
+  /* Popover/Dropdown: Glass effect */
+  --popover: 0 0% 100%;
+  --popover-foreground: 340 20% 12%;
+  
+  /* Primary: Baby Pink (Liquid Glass) */
+  --primary: 340 82% 65%;
+  --primary-foreground: 0 0% 100%;
+  
+  /* Secondary: Warm Rose */
+  --secondary: 340 25% 96%;
+  --secondary-foreground: 340 20% 12%;
+  
+  --muted: 340 20% 96%;
+  --muted-foreground: 340 10% 47%;
+  
+  /* Accent: Soft Pink highlight */
+  --accent: 340 80% 95%;
+  --accent-foreground: 340 70% 45%;
+  
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  
+  --border: 340 20% 91%;
+  --input: 340 20% 91%;
+  --ring: 340 82% 65%;
+  
+  /* Sidebar: Dark glass with pink tint */
+  --sidebar-background: 340 25% 12%;
+  --sidebar-foreground: 340 20% 98%;
+  --sidebar-primary: 340 82% 65%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 340 20% 18%;
+  --sidebar-accent-foreground: 340 20% 98%;
+  --sidebar-border: 340 20% 18%;
+  --sidebar-ring: 340 82% 65%;
+  
+  --radius: 1rem;
+
+  /* iOS 26 Liquid Glass Effect Variables */
+  --glass-bg: rgba(255, 255, 255, 0.15);
+  --glass-bg-solid: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.35);
+  --glass-border-highlight: rgba(255, 255, 255, 0.6);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  --glass-shadow-lg: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+  --glass-blur: 20px;
+  --glass-blur-lg: 40px;
+  --glass-specular: rgba(255, 255, 255, 0.4);
+  --glass-refraction: rgba(255, 255, 255, 0.08);
+  
+  /* Baby Pink Water Colors */
+  --water-cyan: 340 82% 65%;
+  --water-teal: 330 70% 55%;
+  --water-sky: 350 75% 62%;
+  --water-emerald: 320 65% 58%;
+}
+
+.dark {
+  /* iOS 26 Liquid Glass Theme - Dark Mode */
+  --background: 340 20% 6%;
+  --foreground: 340 15% 98%;
+  
+  /* Card: Dark glass effect */
+  --card: 340 15% 10%;
+  --card-foreground: 340 15% 98%;
+  
+  /* Popover/Dropdown: Dark glass */
+  --popover: 340 15% 10%;
+  --popover-foreground: 340 15% 98%;
+  
+  /* Primary: Baby Pink (Liquid Glass) */
+  --primary: 340 82% 70%;
+  --primary-foreground: 0 0% 100%;
+  
+  --secondary: 340 15% 15%;
+  --secondary-foreground: 340 20% 98%;
+  
+  --muted: 340 15% 15%;
+  --muted-foreground: 340 12% 65%;
+  
+  --accent: 340 20% 18%;
+  --accent-foreground: 340 75% 75%;
+  
+  --destructive: 0 62% 50%;
+  --destructive-foreground: 0 0% 100%;
+  
+  --border: 340 15% 18%;
+  --input: 340 15% 18%;
+  --ring: 340 82% 70%;
+  
+  /* Sidebar: Dark elegant with pink tint */
+  --sidebar-background: 340 20% 5%;
+  --sidebar-foreground: 340 20% 98%;
+  --sidebar-primary: 340 82% 70%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 340 15% 12%;
+  --sidebar-accent-foreground: 340 20% 98%;
+  --sidebar-border: 340 15% 15%;
+  --sidebar-ring: 340 82% 70%;
+
+  /* iOS 26 Dark Liquid Glass Variables */
+  --glass-bg: rgba(45, 30, 38, 0.25);
+  --glass-bg-solid: rgba(45, 30, 38, 0.9);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --glass-border-highlight: rgba(255, 255, 255, 0.2);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --glass-shadow-lg: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  --glass-specular: rgba(255, 255, 255, 0.15);
+  --glass-refraction: rgba(255, 255, 255, 0.03);
+  
+  /* Baby Pink Water Colors - Dark Mode */
+  --water-cyan: 340 82% 70%;
+  --water-teal: 330 70% 60%;
+  --water-sky: 350 75% 65%;
+  --water-emerald: 320 65% 62%;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-foreground antialiased selection:bg-primary/20 selection:text-primary overflow-x-hidden;
+    font-family: var(--font-sans);
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-overflow-scrolling: touch;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    letter-spacing: -0.01em;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    @apply font-semibold tracking-tight text-foreground;
+    letter-spacing: -0.02em;
+  }
+}
+
+@supports (padding-top: env(safe-area-inset-top)) {
+  .safe-area-p {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+/* iOS 26 Liquid Glass Effects */
+.glass {
+  position: relative;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+/* Main glass card with refraction & specular highlights */
+.glass-card {
+  position: relative;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  border: 1px solid var(--glass-border);
+  box-shadow: 
+    var(--glass-shadow),
+    inset 0 1px 0 var(--glass-specular),
+    inset 0 -1px 0 var(--glass-refraction);
+  border-radius: var(--radius);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Specular highlight on top edge */
+.glass-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    var(--glass-border-highlight) 50%, 
+    transparent 100%
+  );
+  border-radius: 100%;
+  pointer-events: none;
+}
+
+/* Inner refraction glow */
+.glass-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    var(--glass-refraction) 0%,
+    transparent 50%,
+    var(--glass-refraction) 100%
+  );
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.glass-card:hover {
+  box-shadow: 
+    var(--glass-shadow-lg),
+    inset 0 1px 0 var(--glass-specular),
+    inset 0 -1px 0 var(--glass-refraction);
+  border-color: var(--glass-border-highlight);
+}
+
+/* Subtle glass for form fields & inputs */
+.glass-subtle {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.dark .glass-subtle {
+  background: rgba(45, 30, 38, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Elevated glass panel with stronger effect */
+.glass-elevated {
+  position: relative;
+  background: var(--glass-bg-solid);
+  backdrop-filter: blur(var(--glass-blur-lg)) saturate(200%);
+  -webkit-backdrop-filter: blur(var(--glass-blur-lg)) saturate(200%);
+  border: 1px solid var(--glass-border-highlight);
+  box-shadow: 
+    var(--glass-shadow-lg),
+    inset 0 2px 0 var(--glass-specular);
+  border-radius: calc(var(--radius) * 1.5);
+}
+
+/* Liquid shine animation on hover */
+@keyframes liquidShine {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.glass-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-shine::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    120deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.1) 40%,
+    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0.1) 60%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.glass-shine:hover::before {
+  opacity: 1;
+  animation: liquidShine 1.5s ease-in-out;
+}
+
+/* iOS 26 Liquid Glass Modal */
+.liquid-glass-modal {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(248, 250, 252, 0.98) 100%
+  );
+  backdrop-filter: blur(40px) saturate(200%);
+  -webkit-backdrop-filter: blur(40px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 
+    0 25px 80px -20px rgba(0, 0, 0, 0.25),
+    0 10px 40px -10px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.dark .liquid-glass-modal {
+  background: linear-gradient(
+    180deg,
+    rgba(45, 30, 38, 0.95) 0%,
+    rgba(35, 20, 28, 0.98) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 
+    0 25px 80px -20px rgba(0, 0, 0, 0.6),
+    0 10px 40px -10px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Liquid Glass Modal Header - Baby Pink effect */
+.liquid-glass-header {
+  background: linear-gradient(
+    135deg,
+    rgba(236, 142, 172, 0.18) 0%,
+    rgba(248, 180, 200, 0.12) 25%,
+    rgba(255, 200, 215, 0.1) 50%,
+    rgba(236, 142, 172, 0.08) 75%,
+    rgba(255, 255, 255, 0.9) 100%
+  );
+  border-bottom: 1px solid rgba(236, 142, 172, 0.25);
+}
+
+.dark .liquid-glass-header {
+  background: linear-gradient(
+    135deg,
+    rgba(236, 142, 172, 0.12) 0%,
+    rgba(220, 120, 155, 0.08) 25%,
+    rgba(200, 100, 140, 0.08) 50%,
+    rgba(236, 142, 172, 0.05) 75%,
+    rgba(30, 20, 28, 0.95) 100%
+  );
+  border-bottom: 1px solid rgba(236, 142, 172, 0.2);
+}
+
+/* Liquid glass shimmer animation */
+@keyframes liquidShimmer {
+  0% { transform: translateX(-100%) rotate(15deg); }
+  100% { transform: translateX(200%) rotate(15deg); }
+}
+
+.liquid-glass-shimmer {
+  background: linear-gradient(
+    120deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.4) 25%,
+    rgba(236, 142, 172, 0.2) 50%,
+    rgba(255, 255, 255, 0.4) 75%,
+    transparent 100%
+  );
+  animation: liquidShimmer 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Reflection overlay */
+.liquid-glass-reflection {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.3) 0%,
+    rgba(255, 255, 255, 0.1) 30%,
+    transparent 60%
+  );
+  pointer-events: none;
+}
+
+/* Liquid glass form field */
+.liquid-glass-field {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.7) 0%,
+    rgba(248, 250, 252, 0.8) 100%
+  );
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.dark .liquid-glass-field {
+  background: linear-gradient(
+    135deg,
+    rgba(55, 35, 45, 0.7) 0%,
+    rgba(45, 30, 38, 0.8) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Liquid glass chip/badge */
+.liquid-glass-chip {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.dark .liquid-glass-chip {
+  background: rgba(55, 35, 45, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Liquid glass button */
+.liquid-glass-button {
+  background: linear-gradient(
+    135deg,
+    rgba(236, 142, 172, 0.9) 0%,
+    rgba(248, 180, 200, 0.9) 100%
+  );
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 
+    0 8px 24px rgba(236, 142, 172, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  color: white;
+  font-weight: 600;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.liquid-glass-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 12px 32px rgba(236, 142, 172, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+/* iOS Liquid Glass Tab Bar */
+.liquid-glass-tab-bar {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-top: 0.5px solid rgba(255, 255, 255, 0.45);
+  padding-bottom: env(safe-area-inset-bottom, 2px);
+}
+
+.dark .liquid-glass-tab-bar {
+  background: rgba(30, 30, 30, 0.65);
+  border-top: 0.5px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Baby Pink Liquid Gradients */
+.liquid-gradient {
+  background: linear-gradient(135deg, 
+    hsl(340, 82%, 65%) 0%, 
+    hsl(330, 70%, 58%) 25%,
+    hsl(350, 75%, 62%) 50%,
+    hsl(340, 82%, 65%) 75%,
+    hsl(320, 65%, 60%) 100%
+  );
+}
+
+.liquid-gradient-subtle {
+  background: linear-gradient(135deg, 
+    hsl(340, 80%, 97%) 0%, 
+    hsl(330, 70%, 97%) 50%,
+    hsl(350, 75%, 98%) 100%
+  );
+}
+
+.dark .liquid-gradient-subtle {
+  background: linear-gradient(135deg, 
+    hsl(340, 15%, 15%) 0%, 
+    hsl(340, 20%, 12%) 50%,
+    hsl(340, 15%, 10%) 100%
+  );
+}
+
+/* Pink shimmer gradient */
+.water-gradient {
+  background: linear-gradient(135deg, 
+    hsl(340, 82%, 65%) 0%, 
+    hsl(350, 75%, 62%) 50%,
+    hsl(330, 70%, 58%) 100%
+  );
+}
+
+/* Accent gradient for important elements */
+.accent-gradient {
+  background: linear-gradient(135deg, 
+    hsl(340, 82%, 65%) 0%, 
+    hsl(330, 70%, 58%) 100%
+  );
+}
+
+/* Animated Water Shimmer */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.water-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+/* Liquid Flow Animation */
+@keyframes liquidFlow {
+  0%, 100% {
+    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+  }
+  50% {
+    border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%;
+  }
+}
+
+.liquid-blob {
+  animation: liquidFlow 8s ease-in-out infinite;
+}
+
+/* Subtle Float Animation */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.float-subtle {
+  animation: float 4s ease-in-out infinite;
+}
+
+/* iOS Style Pill Button */
+.pill-button {
+  @apply rounded-full px-4 py-2 font-medium transition-all duration-200;
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+}
+
+.pill-button:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 20px rgba(135, 90, 31, 0.15);
+}
+
+.pill-button:active {
+  transform: scale(0.98);
+}
+
+/* Hide scrollbar utility */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Custom Scrollbar for Calendar - iOS style */
+.calendar-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.calendar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.calendar-scroll::-webkit-scrollbar-thumb {
+  @apply bg-primary/20 rounded-full;
+  transition: background 0.2s;
+}
+.calendar-scroll::-webkit-scrollbar-thumb:hover {
+  @apply bg-primary/40;
+}
+
+/* Planning Board Scrollbar */
+.planning-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.planning-scroll::-webkit-scrollbar {
+  width: 3px;
+  height: 3px;
+}
+.planning-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.planning-scroll::-webkit-scrollbar-thumb {
+  @apply bg-muted-foreground/20 rounded-full;
+}
+.planning-scroll::-webkit-scrollbar-thumb:hover {
+  @apply bg-muted-foreground/30;
+}
+
+/* Drag ghost pop-in */
+@keyframes dragGhostEnter {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.drag-ghost-enter {
+  animation: dragGhostEnter 0.12s ease-out forwards;
+}
+
+/* Hold-to-drag ring: pulses white glow while user holds the card */
+@keyframes hold-ring-pulse {
+  0%   { opacity: 0; transform: scale(0.92); }
+  40%  { opacity: 1; transform: scale(1.0); }
+  100% { opacity: 1; transform: scale(1.0); }
+}
+
+/* Smooth page transitions */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInScale {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+.animate-fade-in-scale {
+  animation: fadeInScale 0.25s ease-out forwards;
+}
+
+/* Prevent layout shift during loading */
+.loading-container {
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 1;
+  animation: fadeIn 0.15s ease-out;
+}
+
+/* Smooth content swap - prevent flash on lazy load */
+.content-ready {
+  animation: fadeIn 0.15s ease-out;
+}
+
+/* Page transition wrapper */
+.page-wrapper {
+  animation: fadeIn 0.12s ease-out;
+  will-change: opacity;
+}
+
+/* Smooth page content appearance */
+.page-content {
+  opacity: 1;
+  transform: translateY(0);
+  animation: pageSlideIn 0.15s ease-out;
+}
+
+@keyframes pageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Appointment Card Styles - iOS Liquid Glass */
+/* iOS 26 Liquid Glass Appointment Card */
+.appointment-card {
+  @apply rounded-2xl p-3 transition-all duration-300;
+  position: relative;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.1),
+    0 1px 3px rgba(0, 0, 0, 0.05),
+    inset 0 1px 0 var(--glass-specular),
+    inset 0 -1px 0 var(--glass-refraction);
+  overflow: hidden;
+}
+
+/* Specular highlight on appointment card */
+.appointment-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 15%;
+  right: 15%;
+  height: 1px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(255, 255, 255, 0.5) 50%, 
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+/* Subtle refraction overlay */
+.appointment-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    transparent 40%,
+    transparent 60%,
+    rgba(255, 255, 255, 0.05) 100%
+  );
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.appointment-card:hover {
+  transform: translateY(-3px) scale(1.02);
+  border-color: var(--glass-border-highlight);
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.15),
+    0 4px 12px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 var(--glass-specular),
+    inset 0 -1px 0 var(--glass-refraction);
+}
+
+.appointment-card:active {
+  transform: scale(0.98);
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 var(--glass-specular);
+}
+
+/* iOS Style Input */
+.ios-input {
+  @apply rounded-xl border-0 bg-secondary/50 px-4 py-3 text-base transition-all duration-200;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.ios-input:focus {
+  @apply ring-2 ring-primary/30 bg-background;
+  box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.1);
+}
+
+/* Live Time Indicator */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(249, 115, 22, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(249, 115, 22, 0.6);
+  }
+}
+
+.live-indicator {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Water Ripple Effect */
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+.ripple-effect::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  pointer-events: none;
+}
+
+.ripple-effect:active::after {
+  animation: ripple 0.6s ease-out;
+}
+
+/* Gradient Text */
+.gradient-text {
+  background: linear-gradient(135deg, hsl(340, 82%, 65%), hsl(330, 70%, 55%));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Status Badge Styles */
+.status-paid {
+  @apply bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20;
+}
+
+.status-unpaid {
+  @apply bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20;
+}

@@ -1,61 +1,45 @@
-# PREGASQUAD MANAGER
+# [Project name]
 
-A comprehensive beauty salon management system for scheduling appointments, managing staff, tracking inventory, handling finances, and running a loyalty/rewards program.
+_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
 
 ## Run & Operate
-- `npm run dev` — Development server (tsx, port 5000)
-- `npm run build` — Production build (Vite + esbuild → dist/)
-- `npm run start` — Production server (node dist/index.cjs)
-- `npm run db:push` — Push schema changes to database
-- **Required env vars**: `DB_DIALECT`, `MYSQL_URL` (or `DATABASE_URL` for Postgres), `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SESSION_SECRET`
-- **Optional env vars**: `GEMINI_API_KEY` (AI text bot + TTS), `HF_TOKEN` (Hugging Face — WhatsApp bot image generation via FLUX), `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` (push notifications)
+
+- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm run typecheck` — full typecheck across all packages
+- `pnpm run build` — typecheck + build all packages
+- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
+- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
+- Required env: `DATABASE_URL` — Postgres connection string
 
 ## Stack
-- **Frontend**: React 18, Vite 7, TypeScript, TailwindCSS 3, shadcn/ui (Radix), TanStack Query, Wouter, PWA (Workbox)
-- **Backend**: Node.js 20, Express, TypeScript, Socket.IO
-- **Database**: Drizzle ORM — MySQL/TiDB (primary, `DB_DIALECT=mysql`) or PostgreSQL (`DB_DIALECT=postgres`)
-- **Build**: Vite (frontend), tsx (dev), esbuild (production server bundle)
-- **Runtime**: Node 20
+
+- pnpm workspaces, Node.js 24, TypeScript 5.9
+- API: Express 5
+- DB: PostgreSQL + Drizzle ORM
+- Validation: Zod (`zod/v4`), `drizzle-zod`
+- API codegen: Orval (from OpenAPI spec)
+- Build: esbuild (CJS bundle)
 
 ## Where things live
-- `client/` — React frontend (entry: `client/index.html`, source: `client/src/`)
-- `server/` — Express backend (entry: `server/index.ts`)
-- `server/replit_integrations/` — Auth (OIDC/PIN) and object storage integrations
-- `shared/schema/` — Drizzle schemas: `postgres.ts` and `mysql.ts`
-- `script/` — Build scripts (build.ts, build-electron.ts)
+
+_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
 
 ## Architecture decisions
-- **Dual DB support**: MySQL/TiDB for production (Koyeb/TiDB Cloud), PostgreSQL for Replit dev — switched via `DB_DIALECT` env var
-- **PIN-based auth**: Primary auth is bcrypt-hashed PINs with role-based permissions (Owner/Manager/Receptionist); Replit OIDC auth is layered on top for developer access
-- **Offline-first**: IndexedDB mirrors server data for offline use; service worker (Workbox) caches assets; startup migrations auto-run via `ensure*` functions in `server/db.ts`
-- **WhatsApp via Baileys**: Free WhatsApp messaging (no paid API); session persisted to `baileys_sessions` DB table for ephemeral-FS resilience
-- **Photo storage**: Staff photos stored as base64 in DB (not filesystem) for ephemeral-FS resilience
+
+_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
 
 ## Product
-- Appointment scheduling with calendar/planning view
-- Staff management, salary tracking, commissions, and employee wallet
-- Inventory management with expiry tracking and low-stock alerts
-- Financial tracking (revenue, expenses, net profit)
-- Client loyalty points and gift card system
-- Lucky Wheel (Tombola) promotional feature
-- WhatsApp bot for appointment confirmations and reminders
-- Remote thermal receipt printing via QZ Tray + Socket.IO relay
-- Staff self-service portal (public token URL)
-- PWA installable on mobile devices
+
+_Describe the high-level user-facing capabilities of this app once they exist._
 
 ## User preferences
-- Default language: Arabic
-- Production DB: MySQL/TiDB Cloud (`DB_DIALECT=mysql`)
-- App runs on port 5000
-- Always present a choice of next steps using the user_query tool at the end of every completed task
+
+_Populate as you build — explicit user instructions worth remembering across sessions._
 
 ## Gotchas
-- QZ Tray WebSocket errors in browser console are expected in non-POS environments — the app falls back gracefully
-- `drizzle.config.ts` throws if DB URL is missing — always set `MYSQL_URL` or `DATABASE_URL`
-- Startup runs many `ensure*` migration functions — safe to re-run, idempotent
-- Baileys (WhatsApp) session is restored from DB on startup; QR re-scan only needed if session is wiped
+
+_Populate as you build — sharp edges, "always run X before Y" rules._
 
 ## Pointers
-- DB schema: `shared/schema/mysql.ts` (production), `shared/schema/postgres.ts` (dev)
-- Auth middleware: `server/replit_integrations/auth/replitAuth.ts`
-- All API routes: `server/routes.ts`
+
+- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
