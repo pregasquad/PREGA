@@ -86,6 +86,10 @@ export default function Salaries() {
   const [openDeductions, setOpenDeductions] = useState<Record<number, boolean>>({});
   const [salonHistoryOpen, setSalonHistoryOpen] = useState(false);
   const [withdrawalsOpen, setWithdrawalsOpen] = useState(false);
+  const [showAddWithdrawal, setShowAddWithdrawal] = useState(false);
+  const [newWithdrawalAmount, setNewWithdrawalAmount] = useState("");
+  const [newWithdrawalDate, setNewWithdrawalDate] = useState(() => format(workDayToday, "yyyy-MM-dd"));
+  const [newWithdrawalNotes, setNewWithdrawalNotes] = useState("");
   const [newCharge, setNewCharge] = useState({ type: "rent", name: "", amount: 0, date: format(workDayToday, "yyyy-MM-dd") });
   const [newDeduction, setNewDeduction] = useState<{ staffName: string; type: "advance" | "loan" | "penalty" | "other"; description: string; amount: number; date: string }>({ staffName: "", type: "advance", description: "", amount: 0, date: format(workDayToday, "yyyy-MM-dd") });
 
@@ -329,6 +333,30 @@ export default function Salaries() {
     onSuccess: () => {
       refreshSalariesBackground();
       toast({ title: t("planning.paymentReverted") || "تم إلغاء الدفع" });
+    },
+  });
+
+  const createOwnerWithdrawalMutation = useMutation({
+    mutationFn: async (data: { amount: number; date: string; notes?: string }) => {
+      const res = await apiRequest("POST", "/api/owner-withdrawals", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/owner-withdrawals"] });
+      setNewWithdrawalAmount("");
+      setNewWithdrawalNotes("");
+      setShowAddWithdrawal(false);
+      toast({ title: t("ownerWithdrawals.withdrawalAdded") });
+    },
+  });
+
+  const deleteOwnerWithdrawalMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/owner-withdrawals/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/owner-withdrawals"] });
+      toast({ title: t("ownerWithdrawals.withdrawalDeleted") });
     },
   });
 
@@ -895,35 +923,122 @@ export default function Salaries() {
                 <span className="text-muted-foreground">{t("salaries.totalExpenses")}</span>
                 <span className="font-semibold tabular-nums text-red-600 dark:text-red-400">- {formatCurrency(totalExpenses)} DH</span>
               </div>
-              {totalOwnerWithdrawals > 0 && (
-                <div className="space-y-1">
-                  <button
-                    className="w-full flex justify-between items-center text-sm py-0.5 hover:opacity-80 transition-opacity"
-                    onClick={() => setWithdrawalsOpen(o => !o)}
-                    data-testid="button-toggle-salary-withdrawals"
-                  >
-                    <span className="text-muted-foreground flex items-center gap-1">
-                      {withdrawalsOpen ? <ChevronUp className="w-3.5 h-3.5 text-orange-500" /> : <ChevronDown className="w-3.5 h-3.5 text-orange-500" />}
-                      {t("ownerWithdrawals.title")}
-                      <span className="text-xs text-orange-500">({filteredOwnerWithdrawals.length})</span>
-                    </span>
-                    <span className="font-semibold tabular-nums text-orange-600 dark:text-orange-400">- {formatCurrency(totalOwnerWithdrawals)} DH</span>
-                  </button>
-                  {withdrawalsOpen && (
-                    <div className="space-y-1.5 pt-1 pr-1 max-h-40 overflow-y-auto">
+              <div className="space-y-1">
+                <button
+                  className="w-full flex justify-between items-center text-sm py-0.5 hover:opacity-80 transition-opacity"
+                  onClick={() => setWithdrawalsOpen(o => !o)}
+                  data-testid="button-toggle-salary-withdrawals"
+                >
+                  <span className="text-muted-foreground flex items-center gap-1">
+                    {withdrawalsOpen ? <ChevronUp className="w-3.5 h-3.5 text-orange-500" /> : <ChevronDown className="w-3.5 h-3.5 text-orange-500" />}
+                    {t("ownerWithdrawals.title")}
+                    <span className="text-xs text-orange-500">({filteredOwnerWithdrawals.length})</span>
+                  </span>
+                  <span className="font-semibold tabular-nums text-orange-600 dark:text-orange-400">
+                    {totalOwnerWithdrawals > 0 ? `- ${formatCurrency(totalOwnerWithdrawals)} DH` : "0 DH"}
+                  </span>
+                </button>
+                {withdrawalsOpen && (
+                  <div className="space-y-2 pt-1">
+                    <div className="space-y-1.5 max-h-44 overflow-y-auto">
+                      {filteredOwnerWithdrawals.length === 0 && (
+                        <p className="text-center text-xs text-muted-foreground py-2">{t("ownerWithdrawals.noWithdrawals")}</p>
+                      )}
                       {filteredOwnerWithdrawals.map((w: any) => (
                         <div key={w.id} className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-orange-50/70 dark:bg-orange-950/20 border border-orange-100/50 dark:border-orange-800/20 text-xs" data-testid={`row-withdrawal-${w.id}`}>
-                          <div className="flex flex-col gap-0.5">
+                          <div className="flex flex-col gap-0.5 flex-1 min-w-0">
                             <span className="font-bold text-orange-700 dark:text-orange-400">{formatCurrency(Number(w.amount))} DH</span>
-                            {w.notes && <span className="text-muted-foreground truncate max-w-[150px]">{w.notes}</span>}
+                            {w.notes && <span className="text-muted-foreground truncate">{w.notes}</span>}
+                            <span className="text-muted-foreground">{w.date}</span>
                           </div>
-                          <span className="text-muted-foreground">{w.date}</span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 shrink-0 text-destructive/60 hover:text-destructive"
+                            onClick={() => deleteOwnerWithdrawalMutation.mutate(w.id)}
+                            disabled={deleteOwnerWithdrawalMutation.isPending}
+                            data-testid={`button-delete-withdrawal-${w.id}`}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
                         </div>
                       ))}
                     </div>
-                  )}
-                </div>
-              )}
+                    {showAddWithdrawal ? (
+                      <div className="p-3 rounded-lg bg-orange-50/80 dark:bg-orange-950/20 border border-orange-100/60 dark:border-orange-800/20 space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <Label className="text-xs">{t("ownerWithdrawals.amount")}</Label>
+                            <Input
+                              type="number"
+                              value={newWithdrawalAmount}
+                              onChange={e => setNewWithdrawalAmount(e.target.value)}
+                              placeholder="0"
+                              className="h-8 text-xs bg-white/60 dark:bg-white/5 border-white/50"
+                              data-testid="input-salary-withdrawal-amount"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">{t("common.date")}</Label>
+                            <Input
+                              type="date"
+                              value={newWithdrawalDate}
+                              onChange={e => setNewWithdrawalDate(e.target.value)}
+                              className="h-8 text-xs bg-white/60 dark:bg-white/5 border-white/50"
+                              data-testid="input-salary-withdrawal-date"
+                            />
+                          </div>
+                        </div>
+                        <Input
+                          value={newWithdrawalNotes}
+                          onChange={e => setNewWithdrawalNotes(e.target.value)}
+                          placeholder={t("ownerWithdrawals.notesPlaceholder")}
+                          className="h-8 text-xs bg-white/60 dark:bg-white/5 border-white/50"
+                          data-testid="input-salary-withdrawal-notes"
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            className="flex-1 h-8 text-xs bg-orange-600 hover:bg-orange-700 text-white"
+                            disabled={createOwnerWithdrawalMutation.isPending || !newWithdrawalAmount}
+                            onClick={() => {
+                              if (!newWithdrawalAmount || !newWithdrawalDate) return;
+                              createOwnerWithdrawalMutation.mutate({
+                                amount: Number(newWithdrawalAmount),
+                                date: newWithdrawalDate,
+                                notes: newWithdrawalNotes || undefined,
+                              });
+                            }}
+                            data-testid="button-save-salary-withdrawal"
+                          >
+                            {t("ownerWithdrawals.addWithdrawal")}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 text-xs"
+                            onClick={() => setShowAddWithdrawal(false)}
+                            data-testid="button-cancel-salary-withdrawal"
+                          >
+                            {t("common.cancel") || "إلغاء"}
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full h-8 text-xs border-orange-200 dark:border-orange-800/40 text-orange-700 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/20"
+                        onClick={() => setShowAddWithdrawal(true)}
+                        data-testid="button-add-salary-withdrawal"
+                      >
+                        <Plus className="w-3.5 h-3.5 ltr:mr-1.5 rtl:ml-1.5" />
+                        {t("ownerWithdrawals.addWithdrawal")}
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
               <div className="border-t border-border/50 my-1" />
               <div className="flex justify-between items-baseline">
                 <span className="text-sm font-bold">{t("salaries.salonNetProfit")}</span>
