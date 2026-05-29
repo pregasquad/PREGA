@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { CalendarIcon, ChevronLeft, ChevronRight, Plus, Trash2, Check, X, Search, Star, RefreshCw, Sparkles, CreditCard, Settings2, Scissors, Clock, User, ChevronsUpDown, ListTodo, Bell, UserCheck, Gift, AlertCircle, AlertTriangle, Wallet, Users, Package, Lock, ShieldCheck, CheckCircle, UserMinus, ChevronDown, Pencil, ArrowDownLeft, Undo2 } from "lucide-react";
+import { CalendarIcon, ChevronLeft, ChevronRight, Plus, Trash2, Check, X, Search, Star, RefreshCw, Sparkles, CreditCard, Settings2, Scissors, Clock, User, ChevronsUpDown, ListTodo, Bell, UserCheck, Gift, AlertCircle, AlertTriangle, Wallet, Users, Package, Lock, ShieldCheck, CheckCircle, UserMinus, ChevronDown, Pencil, ArrowDownLeft, Undo2, Bot } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
@@ -2676,14 +2676,17 @@ export default function Planning() {
                           isDragging && "opacity-40 scale-95 saturate-50",
                           holdingCardId === booking.id && "scale-[1.03] brightness-110",
                           isResizing && "ring-2 ring-white/60 ring-inset shadow-xl",
-                          isConflicting && "ring-2 ring-amber-400 ring-inset"
+                          isConflicting && "ring-2 ring-amber-400 ring-inset",
+                          !isConflicting && !isResizing && booking.bookingStatus === "bot_confirmed" && "ring-2 ring-indigo-400/70 ring-inset"
                         )}
                         style={{ 
                           background: booking.paid
                             ? `linear-gradient(135deg, ${s.color}ee, ${s.color}cc)`
                             : `linear-gradient(135deg, ${s.color}77, ${s.color}55)`,
                           cursor: canEdit ? 'grab' : 'default',
-                          border: booking.paid ? 'none' : `1.5px solid ${s.color}bb`,
+                          border: booking.bookingStatus === "bot_confirmed" && !booking.paid
+                            ? `1.5px dashed ${s.color}cc`
+                            : booking.paid ? 'none' : `1.5px solid ${s.color}bb`,
                           transition: 'opacity 0.15s, transform 0.15s, filter 0.15s, scale 0.15s',
                           touchAction: canEdit && !isResizing ? 'none' : 'auto',
                         }}
@@ -2714,6 +2717,13 @@ export default function Planning() {
                           <div className="absolute top-0.5 left-0.5 z-20 pointer-events-none">
                             <div className="bg-violet-500 rounded-full p-0.5 shadow-md">
                               <ShieldCheck className="w-2.5 h-2.5 text-white" strokeWidth={2.5} />
+                            </div>
+                          </div>
+                        )}
+                        {booking.bookingStatus === "bot_confirmed" && (
+                          <div className="absolute bottom-0.5 right-0.5 z-20 pointer-events-none">
+                            <div className="bg-indigo-500 rounded-full p-0.5 shadow-md animate-pulse">
+                              <Bot className="w-2.5 h-2.5 text-white" strokeWidth={2.5} />
                             </div>
                           </div>
                         )}
