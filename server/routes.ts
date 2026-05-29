@@ -6052,18 +6052,71 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
                   const endMinutes = (sh * 60 + sm + 60) % (24 * 60);
                   const endTime = `${String(Math.floor(endMinutes / 60)).padStart(2, "0")}:${String(endMinutes % 60).padStart(2, "0")}`;
 
+                  // ── Auto-assign staff by service category ────────────────
+                  // 1. Find the service record to get its category
+                  // 2. Find staff members whose categories include that category
+                  // 3. Pick the one with fewest appointments on that date (load-balance)
+                  // 4. Fall back to "À assigner" if no match
+                  let autoAssignedStaff = "À assigner";
+                  let autoAssignedStaffId: number | undefined;
+                  let matchedService: any = undefined;
+                  try {
+                    const serviceName = (extracted.service || "").toLowerCase();
+                    matchedService = (allServices || []).find((sv: any) =>
+                      sv.name.toLowerCase() === serviceName ||
+                      serviceName.includes(sv.name.toLowerCase()) ||
+                      sv.name.toLowerCase().includes(serviceName)
+                    );
+                    const serviceCategory = matchedService?.category;
+
+                    if (serviceCategory) {
+                      // Find all staff who handle this category
+                      const eligibleStaff = (allStaff || []).filter((sv: any) => {
+                        if (!sv.categories) return false;
+                        return sv.categories
+                          .split(",")
+                          .map((c: string) => c.trim().toLowerCase())
+                          .includes(serviceCategory.toLowerCase());
+                      });
+
+                      if (eligibleStaff.length > 0) {
+                        // Count existing appointments per eligible staff on the target date
+                        const aptsOnDate = existingApts.filter((a: any) => a.date === extracted.date);
+                        const countByStaff = new Map<number, number>();
+                        for (const sv of eligibleStaff) countByStaff.set(sv.id, 0);
+                        for (const a of aptsOnDate) {
+                          if (a.staffId && countByStaff.has(a.staffId)) {
+                            countByStaff.set(a.staffId, (countByStaff.get(a.staffId) ?? 0) + 1);
+                          }
+                        }
+                        // Pick staff with fewest appointments that day
+                        const best = eligibleStaff.reduce((prev: any, cur: any) =>
+                          (countByStaff.get(cur.id) ?? 0) < (countByStaff.get(prev.id) ?? 0) ? cur : prev
+                        );
+                        autoAssignedStaff = best.name;
+                        autoAssignedStaffId = best.id;
+                        console.log(`[Bot] Auto-assigned staff "${best.name}" (category: ${serviceCategory}) for ${clientLabel}`);
+                      } else {
+                        console.log(`[Bot] No staff found for category "${serviceCategory}" — leaving unassigned`);
+                      }
+                    }
+                  } catch (assignErr) {
+                    console.warn("[Bot] Staff auto-assign failed (non-fatal):", assignErr);
+                  }
+
                   const aptPrice = extracted.price ?? 0;
                   const newApt = await storage.createAppointment({
                     client: clientName,
                     phone: clientPhone,
                     service: extracted.service || "خدمة واتساب",
-                    staff: "À assigner",
+                    staff: autoAssignedStaff,
+                    ...(autoAssignedStaffId ? { staffId: autoAssignedStaffId } : {}),
                     date: extracted.date,
                     startTime: extracted.time,
                     endTime,
-                    duration: 60,
-                    price: aptPrice,
-                    total: aptPrice,
+                    duration: matchedService?.duration ?? 60,
+                    price: aptPrice || matchedService?.price || 0,
+                    total: aptPrice || matchedService?.price || 0,
                     paid: false,
                     bookingStatus: "bot_confirmed",
                   } as any);
