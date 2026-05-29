@@ -3,7 +3,7 @@ import type { Server } from "http";
 import { Server as SocketIOServer } from "socket.io";
 import { storage } from "../storage";
 import { api } from "../shared-routes";
-import { z } from "zod";
+import { z } from "zod/v4";
 import { setupAuth, registerAuthRoutes, isPinAuthenticated, requirePermission, checkRateLimit, recordFailedAttempt, clearAttempts } from "../replit_integrations/auth";
 import { vapidPublicKey, sendPushNotification, checkAndNotifyExpiringProducts, checkAndNotifyLowStock as broadcastLowStockNotifications, sendClosingReminderNow } from "../push";
 import { db, schema, pool, dbDialect, isDatabaseOffline, checkDatabaseConnection, getBotMemory, saveBotMemory, type BotClientMemory, saveBroadcastLog, getLastBroadcastLog } from "../db";
@@ -3339,7 +3339,7 @@ export async function registerRoutes(
     try {
       const jid = decodeURIComponent(req.params.jid);
       const { getBotMemory, saveBotMemory } = await import("../db");
-      const { learnFromConversation, sanitizeClientName } = await import("./gemini");
+      const { learnFromConversation, sanitizeClientName } = await import("./gemini.js");
       const mem = await getBotMemory(jid);
       if (!mem || mem.convHistory.length < 2) {
         return res.json({ success: false, reason: "not_enough_history" });
@@ -5292,7 +5292,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
           if (wissalLastTurn) {
             try {
-              const { detectBossCorrection } = await import("./gemini");
+              const { detectBossCorrection } = await import("./gemini.js");
               const result = await detectBossCorrection(wissalLastTurn.text, bossText.trim());
               if (result?.isCorrection && result.wrongInfo?.trim().length > 3 && result.correctInfo?.trim().length > 3) {
                 // Fix 6: dedup — skip if we've already recorded this exact correction in this session
@@ -5469,7 +5469,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
           // Do this BEFORE merging so the transcription replaces "[voice message]"
           // Skip transcription entirely if this JID is bot-blocked — voice notes
           // can never be "1"/"2"/"3" quick actions, so there's nothing useful to do.
-          const { transcribeAudio } = await import("./gemini");
+          const { transcribeAudio } = await import("./gemini.js");
           for (const msg of msgs) {
             if (msg.isVoice && isHardBlocked) {
               console.log(`[Bot] Skipping voice transcription for hard-blocked JID ${remoteJid}`);
@@ -5648,7 +5648,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
           // ── Image generation: client asked for a photo ───────────────────
           {
-            const { detectImageRequest, generateImage } = await import("./gemini");
+            const { detectImageRequest, generateImage } = await import("./gemini.js");
             if (detectImageRequest(mergedText) && !mergedImageBase64) {
               const { sendTypingPresence, stopTypingPresence, sendWhatsAppImageBuffer, sendWhatsAppMessage } = await import("./baileys.js");
               await sendTypingPresence(remoteJid);
@@ -5728,7 +5728,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
           }
 
           // ── AI assistant reply ───────────────────────────────────────────
-          const { askGemini, FALLBACK_REPLY, learnFromConversation, sanitizeClientName } = await import("./gemini");
+          const { askGemini, FALLBACK_REPLY, learnFromConversation, sanitizeClientName } = await import("./gemini.js");
           const { sendWhatsAppMessage, sendTypingPresence, stopTypingPresence } = await import("./baileys.js");
 
           // Show typing immediately — client sees we're working on a reply
@@ -5948,7 +5948,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
             const detectedLang = currentLang;
             // Use WhatsApp pushName (display name) as primary source — only if
             // no name is already stored and the push name looks like a real name
-            const { sanitizeClientName: _sanitize } = await import("./gemini");
+            const { sanitizeClientName: _sanitize } = await import("./gemini.js");
             const pushNameCleaned = _sanitize(pushName || null);
             const detectedName = extractName(mergedText) || pushNameCleaned;
             // Only track services mentioned in the CLIENT's message — not the bot reply.
@@ -6114,7 +6114,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
           const ttsEnabled = (bizSettings as any)?.ttsEnabled !== false;
           if (batchHasVoice && !isLocationRequest && ttsEnabled) {
             try {
-              const { textToSpeech } = await import("./gemini");
+              const { textToSpeech } = await import("./gemini.js");
               const { sendWhatsAppVoiceNote } = await import("./baileys.js");
               const ttsResult = await textToSpeech(finalReply, bizSettings?.ttsVoice || "Aoede");
               if (ttsResult) {
@@ -6172,7 +6172,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
           // either update the existing pending appointment OR create a new DB
           // record so it shows in "حجوزات أكّدها البوت".
           try {
-            const { extractBotConfirmedAppointment } = await import("./gemini");
+            const { extractBotConfirmedAppointment } = await import("./gemini.js");
             const todayStr = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD in local TZ
             const extracted = extractBotConfirmedAppointment(finalReply, newHistory, todayStr, serviceList);
             if (extracted) {

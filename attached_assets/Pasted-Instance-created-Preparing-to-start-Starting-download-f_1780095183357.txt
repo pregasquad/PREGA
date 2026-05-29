@@ -1,0 +1,82 @@
+Instance created. Preparing to start...
+Starting download for registry01.prod.koyeb.com/k-e7439398-3c51-4910-ae36-64250f99e91e/2e832d5a-5224-456c-9d97-81a2f4b02a1c:1371da67-651e-4ccf-a148-36908ef84283
+Download progress: 100% |[32m++++++++[0m| (11.3 MiB/s)
+Download complete for registry01.prod.koyeb.com/k-e7439398-3c51-4910-ae36-64250f99e91e/2e832d5a-5224-456c-9d97-81a2f4b02a1c:1371da67-651e-4ccf-a148-36908ef84283
+Instance is starting... Waiting for health checks to pass.
+Using MySQL/TiDB database
+Database connection ready
+Push subscriptions table ready
+Appointments audit columns ready
+Admin roles photo column ready
+Product expiry columns ready
+Service starting price column ready
+Service max price column ready
+Service emoji column ready
+Deduction cleared columns ready
+Deduction paid_back column ready
+Auto-lock column ready
+Charge attachment columns ready
+Planning shortcuts column ready
+Planning slot height column ready
+Appointment discount columns ready
+Staff ID backfill ready (MySQL/TiDB)
+Staff payments table ready
+Staff public tokens ready
+Tombola spins table ready
+Salon payments table ready
+Booking status column ready
+Baileys sessions table ready
+Bot client memory table ready
+Bot memory phone column ready
+Bot blocked column ready
+TTS voice column ready
+TTS enabled column ready
+maps_link column ready
+Bot enabled column ready
+Bot filter columns ready
+Bot silence after booking column ready
+Owner withdrawals table ready
+Owner withdrawals notes column ready
+Categories color column ready
+Salon complaints table ready
+Complaint type column ready
+Private room column ready
+Staff gender column ready
+Staff gender defaults applied
+Boss instructions column ready
+Wissal personality column ready
+Business settings row ready
+PayPal order ID column ready
+Holidays column ready
+Broadcast logs table ready
+Daily summary columns ready
+Foreign key constraints are only added for PostgreSQL
+Not on Replit - auth routes disabled
+Server listening on port 8000
+[Baileys] Saved session found in DB — reconnecting…
+[Baileys] Connecting… WA version: 2,3000,1035194821 (latest: true)
+[Baileys] Connection state → connecting
+Instance is healthy. All health checks are passing.
+[Baileys] Connection state → open
+[Baileys] Connected as +212669640496
+Client connected: zatmBluschoJ6sm7AAAB
+Client connected: KSC2FHnOoEXlc0QTAAAD
+Client connected: AQ1W5y5oMPphHhkGAAAF
+[Error] 500 — Invalid element at key "service": expected a Zod schema Error: Invalid element at key "service": expected a Zod schema
+    at file:///app/node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/core/schemas.js:696:23
+    at get value (file:///app/node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/core/util.js:33:31)
+    at inst._zod.parse (file:///app/node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/core/schemas.js:787:39)
+    at Module.<anonymous> (file:///app/node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/core/parse.js:6:32)
+    at inst.parse (file:///app/node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/classic/schemas.js:29:42)
+    at <anonymous> (/app/artifacts/api-server/src/routes/routes.ts:1661:51)
+    at Layer.handleRequest (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/lib/layer.js:152:17)
+    at next (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/lib/route.js:157:13)
+    at <anonymous> (/app/artifacts/api-server/src/replit_integrations/auth/replitAuth.ts:289:14)
+    at Layer.handleRequest (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/lib/layer.js:152:17)
+Client disconnected: KSC2FHnOoEXlc0QTAAAD
+Client disconnected: zatmBluschoJ6sm7AAAB
+Client disconnected: AQ1W5y5oMPphHhkGAAAF
+[Bot] @lid JID — no phone in memory yet, lidRaw=85715031466043
+[Bot] Buffered msg 1 for 85715031466043@lid — waiting 15s after last message
+[Bot] Error handling buffered batch: Cannot find module '/app/artifacts/api-server/dist/gemini' imported from /app/artifacts/api-server/dist/index.js
+[Bot] Flushing 1 buffered message(s) for 85715031466043@lid

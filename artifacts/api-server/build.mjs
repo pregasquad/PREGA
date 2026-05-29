@@ -18,6 +18,7 @@ async function buildAll() {
     entryPoints: [
       path.resolve(artifactDir, "src/index.ts"),
       path.resolve(artifactDir, "src/baileys.ts"),
+      path.resolve(artifactDir, "src/gemini.ts"),
       path.resolve(artifactDir, "src/schema-mysql.ts"),
     ],
     platform: "node",
