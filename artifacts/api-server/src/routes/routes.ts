@@ -5806,7 +5806,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
           // ── Build 20-day planning snapshot for availability checking ────
           const ARABIC_DAYS = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
-          const { getMoroccanHolidayForDate } = await import("./morocco-holidays");
+          const { getMoroccanHolidayForDate } = await import("../morocco-holidays");
           // Also build a set of custom salon holidays for fast lookup
           const customHolidaySet = new Set<string>((() => {
             try {
