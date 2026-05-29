@@ -1,4 +1,4 @@
-import { z } from 'zod/v4';
+import { z } from 'zod';
 import { insertAppointmentSchema, insertServiceSchema, insertCategorySchema, insertStaffSchema, appointments, services, categories, staff, insertClientSchema, clients } from '@workspace/db';
 
 export const errorSchemas = {

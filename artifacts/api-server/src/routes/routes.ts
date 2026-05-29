@@ -3,7 +3,7 @@ import type { Server } from "http";
 import { Server as SocketIOServer } from "socket.io";
 import { storage } from "../storage";
 import { api } from "../shared-routes";
-import { z } from "zod/v4";
+import { z } from "zod";
 import { setupAuth, registerAuthRoutes, isPinAuthenticated, requirePermission, checkRateLimit, recordFailedAttempt, clearAttempts } from "../replit_integrations/auth";
 import { vapidPublicKey, sendPushNotification, checkAndNotifyExpiringProducts, checkAndNotifyLowStock as broadcastLowStockNotifications, sendClosingReminderNow } from "../push";
 import { db, schema, pool, dbDialect, isDatabaseOffline, checkDatabaseConnection, getBotMemory, saveBotMemory, type BotClientMemory, saveBroadcastLog, getLastBroadcastLog } from "../db";
