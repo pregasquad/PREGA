@@ -1425,6 +1425,20 @@ export async function registerRoutes(
     res.json(items);
   });
 
+  // Lightweight count of unreviewed bot-confirmed appointments (for nav badge)
+  app.get("/api/appointments/bot-confirmed/count", isPinAuthenticated, async (req, res) => {
+    const all = await storage.getAppointments();
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 7);
+    cutoff.setHours(0, 0, 0, 0);
+    const count = all.filter((a: any) => {
+      if (a.bookingStatus !== "bot_confirmed") return false;
+      if (!a.date) return true;
+      return new Date(a.date) >= cutoff;
+    }).length;
+    res.json({ count });
+  });
+
   // Get appointments auto-saved by the AI WhatsApp bot — needs staff review.
   // Only "bot_confirmed" status (AI-created, not yet reviewed by staff).
   // Includes past appointments so staff can spot missed ones, but limits to last 7 days.

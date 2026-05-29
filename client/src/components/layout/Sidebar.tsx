@@ -148,6 +148,13 @@ export function Sidebar() {
     refetchOnWindowFocus: false,
   });
 
+  const { data: botCountData } = useQuery<{ count: number }>({
+    queryKey: ["/api/appointments/bot-confirmed/count"],
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+  const botPendingCount = botCountData?.count ?? 0;
+
 
   // Play notification sound
   const playNotificationSound = () => {
@@ -526,6 +533,7 @@ export function Sidebar() {
             
             const isWhatsApp = item.href === "/whatsapp";
             const showWaBadge = isWhatsApp && waDisconnected;
+            const showBotBadge = isWhatsApp && botPendingCount > 0;
 
             return (
               <SidebarMenuItem key={item.href}>
@@ -552,6 +560,11 @@ export function Sidebar() {
                         <item.icon className={cn("w-5 h-5", isActive ? "stroke-[2.5]" : "stroke-[2]")} />
                         {showWaBadge && (
                           <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border border-background animate-pulse" />
+                        )}
+                        {showBotBadge && !showWaBadge && (
+                          <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-indigo-500 text-white text-[9px] font-bold rounded-full border border-background flex items-center justify-center px-0.5 animate-pulse">
+                            {botPendingCount > 9 ? "9+" : botPendingCount}
+                          </span>
                         )}
                       </span>
                       <span className="font-medium text-base">{label}</span>

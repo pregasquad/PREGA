@@ -290,13 +290,16 @@ export default function WhatsApp() {
     });
     socket.on("booking:updated", () => {
       queryClient.invalidateQueries({ queryKey: ["/api/appointments/bot-confirmed"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments/bot-confirmed/count"] });
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
     });
     socket.on("booking:created", () => {
       queryClient.invalidateQueries({ queryKey: ["/api/appointments/bot-confirmed"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments/bot-confirmed/count"] });
     });
     socket.on("appointment:deleted", () => {
       queryClient.invalidateQueries({ queryKey: ["/api/appointments/bot-confirmed"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments/bot-confirmed/count"] });
     });
     return () => {
       socket.off("whatsapp:pairing_code");
@@ -767,6 +770,7 @@ export default function WhatsApp() {
       apiRequest("PATCH", `/api/appointments/${id}/accept-bot`, {}).then((r) => r.json()),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/appointments/bot-confirmed"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments/bot-confirmed/count"] });
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
       toast({ title: "✅ تم قبول الحجز", description: "أصبح الحجز مؤكداً في جدول المواعيد" });
     },
@@ -779,6 +783,7 @@ export default function WhatsApp() {
       apiRequest("DELETE", `/api/appointments/${id}/bot`).then((r) => r.json()),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/appointments/bot-confirmed"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments/bot-confirmed/count"] });
       toast({ title: "🗑️ تم حذف الحجز" });
     },
     onError: (err: any) =>

@@ -65,6 +65,13 @@ export function BottomNav() {
     queryKey: ["/api/business-settings"],
   });
 
+  const { data: botCountData } = useQuery<{ count: number }>({
+    queryKey: ["/api/appointments/bot-confirmed/count"],
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+  const botPendingCount = botCountData?.count ?? 0;
+
   useEffect(() => {
     const socket = getAppSocket();
 
@@ -116,7 +123,7 @@ export function BottomNav() {
 
   const isMoreActive = moreItems.some(opt => location === opt.route);
   const waInMore     = moreItems.some(opt => opt.key === "whatsapp");
-  const hasBadge     = (waInMore && waDisconnected) || notifications.length > 0;
+  const hasBadge     = (waInMore && waDisconnected) || notifications.length > 0 || (waInMore && botPendingCount > 0);
 
   return (
     <>
@@ -143,6 +150,7 @@ export function BottomNav() {
 
           {primaryTabs.map((tab) => {
             const isActive = location === tab.route || (tab.route === "/planning" && location === "/");
+            const isWATab = tab.key === "whatsapp";
             return (
               <button
                 key={tab.key}
@@ -173,15 +181,25 @@ export function BottomNav() {
                     }}
                   />
                 )}
-                <tab.icon
-                  className="w-5 h-5 relative"
-                  style={{
-                    transform: isActive ? "scale(1.15) translateY(-1px)" : "scale(1)",
-                    transition: "transform 0.2s",
-                    filter: isActive ? "drop-shadow(0 0 5px rgba(237,89,145,0.8))" : "none",
-                  }}
-                  strokeWidth={isActive ? 2.5 : 1.75}
-                />
+                <div className="relative">
+                  <tab.icon
+                    className="w-5 h-5"
+                    style={{
+                      transform: isActive ? "scale(1.15) translateY(-1px)" : "scale(1)",
+                      transition: "transform 0.2s",
+                      filter: isActive ? "drop-shadow(0 0 5px rgba(237,89,145,0.8))" : "none",
+                    }}
+                    strokeWidth={isActive ? 2.5 : 1.75}
+                  />
+                  {isWATab && !waDisconnected && botPendingCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 bg-indigo-500 text-white text-[9px] font-bold rounded-full border border-background flex items-center justify-center px-0.5 animate-pulse">
+                      {botPendingCount > 9 ? "9+" : botPendingCount}
+                    </span>
+                  )}
+                  {isWATab && waDisconnected && (
+                    <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full border border-background animate-pulse" />
+                  )}
+                </div>
                 <span
                   className="text-[10px] font-medium leading-none relative"
                   style={{ textShadow: isActive ? "0 0 8px rgba(237,89,145,0.7)" : "none" }}
@@ -350,6 +368,11 @@ export function BottomNav() {
                           <opt.icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
                           {isWA && waDisconnected && (
                             <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full border border-background animate-pulse" />
+                          )}
+                          {isWA && !waDisconnected && botPendingCount > 0 && (
+                            <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 bg-indigo-500 text-white text-[9px] font-bold rounded-full border border-background flex items-center justify-center px-0.5 animate-pulse">
+                              {botPendingCount > 9 ? "9+" : botPendingCount}
+                            </span>
                           )}
                         </div>
                         <span className="text-[10px] font-medium text-center leading-tight">
