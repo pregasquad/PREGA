@@ -1472,6 +1472,42 @@ export async function registerRoutes(
       io.emit("appointment:updated", { id, ...updates });
       io.emit("booking:updated", { id, ...updates });
       res.json(item);
+
+      // ── Send WhatsApp confirmation to the client (fire-and-forget) ──
+      // Fetch full appointment for phone/service/date details
+      const apt = await storage.getAppointment(id).catch(() => undefined);
+      if (apt && apt.phone) {
+        (async () => {
+          try {
+            const { sendBookingConfirmation } = await import("./baileys");
+            const { getBotMemoriesByPhone } = await import("./db");
+
+            // Look up client language preference from bot memory
+            let lang: string | undefined;
+            try {
+              let normPhone = (apt.phone || "").replace(/[^0-9]/g, "");
+              if (normPhone.startsWith("00")) normPhone = normPhone.slice(2);
+              if (normPhone.startsWith("0") && normPhone.length === 10) normPhone = "212" + normPhone.slice(1);
+              if (normPhone.length === 9) normPhone = "212" + normPhone;
+              const mems = normPhone ? await getBotMemoriesByPhone(normPhone) : [];
+              lang = mems.find((m: any) => m.language && m.language !== "unknown")?.language;
+            } catch { /* fall back to default */ }
+
+            await sendBookingConfirmation(
+              apt.phone,
+              (apt.client || "").split(" (")[0],
+              apt.date,
+              apt.startTime,
+              apt.service || "خدمة",
+              undefined,
+              lang
+            );
+            console.log(`[accept-bot] ✅ Sent WhatsApp confirmation to ${apt.phone} for appointment #${id}`);
+          } catch (msgErr) {
+            console.warn(`[accept-bot] WhatsApp confirmation failed for #${id} (non-fatal):`, msgErr);
+          }
+        })();
+      }
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }
