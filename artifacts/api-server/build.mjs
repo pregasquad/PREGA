@@ -22,6 +22,7 @@ async function buildAll() {
     ],
     platform: "node",
     bundle: true,
+    splitting: true,
     format: "esm",
     outdir: distDir,
     outExtension: { ".js": ".mjs" },
