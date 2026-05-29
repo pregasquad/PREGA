@@ -1,0 +1,46 @@
+Instance created. Preparing to start...
+Starting download for registry01.prod.koyeb.com/k-e7439398-3c51-4910-ae36-64250f99e91e/2e832d5a-5224-456c-9d97-81a2f4b02a1c:5b8eb552-49ca-4a76-aabb-54889658084f
+Download progress: 100% |[32m++++++++[0m| (11.4 MiB/s)
+Download complete for registry01.prod.koyeb.com/k-e7439398-3c51-4910-ae36-64250f99e91e/2e832d5a-5224-456c-9d97-81a2f4b02a1c:5b8eb552-49ca-4a76-aabb-54889658084f
+Instance is starting... Waiting for health checks to pass.
+/app/lib/db/src/index.ts:8
+  throw new Error(
+        ^
+
+Error: DATABASE_URL must be set. Did you forget to provision a database?
+    at ../../lib/db/src/index.ts (/app/lib/db/src/index.ts:8:9)
+    at __init (file:///app/artifacts/api-server/dist/index.mjs:22:56)
+    at src/db.ts (/app/artifacts/api-server/src/db.ts:1:1)
+    at __init (file:///app/artifacts/api-server/dist/index.mjs:22:56)
+    at <anonymous> (/app/artifacts/api-server/src/storage.ts:1:1)
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+    at async node:internal/modules/esm/loader:633:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v24.16.0
+Application exited with code 1. This usually indicates an application failure. Check that the command used to launch your application is correct.
+Application exited with code 1. This usually indicates an application failure. Check that the command used to launch your application is correct.
+Instance stopped.
+Instance created. Preparing to start...
+Starting download for registry01.prod.koyeb.com/k-e7439398-3c51-4910-ae36-64250f99e91e/2e832d5a-5224-456c-9d97-81a2f4b02a1c:5b8eb552-49ca-4a76-aabb-54889658084f
+Download progress: 100% |[32m++++++++[0m| (11.4 MiB/s)
+Download complete for registry01.prod.koyeb.com/k-e7439398-3c51-4910-ae36-64250f99e91e/2e832d5a-5224-456c-9d97-81a2f4b02a1c:5b8eb552-49ca-4a76-aabb-54889658084f
+Instance is starting... Waiting for health checks to pass.
+/app/lib/db/src/index.ts:8
+  throw new Error(
+        ^
+
+Error: DATABASE_URL must be set. Did you forget to provision a database?
+    at ../../lib/db/src/index.ts (/app/lib/db/src/index.ts:8:9)
+    at __init (file:///app/artifacts/api-server/dist/index.mjs:22:56)
+    at src/db.ts (/app/artifacts/api-server/src/db.ts:1:1)
+    at __init (file:///app/artifacts/api-server/dist/index.mjs:22:56)
+    at <anonymous> (/app/artifacts/api-server/src/storage.ts:1:1)
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+    at async node:internal/modules/esm/loader:633:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v24.16.0
+Application exited with code 1. This usually indicates an application failure. Check that the command used to launch your application is correct.
+Application exited with code 1. This usually indicates an application failure. Check that the command used to launch your application is correct.
+Instance stopped.
