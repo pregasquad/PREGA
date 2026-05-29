@@ -1343,11 +1343,13 @@ export function extractBotConfirmedAppointment(
     return null;
   }
 
-  // Only look for the time in the bot reply itself — falling back to allText
-  // risks picking up times mentioned earlier in conversation (e.g. "10h was
-  // unavailable, confirmed for 14h") and extracting the wrong time slot.
-  const timeResult = extractTime(botReply);
-  if (!timeResult) return null; // no recognisable time in this reply → don't create ghost appointment
+  // Try the bot reply first (most precise), then fall back to recent text
+  // (last 4 msgs) — handles short confirmations like "Confirmé! 🌸" where
+  // the time was stated one or two turns earlier.
+  // We do NOT search full history to avoid picking up a stale time from an
+  // earlier aborted booking attempt in the same conversation.
+  const timeResult = extractTime(botReply) ?? extractTime(recentText);
+  if (!timeResult) return null; // no recognisable time in recent context → skip
 
   const timeStr = `${String(timeResult.hour).padStart(2, "0")}:${String(timeResult.minute).padStart(2, "0")}`;
 
@@ -1437,9 +1439,10 @@ export function extractBotConfirmedAppointment(
     return null;
   }
 
-  // Search bot reply first, then recent history only (last 4 messages) —
-  // full allText would risk picking up stale dates from old conversation turns.
-  const dateStr = extractDate(botReply) ?? extractDate(recentText);
+  // Search bot reply → recent text → full history (last resort).
+  // Full history is safe for dates because a specific date rarely changes
+  // within one conversation, unlike a time slot that may be negotiated.
+  const dateStr = extractDate(botReply) ?? extractDate(recentText) ?? extractDate(allText);
   if (!dateStr) return null; // no recognisable date → skip
 
   // ── 5. Extract service ────────────────────────────────────────────────────

@@ -48,6 +48,8 @@ import {
   Crown,
   Settings2,
   BookMarked,
+  CheckCheck,
+  UserCheck,
 } from "lucide-react";
 
 interface WAStatus {
@@ -293,6 +295,9 @@ export default function WhatsApp() {
     socket.on("booking:created", () => {
       queryClient.invalidateQueries({ queryKey: ["/api/appointments/bot-confirmed"] });
     });
+    socket.on("appointment:deleted", () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments/bot-confirmed"] });
+    });
     return () => {
       socket.off("whatsapp:pairing_code");
       socket.off("whatsapp:pairing_code_expired");
@@ -302,6 +307,7 @@ export default function WhatsApp() {
       socket.off("whatsapp:logged_out");
       socket.off("booking:updated");
       socket.off("booking:created");
+      socket.off("appointment:deleted");
       if (codeExpiryRef.current) clearInterval(codeExpiryRef.current);
     };
   }, []);
@@ -751,6 +757,29 @@ export default function WhatsApp() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/whatsapp/boss-instructions"] });
       toast({ title: "تم الحذف" });
+    },
+    onError: (err: any) =>
+      toast({ title: "خطأ", description: err.message, variant: "destructive" }),
+  });
+
+  const acceptBotAptMutation = useMutation({
+    mutationFn: (id: number) =>
+      apiRequest("PATCH", `/api/appointments/${id}/accept-bot`, {}).then((r) => r.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments/bot-confirmed"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+      toast({ title: "✅ تم قبول الحجز", description: "أصبح الحجز مؤكداً في جدول المواعيد" });
+    },
+    onError: (err: any) =>
+      toast({ title: "خطأ", description: err.message, variant: "destructive" }),
+  });
+
+  const deleteBotAptMutation = useMutation({
+    mutationFn: (id: number) =>
+      apiRequest("DELETE", `/api/appointments/${id}/bot`).then((r) => r.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments/bot-confirmed"] });
+      toast({ title: "🗑️ تم حذف الحجز" });
     },
     onError: (err: any) =>
       toast({ title: "خطأ", description: err.message, variant: "destructive" }),
@@ -1957,15 +1986,22 @@ export default function WhatsApp() {
           onClick={() => setBotConfirmedOpen((o) => !o)}
           data-testid="button-toggle-bot-confirmed"
         >
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center shrink-0">
-            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+          <div className="w-10 h-10 rounded-xl bg-violet-500/15 border border-violet-500/25 flex items-center justify-center shrink-0">
+            <Bot className="w-5 h-5 text-violet-400" />
           </div>
           <div className="flex-1">
-            <span className="font-semibold text-sm">حجوزات أكّدها البوت</span>
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-sm">حجوزات البوت — تحتاج مراجعة</span>
+              {botConfirmedAppointments.length > 0 && (
+                <Badge className="text-[10px] px-1.5 py-0 bg-violet-500/20 text-violet-400 border-violet-500/30">
+                  {botConfirmedAppointments.length}
+                </Badge>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground mt-0.5">
               {botConfirmedOpen && botConfirmedAppointments.length > 0
-                ? `${botConfirmedAppointments.length} حجز مؤكّد عبر واتساب`
-                : "اضغط لعرض المواعيد التي أكّدها العملاء عبر واتساب"}
+                ? "اقبل أو احذف كل حجز حجزه البوت تلقائياً"
+                : "حجوزات أنشأها البوت تلقائياً — راجعها وقبلها أو احذفها"}
             </p>
           </div>
           {botConfirmedFetching && <Loader2 className="w-4 h-4 text-muted-foreground animate-spin shrink-0" />}
@@ -1981,8 +2017,8 @@ export default function WhatsApp() {
             {/* Toolbar */}
             <div className="flex items-center justify-between px-5 py-3 glass-subtle">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                <span>{botConfirmedAppointments.length} حجز مؤكّد</span>
+                <Bot className="w-3 h-3 text-violet-400" />
+                <span>{botConfirmedAppointments.length} حجز ينتظر المراجعة</span>
               </div>
               <Button
                 size="sm"
@@ -2004,7 +2040,8 @@ export default function WhatsApp() {
             ) : botConfirmedAppointments.length === 0 ? (
               <div className="flex flex-col items-center gap-3 py-10 text-muted-foreground" dir="rtl">
                 <CheckCircle2 className="w-8 h-8 opacity-30" />
-                <p className="text-sm">لا توجد حجوزات مؤكّدة من البوت بعد</p>
+                <p className="text-sm">لا توجد حجوزات بوت تنتظر المراجعة</p>
+                <p className="text-xs opacity-60">تظهر هنا الحجوزات التي أنشأها البوت تلقائياً خلال آخر 7 أيام</p>
               </div>
             ) : (
               <div className="divide-y divide-border/40" dir="rtl">
@@ -2015,17 +2052,19 @@ export default function WhatsApp() {
                   })();
                   const serviceNames = services?.map((s: any) => s.name).join("، ") || apt.service || "—";
                   const totalDuration = services?.reduce((a: number, s: any) => a + (s.duration || 0), 0) || apt.duration;
+                  const isAccepting = acceptBotAptMutation.isPending && (acceptBotAptMutation.variables as number) === apt.id;
+                  const isDeleting = deleteBotAptMutation.isPending && (deleteBotAptMutation.variables as number) === apt.id;
                   return (
                     <div
                       key={apt.id}
                       className="px-5 py-4 space-y-3 hover:bg-muted/10 transition-colors"
                       data-testid={`row-bot-confirmed-${apt.id}`}
                     >
-                      {/* Row 1: client + paid badge */}
+                      {/* Row 1: client + badges */}
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
-                          <div className="w-8 h-8 rounded-full bg-emerald-500/15 flex items-center justify-center shrink-0">
-                            <User className="w-4 h-4 text-emerald-400" />
+                          <div className="w-8 h-8 rounded-full bg-violet-500/15 flex items-center justify-center shrink-0">
+                            <User className="w-4 h-4 text-violet-400" />
                           </div>
                           <div className="min-w-0">
                             <p className="text-sm font-semibold truncate">{apt.client || "—"}</p>
@@ -2035,11 +2074,9 @@ export default function WhatsApp() {
                           </div>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
-                          {apt.bookingStatus === "bot_confirmed" && (
-                            <Badge className="text-[10px] px-2 py-0 bg-violet-500/15 text-violet-400 border-violet-500/30">
-                              🤖 بوت
-                            </Badge>
-                          )}
+                          <Badge className="text-[10px] px-2 py-0 bg-violet-500/15 text-violet-400 border-violet-500/30">
+                            🤖 بوت
+                          </Badge>
                           <Badge
                             className={`text-[10px] px-2 py-0 ${apt.paid ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" : "bg-amber-500/15 text-amber-400 border-amber-500/30"}`}
                           >
@@ -2062,7 +2099,7 @@ export default function WhatsApp() {
 
                       {/* Row 3: staff + date/time + price */}
                       <div className="flex items-center gap-3 flex-wrap">
-                        {apt.staff && (
+                        {apt.staff && apt.staff !== "À assigner" && (
                           <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
                             <User className="w-3 h-3" />
                             {apt.staff}
@@ -2083,6 +2120,40 @@ export default function WhatsApp() {
                             {apt.total} {currency}
                           </span>
                         )}
+                      </div>
+
+                      {/* Row 4: action buttons */}
+                      <div className="flex items-center gap-2 pt-1" dir="ltr">
+                        <Button
+                          size="sm"
+                          className="h-8 text-xs gap-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30"
+                          variant="outline"
+                          disabled={isAccepting || isDeleting}
+                          onClick={() => acceptBotAptMutation.mutate(apt.id)}
+                          data-testid={`button-accept-bot-apt-${apt.id}`}
+                        >
+                          {isAccepting ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <CheckCheck className="w-3.5 h-3.5" />
+                          )}
+                          قبول
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="h-8 text-xs gap-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/25"
+                          variant="outline"
+                          disabled={isAccepting || isDeleting}
+                          onClick={() => deleteBotAptMutation.mutate(apt.id)}
+                          data-testid={`button-delete-bot-apt-${apt.id}`}
+                        >
+                          {isDeleting ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-3.5 h-3.5" />
+                          )}
+                          حذف
+                        </Button>
                       </div>
                     </div>
                   );

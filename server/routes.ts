@@ -1425,18 +1425,54 @@ export async function registerRoutes(
     res.json(items);
   });
 
-  // Get appointments confirmed by the WhatsApp bot
-  // Includes: "confirmed" (client replied "1") + "bot_confirmed" (auto-saved by AI)
+  // Get appointments auto-saved by the AI WhatsApp bot — needs staff review.
+  // Only "bot_confirmed" status (AI-created, not yet reviewed by staff).
+  // Includes past appointments so staff can spot missed ones, but limits to last 7 days.
   app.get("/api/appointments/bot-confirmed", isPinAuthenticated, async (req, res) => {
     const all = await storage.getAppointments();
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 7);
+    cutoff.setHours(0, 0, 0, 0);
     const confirmed = all
-      .filter((a: any) => a.bookingStatus === "confirmed" || a.bookingStatus === "bot_confirmed")
+      .filter((a: any) => {
+        if (a.bookingStatus !== "bot_confirmed") return false;
+        if (!a.date) return true;
+        return new Date(a.date) >= cutoff;
+      })
       .sort((a: any, b: any) => {
         const da = new Date(`${a.date}T${a.startTime || "00:00"}`).getTime();
         const db = new Date(`${b.date}T${b.startTime || "00:00"}`).getTime();
         return db - da;
       });
     res.json(confirmed);
+  });
+
+  // Accept a bot-confirmed appointment (move to "confirmed" with optional staff assignment)
+  app.patch("/api/appointments/:id/accept-bot", isPinAuthenticated, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const { staff } = req.body;
+      const updates: any = { bookingStatus: "confirmed" };
+      if (staff) updates.staff = staff;
+      const item = await storage.updateAppointment(id, updates);
+      io.emit("appointment:updated", { id, ...updates });
+      io.emit("booking:updated", { id, ...updates });
+      res.json(item);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  // Delete a bot-confirmed appointment
+  app.delete("/api/appointments/:id/bot", isPinAuthenticated, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      await storage.deleteAppointment(id);
+      io.emit("appointment:deleted", { id });
+      res.json({ ok: true });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
   });
 
   app.post(api.appointments.create.path, isPinAuthenticated, requirePermission("manage_appointments"), async (req, res) => {
