@@ -542,6 +542,9 @@ importers:
       socket.io-client:
         specifier: ^4.8.3
         version: 4.8.3
+      tailwindcss-animate:
+        specifier: ^1.0.7
+        version: 1.0.7(tailwindcss@3.4.19(tsx@4.21.0)(yaml@2.8.4))
     devDependencies:
       '@hookform/resolvers':
         specifier: ^3.10.0
@@ -15630,6 +15633,10 @@ snapshots:
   supports-preserve-symlinks-flag@1.0.0: {}
 
   tailwind-merge@3.5.0: {}
+
+  tailwindcss-animate@1.0.7(tailwindcss@3.4.19(tsx@4.21.0)(yaml@2.8.4)):
+    dependencies:
+      tailwindcss: 3.4.19(tsx@4.21.0)(yaml@2.8.4)
 
   tailwindcss-animate@1.0.7(tailwindcss@4.3.0):
     dependencies:

@@ -128,7 +128,6 @@ const startServer = async () => {
   }
 
   await registerRoutes(httpServer, app);
-  registerObjectStorageRoutes(app);
   registerPayPalRoutes(app);
 
   app.use((err: any, _req: any, res: any, _next: any) => {

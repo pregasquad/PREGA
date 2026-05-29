@@ -50,7 +50,7 @@ export async function initializeDatabase(): Promise<boolean> {
     if (dbDialect === 'mysql') {
       const { drizzle } = await import("drizzle-orm/mysql2");
       const mysql = await import("mysql2/promise");
-      const schemaModule = await import("./schema-mysql");
+      const schemaModule = await import("./schema-mysql.js");
       schema = schemaModule;
       
       pool = mysql.default.createPool({

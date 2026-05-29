@@ -8,7 +8,7 @@ import { setupAuth, registerAuthRoutes, isPinAuthenticated, requirePermission, c
 import { vapidPublicKey, sendPushNotification, checkAndNotifyExpiringProducts, checkAndNotifyLowStock as broadcastLowStockNotifications, sendClosingReminderNow } from "../push";
 import { db, schema, pool, dbDialect, isDatabaseOffline, checkDatabaseConnection, getBotMemory, saveBotMemory, type BotClientMemory, saveBroadcastLog, getLastBroadcastLog } from "../db";
 import { eq } from "drizzle-orm";
-import { insertAdminRoleSchema, ROLE_PERMISSIONS, insertOwnerWithdrawalSchema } from "@workspace/db";
+import { insertAdminRoleSchema, ROLE_PERMISSIONS, insertOwnerWithdrawalSchema, insertSalonPaymentSchema, insertStaffPaymentSchema } from "@workspace/db";
 import bcrypt from "bcryptjs";
 import multer from "multer";
 import { offlineStorage } from "../offline-storage";
@@ -2844,7 +2844,6 @@ export async function registerRoutes(
 
   app.post("/api/salon-payments", isPinAuthenticated, requirePermission("manage_salaries"), async (req, res) => {
     try {
-      const { insertSalonPaymentSchema } = await import("@shared/schema");
       const validated = insertSalonPaymentSchema.parse(req.body);
       const payment = await storage.createSalonPayment(validated);
       res.json(payment);
@@ -2886,7 +2885,6 @@ export async function registerRoutes(
 
   app.post("/api/staff-payments", isPinAuthenticated, requirePermission("manage_salaries"), async (req, res) => {
     try {
-      const { insertStaffPaymentSchema } = await import("@shared/schema");
       const validated = insertStaffPaymentSchema.parse(req.body);
       const payment = await storage.createStaffPayment(validated);
       res.json(payment);
