@@ -147,7 +147,7 @@ setInterval(async () => {
       msg += `\n🤖 مواعيد بوت تحتاج مراجعة: *${botPending.length}*`;
     }
 
-    const { sendWhatsAppMessage, formatJid } = await import("./baileys");
+    const { sendWhatsAppMessage, formatJid } = await import("./baileys.js");
     // Support multiple recipients separated by comma (e.g. "212600000000,212700000000")
     const recipients = ownerPhone.split(",").map((p: string) => p.trim()).filter(Boolean);
     for (const phone of recipients) {
@@ -1078,7 +1078,7 @@ export async function registerRoutes(
       // Send WhatsApp confirmation for the overall booking (if phone provided)
       if (input.phone && createdAppointments.length > 0) {
         try {
-          const { sendBookingConfirmation, formatJid } = await import("./baileys");
+          const { sendBookingConfirmation, formatJid } = await import("./baileys.js");
           const allServiceNames = createdAppointments.map(a => a.service).join(" + ");
 
           // Look up the client's preferred language from bot memory so the confirmation
@@ -1610,7 +1610,7 @@ export async function registerRoutes(
       if (apt && apt.phone) {
         (async () => {
           try {
-            const { sendBookingConfirmation } = await import("./baileys");
+            const { sendBookingConfirmation } = await import("./baileys.js");
             const { getBotMemoriesByPhone } = await import("../db");
 
             // Look up client language preference from bot memory
@@ -3095,7 +3095,7 @@ export async function registerRoutes(
   // ── Baileys WhatsApp management routes ──────────────────────────────────
   app.get("/api/whatsapp/qr", isPinAuthenticated, async (_req, res) => {
     try {
-      const { getQRDataUrl, getStatus, getPairingCode, getPairingCodeExpiresAt, getLastPairingError } = await import("./baileys");
+      const { getQRDataUrl, getStatus, getPairingCode, getPairingCodeExpiresAt, getLastPairingError } = await import("./baileys.js");
       const s = getStatus();
       const qr = getQRDataUrl();
       const pairingCode = getPairingCode();
@@ -3110,7 +3110,7 @@ export async function registerRoutes(
 
   app.get("/api/whatsapp/status", isPinAuthenticated, async (_req, res) => {
     try {
-      const { getStatus } = await import("./baileys");
+      const { getStatus } = await import("./baileys.js");
       res.json(getStatus());
     } catch (err: any) {
       res.status(500).json({ error: err.message });
@@ -3122,7 +3122,7 @@ export async function registerRoutes(
       return res.status(400).json({ success: false, error: "REPLIT_DEV" });
     }
     try {
-      const { startQR } = await import("./baileys");
+      const { startQR } = await import("./baileys.js");
       startQR(); // non-blocking — QR arrives via polling /api/whatsapp/qr
       res.json({ success: true });
     } catch (err: any) {
@@ -3135,7 +3135,7 @@ export async function registerRoutes(
       return res.status(400).json({ success: false, error: "REPLIT_DEV" });
     }
     try {
-      const { startPairingCode } = await import("./baileys");
+      const { startPairingCode } = await import("./baileys.js");
       const { phone } = z.object({ phone: z.string().min(8) }).parse(req.body);
       startPairingCode(phone); // non-blocking — code arrives via polling /api/whatsapp/qr
       res.json({ success: true });
@@ -3149,7 +3149,7 @@ export async function registerRoutes(
       return res.status(400).json({ success: false, error: "REPLIT_DEV" });
     }
     try {
-      const { reconnect } = await import("./baileys");
+      const { reconnect } = await import("./baileys.js");
       await reconnect();
       res.json({ success: true });
     } catch (err: any) {
@@ -3162,7 +3162,7 @@ export async function registerRoutes(
       return res.status(400).json({ success: false, error: "REPLIT_DEV" });
     }
     try {
-      const { disconnect } = await import("./baileys");
+      const { disconnect } = await import("./baileys.js");
       await disconnect();
       res.json({ success: true });
     } catch (err: any) {
@@ -3175,7 +3175,7 @@ export async function registerRoutes(
       return res.status(400).json({ success: false, error: "REPLIT_DEV" });
     }
     try {
-      const { clearSessionIfDisconnected } = await import("./baileys");
+      const { clearSessionIfDisconnected } = await import("./baileys.js");
       clearSessionIfDisconnected();
       res.json({ success: true });
     } catch (err: any) {
@@ -3597,7 +3597,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
   // WhatsApp Notifications (Baileys) - protected routes
   app.post("/api/notifications/send", isPinAuthenticated, async (req, res) => {
     try {
-      const { sendWhatsAppMessage } = await import("./baileys");
+      const { sendWhatsAppMessage } = await import("./baileys.js");
       const { phone, message } = z.object({
         phone: z.string(),
         message: z.string(),
@@ -3617,7 +3617,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
   app.post("/api/notifications/appointment-reminder", isPinAuthenticated, async (req, res) => {
     try {
-      const { sendAppointmentReminder } = await import("./baileys");
+      const { sendAppointmentReminder } = await import("./baileys.js");
       const { clientPhone, clientName, appointmentDate, appointmentTime, serviceName } = z.object({
         clientPhone: z.string(),
         clientName: z.string(),
@@ -3640,7 +3640,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
   app.post("/api/notifications/booking-confirmation", isPinAuthenticated, async (req, res) => {
     try {
-      const { sendBookingConfirmation } = await import("./baileys");
+      const { sendBookingConfirmation } = await import("./baileys.js");
       const { clientPhone, clientName, appointmentDate, appointmentTime, serviceName } = z.object({
         clientPhone: z.string(),
         clientName: z.string(),
@@ -3664,7 +3664,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
   // Send gift card notification via WhatsApp
   app.post("/api/notifications/gift-card", isPinAuthenticated, requirePermission("manage_business_settings"), async (req, res) => {
     try {
-      const { sendGiftCardNotification } = await import("./baileys");
+      const { sendGiftCardNotification } = await import("./baileys.js");
       const { recipientPhone, recipientName, giftCardCode, amount, senderName } = z.object({
         recipientPhone: z.string().min(1, "Phone is required"),
         recipientName: z.string().min(1, "Recipient name is required"),
@@ -3688,7 +3688,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
   // Bulk WhatsApp broadcast — starts async job, returns jobId immediately
   app.post("/api/notifications/broadcast", isPinAuthenticated, requirePermission("admin_settings"), async (req, res) => {
     try {
-      const { sendWhatsAppMessage } = await import("./baileys");
+      const { sendWhatsAppMessage } = await import("./baileys.js");
       const { message, clientIds } = z.object({
         message: z.string().min(1, "Message is required"),
         clientIds: z.array(z.number()).optional(),
@@ -3766,7 +3766,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
   // Check Baileys connection status (legacy endpoint kept for compatibility)
   app.get("/api/notifications/status", isPinAuthenticated, async (_req, res) => {
     try {
-      const { getConnectionStatus } = await import("./baileys");
+      const { getConnectionStatus } = await import("./baileys.js");
       const status = await getConnectionStatus();
       res.json(status);
     } catch (err: any) {
@@ -5220,7 +5220,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
     sess.timer = setTimeout(() => runFlush(remoteJid, flush), BUFFER_DELAY_MS);
   }
 
-  import("./baileys").then(({ initBaileys, setSocketIO, setIncomingMessageHandler, setOutgoingMessageHandler, sendBotConfirmed, sendBotCancelled, sendBotModify, sendBotError }) => {
+  import("./baileys.js").then(({ initBaileys, setSocketIO, setIncomingMessageHandler, setOutgoingMessageHandler, sendBotConfirmed, sendBotCancelled, sendBotModify, sendBotError }) => {
     setSocketIO(io);
 
     // When boss manually replies to a client → cancel pending Wissal reply AND record boss text in history
@@ -5616,7 +5616,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
               .sort((a: any, b: any) => b.id - a.id);
 
             if (cancellableApts.length > 0) {
-              const { sendWhatsAppMessage, sendTypingPresence, stopTypingPresence } = await import("./baileys");
+              const { sendWhatsAppMessage, sendTypingPresence, stopTypingPresence } = await import("./baileys.js");
               await sendTypingPresence(remoteJid);
               const aptToCancel = cancellableApts[0];
               try { await storage.updateAppointment(aptToCancel.id, { bookingStatus: "cancelled" } as any); } catch (e) { console.warn(`[Bot] updateAppointment natural-cancel failed for #${aptToCancel.id}:`, e); }
@@ -5650,7 +5650,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
           {
             const { detectImageRequest, generateImage } = await import("./gemini");
             if (detectImageRequest(mergedText) && !mergedImageBase64) {
-              const { sendTypingPresence, stopTypingPresence, sendWhatsAppImageBuffer, sendWhatsAppMessage } = await import("./baileys");
+              const { sendTypingPresence, stopTypingPresence, sendWhatsAppImageBuffer, sendWhatsAppMessage } = await import("./baileys.js");
               await sendTypingPresence(remoteJid);
               console.log(`[Bot] Image request detected from ${remoteJid}: "${mergedText.slice(0, 60)}"`);
               try {
@@ -5714,7 +5714,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
             const isFrench = clientLang === "french";
             for (const [pattern, arReplies, frReplies] of shortReplies) {
               if (pattern.test(t)) {
-                const { sendWhatsAppMessage: _send, sendTypingPresence: _tp, stopTypingPresence: _stp } = await import("./baileys");
+                const { sendWhatsAppMessage: _send, sendTypingPresence: _tp, stopTypingPresence: _stp } = await import("./baileys.js");
                 await _tp(remoteJid);
                 await new Promise<void>((r) => setTimeout(r, 700 + Math.floor(Math.random() * 500)));
                 await _stp(remoteJid);
@@ -5729,7 +5729,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
           // ── AI assistant reply ───────────────────────────────────────────
           const { askGemini, FALLBACK_REPLY, learnFromConversation, sanitizeClientName } = await import("./gemini");
-          const { sendWhatsAppMessage, sendTypingPresence, stopTypingPresence } = await import("./baileys");
+          const { sendWhatsAppMessage, sendTypingPresence, stopTypingPresence } = await import("./baileys.js");
 
           // Show typing immediately — client sees we're working on a reply
           await sendTypingPresence(remoteJid);
@@ -6115,7 +6115,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
           if (batchHasVoice && !isLocationRequest && ttsEnabled) {
             try {
               const { textToSpeech } = await import("./gemini");
-              const { sendWhatsAppVoiceNote } = await import("./baileys");
+              const { sendWhatsAppVoiceNote } = await import("./baileys.js");
               const ttsResult = await textToSpeech(finalReply, bizSettings?.ttsVoice || "Aoede");
               if (ttsResult) {
                 const { success } = await sendWhatsAppVoiceNote(
@@ -6346,7 +6346,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
         } catch (err: any) {
           console.error("[Bot] Error handling buffered batch:", err.message);
           try {
-            const { sendWhatsAppMessage, stopTypingPresence } = await import("./baileys");
+            const { sendWhatsAppMessage, stopTypingPresence } = await import("./baileys.js");
             await stopTypingPresence(remoteJid);
             // Use a language-aware fallback — clientLang is available in this closure scope
             const fallbackMsg = clientLang === "french"

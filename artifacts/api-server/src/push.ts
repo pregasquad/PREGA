@@ -195,7 +195,7 @@ export async function checkAndSendAppointmentReminders(): Promise<void> {
 
     if (allAppointments.length === 0) return;
 
-    const { sendAppointmentReminder } = await import('./baileys');
+    const { sendAppointmentReminder } = await import('./baileys.js');
 
     for (const apt of allAppointments) {
       if (sentReminderIds.has(apt.id)) continue;
@@ -272,7 +272,7 @@ export async function checkAndSendRebookingReminders(): Promise<void> {
     const { getAllBotMemories } = await import("./db");
     const memories = await getAllBotMemories();
 
-    const { sendWhatsAppMessage } = await import("./baileys");
+    const { sendWhatsAppMessage } = await import("./baileys.js");
 
     const WEEKS = 3;
     const thresholdMs = WEEKS * 7 * 24 * 60 * 60 * 1000;
