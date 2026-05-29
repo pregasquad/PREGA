@@ -21,11 +21,10 @@ RUN pnpm --filter @workspace/pregasquad-manager run build
 FROM node:24-slim AS runner
 WORKDIR /app
 
-RUN npm install -g serve
-
-COPY --from=base /app/artifacts/pregasquad-manager/dist/public ./public
+COPY --from=base /app/artifacts/pregasquad-manager/dist ./dist
+COPY --from=base /app/artifacts/pregasquad-manager/server.cjs ./server.cjs
 
 EXPOSE 8080
 ENV PORT=8080
 
-CMD ["serve", "-s", "public", "-l", "8080"]
+CMD ["node", "server.cjs"]
