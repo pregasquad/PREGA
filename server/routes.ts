@@ -65,40 +65,86 @@ setInterval(async () => {
     if (lastDailySummarySentDate === todayStr) return;
     lastDailySummarySentDate = todayStr;
 
-    // Fetch today's appointments
-    const todayAppts: any[] = await storage.getAppointmentsByDateRange(todayStr, todayStr).catch(() => []);
-    const newToday = todayAppts.filter((a: any) => !a.isPaid);
+    // Fetch today's appointments + salon standalone payments in parallel
+    const [todayAppts, allSalonPayments] = await Promise.all([
+      storage.getAppointmentsByDateRange(todayStr, todayStr).catch(() => [] as any[]),
+      storage.getSalonPayments().catch(() => [] as any[]),
+    ]);
+
+    // Split appointments: paid = actual collected, unpaid = still pending
+    const paidAppts   = (todayAppts as any[]).filter((a: any) => a.paid === true);
+    const unpaidAppts = (todayAppts as any[]).filter((a: any) => !a.paid);
+
+    // Standalone cash payments recorded today (getSalonPayments returns all — filter by date)
+    const salonPaymentsToday = (allSalonPayments as any[]).filter((p: any) => {
+      if (!p.collectedAt) return false;
+      return new Date(p.collectedAt).toISOString().split("T")[0] === todayStr;
+    });
+
+    const sym = (settings as any).currencySymbol || "DH";
+
+    // Revenue figures
+    const collectedFromAppts   = paidAppts.reduce((s: number, a: any) => s + (Number(a.total) || Number(a.price) || 0), 0);
+    const collectedStandalone  = salonPaymentsToday.reduce((s: number, p: any) => s + (Number(p.amount) || 0), 0);
+    const totalCollected       = collectedFromAppts + collectedStandalone;
+    const expectedPending      = unpaidAppts.reduce((s: number, a: any) => s + (Number(a.total) || Number(a.price) || 0), 0);
 
     const ARABIC_DAYS_S = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
     const dayLabel = ARABIC_DAYS_S[now.getDay()];
+    const totalAppts = (todayAppts as any[]).length;
 
-    let msg = `📋 *ملخص يوم ${dayLabel} ${todayStr}* — صالون ${(settings as any).businessName || "PREGASQUAD"}\n\n`;
+    let msg = `📋 *ملخص يوم ${dayLabel} ${todayStr}*\n🏪 صالون ${(settings as any).businessName || "PREGASQUAD"}\n\n`;
 
-    if (newToday.length === 0) {
-      msg += "لا توجد مواعيد مسجلة اليوم 🌸";
-    } else {
-      msg += `📅 عدد المواعيد اليوم: *${newToday.length}*\n\n`;
-      const sorted = [...newToday].sort((a: any, b: any) => (a.startTime || "").localeCompare(b.startTime || ""));
-      sorted.forEach((a: any, i: number) => {
-        const clientName = a.clientName || a.client || "عميل";
-        const service = a.service || a.serviceName || "خدمة";
-        const time = a.startTime || "?";
-        const staff = a.staff || a.staffName || "";
-        msg += `${i + 1}. ⏰ ${time} — ${clientName} — ${service}${staff ? ` (${staff})` : ""}\n`;
-      });
-
-      // Revenue estimate
-      const totalRevenue = newToday.reduce((sum: number, a: any) => sum + (Number(a.price) || 0), 0);
-      if (totalRevenue > 0) {
-        const sym = (settings as any).currencySymbol || "DH";
-        msg += `\n💰 إجمالي متوقع: *${totalRevenue} ${sym}*`;
-      }
+    // ── Earnings block ────────────────────────────────────────────────────────
+    msg += `💰 *الأرباح*\n`;
+    msg += `✅ محصّل فعلاً: *${totalCollected.toFixed(0)} ${sym}*`;
+    if (collectedStandalone > 0) {
+      msg += ` (منها ${collectedStandalone.toFixed(0)} ${sym} مدفوعات مستقلة)`;
+    }
+    msg += `\n`;
+    if (expectedPending > 0) {
+      msg += `⏳ متوقع (غير محصّل): *${expectedPending.toFixed(0)} ${sym}*\n`;
+    }
+    const grandTotal = totalCollected + expectedPending;
+    if (grandTotal > 0) {
+      msg += `📊 الإجمالي الكلي: *${grandTotal.toFixed(0)} ${sym}*\n`;
     }
 
-    // Bot-confirmed pending review
-    const botPending = todayAppts.filter((a: any) => a.botConfirmed && !a.isPaid);
+    // ── Appointments block ────────────────────────────────────────────────────
+    msg += `\n📅 *المواعيد (${totalAppts})*`;
+    if (paidAppts.length > 0 && unpaidAppts.length > 0) {
+      msg += ` — ${paidAppts.length} مكتملة ✅ / ${unpaidAppts.length} قادمة ⏳`;
+    } else if (paidAppts.length > 0) {
+      msg += ` — كلها مكتملة ✅`;
+    } else if (unpaidAppts.length > 0) {
+      msg += ` — كلها قادمة ⏳`;
+    }
+    msg += `\n`;
+
+    if (totalAppts === 0) {
+      msg += "لا توجد مواعيد مسجلة اليوم 🌸\n";
+    } else {
+      const allSorted = [...(todayAppts as any[])].sort((a: any, b: any) =>
+        (a.startTime || "").localeCompare(b.startTime || "")
+      );
+      allSorted.forEach((a: any, i: number) => {
+        const clientName = a.client || "عميل";
+        const service = a.service || "خدمة";
+        const time = a.startTime || "?";
+        const staff = a.staff || "";
+        const price = Number(a.total) || Number(a.price) || 0;
+        const statusIcon = a.paid ? "✅" : "⏳";
+        msg += `${statusIcon} ${time} — ${clientName} — ${service}`;
+        if (staff) msg += ` (${staff})`;
+        if (price > 0) msg += ` — ${price.toFixed(0)} ${sym}`;
+        msg += `\n`;
+      });
+    }
+
+    // ── Bot pending ───────────────────────────────────────────────────────────
+    const botPending = (todayAppts as any[]).filter((a: any) => a.botConfirmed && !a.paid);
     if (botPending.length > 0) {
-      msg += `\n\n🤖 مواعيد بوت تحتاج مراجعة: *${botPending.length}*`;
+      msg += `\n🤖 مواعيد بوت تحتاج مراجعة: *${botPending.length}*`;
     }
 
     const { sendWhatsAppMessage, formatJid } = await import("./baileys");
