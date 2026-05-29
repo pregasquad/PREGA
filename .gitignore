@@ -1,45 +1,49 @@
-# Dependencies
-node_modules/
+# See https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
 
-# Build output
-dist/
-dist-electron/
-release/
-android/
+# compiled output
+dist
+tmp
+out-tsc
+*.tsbuildinfo
+.expo
+.expo-shared
 
-# Environment files
-.env
-.env.local
-.env.*.local
+# dependencies
+node_modules
 
-# Large files
-*.zip
-*.exe
+# IDEs and editors
+/.idea
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
 
-# Attached assets (screenshots and reference files)
-attached_assets/
+# IDE - VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
 
-# Electron cache
-.cache/
-electron/
+# misc
+/.sass-cache
+/connect.lock
+/coverage
+/libpeerconnection.log
+npm-debug.log
+yarn-error.log
+testem.log
+/typings
 
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# OS files
+# System Files
 .DS_Store
 Thumbs.db
 
-# Logs
-*.log
-npm-debug.log*
+.cursor/rules/nx-rules.mdc
+.github/instructions/nx.instructions.md
 
 # Replit
-.config/
-
-# Database files
-*.db
-*.sqlite
+.cache/
+.local/
