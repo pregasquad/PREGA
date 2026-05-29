@@ -4,7 +4,7 @@ import { Server as SocketIOServer } from "socket.io";
 import session from "express-session";
 import { storage } from "./storage-sqlite";
 import { api } from "@shared/routes";
-import { z } from "zod/v4";
+import { z } from "zod";
 import path from "path";
 
 const app = express();

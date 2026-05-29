@@ -36,7 +36,7 @@ async function buildAll() {
       "*.node",
       "sharp",
       "@whiskeysockets/baileys",
-      "zod/v4",
+
       "better-sqlite3",
       "sqlite3",
       "canvas",

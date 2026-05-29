@@ -1,6 +1,6 @@
 import { mysqlTable, text, longtext, int, boolean, timestamp, varchar, serial, double, index, json } from "drizzle-orm/mysql-core";
 import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod/v4";
+import { z } from "zod";
 
 export const sessions = mysqlTable(
   "sessions",
