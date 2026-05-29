@@ -29,4 +29,4 @@ COPY --from=base /app/artifacts/api-server/package.json ./artifacts/api-server/p
 EXPOSE 8080
 ENV PORT=8080
 
-CMD ["node", "--enable-source-maps", "./artifacts/api-server/dist/index.mjs"]
+CMD ["node", "--enable-source-maps", "./artifacts/api-server/dist/index.js"]

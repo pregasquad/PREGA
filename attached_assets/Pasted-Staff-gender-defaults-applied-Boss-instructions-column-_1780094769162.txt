@@ -1,0 +1,170 @@
+Staff gender defaults applied
+Boss instructions column ready
+Wissal personality column ready
+Business settings row ready
+PayPal order ID column ready
+Holidays column ready
+Broadcast logs table ready
+Daily summary columns ready
+Foreign key constraints are only added for PostgreSQL
+Not on Replit - auth routes disabled
+[Baileys] Import error: Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/app/artifacts/api-server/dist/baileys' imported from /app/artifacts/api-server/dist/index.mjs
+    at finalizeResolution (node:internal/modules/esm/resolve:271:11)
+    at moduleResolve (node:internal/modules/esm/resolve:865:10)
+    at defaultResolve (node:internal/modules/esm/resolve:992:11)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:691:20)
+    at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:708:38)
+    at ModuleLoader.resolveSync (node:internal/modules/esm/loader:740:52)
+    at #resolve (node:internal/modules/esm/loader:673:17)
+    at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:593:35)
+    at node:internal/modules/esm/loader:622:32
+    at TracingChannel.tracePromise (node:diagnostics_channel:362:14) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///app/artifacts/api-server/dist/baileys'
+}
+Server listening on port 8000
+Instance is healthy. All health checks are passing.
+Instance is stopping.
+Instance stopped.
+Instance created. Preparing to start...
+Starting download for registry01.prod.koyeb.com/k-e7439398-3c51-4910-ae36-64250f99e91e/2e832d5a-5224-456c-9d97-81a2f4b02a1c:1d7e083e-bbfe-4dcd-8dc2-229aa2924b9d
+Download progress: 100% |[32m++++++++[0m| (11.3 MiB/s)
+Download complete for registry01.prod.koyeb.com/k-e7439398-3c51-4910-ae36-64250f99e91e/2e832d5a-5224-456c-9d97-81a2f4b02a1c:1d7e083e-bbfe-4dcd-8dc2-229aa2924b9d
+Instance is starting... Waiting for health checks to pass.
+Using MySQL/TiDB database
+Database connection ready
+Push subscriptions table ready
+Appointments audit columns ready
+Admin roles photo column ready
+Product expiry columns ready
+Service starting price column ready
+Service max price column ready
+Service emoji column ready
+Deduction cleared columns ready
+Deduction paid_back column ready
+Auto-lock column ready
+Charge attachment columns ready
+Planning shortcuts column ready
+Planning slot height column ready
+Appointment discount columns ready
+Staff ID backfill ready (MySQL/TiDB)
+Staff payments table ready
+Staff public tokens ready
+Tombola spins table ready
+Salon payments table ready
+Booking status column ready
+Baileys sessions table ready
+Bot client memory table ready
+Bot memory phone column ready
+Bot blocked column ready
+TTS voice column ready
+TTS enabled column ready
+maps_link column ready
+Bot enabled column ready
+Bot filter columns ready
+Bot silence after booking column ready
+Owner withdrawals table ready
+Owner withdrawals notes column ready
+Categories color column ready
+Salon complaints table ready
+Complaint type column ready
+Private room column ready
+Staff gender column ready
+Staff gender defaults applied
+Boss instructions column ready
+Wissal personality column ready
+Business settings row ready
+PayPal order ID column ready
+Holidays column ready
+Broadcast logs table ready
+Daily summary columns ready
+Foreign key constraints are only added for PostgreSQL
+Not on Replit - auth routes disabled
+[Baileys] Import error: Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/app/artifacts/api-server/dist/baileys' imported from /app/artifacts/api-server/dist/index.mjs
+    at finalizeResolution (node:internal/modules/esm/resolve:271:11)
+    at moduleResolve (node:internal/modules/esm/resolve:865:10)
+    at defaultResolve (node:internal/modules/esm/resolve:992:11)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:691:20)
+    at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:708:38)
+    at ModuleLoader.resolveSync (node:internal/modules/esm/loader:740:52)
+    at #resolve (node:internal/modules/esm/loader:673:17)
+    at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:593:35)
+    at node:internal/modules/esm/loader:622:32
+    at TracingChannel.tracePromise (node:diagnostics_channel:362:14) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///app/artifacts/api-server/dist/baileys'
+}
+Server listening on port 8000
+Instance is healthy. All health checks are passing.
+Instance is stopping.
+Instance stopped.
+Instance created. Preparing to start...
+Starting download for registry01.prod.koyeb.com/k-e7439398-3c51-4910-ae36-64250f99e91e/2e832d5a-5224-456c-9d97-81a2f4b02a1c:822bb8f9-8c80-41a2-be58-9b07038c8f96
+Download progress: 100% |[32m++++++++[0m| (11.3 MiB/s)
+Download complete for registry01.prod.koyeb.com/k-e7439398-3c51-4910-ae36-64250f99e91e/2e832d5a-5224-456c-9d97-81a2f4b02a1c:822bb8f9-8c80-41a2-be58-9b07038c8f96
+Using MySQL/TiDB database
+Database connection ready
+Push subscriptions table ready
+Appointments audit columns ready
+Admin roles photo column ready
+Product expiry columns ready
+Service starting price column ready
+Service max price column ready
+Service emoji column ready
+Deduction cleared columns ready
+Deduction paid_back column ready
+Auto-lock column ready
+Charge attachment columns ready
+Planning shortcuts column ready
+Planning slot height column ready
+Appointment discount columns ready
+Staff ID backfill ready (MySQL/TiDB)
+Staff payments table ready
+Staff public tokens ready
+Tombola spins table ready
+Salon payments table ready
+Booking status column ready
+Baileys sessions table ready
+Bot client memory table ready
+Bot memory phone column ready
+Bot blocked column ready
+TTS voice column ready
+TTS enabled column ready
+maps_link column ready
+Bot enabled column ready
+Bot filter columns ready
+Bot silence after booking column ready
+[Baileys] Import error: Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/app/artifacts/api-server/dist/baileys.js' imported from /app/artifacts/api-server/dist/index.mjs
+    at finalizeResolution (node:internal/modules/esm/resolve:271:11)
+    at moduleResolve (node:internal/modules/esm/resolve:865:10)
+    at defaultResolve (node:internal/modules/esm/resolve:992:11)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:691:20)
+    at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:708:38)
+    at ModuleLoader.resolveSync (node:internal/modules/esm/loader:740:52)
+    at #resolve (node:internal/modules/esm/loader:673:17)
+    at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:593:35)
+    at node:internal/modules/esm/loader:622:32
+    at TracingChannel.tracePromise (node:diagnostics_channel:362:14) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///app/artifacts/api-server/dist/baileys.js'
+}
+Owner withdrawals table ready
+Owner withdrawals notes column ready
+Categories color column ready
+Salon complaints table ready
+Complaint type column ready
+Private room column ready
+Staff gender column ready
+Staff gender defaults applied
+Boss instructions column ready
+Wissal personality column ready
+Business settings row ready
+PayPal order ID column ready
+Holidays column ready
+Broadcast logs table ready
+Daily summary columns ready
+Foreign key constraints are only added for PostgreSQL
+Not on Replit - auth routes disabled
+Server listening on port 8000
+Instance is starting... Waiting for health checks to pass.
+Instance is healthy. All health checks are passing.

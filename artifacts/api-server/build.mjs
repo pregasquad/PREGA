@@ -25,7 +25,6 @@ async function buildAll() {
     splitting: true,
     format: "esm",
     outdir: distDir,
-    outExtension: { ".js": ".mjs" },
     logLevel: "info",
     // Some packages may not be bundleable, so we externalize them, we can add more here as needed.
     // Some of the packages below may not be imported or installed, but we're adding them in case they are in the future.
