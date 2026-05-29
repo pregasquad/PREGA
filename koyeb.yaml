@@ -1,0 +1,34 @@
+name: pregasquad-api
+
+services:
+  - name: api-server
+    type: web
+    git:
+      branch: main
+    docker:
+      dockerfile: Dockerfile
+    instance_type: nano
+    regions:
+      - was
+    ports:
+      - port: 8080
+        protocol: http
+    routes:
+      - path: /
+        port: 8080
+    health_checks:
+      - path: /api/healthz
+        port: 8080
+        protocol: http
+        initial_delay_seconds: 10
+        period_seconds: 30
+        success_threshold: 1
+        failure_threshold: 3
+        timeout_seconds: 5
+    env:
+      - key: PORT
+        value: "8080"
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        secret: DATABASE_URL
