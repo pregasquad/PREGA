@@ -1,5 +1,3 @@
-import * as postgresSchema from "@workspace/db";
-
 export const dbDialect = process.env.DB_DIALECT || 'postgres';
 
 let isOfflineMode = false;
@@ -37,7 +35,7 @@ function getDatabaseUrl(): string | null {
 
 let db: any;
 let pool: any;
-let schema: any = postgresSchema;
+let schema: any = null;
 
 export async function initializeDatabase(): Promise<boolean> {
   const databaseUrl = getDatabaseUrl();
@@ -72,7 +70,9 @@ export async function initializeDatabase(): Promise<boolean> {
     } else {
       const { drizzle } = await import("drizzle-orm/node-postgres");
       const pg = await import("pg");
-      
+      const postgresSchema = await import("@workspace/db");
+      schema = postgresSchema;
+
       pool = new pg.default.Pool({ connectionString: databaseUrl });
       db = drizzle(pool, { schema });
       console.log("Using PostgreSQL database");
