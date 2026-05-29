@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { DollarSign, Users, CalendarIcon, TrendingUp, Building2, RefreshCw, Plus, Trash2, Receipt, UserMinus, ChevronDown, ChevronUp, CheckCircle, Pencil, Wallet, Briefcase, BarChart3, ArrowDownLeft, Store, Undo2 } from "lucide-react";
+import { DollarSign, Users, CalendarIcon, TrendingUp, Building2, RefreshCw, Plus, Trash2, Receipt, UserMinus, ChevronDown, ChevronUp, CheckCircle, Pencil, Wallet, Briefcase, BarChart3, ArrowDownLeft, Store, Undo2, FileDown } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
@@ -82,6 +82,9 @@ export default function Salaries() {
   const [payBackDeduction, setPayBackDeduction] = useState<StaffDeduction | null>(null);
   const [payBackInputAmount, setPayBackInputAmount] = useState<string>("");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [monthlyGoal, setMonthlyGoal] = useState<number>(() => Number(localStorage.getItem("monthly_revenue_goal") || 0));
+  const [goalEditValue, setGoalEditValue] = useState("");
+  const [showGoalEdit, setShowGoalEdit] = useState(false);
   const [openPaymentHistories, setOpenPaymentHistories] = useState<Record<number, boolean>>({});
   const [openDeductions, setOpenDeductions] = useState<Record<number, boolean>>({});
   const [salonHistoryOpen, setSalonHistoryOpen] = useState(false);
@@ -666,25 +669,83 @@ export default function Salaries() {
     };
   };
 
+  const exportToCSV = () => {
+    const periodLabel = period === "day" ? format(selectedDate, "yyyy-MM-dd")
+      : period === "week" ? `${format(start, "yyyy-MM-dd")}_${format(end, "yyyy-MM-dd")}`
+      : period === "month" ? format(selectedDate, "yyyy-MM")
+      : `${format(customStartDate, "yyyy-MM-dd")}_${format(customEndDate, "yyyy-MM-dd")}`;
+
+    const bom = "\uFEFF";
+    const rows: string[] = [];
+    rows.push(`"تقرير الرواتب والمصاريف","${periodLabel}"`);
+    rows.push("");
+    rows.push(`"الإجمالي الكلي للحجوزات المدفوعة","${totalRevenue} DH"`);
+    rows.push(`"إجمالي العمولات","${totalCommissions} DH"`);
+    rows.push(`"نصيب الصالون","${salonPortion} DH"`);
+    rows.push(`"إجمالي المصاريف","${totalExpenses} DH"`);
+    rows.push(`"سحوبات المالك","${totalOwnerWithdrawals} DH"`);
+    rows.push(`"صافي الربح","${netProfit} DH"`);
+    rows.push(`"إجمالي المستحق للموظفين","${netStaffPayable} DH"`);
+    rows.push("");
+    rows.push(`"الموظف","الإيراد","العمولة","الخصومات","الصافي"`);
+    for (const s of staff) {
+      const earning = staffEarnings.find(e => e.name === s.name);
+      const commission = earning ? earning.totalCommission : 0;
+      const deductionAmt = pendingDeductions
+        .filter(d => d.staffId === s.id || (!d.staffId && d.staffName === s.name))
+        .reduce((sum, d) => sum + getRemainingAmount(d), 0);
+      const net = commission - deductionAmt;
+      if (commission === 0 && deductionAmt === 0) continue;
+      rows.push(`"${s.name}","${earning?.totalRevenue ?? 0}","${commission}","${deductionAmt}","${net}"`);
+    }
+    rows.push("");
+    if (filteredCharges.length > 0) {
+      rows.push(`"المصاريف","النوع","المبلغ","التاريخ"`);
+      for (const c of filteredCharges) {
+        rows.push(`"${c.name}","${getChargeTypeLabel(c.type)}","${c.amount}","${c.date}"`);
+      }
+    }
+
+    const blob = new Blob([bom + rows.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `salary_report_${periodLabel}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: t("salaries.csvExported") || "تم تصدير التقرير" });
+  };
+
   return (
     <div className="flex flex-col gap-3 p-2 animate-fade-in" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
       <div className="flex justify-between items-center">
         <h1 className="text-lg font-bold" data-testid="text-page-title">{t("salaries.pageTitle")}</h1>
-        <Button
-          variant="outline"
-          size="icon"
-          disabled={isRefreshing}
-          onClick={async () => {
-            setIsRefreshing(true);
-            await queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
-            setLastUpdate(new Date());
-            setIsRefreshing(false);
-            toast({ title: t("common.refreshed"), description: t("common.dataUpdated") });
-          }}
-          data-testid="button-refresh-salaries"
-        >
-          <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={exportToCSV}
+            title={t("salaries.exportCSV") || "تصدير CSV"}
+            data-testid="button-export-csv"
+          >
+            <FileDown className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            disabled={isRefreshing}
+            onClick={async () => {
+              setIsRefreshing(true);
+              await queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+              setLastUpdate(new Date());
+              setIsRefreshing(false);
+              toast({ title: t("common.refreshed"), description: t("common.dataUpdated") });
+            }}
+            data-testid="button-refresh-salaries"
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+          </Button>
+        </div>
       </div>
 
       {unclearedDeductions.length > 0 && (
@@ -896,6 +957,76 @@ export default function Salaries() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Monthly Revenue Goal */}
+      {period === "month" && (
+        <Card className="glass-card" data-testid="card-monthly-goal">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-violet-500/15 flex items-center justify-center">
+                  <TrendingUp className="h-3.5 w-3.5 text-violet-600" />
+                </div>
+                <span className="text-sm font-semibold">{t("salaries.monthlyGoal") || "هدف الشهر"}</span>
+              </div>
+              {!showGoalEdit ? (
+                <button
+                  className="text-xs text-muted-foreground underline underline-offset-2"
+                  onClick={() => { setGoalEditValue(monthlyGoal > 0 ? String(monthlyGoal) : ""); setShowGoalEdit(true); }}
+                  data-testid="button-edit-goal"
+                >
+                  {monthlyGoal > 0 ? `${formatCurrency(monthlyGoal)} DH` : (t("salaries.setGoal") || "تعيين الهدف")}
+                </button>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <Input
+                    type="number"
+                    value={goalEditValue}
+                    onChange={e => setGoalEditValue(e.target.value)}
+                    className="h-7 w-28 text-sm text-end"
+                    placeholder="0"
+                    data-testid="input-monthly-goal"
+                    autoFocus
+                  />
+                  <Button size="sm" className="h-7 px-2 text-xs" onClick={() => {
+                    const val = Number(goalEditValue) || 0;
+                    setMonthlyGoal(val);
+                    localStorage.setItem("monthly_revenue_goal", String(val));
+                    setShowGoalEdit(false);
+                  }} data-testid="button-save-goal">✓</Button>
+                  <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setShowGoalEdit(false)}>✕</Button>
+                </div>
+              )}
+            </div>
+            {monthlyGoal > 0 ? (
+              <>
+                <div className="relative h-3 rounded-full bg-secondary overflow-hidden mb-1.5">
+                  <div
+                    className={`absolute inset-y-0 start-0 rounded-full transition-all duration-500 ${
+                      totalRevenue >= monthlyGoal
+                        ? "bg-emerald-500"
+                        : totalRevenue / monthlyGoal >= 0.7
+                        ? "bg-violet-500"
+                        : "bg-violet-400/70"
+                    }`}
+                    style={{ width: `${Math.min((totalRevenue / monthlyGoal) * 100, 100)}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-[11px] text-muted-foreground tabular-nums">
+                  <span data-testid="text-goal-revenue">{formatCurrency(totalRevenue)} DH</span>
+                  <span className={`font-semibold ${totalRevenue >= monthlyGoal ? "text-emerald-600 dark:text-emerald-400" : "text-violet-600 dark:text-violet-400"}`}>
+                    {Math.round((totalRevenue / monthlyGoal) * 100)}%
+                    {totalRevenue >= monthlyGoal && " ✓"}
+                  </span>
+                  <span>{formatCurrency(monthlyGoal)} DH</span>
+                </div>
+              </>
+            ) : (
+              <p className="text-xs text-muted-foreground text-center py-1">{t("salaries.noGoalSet") || "لم يتم تعيين هدف شهري بعد"}</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Salon Budget - Glass Card */}
       <Card className="glass-card" data-testid="card-salon-budget">

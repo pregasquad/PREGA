@@ -1705,16 +1705,39 @@ export async function registerRoutes(
       
       // When appointment becomes paid, handle stock and loyalty points
       if (item.paid && oldAppointment && !oldAppointment.paid) {
-        // Deduct stock for linked products
-        if (item.service) {
-          const service = await storage.getServiceByName(item.service);
-          if (service?.linkedProductId) {
-            const product = await storage.getProducts().then(prods => prods.find(p => p.id === service.linkedProductId));
+        // Deduct stock for all linked products (single-service & multi-service)
+        const allProducts = await storage.getProducts();
+        const deductForServiceName = async (serviceName: string) => {
+          const service = await storage.getServiceByName(serviceName);
+          if (!service) return;
+          // linkedProductIds: array of {productId, quantity}
+          const multiLinks: { productId: number; quantity: number }[] = Array.isArray(service.linkedProductIds) ? service.linkedProductIds as any : [];
+          if (multiLinks.length > 0) {
+            for (const link of multiLinks) {
+              const product = allProducts.find(p => p.id === link.productId);
+              if (product && product.quantity > 0) {
+                const deductQty = Math.min(link.quantity || 1, product.quantity);
+                await storage.updateProductQuantity(product.id, product.quantity - deductQty);
+                checkAndNotifyLowStock(product.id);
+              }
+            }
+          } else if (service.linkedProductId) {
+            // Legacy single link
+            const product = allProducts.find(p => p.id === service.linkedProductId);
             if (product && product.quantity > 0) {
               await storage.updateProductQuantity(product.id, product.quantity - 1);
               checkAndNotifyLowStock(product.id);
             }
           }
+        };
+        // Multi-service appointment (servicesJson)
+        if (item.servicesJson) {
+          const svcList = typeof item.servicesJson === 'string' ? JSON.parse(item.servicesJson) : item.servicesJson;
+          if (Array.isArray(svcList)) {
+            for (const svc of svcList) { if (svc.name) await deductForServiceName(svc.name); }
+          }
+        } else if (item.service) {
+          await deductForServiceName(item.service);
         }
         
         // Award loyalty points to client
