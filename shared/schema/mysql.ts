@@ -351,6 +351,9 @@ export const businessSettings = mysqlTable("business_settings", {
   botFilterNumbers: text("bot_filter_numbers"),
   bossInstructions: text("boss_instructions"),
   botSilenceAfterBooking: boolean("bot_silence_after_booking").notNull().default(true),
+  ownerPhone: varchar("owner_phone", { length: 50 }),
+  dailySummaryEnabled: boolean("daily_summary_enabled").notNull().default(false),
+  dailySummaryTime: varchar("daily_summary_time", { length: 10 }).notNull().default("20:00"),
   planningSlotHeight: int("planning_slot_height").notNull().default(44),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

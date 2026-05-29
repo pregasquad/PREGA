@@ -1600,6 +1600,41 @@ export async function ensureBotSilenceAfterBookingColumn(): Promise<void> {
   }
 }
 
+export async function ensureDailySummaryColumns(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      const [rows] = await connection.query(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = 'business_settings'
+          AND COLUMN_NAME = 'owner_phone'
+      `);
+      if ((rows as any[]).length === 0) {
+        await connection.query(`ALTER TABLE business_settings ADD COLUMN owner_phone VARCHAR(50)`);
+        await connection.query(`ALTER TABLE business_settings ADD COLUMN daily_summary_enabled BOOLEAN NOT NULL DEFAULT FALSE`);
+        await connection.query(`ALTER TABLE business_settings ADD COLUMN daily_summary_time VARCHAR(10) NOT NULL DEFAULT '20:00'`);
+        console.log("Added daily summary columns to business_settings");
+      }
+      connection.release();
+    } else {
+      await pool.query(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'business_settings' AND column_name = 'owner_phone') THEN
+            ALTER TABLE business_settings ADD COLUMN owner_phone VARCHAR(50);
+            ALTER TABLE business_settings ADD COLUMN daily_summary_enabled BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE business_settings ADD COLUMN daily_summary_time VARCHAR(10) NOT NULL DEFAULT '20:00';
+          END IF;
+        END $$;
+      `);
+    }
+    console.log("Daily summary columns ready");
+  } catch (error) {
+    console.error("Failed to ensure daily summary columns:", error);
+  }
+}
+
 export async function ensureOwnerWithdrawalsNotesColumn(): Promise<void> {
   try {
     if (dbDialect === 'mysql') {

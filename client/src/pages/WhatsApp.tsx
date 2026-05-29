@@ -50,6 +50,7 @@ import {
   BookMarked,
   CheckCheck,
   UserCheck,
+  BarChart2,
 } from "lucide-react";
 
 interface WAStatus {
@@ -577,6 +578,28 @@ export default function WhatsApp() {
       toast({ title: "خطأ", description: err.message, variant: "destructive" }),
   });
 
+  const [summaryPhone, setSummaryPhone] = useState("");
+  const [summaryTime, setSummaryTime] = useState("20:00");
+  const summaryEnabled = (bizSettings as any)?.dailySummaryEnabled === true;
+
+  useEffect(() => {
+    if (bizSettings) {
+      setSummaryPhone((bizSettings as any).ownerPhone || "");
+      setSummaryTime((bizSettings as any).dailySummaryTime || "20:00");
+    }
+  }, [bizSettings]);
+
+  const saveSummaryMutation = useMutation({
+    mutationFn: (data: { ownerPhone: string; dailySummaryEnabled: boolean; dailySummaryTime: string }) =>
+      apiRequest("PATCH", "/api/business-settings", data).then((r) => r.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/business-settings"] });
+      toast({ title: "تم الحفظ ✓", description: "إعدادات الملخص اليومي محفوظة 📊" });
+    },
+    onError: (err: any) =>
+      toast({ title: "خطأ", description: err.message, variant: "destructive" }),
+  });
+
   // ── Conversation log query & mutations ────────────────────────────────────
   interface ConvEntry {
     jid: string;
@@ -1004,6 +1027,79 @@ export default function WhatsApp() {
             )}
           </Button>
         </div>
+      </div>
+
+      {/* ── DAILY SUMMARY ── */}
+      <div className="glass-card rounded-2xl p-4 border border-border/30 space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/25 flex items-center justify-center shrink-0 shadow-md">
+            <BarChart2 className="w-5 h-5 text-amber-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm">ملخص يومي لصاحبة الصالون</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              وصال ترسل واتساب بقائمة المواعيد والإيراد كل يوم
+            </p>
+          </div>
+          <Switch
+            data-testid="switch-daily-summary"
+            checked={summaryEnabled}
+            onCheckedChange={(v) =>
+              saveSummaryMutation.mutate({
+                ownerPhone: summaryPhone,
+                dailySummaryEnabled: v,
+                dailySummaryTime: summaryTime,
+              })
+            }
+          />
+        </div>
+        {summaryEnabled && (
+          <div className="space-y-2 pt-1 border-t border-border/20">
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="text-xs text-muted-foreground mb-1 block">رقم المدير/المديرة (واتساب)</label>
+                <Input
+                  data-testid="input-summary-phone"
+                  placeholder="212600000000"
+                  value={summaryPhone}
+                  onChange={(e) => setSummaryPhone(e.target.value)}
+                  className="h-9 text-sm rounded-xl"
+                  dir="ltr"
+                />
+              </div>
+              <div className="w-28">
+                <label className="text-xs text-muted-foreground mb-1 block">وقت الإرسال</label>
+                <Input
+                  data-testid="input-summary-time"
+                  type="time"
+                  value={summaryTime}
+                  onChange={(e) => setSummaryTime(e.target.value)}
+                  className="h-9 text-sm rounded-xl"
+                />
+              </div>
+            </div>
+            <Button
+              data-testid="button-save-summary"
+              size="sm"
+              disabled={saveSummaryMutation.isPending}
+              onClick={() =>
+                saveSummaryMutation.mutate({
+                  ownerPhone: summaryPhone,
+                  dailySummaryEnabled: true,
+                  dailySummaryTime: summaryTime,
+                })
+              }
+              className="w-full rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30"
+              variant="ghost"
+            >
+              {saveSummaryMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <><Save className="w-4 h-4 mr-1" />حفظ الإعدادات</>
+              )}
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* ── DISCONNECTED ALERT ── */}

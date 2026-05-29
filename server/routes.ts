@@ -43,6 +43,73 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000);
 
+// ── Daily summary scheduler — checks every minute if it's time to send ────────
+let lastDailySummarySentDate: string | null = null;
+setInterval(async () => {
+  try {
+    const settings = await storage.getBusinessSettings().catch(() => null);
+    if (!settings) return;
+    const enabled = (settings as any).dailySummaryEnabled;
+    const ownerPhone: string | undefined = (settings as any).ownerPhone;
+    const summaryTime: string = (settings as any).dailySummaryTime || "20:00";
+    if (!enabled || !ownerPhone) return;
+
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, "0");
+    const mm = String(now.getMinutes()).padStart(2, "0");
+    const currentTime = `${hh}:${mm}`;
+    const todayStr = now.toISOString().split("T")[0];
+
+    // Fire only once per day at the configured time (within the same minute)
+    if (currentTime !== summaryTime) return;
+    if (lastDailySummarySentDate === todayStr) return;
+    lastDailySummarySentDate = todayStr;
+
+    // Fetch today's appointments
+    const todayAppts: any[] = await storage.getAppointmentsByDateRange(todayStr, todayStr).catch(() => []);
+    const newToday = todayAppts.filter((a: any) => !a.isPaid);
+
+    const ARABIC_DAYS_S = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+    const dayLabel = ARABIC_DAYS_S[now.getDay()];
+
+    let msg = `📋 *ملخص يوم ${dayLabel} ${todayStr}* — صالون ${(settings as any).businessName || "PREGASQUAD"}\n\n`;
+
+    if (newToday.length === 0) {
+      msg += "لا توجد مواعيد مسجلة اليوم 🌸";
+    } else {
+      msg += `📅 عدد المواعيد اليوم: *${newToday.length}*\n\n`;
+      const sorted = [...newToday].sort((a: any, b: any) => (a.startTime || "").localeCompare(b.startTime || ""));
+      sorted.forEach((a: any, i: number) => {
+        const clientName = a.clientName || a.client || "عميل";
+        const service = a.service || a.serviceName || "خدمة";
+        const time = a.startTime || "?";
+        const staff = a.staff || a.staffName || "";
+        msg += `${i + 1}. ⏰ ${time} — ${clientName} — ${service}${staff ? ` (${staff})` : ""}\n`;
+      });
+
+      // Revenue estimate
+      const totalRevenue = newToday.reduce((sum: number, a: any) => sum + (Number(a.price) || 0), 0);
+      if (totalRevenue > 0) {
+        const sym = (settings as any).currencySymbol || "DH";
+        msg += `\n💰 إجمالي متوقع: *${totalRevenue} ${sym}*`;
+      }
+    }
+
+    // Bot-confirmed pending review
+    const botPending = todayAppts.filter((a: any) => a.botConfirmed && !a.isPaid);
+    if (botPending.length > 0) {
+      msg += `\n\n🤖 مواعيد بوت تحتاج مراجعة: *${botPending.length}*`;
+    }
+
+    const { sendWhatsAppMessage, formatJid } = await import("./baileys");
+    const jid = formatJid(ownerPhone);
+    await sendWhatsAppMessage(jid, msg);
+    console.log(`[DailySummary] Sent to ${ownerPhone} at ${currentTime}`);
+  } catch (err: any) {
+    console.error("[DailySummary] Error:", err.message);
+  }
+}, 60 * 1000);
+
 // Initialize Supabase client (only if URL is a valid HTTP/HTTPS URL)
 const supabaseUrl = process.env.SUPABASE_URL || "";
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || "";
