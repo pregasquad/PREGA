@@ -246,45 +246,31 @@ export class DatabaseStorage implements IStorage {
       }
     }
     
-    console.log("[STORAGE] createAppointment - processed data:", JSON.stringify(processedAppointment));
-    
     if (isMySQL()) {
-      console.log("[STORAGE] Using MySQL/TiDB path");
       const result = await db().insert(s.appointments).values(processedAppointment);
-      console.log("[STORAGE] MySQL/TiDB insert result type:", typeof result);
-      console.log("[STORAGE] MySQL/TiDB insert result keys:", Object.keys(result || {}));
-      console.log("[STORAGE] MySQL/TiDB insert result:", JSON.stringify(result));
-      
+
       // TiDB/MySQL2 returns result differently - try multiple approaches
       let insertId = (result as any).insertId 
         ?? (result as any)[0]?.insertId 
         ?? (result as any)[0]?.[0]?.insertId;
       
-      // If still no insertId, try to get the last inserted row
+      // If still no insertId, fall back to querying the latest row for this client
       if (!insertId) {
-        console.log("[STORAGE] No insertId found, querying for latest appointment");
         const [latest] = await db()
           .select()
           .from(s.appointments)
           .where(eq(s.appointments.client, processedAppointment.client))
           .orderBy(desc(s.appointments.id))
           .limit(1);
-        if (latest) {
-          console.log("[STORAGE] Found latest appointment:", JSON.stringify(latest));
-          return latest;
-        }
+        if (latest) return latest;
         throw new Error("Failed to get insert ID from MySQL/TiDB");
       }
       
-      console.log("[STORAGE] MySQL/TiDB insertId:", insertId);
       const [created] = await db().select().from(s.appointments).where(eq(s.appointments.id, insertId));
       if (!created) throw new Error("Failed to retrieve created appointment from MySQL/TiDB");
-      console.log("[STORAGE] MySQL/TiDB created appointment:", JSON.stringify(created));
       return created;
     }
-    console.log("[STORAGE] Using PostgreSQL path");
     const [created] = await db().insert(s.appointments).values(processedAppointment).returning();
-    console.log("[STORAGE] PostgreSQL created appointment:", JSON.stringify(created));
     return created;
   }
   
