@@ -20,6 +20,10 @@ author = "agent"
 task = "workflow.run"
 args = "API Server"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Manager"
+
 [[workflows.workflow]]
 name = "API Server"
 author = "agent"
@@ -31,6 +35,18 @@ outputType = "console"
 task = "shell.exec"
 args = "PORT=8080 pnpm --filter @workspace/api-server run dev"
 waitForPort = 8080
+
+[[workflows.workflow]]
+name = "Manager"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "PORT=8081 BASE_PATH=/ pnpm --filter @workspace/pregasquad-manager run dev"
+waitForPort = 8081
 
 [agent]
 stack = "PNPM_WORKSPACE"

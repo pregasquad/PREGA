@@ -29,6 +29,7 @@ const StaffPerformance = lazy(() => import("@/pages/StaffPerformance"));
 const Staff = lazy(() => import("@/pages/Staff"));
 const AdminSettings = lazy(() => import("@/pages/AdminSettings"));
 const WhatsApp = lazy(() => import("@/pages/WhatsApp"));
+const Logs = lazy(() => import("@/pages/Logs"));
 const LoyaltyRewards = lazy(() => import("@/pages/LoyaltyRewards"));
 const Packages = lazy(() => import("@/pages/Packages"));
 const BookingHistory = lazy(() => import("@/pages/BookingHistory"));
@@ -201,6 +202,10 @@ function Router() {
 
       <Route path="/whatsapp">
         <PageRoute component={WhatsApp} requireAdmin permission="admin_settings" />
+      </Route>
+
+      <Route path="/logs">
+        <PageRoute component={Logs} requireAdmin permission="admin_settings" />
       </Route>
 
       <Route path="/admin-settings">

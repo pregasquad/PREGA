@@ -3,6 +3,7 @@ import type { Server } from "http";
 import { Server as SocketIOServer } from "socket.io";
 import { storage } from "../storage";
 import { api } from "../shared-routes";
+import { getRecentLogs, getLastId } from "../log-buffer";
 import { z } from "zod";
 import { setupAuth, registerAuthRoutes, isPinAuthenticated, requirePermission, checkRateLimit, recordFailedAttempt, clearAttempts } from "../replit_integrations/auth";
 import { vapidPublicKey, sendPushNotification, checkAndNotifyExpiringProducts, checkAndNotifyLowStock as broadcastLowStockNotifications, sendClosingReminderNow } from "../push";
@@ -596,6 +597,32 @@ export async function registerRoutes(
   // Simple health check for UptimeRobot
   app.get("/health", (_req, res) => {
     res.status(200).send("OK");
+  });
+
+  // Real-time server log viewer — admin only
+  app.get("/api/logs", (req, res) => {
+    const sinceId = req.query.since !== undefined ? Number(req.query.since) : undefined;
+    res.json({ logs: getRecentLogs(sinceId), lastId: getLastId() });
+  });
+
+  app.get("/api/logs/stream", (req, res) => {
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.flushHeaders();
+    let lastId = req.query.since !== undefined ? Number(req.query.since) : getLastId();
+    const send = () => {
+      const newLogs = getRecentLogs(lastId);
+      if (newLogs.length > 0) {
+        lastId = newLogs[newLogs.length - 1].id;
+        res.write(`data: ${JSON.stringify(newLogs)}\n\n`);
+      }
+    };
+    send();
+    const interval = setInterval(send, 800);
+    const heartbeat = setInterval(() => res.write(": ping\n\n"), 15000);
+    req.on("close", () => { clearInterval(interval); clearInterval(heartbeat); });
   });
 
   // === PUBLIC BOOKING API ROUTES ===

@@ -30,7 +30,8 @@ import {
   PackageOpen,
   History,
   Sparkles,
-  MessageCircle
+  MessageCircle,
+  Terminal
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
@@ -63,6 +64,7 @@ const NAV_ITEMS = [
   { labelKey: "nav.reports", href: "/reports", icon: BarChart3, permission: "view_reports" },
   { labelKey: "nav.loyaltyRewards", href: "/loyalty-rewards", icon: Gift, permission: "view_loyalty" },
   { labelKey: "nav.whatsapp", href: "/whatsapp", icon: MessageCircle, permission: "admin_settings" },
+  { labelKey: "nav.logs", href: "/logs", icon: Terminal, permission: "admin_settings" },
   { labelKey: "nav.tombola", href: "/tombola", icon: Sparkles, permission: null },
   { labelKey: "nav.adminSettings", href: "/admin-settings", icon: Settings, permission: "admin_settings" },
   { labelKey: "nav.booking", href: "/booking", icon: ExternalLink, external: true, permission: null },

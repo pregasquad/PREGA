@@ -1,3 +1,4 @@
+import "./log-buffer";
 import { createServer } from "http";
 import app from "./app";
 import { registerRoutes } from "./routes/routes";
