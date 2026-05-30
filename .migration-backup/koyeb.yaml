@@ -1,0 +1,28 @@
+name: pregasquad-manager
+type: web
+deploy:
+  docker:
+    dockerfile: Dockerfile
+  regions:
+    - fra
+  ports:
+    - port: 8000
+      protocol: http
+  env:
+    - key: NODE_ENV
+      value: production
+    - key: PORT
+      value: "8000"
+    - key: DB_DIALECT
+      value: mysql
+    - key: MYSQL_URL
+      secret: mysql-url
+  scaling:
+    min: 1
+    max: 2
+  health_checks:
+    - path: /api/health
+      port: 8000
+      grace_period: 60
+      interval: 30
+      timeout: 10

@@ -1,8 +1,6 @@
 import { Router, type IRouter } from "express";
-import { z } from "zod/v4";
+import { HealthCheckResponse } from "@workspace/api-zod";
 import { getRecentLogs, getLastId } from "../log-buffer";
-
-const HealthCheckResponse = z.object({ status: z.string() });
 
 const router: IRouter = Router();
 
