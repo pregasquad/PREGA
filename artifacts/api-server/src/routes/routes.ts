@@ -1644,33 +1644,82 @@ export async function registerRoutes(
       // ── Send WhatsApp confirmation to the client (fire-and-forget) ──
       // Fetch full appointment for phone/service/date details
       const apt = await storage.getAppointment(id).catch(() => undefined);
-      if (apt && apt.phone) {
+      if (apt) {
         (async () => {
           try {
-            const { sendBookingConfirmation } = await import("./baileys.js");
-            const { getBotMemoriesByPhone } = await import("../db");
+            const { sendBookingConfirmation, sendWhatsAppMessage } = await import("./baileys.js");
+            const { getBotMemoriesByPhone, getAllBotMemories } = await import("../db");
 
-            // Look up client language preference from bot memory
+            // Resolve phone — appointment may have been created by @lid contact
+            // whose phone wasn't known yet at booking time
+            let phoneToUse: string | null = apt.phone || null;
+            let jidToUse: string | null = null;
             let lang: string | undefined;
-            try {
-              let normPhone = (apt.phone || "").replace(/[^0-9]/g, "");
-              if (normPhone.startsWith("00")) normPhone = normPhone.slice(2);
-              if (normPhone.startsWith("0") && normPhone.length === 10) normPhone = "212" + normPhone.slice(1);
-              if (normPhone.length === 9) normPhone = "212" + normPhone;
-              const mems = normPhone ? await getBotMemoriesByPhone(normPhone) : [];
-              lang = mems.find((m: any) => m.language && m.language !== "unknown")?.language;
-            } catch { /* fall back to default */ }
 
-            await sendBookingConfirmation(
-              apt.phone,
-              (apt.client || "").split(" (")[0],
-              apt.date,
-              apt.startTime,
-              apt.service || "خدمة",
-              undefined,
-              lang
-            );
-            console.log(`[accept-bot] ✅ Sent WhatsApp confirmation to ${apt.phone} for appointment #${id}`);
+            if (!phoneToUse) {
+              // Fall back: search bot memory by client name to find phone or JID
+              try {
+                const allMems = await getAllBotMemories();
+                const clientNameRaw = (apt.client || "").split(" (")[0].trim().toLowerCase();
+                const match = allMems.find((m: any) =>
+                  m.clientName && m.clientName.trim().toLowerCase() === clientNameRaw
+                );
+                if (match) {
+                  lang = match.language && match.language !== "unknown" ? match.language : undefined;
+                  if (match.phone) {
+                    phoneToUse = match.phone;
+                    // Back-fill the phone onto the appointment so future lookups work
+                    try { await storage.updateAppointment(id, { phone: match.phone } as any); } catch {}
+                    console.log(`[accept-bot] Resolved phone ${match.phone} from bot memory for appointment #${id}`);
+                  } else if (match.jid) {
+                    // Phone still unknown but we have the JID — send directly to it
+                    jidToUse = match.jid;
+                    console.log(`[accept-bot] Using JID ${match.jid} (phone unresolved) for appointment #${id}`);
+                  }
+                }
+              } catch { /* non-fatal */ }
+            }
+
+            if (!phoneToUse && !jidToUse) {
+              console.warn(`[accept-bot] ⚠️ No phone or JID found for appointment #${id} — skipping WhatsApp confirmation`);
+              return;
+            }
+
+            // Look up client language preference from bot memory (if not already found above)
+            if (!lang && phoneToUse) {
+              try {
+                let normPhone = (phoneToUse || "").replace(/[^0-9]/g, "");
+                if (normPhone.startsWith("00")) normPhone = normPhone.slice(2);
+                if (normPhone.startsWith("0") && normPhone.length === 10) normPhone = "212" + normPhone.slice(1);
+                if (normPhone.length === 9) normPhone = "212" + normPhone;
+                const mems = normPhone ? await getBotMemoriesByPhone(normPhone) : [];
+                lang = mems.find((m: any) => m.language && m.language !== "unknown")?.language;
+              } catch { /* fall back to default */ }
+            }
+
+            const clientName = (apt.client || "").split(" (")[0];
+            const firstName = clientName.split(" ")[0];
+            const service = apt.service || "خدمة";
+
+            if (phoneToUse) {
+              await sendBookingConfirmation(
+                phoneToUse,
+                clientName,
+                apt.date,
+                apt.startTime,
+                service,
+                undefined,
+                lang
+              );
+            } else if (jidToUse) {
+              // Send directly to JID — build same message as sendBookingConfirmation
+              const msg = lang === "french"
+                ? `Bonjour ${firstName} 🌸\n\nVotre rendez-vous a bien été confirmé ✅\n\n📋 Prestation : ${service}\n📅 Date : ${apt.date}\n⏰ Heure : ${apt.startTime}\n\nNous avons hâte de vous accueillir 💕`
+                : `مرحبا ${firstName} 🌸\n\nتم تأكيد rendez-vousك بنجاح ✅\n\n📋 الخدمة: ${service}\n📅 التاريخ: ${apt.date}\n⏰ الوقت: ${apt.startTime}\n\nنتطلع لاستقبالك 💕`;
+              await sendWhatsAppMessage(jidToUse, msg);
+            }
+
+            console.log(`[accept-bot] ✅ Sent WhatsApp confirmation to ${phoneToUse || jidToUse} for appointment #${id}`);
           } catch (msgErr) {
             console.warn(`[accept-bot] WhatsApp confirmation failed for #${id} (non-fatal):`, msgErr);
           }
