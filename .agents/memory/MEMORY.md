@@ -1,3 +1,4 @@
 - [Express 5 path-to-regexp compat](express5-path-compat.md) — Express 5 uses path-to-regexp v8 which rejects `(*)` and bare `*` wildcards; use RegExp routes instead.
 - [Frontend shared schema alias](frontend-shared-schema.md) — @shared/schema and @shared/routes are resolved via Vite aliases pointing to local copies in src/lib/.
 - [API server externals](api-server-externals.md) — @whiskeysockets/baileys, zod/v4, and dynamic ./db imports need special handling in build.mjs.
+- [Fresh setup sequence](fresh-setup.md) — exact steps and gotchas to get this repo running from scratch (install, DB, workflows).
