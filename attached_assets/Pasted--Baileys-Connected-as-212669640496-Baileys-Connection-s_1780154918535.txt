@@ -1,0 +1,150 @@
+[Baileys] Connected as +212669640496
+[Baileys] Connection state → close
+[Baileys] Connection closed. Code: 503. Message: "Stream Errored (unknown)"
+[Baileys] Reconnect attempt 1/5 in 10s…
+[Baileys] Connecting… WA version: 2,3000,1035194821 (latest: true)
+[Baileys] Connection state → connecting
+[Baileys] Connection state → open
+[Baileys] Connected as +212669640496
+Client connected: D7MO93dLbCVVivzWAAAB
+Client connected: dZs0EvxmSJmXgzPNAAAE
+Client connected: p73p4eT6m8h2SJ5RAAAF
+[Bot] JID 173276395532364@lid bot_blocked set to true, memCache + aiReplyCache cleared
+Client disconnected: dZs0EvxmSJmXgzPNAAAE
+Client disconnected: D7MO93dLbCVVivzWAAAB
+Client disconnected: p73p4eT6m8h2SJ5RAAAF
+[Bot] Boss replied to 173276395532364@lid — Wissal standing by (takes over if boss stays silent after next client msg)
+[Bot] Saved boss reply to conv history for 173276395532364@lid: "Saalam" (total turns: 22)
+[BossCorrection] gemini-3.1-flash-lite detected correction=false
+[BossCorrection] No correction detected for 173276395532364@lid (isCorrection=false)
+Client connected: R6ZwvX6BiJlHWgivAAAH
+Client connected: MiAO8Cz1g4Qb_rrtAAAK
+Client connected: BNifaYB7-q7iOS0CAAAL
+Closing session: SessionEntry {
+  _chains: {
+    'BTIOfwzSxBU5wdFL/1G0JHrs2Ul6GPQYYm7i1bFrHINs': { chainKey: [Object], chainType: 2, messageKeys: {} },
+    'BSr/chTpAOxX0eHpEGOdBmJ6O0+vb8qhXIb0bcbLZYsM': { chainKey: [Object], chainType: 2, messageKeys: {} },
+    'BbGeZ9gO/vXB3IylTVzJ3nAsRPRonV0RtvZZ89LpOC8A': { chainKey: [Object], chainType: 1, messageKeys: {} }
+  },
+  registrationId: 1776926759,
+  currentRatchet: {
+    ephemeralKeyPair: {
+      pubKey: <Buffer 05 b1 9e 67 d8 0e fe f5 c1 dc 8c a5 4d 5c c9 de 70 2c 44 f4 68 9d 5d 11 b6 f6 59 f3 d2 e9 38 2f 00>,
+      privKey: <Buffer d8 f2 7e 0e 9a 4c 49 f2 74 a0 7b 56 b9 ca dc b6 fe b8 71 7a 4c f8 ed fd f3 f3 21 fe 30 2e 17 53>
+    },
+    lastRemoteEphemeralKey: <Buffer 05 2a ff 72 14 e9 00 ec 57 d1 e1 e9 10 63 9d 06 62 7a 3b 4f af 6f ca a1 5c 86 f4 6d c6 cb 65 8b 0c>,
+    previousCounter: 9,
+    rootKey: <Buffer 1b 2b f8 e0 2d 54 76 7c a6 da 49 bd d1 c7 75 08 48 56 b4 41 f2 8d d0 de 3b aa 35 e5 93 eb e6 fa>
+  },
+  indexInfo: {
+    baseKey: <Buffer 05 ea 60 bc 2c 38 18 ee b1 7b 66 75 aa 7a 4d da 5e 6a 51 0b 81 e3 d7 c6 46 ae 34 ee 96 f4 ff c7 58>,
+    baseKeyType: 1,
+    closed: -1,
+    used: 1780150317347,
+    created: 1780102819059,
+    remoteIdentityKey: <Buffer 05 33 4e 0f 5c 8a 80 d6 67 4a 62 99 33 d9 d6 e8 83 98 60 c5 c6 af 9b e4 6b 85 ee 89 53 3a 1b 15 05>
+  }
+}
+Removing old closed session: SessionEntry {
+  _chains: {
+    'BdEJ4VPRXvjvPgitZ6JQvW5B3gUpj+IRxz0A83ZR1yo2': { chainKey: [Object], chainType: 2, messageKeys: {} },
+    'BTt+B+lgyvRfSe60nnkSe0rNfdRxfjhH7y/DAY1z50ps': { chainKey: [Object], chainType: 2, messageKeys: {} },
+    'BfsmvoIxT6WLsYKqEpl+u8UiHImPgSG1RAfrl4OHxlYG': { chainKey: [Object], chainType: 1, messageKeys: {} }
+  },
+  registrationId: 1776926759,
+  currentRatchet: {
+    ephemeralKeyPair: {
+      pubKey: <Buffer 05 fb 26 be 82 31 4f a5 8b b1 82 aa 12 99 7e bb c5 22 1c 89 8f 81 21 b5 44 07 eb 97 83 87 c6 56 06>,
+      privKey: <Buffer e0 0d de 4a 5b 6f 68 4e 5d ac 20 e3 86 ec 2d 95 29 1d 22 98 d7 74 1a 44 af 9b 16 4b 6f f5 87 6d>
+    },
+    lastRemoteEphemeralKey: <Buffer 05 3b 7e 07 e9 60 ca f4 5f 49 ee b4 9e 79 12 7b 4a cd 7d d4 71 7e 38 47 ef 2f c3 01 8d 73 e7 4a 6c>,
+    previousCounter: 1,
+    rootKey: <Buffer 76 78 bb 40 a3 3c 7f ff 0e 38 3d 6e ab 34 89 14 75 3a 05 76 56 4b 82 5f d3 f0 32 0e 20 6a 55 7f>
+  },
+  indexInfo: {
+    baseKey: <Buffer 05 e5 2c 80 1f 13 e4 98 25 e0 75 d0 fb 73 de fc e9 11 f5 45 d3 d0 0e 6d 56 98 77 a8 72 6c 79 37 15>,
+    baseKeyType: 1,
+    closed: 1779469814122,
+    used: 1779480062199,
+    created: 1779467114194,
+    remoteIdentityKey: <Buffer 05 33 4e 0f 5c 8a 80 d6 67 4a 62 99 33 d9 d6 e8 83 98 60 c5 c6 af 9b e4 6b 85 ee 89 53 3a 1b 15 05>
+  }
+}
+[accept-bot] ✅ Sent WhatsApp confirmation to 173276395532364 for appointment #5214354
+Client disconnected: BNifaYB7-q7iOS0CAAAL
+Client disconnected: MiAO8Cz1g4Qb_rrtAAAK
+Client disconnected: R6ZwvX6BiJlHWgivAAAH
+[Bot] Boss replied to 173276395532364@lid — Wissal standing by (takes over if boss stays silent after next client msg)
+[Bot] Saved boss reply to conv history for 173276395532364@lid: "Mana confitmey lik rendez vous lundi maa 5h" (total turns: 22)
+Decrypted message with closed session.
+[BossCorrection] gemini-3.1-flash-lite detected correction=true
+[BossCorrection] Auto-saved correction for 173276395532364@lid: ❌ "إنهاء المحادثة وتوديع الزبونة" → ✅ "تأكيد الموعد يوم الاثنين على الساعة الخامسة"
+[Bot] Boss replied to 173276395532364@lid — Wissal standing by (takes over if boss stays silent after next client msg)
+[Bot] Saved boss reply to conv history for 173276395532364@lid: "Mzn?" (total turns: 22)
+Decrypted message with closed session.
+[BossCorrection] gemini-3.1-flash-lite detected correction=false
+[BossCorrection] No correction detected for 173276395532364@lid (isCorrection=false)
+[Bot] @lid JID — phone not resolved yet (lidRaw=173276395532364), client will be created once phone is known
+[Bot] Buffered msg 1 for 173276395532364@lid — waiting 15s after last message
+[Bot] Flushing 1 buffered message(s) for 173276395532364@lid
+[Bot] 173276395532364@lid is admin-blocked (DB) — quick actions still processed, AI reply will be skipped
+[Bot] 173276395532364@lid is hard-blocked (admin or booking silence) — skipping AI reply
+Decrypted message with closed session.
+[Bot] Boss replied to 173276395532364@lid — Wissal standing by (takes over if boss stays silent after next client msg)
+[Bot] Saved boss reply to conv history for 173276395532364@lid: "Gher makantch mt2akda" (total turns: 22)
+[BossCorrection] gemini-3.1-flash-lite detected correction=true
+[BossCorrection] Auto-saved correction for 173276395532364@lid: ❌ "وصال أنهت المحادثة دون تأكيد الموعد" → ✅ "المدير قام بتأكيد الموعد ليوم الاثنين على الساعة الخامسة"
+Decrypted message with closed session.
+[Bot] Boss replied to 173276395532364@lid — Wissal standing by (takes over if boss stays silent after next client msg)
+[Bot] Saved boss reply to conv history for 173276395532364@lid: "Ana db galt lik tnin incjalah maa 5h yak?" (total turns: 22)
+[BossCorrection] gemini-3.1-flash-lite detected correction=true
+[BossCorrection] Auto-saved correction for 173276395532364@lid: ❌ "لم تقم وصال بتأكيد الموعد أو ذكرت وقتاً غير دقيق" → ✅ "تأكيد الموعد يوم الاثنين على الساعة الخامسة"
+[Bot] @lid JID — phone not resolved yet (lidRaw=173276395532364), client will be created once phone is known
+[Bot] Buffered msg 1 for 173276395532364@lid — waiting 15s after last message
+[Bot] @lid JID — phone not resolved yet (lidRaw=173276395532364), client will be created once phone is known
+[Bot] Buffered msg 2 for 173276395532364@lid — waiting 15s after last message
+[Bot] @lid JID — phone not resolved yet (lidRaw=173276395532364), client will be created once phone is known
+[Bot] Buffered msg 3 for 173276395532364@lid — waiting 15s after last message
+[Bot] @lid JID — phone not resolved yet (lidRaw=173276395532364), client will be created once phone is known
+[Bot] Buffered msg 4 for 173276395532364@lid — waiting 15s after last message
+Decrypted message with closed session.
+[Bot] Boss manually replied to 173276395532364@lid — cancelled Wissal's pending reply (4 client msg(s) preserved in history)
+[Bot] Boss replied to 173276395532364@lid — Wissal standing by (takes over if boss stays silent after next client msg)
+[Bot] Saved boss reply to conv history for 173276395532364@lid: "Si ba3d gheda" (total turns: 24)
+[BossCorrection] gemini-3.1-flash-lite detected correction=true
+[BossCorrection] Auto-saved correction for 173276395532364@lid: ❌ "تحديد الموعد يوم الاثنين (lundi)" → ✅ "الموعد الصحيح هو بعد غد (الأربعاء)"
+Decrypted message with closed session.
+[Bot] Boss replied to 173276395532364@lid — Wissal standing by (takes over if boss stays silent after next client msg)
+[Bot] Saved boss reply to conv history for 173276395532364@lid: "Safi ana khdit lik rendez vous" (total turns: 24)
+[BossCorrection] gemini-3.1-flash-lite detected correction=false
+[BossCorrection] No correction detected for 173276395532364@lid (isCorrection=false)
+[Bot] @lid JID — phone not resolved yet (lidRaw=173276395532364), client will be created once phone is known
+[Bot] Buffered msg 1 for 173276395532364@lid — waiting 15s after last message
+[Bot] @lid JID — phone not resolved yet (lidRaw=173276395532364), client will be created once phone is known
+[Bot] Buffered msg 2 for 173276395532364@lid — waiting 15s after last message
+Client connected: 8LLSuVepJRMTFwt2AAAO
+Client connected: S3LnWHWFGaZmtbB0AAAQ
+Client connected: j6kh6CsfMrSjN66WAAAR
+[Bot] Flushing 2 buffered message(s) for 173276395532364@lid
+[Bot] 173276395532364@lid is admin-blocked (DB) — quick actions still processed, AI reply will be skipped
+[Bot] Merged batch of 2 message(s) for 173276395532364@lid: "Lah iskhrrr
+Merciii"
+[Bot] 173276395532364@lid is hard-blocked (admin or booking silence) — skipping AI reply
+[STORAGE] createAppointment - processed data: {"date":"2026-06-01","startTime":"17:00","duration":90,"client":"","clientId":null,"service":"Cheveux Coloration","servicesJson":"[{\"name\":\"Cheveux Coloration\",\"price\":250,\"duration\":90}]","staff":"KHALIL","price":250,"total":250,"paid":false,"loyaltyDiscountAmount":0,"loyaltyPointsRedeemed":0,"giftCardDiscountAmount":0,"createdBy":"MEHDI","privateRoom":false,"staffId":287873}
+[STORAGE] Using MySQL/TiDB path
+[STORAGE] MySQL/TiDB insert result type: object
+[STORAGE] MySQL/TiDB insert result keys: [ '0', '1' ]
+[STORAGE] MySQL/TiDB insert result: [{"fieldCount":0,"affectedRows":1,"insertId":5214355,"info":"","serverStatus":2,"warningStatus":0,"changedRows":0},null]
+[STORAGE] MySQL/TiDB insertId: 5214355
+[STORAGE] MySQL/TiDB created appointment: {"id":5214355,"date":"2026-06-01","startTime":"17:00","duration":90,"client":"","clientId":null,"phone":null,"service":"Cheveux Coloration","servicesJson":"[{\"name\":\"Cheveux Coloration\",\"price\":250,\"duration\":90}]","staff":"KHALIL","staffId":287873,"price":250,"total":250,"paid":false,"loyaltyPointsEarned":0,"loyaltyDiscountAmount":0,"loyaltyPointsRedeemed":0,"giftCardDiscountAmount":0,"createdBy":"MEHDI","createdAt":"2026-05-30T15:16:03.000Z","bookingStatus":"pending","privateRoom":false,"paypalOrderId":null}
+(node:1) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Client disconnected: 8LLSuVepJRMTFwt2AAAO
+Client disconnected: j6kh6CsfMrSjN66WAAAR
+Client disconnected: S3LnWHWFGaZmtbB0AAAQ
+Client connected: 78YN8zLc0vOfq8EIAAAT
+Client connected: R_7kzn4_0ULhpyUKAAAV
+Client connected: OUeRa7ZN3xuqE50fAAAX
+[WhatsApp] Auto-created client "4799118702" (4799118702)
+[WhatsApp] Auto-created client "212620033886" (212620033886)
+[WhatsApp] Auto-created client "212641991796" (212641991796)
