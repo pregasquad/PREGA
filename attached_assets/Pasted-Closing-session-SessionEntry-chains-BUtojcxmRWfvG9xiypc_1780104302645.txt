@@ -1,0 +1,125 @@
+Closing session: SessionEntry {
+  _chains: {
+    'BUtojcxmRWfvG9xiypcm0yt1Tx8P/G2hEuLwF3K0Cnkm': { chainKey: [Object], chainType: 2, messageKeys: {} },
+    'BcRt1mFTPnJjwuSyotoRKk2q/U53bKRwfgpU6RAl9YoY': { chainKey: [Object], chainType: 2, messageKeys: {} },
+    BZi09WgIJHL8jr99DJYULcCb35RFzWs7yriXIkwcwn4C: { chainKey: [Object], chainType: 2, messageKeys: {} },
+    'BZPDxoLC9rB/W4Qki1h/GNeFRLjk45+vBMwSYYHzu4lz': { chainKey: [Object], chainType: 2, messageKeys: {} },
+    BQqQ21sR6DYA8vk6jmWaJAOiN1lEhw9IlmTfGeyx68wT: { chainKey: [Object], chainType: 2, messageKeys: {} },
+    Bd9OSsKUsTdwbRGXugFsrmK15xNGAebVASaqDwJeMXsb: { chainKey: [Object], chainType: 2, messageKeys: {} },
+    'BZx3CZgPS+OGNGsuOWOZt2cdwStmHXC0CouYBZCVPAMd': { chainKey: [Object], chainType: 2, messageKeys: {} },
+    'BdyMBdGrE+5uBvI7CEld2Mc+PCf2NotHw+Pqv6srIgkW': { chainKey: [Object], chainType: 2, messageKeys: {} },
+    'BWe6aJ7oA1gwhDf4TJK7a/ejJa09KCsHRyZZZy1hVmle': { chainKey: [Object], chainType: 2, messageKeys: {} },
+    'BcBODoqGrsR/ZIhvfqj9leLPJsL6WEhbkrwjuMa7Whw0': { chainKey: [Object], chainType: 2, messageKeys: {} },
+    BR7kKlOfsqE3ml1OVAnBFPAAlVu7dO74TdHQDyg56jFh: { chainKey: [Object], chainType: 2, messageKeys: {} },
+    'BYccVL3bbmhtMXi3JMdBwYTJRZ/AAVEP5sPDbDlb1cZY': { chainKey: [Object], chainType: 2, messageKeys: [Object] },
+    'BXfZv4smT3/DPnfZ8jpsZtzeyXaVBMuSM7ll1eYjmwx5': { chainKey: [Object], chainType: 2, messageKeys: {} },
+    'BQezOu5+GW0Me62uE+Kg/sR27KYMld+ceB03rkfFnqx6': { chainKey: [Object], chainType: 2, messageKeys: {} },
+    'BdFohDmo2wiJNQ+f19X9wL1Z6mYq7pK1USmjtPcA7N8S': { chainKey: [Object], chainType: 2, messageKeys: {} },
+    'Bet242x8iSvAjLEiGGTf0dFxXpwUSont7inY1LzN+lZA': { chainKey: [Object], chainType: 2, messageKeys: {} },
+    BaivBsuKeOBLKHAm5xoIXSaJHdPbMYc80MgpCfbPYTQG: { chainKey: [Object], chainType: 2, messageKeys: {} },
+    BX12EmNMf5vHCQR6Mih9Q7SFN6P348A6dWFZ4Nge9jZK: { chainKey: [Object], chainType: 2, messageKeys: {} },
+    BUuB8cK7LtL1mktL1JGANoXb0sHcq2q8NTQsRdxb4Nce: { chainKey: [Object], chainType: 2, messageKeys: {} },
+    'BRLoS/Iipc7vUkTEwH3RJicQbjnJgVJIE2m2AR35dsNj': { chainKey: [Object], chainType: 2, messageKeys: {} },
+    'BWM7lH+WAYomWgHIXgrLln+o6BAL9prPZ4uQYTsw29cB': { chainKey: [Object], chainType: 2, messageKeys: {} },
+    'BXBRHOS0JmGbnb48m3H+xa7FKp4X2gZ8HiKjF3xZW/F9': { chainKey: [Object], chainType: 2, messageKeys: {} },
+    BTZrUFm5VHhbyXxDhJGSfBuKbfjCWObjQEYgYHDRuaNf: { chainKey: [Object], chainType: 2, messageKeys: {} },
+    'BTg9qGNueYOinI0EWBo/4Pd7WRUr9960Pu4RirUtqhFZ': { chainKey: [Object], chainType: 2, messageKeys: {} },
+    BU1ArLN4d48bNQoumzMFgJh0Pfu3vVaLtmwSPSyfm3sF: { chainKey: [Object], chainType: 2, messageKeys: {} },
+    BeDG70ylYBfEgxXmiQ8sga0hAVa8LtGrgoUQxLaR2UAr: { chainKey: [Object], chainType: 2, messageKeys: {} },
+    'BekfVjcG9umE3rnN6uEpdHyws/fLPwgbamxMVp3obNB3': { chainKey: [Object], chainType: 2, messageKeys: {} },
+    'BRDyGmwlV2kOzsRrZ2upwME8efm/ogySOwWLTr3WugNR': { chainKey: [Object], chainType: 2, messageKeys: {} },
+    'Bb5gTsGtXGSpHMDLFnSB50xKNIoBuPN4rM7p/DHjA907': { chainKey: [Object], chainType: 2, messageKeys: {} },
+    BdO20FLUp6awbFlxcgw3u2vjE0tPkLyksoKOLZ9jv2hL: { chainKey: [Object], chainType: 2, messageKeys: {} },
+    'BRW6RFZFlRBGnhzSsI/DVfXj8ReBZvC1V7/tYrwCEEND': { chainKey: [Object], chainType: 2, messageKeys: {} },
+    'Bc0mFttUfikUrLWv/DT59fQzxHFi0R36nYuftAYTwFBY': { chainKey: [Object], chainType: 2, messageKeys: {} },
+    BUKE6sy2g4pJ7NuKUINd6w5AujZnUKcXjDG12eQIkT4i: { chainKey: [Object], chainType: 2, messageKeys: {} },
+    'BVu3CIgvRrHX4DFV/R+OZgLPJr4QAaV6Q8KluRdKFTgm': { chainKey: [Object], chainType: 2, messageKeys: {} },
+    BZ1dzuLgbJ1IpiHdHdJKwthkvx9IfMxvoVqKtKngJ01R: { chainKey: [Object], chainType: 1, messageKeys: {} }
+  },
+  registrationId: 1814778568,
+  currentRatchet: {
+    ephemeralKeyPair: {
+      pubKey: <Buffer 05 9d 5d ce e2 e0 6c 9d 48 a6 21 dd 1d d2 4a c2 d8 64 bf 1f 48 7c cc 6f a1 5a 8a b4 a9 e0 27 4d 51>,
+      privKey: <Buffer 30 30 f1 7b 95 4c 95 66 ce 9f cd 64 e5 c9 c2 7d b2 a6 0b dc 16 da 2e e4 df 4e 86 e2 79 3e fa 40>
+    },
+    lastRemoteEphemeralKey: <Buffer 05 5b b7 08 88 2f 46 b1 d7 e0 31 55 fd 1f 8e 66 02 cf 26 be 10 01 a5 7a 43 c2 a5 b9 17 4a 15 38 26>,
+    previousCounter: 0,
+    rootKey: <Buffer ec 82 84 73 1d 62 74 9c f2 d5 a0 c4 28 ac 01 99 6b fc 98 e8 ff ff 84 a7 5d e1 7d 8d 25 64 8a c6>
+  },
+  indexInfo: {
+    baseKey: <Buffer 05 0a 05 9b 7c 0e 5c 8f f6 2a 26 a7 45 6b 00 2f 10 78 01 80 7f 4e 2c 1f 04 11 e7 c2 c1 b8 71 67 41>,
+    baseKeyType: 2,
+    closed: -1,
+    used: 1780097121504,
+    created: 1778982967049,
+    remoteIdentityKey: <Buffer 05 9d b5 69 30 91 5e 13 7a 39 81 07 12 f4 54 30 d8 96 15 ec 2e e5 6a 4b 15 4a 79 d6 e8 b5 02 db 49>
+  }
+}
+Closing session: SessionEntry {
+  _chains: {
+    'BS8LtqxgsH9G/XixVVLbzE/f0i6mEQlN1kaWCtIcCKR4': { chainKey: [Object], chainType: 1, messageKeys: {} }
+  },
+  registrationId: 1776926759,
+  currentRatchet: {
+    ephemeralKeyPair: {
+      pubKey: <Buffer 05 2f 0b b6 ac 60 b0 7f 46 fd 78 b1 55 52 db cc 4f df d2 2e a6 11 09 4d d6 46 96 0a d2 1c 08 a4 78>,
+      privKey: <Buffer 18 eb 89 c6 c3 08 46 c3 27 d9 b9 6b 78 eb 36 ba 5e 7e ec 45 9c 3c 9b 5d 9e 06 9e 38 33 62 93 60>
+    },
+    lastRemoteEphemeralKey: <Buffer 05 6b c9 7b 04 13 ae aa ea 11 00 65 59 df e7 86 cf 85 88 6c 67 05 0d d4 ef 4c b0 66 27 2c 7d 00 54>,
+    previousCounter: 0,
+    rootKey: <Buffer 0c 2b 0a 5e 02 42 3d ca d3 6e 41 71 c9 16 43 a5 68 f5 7f 44 b5 5e d2 d3 fe 0a e9 92 9b c4 01 c2>
+  },
+  indexInfo: {
+    baseKey: <Buffer 05 83 3a 7a 7f 63 e2 27 db 9d 6c 04 03 9b 84 6a c3 4e e1 62 4c e8 31 56 f9 e0 58 23 8b 5a d7 34 58>,
+    baseKeyType: 1,
+    closed: -1,
+    used: 1780071139262,
+    created: 1780071139262,
+    remoteIdentityKey: <Buffer 05 33 4e 0f 5c 8a 80 d6 67 4a 62 99 33 d9 d6 e8 83 98 60 c5 c6 af 9b e4 6b 85 ee 89 53 3a 1b 15 05>
+  },
+  pendingPreKey: {
+    signedKeyId: 9646888,
+    baseKey: <Buffer 05 83 3a 7a 7f 63 e2 27 db 9d 6c 04 03 9b 84 6a c3 4e e1 62 4c e8 31 56 f9 e0 58 23 8b 5a d7 34 58>,
+    preKeyId: 866
+  }
+}
+Removing old closed session: SessionEntry {
+  _chains: {
+    'BZ0pdCm/o0Xb6aftlpM5xkgHnMxXCF2aPnxcjmB9ed4f': { chainKey: [Object], chainType: 2, messageKeys: {} },
+    'BRoHvNXD1pzGwL8hooFdDaG72OIdafGo8q/Pvt27+dFf': { chainKey: [Object], chainType: 2, messageKeys: {} },
+    BUHb7bdi3sZHmGgXPlxBQ56ClDHprcpVa912BkuRjH1D: { chainKey: [Object], chainType: 2, messageKeys: {} },
+    'BYMFaTlIgz/wSJ4N9Dye/GH1k5ZealGe73Z39pgDKghM': { chainKey: [Object], chainType: 1, messageKeys: {} }
+  },
+  registrationId: 1776926759,
+  currentRatchet: {
+    ephemeralKeyPair: {
+      pubKey: <Buffer 05 83 05 69 39 48 83 3f f0 48 9e 0d f4 3c 9e fc 61 f5 93 96 5e 6a 51 9e ef 76 77 f6 98 03 2a 08 4c>,
+      privKey: <Buffer 98 56 13 ea 85 fa a7 3b 9d 90 f2 ce 8b f9 fe cc 87 4f 06 7d ce a9 67 0e b6 c1 d4 f5 ee 67 e8 6c>
+    },
+    lastRemoteEphemeralKey: <Buffer 05 41 db ed b7 62 de c6 47 98 68 17 3e 5c 41 43 9e 82 94 31 e9 ad ca 55 6b dd 76 06 4b 91 8c 7d 43>,
+    previousCounter: 0,
+    rootKey: <Buffer f3 7e 6b 93 15 e5 88 0e a5 d2 0a f3 54 59 0a b5 a2 ef f2 f7 5f ad 98 32 01 96 95 28 f5 c4 7f 2d>
+  },
+  indexInfo: {
+    baseKey: <Buffer 05 ed 58 47 19 30 95 a0 7e 79 0c 77 8b 17 3b 40 67 2c 25 b1 34 e0 2b 3c 0b 65 14 5e 0b 65 81 9a 69>,
+    baseKeyType: 1,
+    closed: 1779467114244,
+    used: 1779464362098,
+    created: 1779399457562,
+    remoteIdentityKey: <Buffer 05 33 4e 0f 5c 8a 80 d6 67 4a 62 99 33 d9 d6 e8 83 98 60 c5 c6 af 9b e4 6b 85 ee 89 53 3a 1b 15 05>
+  }
+}
+[DailySummary] Sent to 212713446214‬ at 01:00
+Client connected: OvYijbIHB4x6dCnNAAAP
+Client connected: ZUT6FC0jPgHBM_9UAAAS
+Client connected: 4cSBreD3i-zrTncpAAAT
+Client disconnected: ZUT6FC0jPgHBM_9UAAAS
+Client disconnected: 4cSBreD3i-zrTncpAAAT
+Client disconnected: OvYijbIHB4x6dCnNAAAP
+Client connected: j5W5m3ZWqb6Y_WPSAAAV
+Client connected: iuCx7GBtrwp2LprOAAAY
+Client connected: SHBO21jkdyoTDOiQAAAZ
+Client disconnected: j5W5m3ZWqb6Y_WPSAAAV
+Client disconnected: iuCx7GBtrwp2LprOAAAY
+Client disconnected: SHBO21jkdyoTDOiQAAAZ
+Download
