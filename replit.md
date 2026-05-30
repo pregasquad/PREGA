@@ -26,7 +26,9 @@ node scripts/apply-migrations.js
 | Workflow name | Command | Port | Output type |
 |---|---|---|---|
 | `API Server` | `PORT=8080 pnpm --filter @workspace/api-server run dev` | 8080 | console |
-| `Manager App` | `PORT=24675 BASE_PATH=/ pnpm --filter @workspace/pregasquad-manager run dev` | 24675 | webview |
+| `Start application` | `PORT=5000 BASE_PATH=/ pnpm --filter @workspace/pregasquad-manager run dev` | 5000 | webview |
+
+> **Important:** Use port **5000** for the frontend, NOT 24675. The Replit platform holds port 24675 at the kernel level (it's the external port-80 mapping) — Vite cannot bind to it and will fail with "Port already in use".
 
 ## Run & Operate
 
