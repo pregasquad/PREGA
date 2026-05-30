@@ -51,7 +51,11 @@ setInterval(async () => {
     if (!settings) return;
     const enabled = (settings as any).dailySummaryEnabled;
     const ownerPhone: string | undefined = (settings as any).ownerPhone;
-    const summaryTime: string = (settings as any).dailySummaryTime || "20:00";
+    // Use explicit summary time → fallback to closing time → fallback to 20:00
+    const summaryTime: string =
+      (settings as any).dailySummaryTime ||
+      (settings as any).closingTime ||
+      "20:00";
     if (!enabled || !ownerPhone) return;
 
     const now = new Date();

@@ -187,9 +187,32 @@ process.on("SIGINT", () => {
   httpServer.close(() => process.exit(0));
 });
 
+// ── Boss crash-alert — rate-limited to 1 per 5 min ──────────────────────────
+let lastCrashAlertAt = 0;
+async function sendCrashAlert(label: string, detail: string) {
+  const now = Date.now();
+  if (now - lastCrashAlertAt < 5 * 60 * 1000) return; // max 1 per 5 min
+  lastCrashAlertAt = now;
+  try {
+    const { storage } = await import("./storage.js");
+    const settings = await storage.getBusinessSettings().catch(() => null);
+    const ownerPhone: string | undefined = (settings as any)?.ownerPhone;
+    if (!ownerPhone) return;
+    const { sendWhatsAppMessage, formatJid } = await import("./baileys.js");
+    const msg = `⚠️ *تنبيه: خطأ في السيرفر*\n\n🔴 *${label}*\n\`${String(detail).slice(0, 300)}\`\n\n🕐 ${new Date().toLocaleTimeString("fr-MA")}`;
+    const recipients = ownerPhone.split(",").map((p: string) => p.trim()).filter(Boolean);
+    for (const phone of recipients) {
+      await sendWhatsAppMessage(formatJid(phone), msg).catch(() => {});
+    }
+  } catch { /* never crash the crash handler */ }
+}
+
 process.on("uncaughtException", (err) => {
   console.error("[uncaughtException] Unhandled error (server kept alive):", err);
+  sendCrashAlert("uncaughtException", err?.message || String(err));
 });
 process.on("unhandledRejection", (reason) => {
   console.error("[unhandledRejection] Unhandled promise rejection (server kept alive):", reason);
+  const msg = reason instanceof Error ? reason.message : String(reason);
+  sendCrashAlert("unhandledRejection", msg);
 });
