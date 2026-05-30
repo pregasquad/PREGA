@@ -24,6 +24,24 @@ const CONFLICT_CODES = new Set([440]);
 const MAX_CONFLICT_ATTEMPTS = 4;
 const MAX_RECONNECT_ATTEMPTS = 5;
 
+// ── LID → real-phone map — populated from contacts.upsert on connect ─────────
+// WhatsApp uses opaque LID identifiers for newer accounts. When Baileys syncs
+// contacts it fires contacts.upsert with objects that may contain both
+// `id` (real JID like 2126...@s.whatsapp.net) and `lid` (LID JID).
+// We capture that mapping here so the message handler can resolve the real phone.
+const lidToPhoneMap = new Map<string, string>(); // "85715031466043" → "212600000000"
+
+/** Resolve a raw LID number to its real phone (E.164 digits only), or null. */
+export function resolvePhoneFromLid(lid: string): string | null {
+  const digits = lid.replace(/[^0-9]/g, "");
+  return lidToPhoneMap.get(digits) ?? null;
+}
+
+/** Expose the full map so the routes repair endpoint can iterate over it. */
+export function getLidPhoneMap(): ReadonlyMap<string, string> {
+  return lidToPhoneMap;
+}
+
 // ── Module-level state ───────────────────────────────────────────────────────
 let sock: any = null;
 let currentQRDataUrl: string | null = null;
@@ -331,6 +349,36 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
 
   sock.ev.on("creds.update", saveCreds);
 
+  // ── Contact sync — builds LID → real-phone map ─────────────────────────────
+  // WhatsApp fires this on connect with the full contact list.  Some contacts
+  // have both `id` (real JID, @s.whatsapp.net) and `lid` (@lid) fields — we
+  // capture that link so @lid messages can be resolved to a real phone number.
+  sock.ev.on("contacts.upsert", (contacts: any[]) => {
+    let mapped = 0;
+    for (const c of contacts) {
+      const rawId: string = c.id ?? "";
+      const rawLid: string = c.lid ?? "";
+      if (rawId.endsWith("@s.whatsapp.net") && rawLid.includes("@lid")) {
+        const phone = rawId.replace("@s.whatsapp.net", "").replace(/[^0-9]/g, "");
+        const lid   = rawLid.replace("@lid", "").replace(/[^0-9]/g, "");
+        if (phone && lid && phone.length <= 15 && lid.length >= 10) {
+          lidToPhoneMap.set(lid, phone);
+          mapped++;
+        }
+      }
+      // Some Baileys versions put the real JID in `lid` and the LID in `id` — handle both
+      if (rawId.endsWith("@lid") && rawLid.endsWith("@s.whatsapp.net")) {
+        const phone = rawLid.replace("@s.whatsapp.net", "").replace(/[^0-9]/g, "");
+        const lid   = rawId.replace("@lid", "").replace(/[^0-9]/g, "");
+        if (phone && lid && phone.length <= 15 && lid.length >= 10) {
+          lidToPhoneMap.set(lid, phone);
+          mapped++;
+        }
+      }
+    }
+    if (mapped > 0) log(`contacts.upsert: mapped ${mapped} LID→phone pair(s), total=${lidToPhoneMap.size}`);
+  });
+
   // Pairing code mode — request code after WS handshake with WhatsApp servers
   if (pairingPhone) {
     status = "pairing";
@@ -502,8 +550,17 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
       const remoteJid: string = msg.key?.remoteJid ?? "";
       if (!remoteJid) continue;
 
-      // Extract phone number from JID
-      const phone = remoteJid.replace(/@.*$/, "").replace(/[^0-9]/g, "");
+      // Extract phone number from JID.
+      // For @lid JIDs the raw digits are a LID, not a real phone.
+      // Try to resolve the real phone from the contacts map first.
+      const rawLidDigits = remoteJid.replace(/@.*$/, "").replace(/[^0-9]/g, "");
+      const resolvedFromContacts = remoteJid.endsWith("@lid")
+        ? (lidToPhoneMap.get(rawLidDigits) ?? null)
+        : null;
+      const phone = resolvedFromContacts ?? rawLidDigits;
+      if (resolvedFromContacts) {
+        log(`@lid resolved from contacts map: ${rawLidDigits} → ${resolvedFromContacts}`);
+      }
 
       let text = "";
       let imageBase64: string | undefined;

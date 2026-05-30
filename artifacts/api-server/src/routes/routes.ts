@@ -3213,15 +3213,20 @@ export async function registerRoutes(
       //      c) If no real phone but has history → leave alone (can't safely touch it).
       const allClientsForCleanup = await storage.getClients();
       const { getBotMemory: _getBotMemSync } = await import("../db");
+      const { getLidPhoneMap } = await import("./baileys.js");
+      const lidPhoneMap = getLidPhoneMap();
       let fixed = 0;
       for (const c of allClientsForCleanup) {
         const p = (c.phone || "").replace(/[^0-9]/g, "");
         if (p.length < 14) continue; // Normal phone number — skip
 
-        // Try to resolve a real phone from memory (LID JID: "{lid}@lid")
+        // Try to resolve real phone: 1) contacts map (from Baileys), 2) bot_client_memory
+        const fromMap = lidPhoneMap.get(p) ?? null;
         const lidJid = `${p}@lid`;
         const mem = await _getBotMemSync(lidJid).catch(() => null);
-        const realPhone = mem?.phone ? normalizePhone(mem.phone) : null;
+        const realPhone = fromMap
+          ? normalizePhone(fromMap)
+          : (mem?.phone ? normalizePhone(mem.phone) : null);
 
         if (realPhone && realPhone.length >= 7 && realPhone.length <= 13) {
           // Real phone found — check if another client already owns it
