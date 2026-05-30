@@ -62,12 +62,18 @@ setInterval(async () => {
     const hh = String(now.getHours()).padStart(2, "0");
     const mm = String(now.getMinutes()).padStart(2, "0");
     const currentTime = `${hh}:${mm}`;
-    const todayStr = now.toISOString().split("T")[0];
+    const calendarDateStr = now.toISOString().split("T")[0];
 
     // Fire only once per day at the configured time (within the same minute)
     if (currentTime !== summaryTime) return;
-    if (lastDailySummarySentDate === todayStr) return;
-    lastDailySummarySentDate = todayStr;
+    if (lastDailySummarySentDate === calendarDateStr) return;
+    lastDailySummarySentDate = calendarDateStr;
+
+    // If summary fires after midnight (00:00–05:59) the business day being
+    // summarised is actually yesterday (e.g. salon closes at 02:00).
+    const businessDate = new Date(now);
+    if (now.getHours() < 6) businessDate.setDate(businessDate.getDate() - 1);
+    const todayStr = businessDate.toISOString().split("T")[0];
 
     // Fetch today's appointments + salon standalone payments in parallel
     const [todayAppts, allSalonPayments] = await Promise.all([
@@ -79,7 +85,7 @@ setInterval(async () => {
     const paidAppts   = (todayAppts as any[]).filter((a: any) => a.paid === true);
     const unpaidAppts = (todayAppts as any[]).filter((a: any) => !a.paid);
 
-    // Standalone cash payments recorded today (getSalonPayments returns all — filter by date)
+    // Standalone cash payments recorded on the business date
     const salonPaymentsToday = (allSalonPayments as any[]).filter((p: any) => {
       if (!p.collectedAt) return false;
       return new Date(p.collectedAt).toISOString().split("T")[0] === todayStr;
@@ -94,7 +100,7 @@ setInterval(async () => {
     const expectedPending      = unpaidAppts.reduce((s: number, a: any) => s + (Number(a.total) || Number(a.price) || 0), 0);
 
     const ARABIC_DAYS_S = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
-    const dayLabel = ARABIC_DAYS_S[now.getDay()];
+    const dayLabel = ARABIC_DAYS_S[businessDate.getDay()];
     const totalAppts = (todayAppts as any[]).length;
 
     let msg = `📋 *ملخص يوم ${dayLabel} ${todayStr}*\n🏪 صالون ${(settings as any).businessName || "PREGASQUAD"}\n\n`;
