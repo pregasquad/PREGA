@@ -606,6 +606,21 @@ export async function ensureForeignKeyConstraints(): Promise<void> {
         IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_staff_deductions_staff_id') THEN
           CREATE INDEX idx_staff_deductions_staff_id ON staff_deductions(staff_id);
         END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_clients_phone') THEN
+          CREATE INDEX idx_clients_phone ON clients(phone);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_clients_created_at') THEN
+          CREATE INDEX idx_clients_created_at ON clients(created_at);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_appointments_phone') THEN
+          CREATE INDEX idx_appointments_phone ON appointments(phone);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_bot_memory_jid') THEN
+          CREATE INDEX idx_bot_memory_jid ON bot_client_memory(jid);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_bot_memory_phone') THEN
+          CREATE INDEX idx_bot_memory_phone ON bot_client_memory(phone);
+        END IF;
       EXCEPTION WHEN OTHERS THEN
         NULL;
       END $$;

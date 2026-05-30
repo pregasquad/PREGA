@@ -1,8 +1,10 @@
 import express, { type Express } from "express";
 import cors from "cors";
+import compression from "compression";
 
 const app: Express = express();
 
+app.use(compression());
 app.use(cors());
 app.use(
   express.json({
