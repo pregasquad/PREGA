@@ -3204,19 +3204,58 @@ export async function registerRoutes(
 
       const emit = (event: string, data: unknown) => io.emit(event, data);
 
-      // 0. Clean up bogus clients created from @lid JIDs (name === phone AND phone ≥ 14 digits)
-      //    Real phone numbers are ≤ 13 digits (E.164 in practice). LIDs are 14-15 digit numeric IDs.
+      // 0. Fix / clean up clients whose phone is a WhatsApp LID (≥14 digits, not a real number).
+      //    LIDs are internal WhatsApp numeric IDs — they are never real phone numbers.
+      //    Strategy per client:
+      //      a) Look up bot_client_memory for "{lid}@lid" — if real phone is stored, update client.
+      //      b) If no real phone and no visit history → delete (will be re-created by step 1 once
+      //         the LID is linked to a real phone in memory).
+      //      c) If no real phone but has history → leave alone (can't safely touch it).
       const allClientsForCleanup = await storage.getClients();
+      const { getBotMemory: _getBotMemSync } = await import("../db");
+      let fixed = 0;
       for (const c of allClientsForCleanup) {
         const p = (c.phone || "").replace(/[^0-9]/g, "");
-        const n = (c.name || "").replace(/[^0-9]/g, "");
-        // Bogus: phone is 14+ digits (LID), name equals phone (no real name was resolved), 0 visits, 0 spent
-        if (p.length >= 14 && n === p && c.name === c.phone && (c.totalVisits ?? 0) === 0 && Number(c.totalSpent ?? 0) === 0) {
+        if (p.length < 14) continue; // Normal phone number — skip
+
+        // Try to resolve a real phone from memory (LID JID: "{lid}@lid")
+        const lidJid = `${p}@lid`;
+        const mem = await _getBotMemSync(lidJid).catch(() => null);
+        const realPhone = mem?.phone ? normalizePhone(mem.phone) : null;
+
+        if (realPhone && realPhone.length >= 7 && realPhone.length <= 13) {
+          // Real phone found — check if another client already owns it
+          const duplicate = await storage.getClientByPhone(realPhone);
+          if (duplicate && duplicate.id !== c.id) {
+            // Merge into the real-phone client: prefer the better name
+            const betterName = (c.name && c.name !== c.phone && c.name !== p)
+              ? c.name
+              : (duplicate.name && duplicate.name !== duplicate.phone ? duplicate.name : null);
+            if (betterName && (!duplicate.name || duplicate.name === duplicate.phone)) {
+              await storage.updateClient(duplicate.id, { name: betterName });
+            }
+            await storage.deleteClient(c.id);
+            cleaned++;
+          } else {
+            // Update this client's phone to the real number
+            const updates: Record<string, unknown> = { phone: realPhone };
+            // Also clear bogus name (name === LID number) if a real name is in memory
+            if ((c.name === c.phone || c.name === p) && mem?.clientName) {
+              updates.name = mem.clientName;
+            }
+            await storage.updateClient(c.id, updates as any);
+            fixed++;
+            updated++;
+          }
+        } else if ((c.totalVisits ?? 0) === 0 && Number(c.totalSpent ?? 0) === 0) {
+          // No real phone resolvable and no history — safe to delete
           await storage.deleteClient(c.id);
           cleaned++;
         }
+        // else: has history but no real phone yet → leave it, will self-heal once phone resolves
       }
-      if (cleaned > 0) console.log(`[sync-clients] Cleaned up ${cleaned} bogus @lid clients`);
+      if (cleaned > 0 || fixed > 0)
+        console.log(`[sync-clients] LID cleanup: ${fixed} phone(s) fixed, ${cleaned} duplicate(s) removed`);
 
       // 1. Sync from bot_client_memory (real WhatsApp contacts who chatted)
       for (const mem of memories) {
