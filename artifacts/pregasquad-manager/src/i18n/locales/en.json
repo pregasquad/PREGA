@@ -514,7 +514,11 @@
     "selectStaffFirst": "Please select a staff member first",
     "joinWaitlist": "Join Waitlist",
     "waitlistSuccess": "You've been added to the waitlist!",
-    "waitlistMessage": "We'll notify you when a slot becomes available."
+    "waitlistMessage": "We'll notify you when a slot becomes available.",
+    "slotBusy": "This time slot is already booked. Please choose another time.",
+    "slotBusyShort": "Slot taken",
+    "busy": "Busy",
+    "slotBusyWarning": "This time slot is already booked. Please choose an available time."
   },
   "waitlist": {
     "title": "Waitlist",

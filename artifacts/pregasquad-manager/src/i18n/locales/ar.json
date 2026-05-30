@@ -514,7 +514,11 @@
     "selectStaffFirst": "يرجى اختيار الموظف أولاً",
     "joinWaitlist": "انضم إلى قائمة الانتظار",
     "waitlistSuccess": "تمت إضافتك إلى قائمة الانتظار!",
-    "waitlistMessage": "سنبلغك عندما يتوفر rendez-vous."
+    "waitlistMessage": "سنبلغك عندما يتوفر rendez-vous.",
+    "slotBusy": "هذا الوقت محجوز بالفعل. الرجاء اختيار وقت آخر.",
+    "slotBusyShort": "الوقت محجوز",
+    "busy": "مشغول",
+    "slotBusyWarning": "هذا الوقت محجوز بالفعل. الرجاء اختيار وقت متاح."
   },
   "waitlist": {
     "title": "قائمة الانتظار",

@@ -514,7 +514,11 @@
     "selectStaffFirst": "Veuillez d'abord choisir un membre du personnel",
     "joinWaitlist": "Rejoindre la Liste d'Attente",
     "waitlistSuccess": "Vous avez été ajouté à la liste d'attente!",
-    "waitlistMessage": "Nous vous informerons dès qu'un créneau sera disponible."
+    "waitlistMessage": "Nous vous informerons dès qu'un créneau sera disponible.",
+    "slotBusy": "Ce créneau est déjà réservé. Veuillez choisir un autre horaire.",
+    "slotBusyShort": "Créneau occupé",
+    "busy": "Occupé",
+    "slotBusyWarning": "Ce créneau est déjà réservé. Veuillez choisir un autre horaire disponible."
   },
   "waitlist": {
     "title": "Liste d'Attente",
