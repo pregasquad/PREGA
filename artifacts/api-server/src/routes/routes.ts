@@ -3303,7 +3303,13 @@ export async function registerRoutes(
         if (!before && after) created++;
       }
 
-      res.json({ ok: true, created, updated, cleaned });
+      // Count clients that still have unresolvable LID phones after the cleanup pass
+      const remainingClients = await storage.getClients();
+      const needsManualFix = remainingClients.filter(
+        (c) => (c.phone || "").replace(/[^0-9]/g, "").length >= 14
+      ).length;
+
+      res.json({ ok: true, created, updated, cleaned, needsManualFix });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }

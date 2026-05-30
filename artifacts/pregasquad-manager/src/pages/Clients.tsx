@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit2, Trash2, User, Phone, Mail, Gift, Calendar as CalendarIcon, Star, Crown, Award, Zap, Clock, RefreshCw, CreditCard, Search, Check, MessageCircle } from "lucide-react";
+import { Plus, Edit2, Trash2, User, Phone, Mail, Gift, Calendar as CalendarIcon, Star, Crown, Award, Zap, Clock, RefreshCw, CreditCard, Search, Check, MessageCircle, AlertTriangle } from "lucide-react";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
 import { format, startOfToday } from "date-fns";
 import { ar, enUS, fr } from "date-fns/locale";
@@ -137,6 +137,13 @@ export default function Clients() {
 
   const [isSyncing, setIsSyncing] = useState(false);
 
+  // A phone is a WhatsApp LID (internal identifier, not a real phone number)
+  // when it has 14+ digits. Real Moroccan numbers are at most 12 digits (212XXXXXXXXX).
+  const isLidPhone = (phone: string | null | undefined) =>
+    (phone ?? "").replace(/[^0-9]/g, "").length >= 14;
+
+  const lidClients = clients.filter((c) => isLidPhone(c.phone));
+
   const handleWhatsAppSync = async () => {
     setIsSyncing(true);
     try {
@@ -145,13 +152,14 @@ export default function Clients() {
       if (!res.ok) throw new Error(data.error || "Sync failed");
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       const parts = [];
-      if (data.created > 0) parts.push(`${data.created} added`);
-      if (data.updated > 0) parts.push(`${data.updated} updated`);
-      if (data.cleaned > 0) parts.push(`${data.cleaned} bogus numbers removed`);
-      toast({
-        title: "WhatsApp Sync",
-        description: parts.length > 0 ? parts.join(", ") : "Already up to date",
-      });
+      if (data.created > 0) parts.push(`${data.created} ajouté(s)`);
+      if (data.updated > 0) parts.push(`${data.updated} mis à jour`);
+      if (data.cleaned > 0) parts.push(`${data.cleaned} supprimé(s)`);
+      const base = parts.length > 0 ? parts.join(", ") : "Déjà à jour";
+      const extra = (data.needsManualFix ?? 0) > 0
+        ? ` — ${data.needsManualFix} contact(s) avec numéro inconnu, corrigez manuellement`
+        : "";
+      toast({ title: "Sync WhatsApp", description: base + extra });
     } catch (err: any) {
       toast({ title: t("common.error", "Error"), description: err.message, variant: "destructive" });
     } finally {
@@ -587,6 +595,36 @@ export default function Clients() {
         </Card>
       </div>
 
+      {lidClients.length > 0 && (
+        <div className="flex items-start gap-3 rounded-lg border border-orange-300 bg-orange-50 dark:bg-orange-950/30 dark:border-orange-700 p-3">
+          <AlertTriangle className="w-5 h-5 text-orange-500 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-orange-800 dark:text-orange-300">
+              {lidClients.length} contact(s) avec numéro WhatsApp inconnu
+            </p>
+            <p className="text-xs text-orange-600 dark:text-orange-400 mt-0.5">
+              WhatsApp utilise des identifiants internes pour ces contacts. Cliquez sur ✏️ à côté du nom et entrez le vrai numéro de téléphone.
+            </p>
+            <div className="flex flex-wrap gap-1 mt-2">
+              {lidClients.slice(0, 8).map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => handleEdit(c)}
+                  className="text-xs bg-orange-200 dark:bg-orange-800 text-orange-900 dark:text-orange-100 rounded px-2 py-0.5 hover:bg-orange-300 dark:hover:bg-orange-700 transition-colors"
+                >
+                  ✏️ {c.name}
+                </button>
+              ))}
+              {lidClients.length > 8 && (
+                <span className="text-xs text-orange-600 dark:text-orange-400 self-center">
+                  +{lidClients.length - 8} autres
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -621,7 +659,13 @@ export default function Clients() {
                       <div className="min-w-0">
                         <p className="font-medium text-sm truncate">{client.name}</p>
                         {client.phone && (
-                          <p className="text-xs text-muted-foreground" dir="ltr">{client.phone}</p>
+                          isLidPhone(client.phone) ? (
+                            <p className="text-xs text-orange-500 flex items-center gap-1">
+                              <AlertTriangle className="w-3 h-3" /> رقم مجهول
+                            </p>
+                          ) : (
+                            <p className="text-xs text-muted-foreground" dir="ltr">{client.phone}</p>
+                          )
                         )}
                       </div>
                     </div>
@@ -713,7 +757,15 @@ export default function Clients() {
                       data-testid={`row-client-${client.id}`}
                     >
                       <TableCell className="font-medium">{client.name}</TableCell>
-                      <TableCell dir="ltr">{client.phone || "-"}</TableCell>
+                      <TableCell dir="ltr">
+                        {isLidPhone(client.phone) ? (
+                          <span className="flex items-center gap-1 text-orange-500 text-sm">
+                            <AlertTriangle className="w-3.5 h-3.5" /> رقم مجهول
+                          </span>
+                        ) : (
+                          client.phone || "-"
+                        )}
+                      </TableCell>
                       <TableCell dir="ltr">{client.email || "-"}</TableCell>
                       <TableCell>{client.totalVisits}</TableCell>
                       <TableCell>{client.loyaltyPoints}</TableCell>
