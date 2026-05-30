@@ -5420,23 +5420,46 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
       if ((botSettings as any).botEnabled === false) return;
 
       // ── @lid phone resolution (always — before filter AND before buffer) ──────
-      // For @lid JIDs the "phone" argument is a raw numeric LID, not a real phone.
-      // Resolve the real phone from bot_client_memory (saved on first @s.whatsapp.net
-      // contact) so it can be used for filtering AND for client auto-creation.
+      // The `phone` arg passed by Baileys is ALREADY the real phone when the
+      // contacts map resolved it (< 14 digits).  Fall back to bot_client_memory
+      // for older conversations that were saved before this fix.
       let lidResolvedPhone: string | null = null;
       if (remoteJid.endsWith("@lid")) {
         try {
-          const { getBotMemory: _getBotMem } = await import("../db");
+          const { getBotMemory: _getBotMem, saveBotMemory: _saveBotMem } = await import("../db");
+
+          // 1. Check if Baileys already gave us the real phone (contacts.upsert resolved it)
+          const phoneArgDigits = phone.replace(/\D/g, "");
+          const phoneArgIsReal = phoneArgDigits.length < 14; // LIDs are 14-15 digits
+
+          let resolvedPhone: string | null = phoneArgIsReal ? phone : null;
+
+          // 2. Fall back to whatever is stored in memory
           const memEntry = await _getBotMem(remoteJid);
-          if (memEntry?.phone) {
-            lidResolvedPhone = normalizeBotPhone(memEntry.phone);
-            console.log(`[Bot] @lid resolved phone from memory: ${lidResolvedPhone}`);
-            // Auto-create client record immediately — always, regardless of filter mode
-            ensureWhatsAppClient(lidResolvedPhone, pushName ?? memEntry.clientName, (event, data) => io.emit(event, data)).catch(() => {});
-          } else {
-            console.log(`[Bot] @lid JID — no phone in memory yet, lidRaw=${phone}`);
+          if (!resolvedPhone && memEntry?.phone) {
+            resolvedPhone = memEntry.phone;
           }
-        } catch { /* ignore */ }
+
+          if (resolvedPhone) {
+            lidResolvedPhone = normalizeBotPhone(resolvedPhone);
+            console.log(`[Bot] @lid resolved: ${resolvedPhone} → ${lidResolvedPhone} (source: ${phoneArgIsReal ? "Baileys contacts map" : "bot_client_memory"})`);
+
+            // Persist phone to memory immediately so future sync and filter checks can use it
+            if (phoneArgIsReal && !memEntry?.phone) {
+              await _saveBotMem(memEntry
+                ? { ...memEntry, phone }
+                : { jid: remoteJid, phone, clientName: pushName || null, language: "fr", preferredServices: [], personalityNotes: null, convHistory: [], visitCount: 0, botBlocked: false }
+              ).catch(() => {});
+            }
+
+            // Auto-create client record immediately — always, regardless of filter mode
+            ensureWhatsAppClient(lidResolvedPhone, pushName ?? memEntry?.clientName, (event, data) => io.emit(event, data)).catch(() => {});
+          } else {
+            console.log(`[Bot] @lid JID — phone not resolved yet (lidRaw=${phone}), client will be created once phone is known`);
+          }
+        } catch (e: any) {
+          console.warn(`[Bot] @lid resolution error: ${e.message}`);
+        }
       }
 
       // ── Phone number filter (allowlist / blocklist) ────────────────────────
@@ -6014,9 +6037,12 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
             // to the client's preferred services, polluting their profile.
             const mentionedSvcs = extractMentionedServices(mergedText, serviceList);
 
-            // Store the real phone in memory so @lid JIDs can be resolved for filtering later
-            // For @s.whatsapp.net JIDs the phone is the real number; for @lid it's a LID (skip)
-            const realPhone = remoteJid.endsWith("@s.whatsapp.net") ? normalizeBotPhone(phone) : (mem.phone || null);
+            // Store the real phone in memory for future sync/filter lookups.
+            // For @s.whatsapp.net: phone arg IS the real phone.
+            // For @lid: use phone arg if Baileys resolved it (< 14 digits), else fall back to mem.phone.
+            const realPhone = remoteJid.endsWith("@s.whatsapp.net")
+              ? normalizeBotPhone(phone)
+              : (phone.replace(/\D/g, "").length < 14 ? normalizeBotPhone(phone) : (mem.phone || null));
 
             const updatedMem: BotClientMemory = mergeHistory(
               {

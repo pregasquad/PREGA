@@ -396,11 +396,23 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
         for (const { lid, phone } of newPairs) {
           const lidJid = `${lid}@lid`;
           try {
-            // 1. Persist phone into bot_client_memory for this LID JID (if entry exists)
+            // 1. Persist phone into bot_client_memory for this LID JID.
+            //    Create a minimal row if none exists — that is the deadlock breaker:
+            //    previously we only updated existing rows, so the first message from
+            //    a LID contact (which hasn't sent anything before) was never saved,
+            //    and the sync loop's `if (!mem.phone) continue` always skipped it.
             const mem = await getBotMemory(lidJid).catch(() => null);
-            if (mem && !mem.phone) {
+            if (!mem) {
+              await saveBotMemory({
+                jid: lidJid, phone,
+                clientName: null, language: "fr",
+                preferredServices: [], personalityNotes: null,
+                convHistory: [], visitCount: 0, botBlocked: false,
+              });
+              log(`contacts.upsert: created new bot_client_memory row for ${lidJid} with phone=${phone}`);
+            } else if (!mem.phone) {
               await saveBotMemory({ ...mem, phone });
-              log(`contacts.upsert: saved phone ${phone} → bot_client_memory[${lidJid}]`);
+              log(`contacts.upsert: updated phone ${phone} → bot_client_memory[${lidJid}]`);
             }
 
             // 2. Fix any client whose phone is the LID digits (14+ digit number)
