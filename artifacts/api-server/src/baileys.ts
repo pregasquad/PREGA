@@ -349,34 +349,96 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
 
   sock.ev.on("creds.update", saveCreds);
 
-  // ── Contact sync — builds LID → real-phone map ─────────────────────────────
-  // WhatsApp fires this on connect with the full contact list.  Some contacts
-  // have both `id` (real JID, @s.whatsapp.net) and `lid` (@lid) fields — we
-  // capture that link so @lid messages can be resolved to a real phone number.
+  // ── Contact sync — builds LID → real-phone map AND persists to DB ──────────
+  // WhatsApp fires contacts.upsert on every connect with the full contact list.
+  // Entries for newer accounts have both:
+  //   id  = "212600000000@s.whatsapp.net"  (real phone JID)
+  //   lid = "85715031466043@lid"           (internal WhatsApp LID)
+  // We capture the mapping in memory AND immediately persist it to
+  // bot_client_memory + clients so the sync endpoint never needs it from memory.
   sock.ev.on("contacts.upsert", (contacts: any[]) => {
-    let mapped = 0;
+    // Collect all new LID→phone pairs first (sync loop — no async)
+    const newPairs: Array<{ lid: string; phone: string }> = [];
+
     for (const c of contacts) {
-      const rawId: string = c.id ?? "";
+      const rawId: string  = c.id  ?? "";
       const rawLid: string = c.lid ?? "";
-      if (rawId.endsWith("@s.whatsapp.net") && rawLid.includes("@lid")) {
-        const phone = rawId.replace("@s.whatsapp.net", "").replace(/[^0-9]/g, "");
-        const lid   = rawLid.replace("@lid", "").replace(/[^0-9]/g, "");
-        if (phone && lid && phone.length <= 15 && lid.length >= 10) {
-          lidToPhoneMap.set(lid, phone);
-          mapped++;
-        }
+
+      let phone = "";
+      let lid   = "";
+
+      if (rawId.endsWith("@s.whatsapp.net") && rawLid.endsWith("@lid")) {
+        phone = rawId.replace("@s.whatsapp.net", "").replace(/[^0-9]/g, "");
+        lid   = rawLid.replace("@lid", "").replace(/[^0-9]/g, "");
+      } else if (rawId.endsWith("@lid") && rawLid.endsWith("@s.whatsapp.net")) {
+        // Some Baileys builds swap the fields
+        phone = rawLid.replace("@s.whatsapp.net", "").replace(/[^0-9]/g, "");
+        lid   = rawId.replace("@lid", "").replace(/[^0-9]/g, "");
       }
-      // Some Baileys versions put the real JID in `lid` and the LID in `id` — handle both
-      if (rawId.endsWith("@lid") && rawLid.endsWith("@s.whatsapp.net")) {
-        const phone = rawLid.replace("@s.whatsapp.net", "").replace(/[^0-9]/g, "");
-        const lid   = rawId.replace("@lid", "").replace(/[^0-9]/g, "");
-        if (phone && lid && phone.length <= 15 && lid.length >= 10) {
+
+      if (phone && lid && phone.length >= 7 && phone.length <= 15 && lid.length >= 10) {
+        if (!lidToPhoneMap.has(lid)) {
           lidToPhoneMap.set(lid, phone);
-          mapped++;
+          newPairs.push({ lid, phone });
         }
       }
     }
-    if (mapped > 0) log(`contacts.upsert: mapped ${mapped} LID→phone pair(s), total=${lidToPhoneMap.size}`);
+
+    if (newPairs.length === 0) return;
+    log(`contacts.upsert: ${newPairs.length} new LID→phone pair(s), total=${lidToPhoneMap.size} — persisting to DB…`);
+
+    // Persist asynchronously so we don't block the event loop
+    (async () => {
+      try {
+        const { getBotMemory, saveBotMemory } = await import("./db.js");
+        const { storage: st } = await import("./storage.js");
+
+        for (const { lid, phone } of newPairs) {
+          const lidJid = `${lid}@lid`;
+          try {
+            // 1. Persist phone into bot_client_memory for this LID JID (if entry exists)
+            const mem = await getBotMemory(lidJid).catch(() => null);
+            if (mem && !mem.phone) {
+              await saveBotMemory({ ...mem, phone });
+              log(`contacts.upsert: saved phone ${phone} → bot_client_memory[${lidJid}]`);
+            }
+
+            // 2. Fix any client whose phone is the LID digits (14+ digit number)
+            const allClients = await st.getClients();
+            for (const c of allClients) {
+              const cp = (c.phone ?? "").replace(/[^0-9]/g, "");
+              if (cp !== lid) continue;
+
+              // Check if a client with the real phone already exists
+              const existing = await st.getClientByPhone(phone);
+              if (existing && existing.id !== c.id) {
+                // Merge: keep the better name, delete the LID ghost
+                const betterName = (c.name && c.name !== c.phone && c.name !== lid)
+                  ? c.name
+                  : (existing.name && existing.name !== existing.phone ? existing.name : null);
+                if (betterName && (!existing.name || existing.name === existing.phone)) {
+                  await st.updateClient(existing.id, { name: betterName } as any);
+                }
+                await st.deleteClient(c.id);
+                log(`contacts.upsert: merged LID client "${c.name}" (${lid}) → real client (${phone})`);
+              } else {
+                // Update this client's phone to the real number
+                const updates: Record<string, string> = { phone };
+                if ((c.name === c.phone || c.name === lid) && mem?.clientName) {
+                  updates.name = mem.clientName;
+                }
+                await st.updateClient(c.id, updates as any);
+                log(`contacts.upsert: fixed client "${c.name}" phone ${lid} → ${phone}`);
+              }
+            }
+          } catch (pairErr: any) {
+            log(`contacts.upsert: error processing LID ${lid}: ${pairErr.message}`);
+          }
+        }
+      } catch (err: any) {
+        log(`contacts.upsert: DB persist error: ${err.message}`);
+      }
+    })();
   });
 
   // Pairing code mode — request code after WS handshake with WhatsApp servers
