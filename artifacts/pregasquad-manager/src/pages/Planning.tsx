@@ -2037,9 +2037,10 @@ export default function Planning() {
       const dx = Math.abs(me.clientX - startX);
       const dy = Math.abs(me.clientY - startY);
       const dist = Math.hypot(dx, dy);
-      // Cancel early if clearly a vertical scroll (dy dominates and > 8px),
-      // or any direction > 15px — mark as scroll so onClick won't fire.
-      if ((dy > dx && dy > 8) || dist > 15) {
+      // Cancel early if clearly a vertical scroll (dy dominates and > 12px),
+      // or any direction > 30px — relaxed threshold so hand tremor during hold
+      // doesn't cancel the gesture before 500 ms elapses.
+      if ((dy > dx && dy > 12) || dist > 30) {
         cancelled = true;
         scrollJustCancelled.current = true;
         cleanup();
@@ -2244,7 +2245,7 @@ export default function Planning() {
         lastPX = t.clientX; lastPY = t.clientY;
         const dx = Math.abs(t.clientX - startX);
         const dy = Math.abs(t.clientY - startY);
-        if ((dy > dx && dy > 8) || Math.hypot(dx, dy) > 15) {
+        if ((dy > dx && dy > 12) || Math.hypot(dx, dy) > 30) {
           cancelled = true; scrollJustCancelled.current = true; cleanup();
         }
       };
