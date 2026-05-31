@@ -515,6 +515,13 @@ export default function Planning() {
   const { data: clients = [] } = useQuery<Array<{id: number, name: string, phone: string | null, loyaltyPoints: number, usePoints: boolean, loyaltyEnrolled: boolean, totalSpent: number, giftCardBalance: number, useGiftCardBalance: boolean}>>({
     queryKey: ["/api/clients"],
   });
+
+  // O(1) client lookup by name — rebuilt only when clients list changes
+  const clientsByName = useMemo(() => {
+    const m = new Map<string, typeof clients[number]>();
+    for (const c of clients) m.set(c.name, c);
+    return m;
+  }, [clients]);
   
   const slotHeight = localSlotHeight ?? (businessSettings?.planningSlotHeight ?? 44);
 
@@ -658,14 +665,17 @@ export default function Planning() {
   }, [walletStaffId, salaryData, businessSettings]);
 
   const currentUserName = typeof window !== 'undefined' ? sessionStorage.getItem("current_user") : null;
-  const currentUser = adminRoles.find(role => role.name === currentUserName);
-  const hasPermission = (permission: string) => {
+  const currentUser = useMemo(
+    () => adminRoles.find(role => role.name === currentUserName),
+    [adminRoles, currentUserName]
+  );
+  const hasPermission = useCallback((permission: string) => {
     if (!currentUserName || currentUserName === "Setup") return true;
     if (!currentUser) return true;
     if (currentUser.role === "owner") return true;
-    if (currentUser.permissions.length === 0) return true;
+    if ((currentUser.permissions || []).length === 0) return true;
     return (currentUser.permissions || []).includes(permission);
-  };
+  }, [currentUserName, currentUser]);
   
   // Re-adjust date once business settings are loaded (in case initial load used wrong cutoff)
   const settingsLoadedRef = useRef(false);
@@ -1534,7 +1544,7 @@ export default function Planning() {
     
     if (appliedLoyaltyPoints) {
       const clientName = form.getValues("client");
-      const client = clientName ? clients.find(c => c.name === clientName) : null;
+      const client = clientName ? (clientsByName.get(clientName) ?? null) : null;
       if (client && client.loyaltyPoints > 0 && businessSettings?.loyaltyEnabled) {
         const pointsValue = businessSettings?.loyaltyPointsValue || 0.1;
         const maxDiscount = client.loyaltyPoints * pointsValue;
@@ -2098,6 +2108,19 @@ export default function Planning() {
     return favoriteIds.map(id => services.find(s => s.id === id)).filter(Boolean);
   }, [services, favoriteIds]);
 
+  // Memoized dialog summary — avoids two .reduce() calls in JSX on every render
+  const dialogSummaryDuration = useMemo(
+    () => selectedServices.reduce((sum, s) => sum + s.duration, 0),
+    [selectedServices]
+  );
+  const dialogSummaryPrice = useMemo(
+    () => selectedServices.reduce((sum, s) => {
+      const inputVal = priceInputs[s.id];
+      return sum + (inputVal !== undefined ? (parseFloat(inputVal.replace(',', '.')) || 0) : s.price);
+    }, 0),
+    [selectedServices, priceInputs]
+  );
+
   const groupedServices = useMemo(() => {
     const groups: Record<string, typeof services> = {};
     const list = serviceSearch.trim() 
@@ -2128,27 +2151,42 @@ export default function Planning() {
     });
   };
 
-  const getBooking = (staffId: number, staffName: string, hour: string) => {
-    return appointments.find(a => (a.staffId === staffId || (!a.staffId && a.staff === staffName)) && a.startTime === hour);
-  };
+  // O(1) appointment lookup map keyed by "staffId_hour" (preferred) or "name_staffName_hour"
+  const appointmentMap = useMemo(() => {
+    const map = new Map<string, any>();
+    for (const a of appointments) {
+      if (a.staffId) map.set(`${a.staffId}_${a.startTime}`, a);
+      if (a.staff)   map.set(`name_${a.staff}_${a.startTime}`, a);
+    }
+    return map;
+  }, [appointments]);
 
-  const getBookingSpan = (app: any) => {
-    return Math.ceil(app.duration / 15);
-  };
+  const getBooking = useCallback((staffId: number, staffName: string, hour: string) => {
+    return appointmentMap.get(`${staffId}_${hour}`) ?? appointmentMap.get(`name_${staffName}_${hour}`);
+  }, [appointmentMap]);
 
-  const isSlotCovered = (staffId: number, staffName: string, hour: string) => {
-    const hourIndex = hours.indexOf(hour);
-    for (let i = 0; i < hourIndex; i++) {
-      const prevBooking = appointments.find(a => (a.staffId === staffId || (!a.staffId && a.staff === staffName)) && a.startTime === hours[i]);
-      if (prevBooking) {
-        const span = getBookingSpan(prevBooking);
-        if (i + span > hourIndex) {
-          return true;
+  const getBookingSpan = (app: any) => Math.ceil(app.duration / 15);
+
+  // O(1) covered-slot lookup set keyed by "staffId_hour"
+  const coveredSlotsSet = useMemo(() => {
+    const covered = new Set<string>();
+    for (const s of staffList) {
+      for (let i = 0; i < hours.length; i++) {
+        const a = appointmentMap.get(`${s.id}_${hours[i]}`) ?? appointmentMap.get(`name_${s.name}_${hours[i]}`);
+        if (a) {
+          const span = Math.ceil((a.duration || 30) / 15);
+          for (let j = i + 1; j < i + span && j < hours.length; j++) {
+            covered.add(`${s.id}_${hours[j]}`);
+          }
         }
       }
     }
-    return false;
-  };
+    return covered;
+  }, [appointmentMap, staffList, hours]);
+
+  const isSlotCovered = useCallback((staffId: number, _staffName: string, hour: string) => {
+    return coveredSlotsSet.has(`${staffId}_${hour}`);
+  }, [coveredSlotsSet]);
 
   // Detect scheduling conflicts: appointments for the same staff whose time ranges overlap
   const conflictingIds = useMemo(() => {
@@ -3305,7 +3343,7 @@ export default function Planning() {
                 {/* Loyalty & Gift Card toggles - show when client has available points/balance */}
                 {(() => {
                   const clientName = form.getValues("client");
-                  const client = clientName ? clients.find(c => c.name === clientName) : null;
+                  const client = clientName ? (clientsByName.get(clientName) ?? null) : null;
                   if (!client) return null;
                   const hasPoints = client.loyaltyEnrolled && client.loyaltyPoints > 0 && businessSettings?.loyaltyEnabled;
                   const hasGiftCard = Number(client.giftCardBalance) > 0;
@@ -3496,13 +3534,9 @@ export default function Planning() {
                   
                   {selectedServices.length > 0 && (
                     <div className="flex items-center justify-between gap-2 px-2 py-1 bg-primary/5 dark:bg-primary/10 rounded-lg text-[11px]">
-                      <span className="text-muted-foreground">{selectedServices.length} {t("common.services")} / {selectedServices.reduce((sum, s) => sum + s.duration, 0)}min</span>
+                      <span className="text-muted-foreground">{selectedServices.length} {t("common.services")} / {dialogSummaryDuration}min</span>
                       <span className="font-bold gradient-text">
-                        {selectedServices.reduce((sum, s) => {
-                          const inputVal = priceInputs[s.id];
-                          const price = inputVal !== undefined ? (parseFloat(inputVal.replace(',', '.')) || 0) : s.price;
-                          return sum + price;
-                        }, 0)} DH
+                        {dialogSummaryPrice} DH
                       </span>
                     </div>
                   )}
