@@ -401,6 +401,7 @@ export default function Planning() {
   } | null>(null);
   const dragRafRef = useRef<number | null>(null);
   const dragJustCompleted = useRef(false);
+  const scrollJustCancelled = useRef(false);
   const resizeStartY = useRef<number>(0);
   const resizeStartSpan = useRef<number>(1);
   const [resizeCurrentSpan, setResizeCurrentSpan] = useState<number>(1);
@@ -1938,6 +1939,8 @@ export default function Planning() {
     let lastPX = e.clientX;
     let lastPY = e.clientY;
     let edgeScrollRafId: number | null = null;
+    let holdRingTimer: ReturnType<typeof setTimeout> | null = null;
+    scrollJustCancelled.current = false;
 
     // ── Ghost position helper (no React re-render) ──
     const moveGhost = (px: number, py: number) => {
@@ -1974,6 +1977,7 @@ export default function Planning() {
       window.removeEventListener('pointercancel', onCancel);
       boardRef.current?.removeEventListener('touchmove', blockTouchScroll);
       if (holdTimerRef !== null) { clearTimeout(holdTimerRef); }
+      if (holdRingTimer !== null) { clearTimeout(holdRingTimer); holdRingTimer = null; }
       if (edgeScrollRafId !== null) cancelAnimationFrame(edgeScrollRafId);
       if (dragRafRef.current) { cancelAnimationFrame(dragRafRef.current); dragRafRef.current = null; }
       try { cardEl.releasePointerCapture(pointerId); } catch {}
@@ -2030,10 +2034,14 @@ export default function Planning() {
     const onMoveHold = (me: PointerEvent) => {
       lastPX = me.clientX;
       lastPY = me.clientY;
-      // Any movement > 15 px cancels hold → user wants to scroll
-      const dist = Math.hypot(me.clientX - startX, me.clientY - startY);
-      if (dist > 15) {
+      const dx = Math.abs(me.clientX - startX);
+      const dy = Math.abs(me.clientY - startY);
+      const dist = Math.hypot(dx, dy);
+      // Cancel early if clearly a vertical scroll (dy dominates and > 8px),
+      // or any direction > 15px — mark as scroll so onClick won't fire.
+      if ((dy > dx && dy > 8) || dist > 15) {
         cancelled = true;
+        scrollJustCancelled.current = true;
         cleanup();
       }
     };
@@ -2099,8 +2107,11 @@ export default function Planning() {
       }
     };
 
-    // Show the hold ring on the card immediately
-    setHoldingCardId(booking.id);
+    // Show the hold ring only after 150 ms — avoids a flash on quick scrolls
+    holdRingTimer = setTimeout(() => {
+      holdRingTimer = null;
+      if (!cancelled) setHoldingCardId(booking.id);
+    }, 150);
 
     // Start 500 ms hold timer — only activates drag if finger/cursor stays still
     const holdTimerRef = setTimeout(() => {
@@ -2883,10 +2894,10 @@ export default function Planning() {
                             ? `1.5px dashed ${s.color}cc`
                             : booking.paid ? 'none' : `1.5px solid ${s.color}bb`,
                           transition: 'opacity 0.15s, transform 0.15s, filter 0.15s, scale 0.15s',
-                          touchAction: canEdit && !isResizing ? 'none' : 'auto',
+                          touchAction: (canEdit && !isResizing && !!draggedAppointment) ? 'none' : 'pan-y',
                         }}
                         onPointerDown={(e) => { if (canEdit && !isResizing) handleCardPointerDown(e, booking, s.color); }}
-                        onClick={(e) => { if (!isResizing && !dragJustCompleted.current) handleAppointmentClick(e, booking); dragJustCompleted.current = false; }}
+                        onClick={(e) => { if (!isResizing && !dragJustCompleted.current && !scrollJustCancelled.current) handleAppointmentClick(e, booking); dragJustCompleted.current = false; scrollJustCancelled.current = false; }}
                       >
                         <div className="water-shimmer absolute inset-0 opacity-30" />
                         {/* Hold-to-drag ring — animates in while user holds */}
