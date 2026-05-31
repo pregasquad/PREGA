@@ -1182,24 +1182,17 @@ export default function Planning() {
     }
     localStorage.setItem('mostUsedServices', JSON.stringify(mostUsed));
 
-    // Handle stock validation for multi-service or single service
+    // Build product needs list synchronously (no awaits — stock check runs in background after save)
     const servicesToCheck = selectedServices.length > 0 
       ? selectedServices.map(s => services.find(svc => svc.name === s.name)).filter(Boolean)
       : [services.find(s => s.name === data.service)].filter(Boolean);
-    
-    // First pass: check ALL stock availability before decrementing any
-    const stockDecrements: Array<{productId: number, newQuantity: number, productName: string}> = [];
-    const productQuantities: Record<number, {current: number, name: string}> = {};
 
-    // Build a unified list of {productId, quantity} from all services to check
     const allProductNeeds: Array<{productId: number, quantity: number}> = [];
     for (const selectedService of servicesToCheck) {
-      // Prefer linkedProductIds (with quantities), fall back to legacy linkedProductId
       const rawIds = (selectedService as any)?.linkedProductIds;
       const linkedItems: Array<{productId: number, quantity: number}> = Array.isArray(rawIds) && rawIds.length > 0
         ? rawIds.map((item: any) => typeof item === "number" ? { productId: item, quantity: 1 } : { productId: item.productId, quantity: item.quantity ?? 1 })
         : ((selectedService as any)?.linkedProductId ? [{ productId: (selectedService as any).linkedProductId, quantity: 1 }] : []);
-
       for (const { productId, quantity } of linkedItems) {
         const existing = allProductNeeds.find(n => n.productId === productId);
         if (existing) existing.quantity += quantity;
@@ -1207,40 +1200,8 @@ export default function Planning() {
       }
     }
 
-    for (const { productId, quantity } of allProductNeeds) {
-      try {
-        if (!productQuantities[productId]) {
-          const res = await apiRequest("GET", `/api/products/${productId}`);
-          const product = await res.json();
-          productQuantities[productId] = { current: product.quantity, name: product.name };
-        }
-        const productInfo = productQuantities[productId];
-        const newQuantity = productInfo.current - quantity;
-        if (newQuantity < 0) {
-          alert(`⚠️ المخزون غير كافٍ لـ ${productInfo.name} (متوفر: ${productInfo.current}، مطلوب: ${quantity})`);
-          return;
-        }
-        productQuantities[productId].current = newQuantity;
-        stockDecrements.push({ productId, newQuantity, productName: productInfo.name });
-      } catch (e) {
-        console.error("Stock check failed:", e);
-      }
-    }
-    
-    // Second pass: all checks passed, now apply all decrements
-    for (const decrement of stockDecrements) {
-      try {
-        await apiRequest("PATCH", `/api/products/${decrement.productId}/quantity`, {
-          quantity: decrement.newQuantity
-        });
-      } catch (e) {
-        console.error("Stock decrement failed:", e);
-      }
-    }
-    queryClient.invalidateQueries({ queryKey: ["/api/products"] });
-
-    // Find the client ID from the clients list
-    const selectedClient = clients.find(c => c.name === data.client);
+    // Find the client ID from the clients list — O(1) map lookup
+    const selectedClient = clientsByName.get(data.client ?? "") ?? null;
     const clientId = selectedClient?.id || (data as any).clientId || null;
 
     // Read prices from React state (priceInputs tracks individual service prices)
@@ -1465,8 +1426,20 @@ export default function Planning() {
       updateMutation.mutate({ id: editingAppointment.id, ...submitData }, {
         onSuccess: async () => { await performDeductions(); }
       });
+      setSelectedServices([]);
+      setPriceInputs({});
+      setSelectedPackage(null);
+      setAppliedLoyaltyPoints(null);
+      setAppliedGiftCardBalance(null);
+      setManualTotalOverride(false);
+      setEditingAppointment(null);
+      setTotalInputValue("0");
+      setIsDialogOpen(false);
     } else {
-      const currentUser = sessionStorage.getItem("current_user") || "Unknown";
+      // ─── OPTIMISTIC CREATE ───────────────────────────────────────────────
+      // Capture everything needed for post-save work BEFORE resetting state
+      const capturedProductNeeds = [...allProductNeeds];
+      const submittingUser = sessionStorage.getItem("current_user") || "Unknown";
       const printData = {
         businessName: salonSettings?.businessName || "PREGASQUAD SALON",
         currency: salonSettings?.currencySymbol || "DH",
@@ -1479,53 +1452,101 @@ export default function Planning() {
         duration: submitData.duration || 0,
         total: finalTotal,
       };
-      createMutation.mutate({ ...submitData, createdBy: currentUser }, {
+
+      // Close dialog and reset state immediately — card appears via onMutate below
+      setSelectedServices([]);
+      setPriceInputs({});
+      setSelectedPackage(null);
+      setAppliedLoyaltyPoints(null);
+      setAppliedGiftCardBalance(null);
+      setManualTotalOverride(false);
+      setEditingAppointment(null);
+      setTotalInputValue("0");
+      setIsDialogOpen(false);
+      playSuccessSound();
+
+      createMutation.mutate({ ...submitData, createdBy: submittingUser }, {
         onSuccess: async (result: any) => {
+          // Background stock check + decrement (appointment card is already visible)
+          if (capturedProductNeeds.length > 0) {
+            const productQuantities: Record<number, {current: number, name: string}> = {};
+            let stockFailed = false;
+
+            for (const { productId, quantity } of capturedProductNeeds) {
+              try {
+                if (!productQuantities[productId]) {
+                  const res = await apiRequest("GET", `/api/products/${productId}`);
+                  const product = await res.json();
+                  productQuantities[productId] = { current: product.quantity, name: product.name };
+                }
+                const info = productQuantities[productId];
+                const newQty = info.current - quantity;
+                if (newQty < 0) {
+                  playErrorSound();
+                  toast({
+                    title: `⚠️ مخزون غير كافٍ لـ ${info.name}`,
+                    description: `متوفر: ${info.current}، مطلوب: ${quantity}`,
+                    variant: "destructive",
+                  });
+                  // Roll back: delete the appointment we just created
+                  if (result?.id && !(result as any)._offline) {
+                    try { await apiRequest("DELETE", `/api/appointments/${result.id}`); } catch {}
+                    queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+                  }
+                  stockFailed = true;
+                  break;
+                }
+                productQuantities[productId].current = newQty;
+              } catch (e) {
+                console.error("Stock check failed:", e);
+              }
+            }
+
+            if (!stockFailed) {
+              for (const { productId } of capturedProductNeeds) {
+                try {
+                  await apiRequest("PATCH", `/api/products/${productId}/quantity`, {
+                    quantity: productQuantities[productId].current,
+                  });
+                } catch (e) {
+                  console.error("Stock decrement failed:", e);
+                }
+              }
+              queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+            }
+
+            if (stockFailed) return;
+          }
+
+          // Loyalty points earned (for receipt)
           let loyaltyPointsEarned = 0;
           let loyaltyPointsBalance = 0;
           try {
-            const clientMatch = clients.find(c => 
-              (submitData.client || data.client || "").includes(c.name)
-            );
-            if (clientMatch && clientMatch.loyaltyEnrolled) {
-              const pointsPerDh = businessSettings?.loyaltyPointsPerDh ?? 1;
-              loyaltyPointsEarned = Math.floor(finalTotal * pointsPerDh);
+            const clientStr = submitData.client || data.client || "";
+            const clientMatch = clients.find(c => clientStr.includes(c.name));
+            if (clientMatch?.loyaltyEnrolled) {
+              loyaltyPointsEarned = Math.floor(finalTotal * (businessSettings?.loyaltyPointsPerDh ?? 1));
               const res = await fetch(`/api/clients/${clientMatch.id}`, {
                 headers: { "x-user-pin": sessionStorage.getItem("user_pin") || "" },
               });
-              if (res.ok) {
-                const updatedClient = await res.json();
-                loyaltyPointsBalance = updatedClient.loyaltyPoints ?? 0;
-              }
+              if (res.ok) loyaltyPointsBalance = (await res.json()).loyaltyPoints ?? 0;
             }
           } catch (e) {
             console.error("Failed to fetch loyalty points:", e);
           }
+
           if (submitData.paid) {
-            autoPrint({ 
-              ...printData, 
+            autoPrint({
+              ...printData,
               appointmentId: result?.id,
               loyaltyPointsEarned: loyaltyPointsEarned > 0 ? loyaltyPointsEarned : undefined,
               loyaltyPointsBalance: loyaltyPointsBalance > 0 ? loyaltyPointsBalance : undefined,
-            }).catch((err) => {
-              console.error("[print-relay] autoPrint failed:", err);
-            });
+            }).catch(err => console.error("[print-relay] autoPrint failed:", err));
           }
           await performDeductions();
         },
       });
-      playSuccessSound();
     }
-
-    setSelectedServices([]);
-    setPriceInputs({});
-    setSelectedPackage(null);
-    setAppliedLoyaltyPoints(null);
-    setAppliedGiftCardBalance(null);
-    setManualTotalOverride(false);
-    setEditingAppointment(null);
-    setTotalInputValue("0");
-    setIsDialogOpen(false);
   };
 
   const computeBaseTotal = (svcList?: typeof selectedServices, prices?: Record<string, string>, pkg?: typeof selectedPackage) => {
