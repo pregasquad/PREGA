@@ -1,0 +1,57 @@
+FROM node:24-slim AS base
+
+# Python + build tools needed for better-sqlite3 native compilation
+RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
+
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable && corepack prepare pnpm@10.26.1 --activate
+
+WORKDIR /app
+
+# Copy workspace manifests and shared libs first (for better layer caching)
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json .npmrc ./
+COPY lib/ lib/
+COPY artifacts/api-server/ artifacts/api-server/
+COPY artifacts/pregasquad-manager/ artifacts/pregasquad-manager/
+
+ENV npm_config_user_agent="pnpm/10.26.1 node/v24.0.0 linux x64"
+
+# Install all deps for API server and frontend
+RUN --mount=type=cache,id=pnpm-api,target=/pnpm/store \
+    pnpm install --frozen-lockfile \
+      --filter @workspace/api-server... \
+      --filter @workspace/pregasquad-manager...
+
+# Build the React frontend first
+RUN pnpm --filter @workspace/pregasquad-manager run build
+
+# Build the API server (esbuild bundle)
+RUN pnpm --filter @workspace/api-server run build
+
+# ── Runner ────────────────────────────────────────────────────────────────────
+FROM node:24-slim AS runner
+ENV NODE_ENV=production
+WORKDIR /app
+
+# Copy built API server bundle
+COPY --from=base /app/artifacts/api-server/dist ./artifacts/api-server/dist
+
+# Copy built frontend into the location serveStatic() expects:
+# __dirname = /app/artifacts/api-server/dist → looks for ./public
+COPY --from=base /app/artifacts/pregasquad-manager/dist/public \
+                 ./artifacts/api-server/dist/public
+
+# Copy node_modules for packages externalized from the bundle
+# (better-sqlite3, @whiskeysockets/baileys, mysql2, etc.)
+COPY --from=base /app/node_modules ./node_modules
+COPY --from=base /app/artifacts/api-server/node_modules \
+                 ./artifacts/api-server/node_modules
+
+# Uploads directory for local file storage
+RUN mkdir -p uploads
+
+EXPOSE 8080
+ENV PORT=8080
+
+CMD ["node", "--enable-source-maps", "artifacts/api-server/dist/index.js"]

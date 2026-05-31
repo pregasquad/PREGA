@@ -6,7 +6,7 @@ services:
     git:
       branch: main
     docker:
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.api
     instance_type: nano
     regions:
       - was
@@ -17,10 +17,10 @@ services:
       - path: /
         port: 8080
     health_checks:
-      - path: /api/healthz
+      - path: /health
         port: 8080
         protocol: http
-        initial_delay_seconds: 10
+        initial_delay_seconds: 15
         period_seconds: 30
         success_threshold: 1
         failure_threshold: 3
@@ -32,35 +32,5 @@ services:
         value: production
       - key: DATABASE_URL
         secret: DATABASE_URL
-
-  - name: prega
-    type: web
-    git:
-      branch: main
-    docker:
-      dockerfile: Dockerfile.manager
-    instance_type: nano
-    regions:
-      - was
-    ports:
-      - port: 8080
-        protocol: http
-    routes:
-      - path: /
-        port: 8080
-    health_checks:
-      - path: /
-        port: 8080
-        protocol: http
-        initial_delay_seconds: 5
-        period_seconds: 30
-        success_threshold: 1
-        failure_threshold: 3
-        timeout_seconds: 5
-    env:
-      - key: PORT
-        value: "8080"
-      - key: NODE_ENV
-        value: production
-      - key: API_URL
-        secret: API_URL
+      - key: SESSION_SECRET
+        secret: SESSION_SECRET
