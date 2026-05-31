@@ -7,26 +7,23 @@ WORKDIR /app
 
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json .npmrc ./
 COPY lib/ lib/
-COPY artifacts/api-server/ artifacts/api-server/
+COPY artifacts/pregasquad-manager/ artifacts/pregasquad-manager/
 
 ENV npm_config_user_agent="pnpm/10.26.1 node/v24.0.0 linux x64"
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile --filter @workspace/api-server...
+    pnpm install --frozen-lockfile --filter @workspace/pregasquad-manager...
 
-RUN pnpm --filter @workspace/api-server run build
+RUN cd artifacts/pregasquad-manager && PORT=8000 BASE_PATH=/ pnpm run build
 
 FROM node:24-slim AS runner
 ENV NODE_ENV=production
 WORKDIR /app
 
-COPY --from=base /app/node_modules ./node_modules
-COPY --from=base /app/lib ./lib
-COPY --from=base /app/artifacts/api-server/dist ./artifacts/api-server/dist
-COPY --from=base /app/artifacts/api-server/node_modules ./artifacts/api-server/node_modules
-COPY --from=base /app/artifacts/api-server/package.json ./artifacts/api-server/package.json
+COPY --from=base /app/artifacts/pregasquad-manager/dist ./artifacts/pregasquad-manager/dist
+COPY --from=base /app/artifacts/pregasquad-manager/server.cjs ./artifacts/pregasquad-manager/server.cjs
 
-EXPOSE 8080
-ENV PORT=8080
+EXPOSE 8000
+ENV PORT=8000
 
-CMD ["node", "--enable-source-maps", "./artifacts/api-server/dist/index.js"]
+CMD ["node", "artifacts/pregasquad-manager/server.cjs"]
