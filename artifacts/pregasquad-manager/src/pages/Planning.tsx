@@ -1,4 +1,44 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
+
+// ── Drag sound effects via Web Audio API ──────────────────────────────────────
+function playDragPickup() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(300, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(520, ctx.currentTime + 0.12);
+    gain.gain.setValueAtTime(0.0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.18);
+    osc.onended = () => ctx.close();
+  } catch {}
+}
+
+function playDragDrop() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(480, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(260, ctx.currentTime + 0.15);
+    gain.gain.setValueAtTime(0.0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.20, ctx.currentTime + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.22);
+    osc.onended = () => ctx.close();
+  } catch {}
+}
+// ─────────────────────────────────────────────────────────────────────────────
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { format, addDays, startOfToday, parseISO, subDays } from "date-fns";
 import { getWorkDayDate } from "@/lib/workday";
@@ -1854,6 +1894,9 @@ export default function Planning() {
       // Haptic pulse on mobile
       try { (navigator as any).vibrate?.(40); } catch {}
 
+      // Sound: pickup
+      playDragPickup();
+
       pDragRef.current = {
         appointment: booking, offsetX, offsetY,
         targetStaff: booking.staff, targetTime: booking.startTime,
@@ -1935,6 +1978,9 @@ export default function Planning() {
       setPDragGhost(null);
       setDraggedAppointment(null);
       setDragOverSlot(null);
+
+      // Sound: drop
+      playDragDrop();
 
       if (drag && (drag.targetStaff !== drag.appointment.staff || drag.targetTime !== drag.appointment.startTime)) {
         await handleDropExec(drag.appointment, drag.targetStaff, drag.targetTime);
