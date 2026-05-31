@@ -1,0 +1,100 @@
+
+#15 [base  8/11] COPY artifacts/pregasquad-manager/ artifacts/pregasquad-manager/
+#15 DONE 0.0s
+
+#16 [base  9/11] RUN --mount=type=cache,id=pnpm-api,target=/pnpm/store     pnpm install --frozen-lockfile       --filter @workspace/api-server...       --filter @workspace/pregasquad-manager...
+#16 0.363 Scope: 5 of 7 workspace projects
+#16 0.418 Lockfile is up to date, resolution step is skipped
+#16 0.444 Progress: resolved 1, reused 0, downloaded 0, added 0
+#16 0.503 .                                        | +985 ++++++++++++++++++++++++++++++++
+#16 0.719 
+#16 0.719    ╭──────────────────────────────────────────────╮
+#16 0.719    │                                              │
+#16 0.719    │     Update available! 10.26.1 → 11.5.0.      │
+#16 0.719    │     Changelog: https://pnpm.io/v/11.5.0      │
+#16 0.719    │   To update, run: corepack use pnpm@11.5.0   │
+#16 0.719    │                                              │
+#16 0.719    ╰──────────────────────────────────────────────╯
+#16 0.719 
+#16 1.448 Progress: resolved 985, reused 0, downloaded 408, added 403
+#16 2.448 Progress: resolved 985, reused 0, downloaded 655, added 644
+#16 3.449 Progress: resolved 985, reused 0, downloaded 656, added 645
+#16 4.450 Progress: resolved 985, reused 0, downloaded 873, added 794
+#16 4.916 Progress: resolved 985, reused 0, downloaded 985, added 985, done
+#16 5.431 .../node_modules/ffmpeg-static install$ node install.js
+#16 5.432 .../node_modules/protobufjs postinstall$ node scripts/postinstall
+#16 5.432 .../es5-ext@0.10.64/node_modules/es5-ext postinstall$  node -e "try{require('./_postinstall')}catch(e){}" || exit 0
+#16 5.456 .../esbuild@0.27.3/node_modules/esbuild postinstall$ node install.js
+#16 5.462 .../node_modules/better-sqlite3 install$ prebuild-install || node-gyp rebuild --release
+#16 5.484 .../node_modules/protobufjs postinstall: Done
+#16 5.493 .../es5-ext@0.10.64/node_modules/es5-ext postinstall: Done
+#16 5.503 .../esbuild@0.27.3/node_modules/esbuild postinstall: Done
+#16 5.527 .../node_modules/better-sqlite3 install: (node:57) [DEP0176] DeprecationWarning: fs.R_OK is deprecated, use fs.constants.R_OK instead
+#16 5.527 .../node_modules/better-sqlite3 install: (Use `node --trace-deprecation ...` to show where the warning was created)
+#16 5.605 .../node_modules/better-sqlite3 install: Done
+#16 6.434 .../node_modules/ffmpeg-static install: Done
+#16 6.677 .../node_modules/@google/genai preinstall$ echo 'preinstall: no-op'
+#16 6.686 .../node_modules/@google/genai preinstall: preinstall: no-op
+#16 6.687 .../node_modules/@google/genai preinstall: Done
+#16 6.689 .../node_modules/@whiskeysockets/baileys preinstall$ node ./engine-requirements.js
+#16 6.726 .../node_modules/@whiskeysockets/baileys preinstall: Done
+#16 7.933 . preinstall$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+#16 7.952 . preinstall: Done
+#16 8.086 Done in 7.9s using pnpm v10.26.1
+#16 DONE 12.1s
+
+#17 [base 10/11] RUN pnpm --filter @workspace/pregasquad-manager run build
+#17 0.550 
+#17 0.550 > @workspace/pregasquad-manager@0.0.0 build /app/artifacts/pregasquad-manager
+#17 0.550 > vite build --config vite.config.ts
+#17 0.550 
+#17 0.662 ▲ [WARNING] Cannot find base config file "../../tsconfig.base.json" [tsconfig.json]
+#17 0.662 
+#17 0.662     tsconfig.json:2:13:
+#17 0.662       2 │   "extends": "../../tsconfig.base.json",
+#17 0.662         ╵              ~~~~~~~~~~~~~~~~~~~~~~~~~~
+#17 0.662 
+#17 0.870 vite v7.3.3 building client environment for production...
+#17 0.914 ✓ 0 modules transformed.
+#17 0.917 ✗ Build failed in 26ms
+#17 0.917 error during build:
+#17 0.917 [vite-plugin-pwa:build] [plugin vite-plugin-pwa:build] index.html: There was an error during the build:
+#17 0.917   failed to resolve "extends":"../../tsconfig.base.json" in /app/artifacts/pregasquad-manager/tsconfig.json
+#17 0.917 Additionally, handling the error in the 'buildEnd' hook caused the following error:
+#17 0.917   failed to resolve "extends":"../../tsconfig.base.json" in /app/artifacts/pregasquad-manager/tsconfig.json
+#17 0.917 file: /app/artifacts/pregasquad-manager/index.html
+#17 0.917     at getRollupError (file:///app/node_modules/.pnpm/rollup@4.60.3/node_modules/rollup/dist/es/shared/parseAst.js:406:41)
+#17 0.917     at file:///app/node_modules/.pnpm/rollup@4.60.3/node_modules/rollup/dist/es/shared/node-entry.js:23883:39
+#17 0.917     at async catchUnfinishedHookActions (file:///app/node_modules/.pnpm/rollup@4.60.3/node_modules/rollup/dist/es/shared/node-entry.js:23341:16)
+#17 0.917     at async rollupInternal (file:///app/node_modules/.pnpm/rollup@4.60.3/node_modules/rollup/dist/es/shared/node-entry.js:23866:5)
+#17 0.917     at async buildEnvironment (file:///app/node_modules/.pnpm/vite@7.3.3_@types+node@25.6.2_jiti@2.7.0_lightningcss@1.32.0_terser@5.48.0_tsx@4.21.0_yaml@2.8.4/node_modules/vite/dist/node/chunks/config.js:33561:12)
+#17 0.917     at async Object.build (file:///app/node_modules/.pnpm/vite@7.3.3_@types+node@25.6.2_jiti@2.7.0_lightningcss@1.32.0_terser@5.48.0_tsx@4.21.0_yaml@2.8.4/node_modules/vite/dist/node/chunks/config.js:33920:19)
+#17 0.917     at async Object.buildApp (file:///app/node_modules/.pnpm/vite@7.3.3_@types+node@25.6.2_jiti@2.7.0_lightningcss@1.32.0_terser@5.48.0_tsx@4.21.0_yaml@2.8.4/node_modules/vite/dist/node/chunks/config.js:33917:153)
+#17 0.917     at async CAC.<anonymous> (file:///app/node_modules/.pnpm/vite@7.3.3_@types+node@25.6.2_jiti@2.7.0_lightningcss@1.32.0_terser@5.48.0_tsx@4.21.0_yaml@2.8.4/node_modules/vite/dist/node/cli.js:629:3)
+#17 0.953 /app/artifacts/pregasquad-manager:
+#17 0.953  ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @workspace/pregasquad-manager@0.0.0 build: `vite build --config vite.config.ts`
+#17 0.953 Exit status 1
+#17 ERROR: process "/bin/sh -c pnpm --filter @workspace/pregasquad-manager run build" did not complete successfully: exit code: 1
+------
+ > [base 10/11] RUN pnpm --filter @workspace/pregasquad-manager run build:
+0.917     at file:///app/node_modules/.pnpm/rollup@4.60.3/node_modules/rollup/dist/es/shared/node-entry.js:23883:39
+0.917     at async catchUnfinishedHookActions (file:///app/node_modules/.pnpm/rollup@4.60.3/node_modules/rollup/dist/es/shared/node-entry.js:23341:16)
+0.917     at async rollupInternal (file:///app/node_modules/.pnpm/rollup@4.60.3/node_modules/rollup/dist/es/shared/node-entry.js:23866:5)
+0.917     at async buildEnvironment (file:///app/node_modules/.pnpm/vite@7.3.3_@types+node@25.6.2_jiti@2.7.0_lightningcss@1.32.0_terser@5.48.0_tsx@4.21.0_yaml@2.8.4/node_modules/vite/dist/node/chunks/config.js:33561:12)
+0.917     at async Object.build (file:///app/node_modules/.pnpm/vite@7.3.3_@types+node@25.6.2_jiti@2.7.0_lightningcss@1.32.0_terser@5.48.0_tsx@4.21.0_yaml@2.8.4/node_modules/vite/dist/node/chunks/config.js:33920:19)
+0.917     at async Object.buildApp (file:///app/node_modules/.pnpm/vite@7.3.3_@types+node@25.6.2_jiti@2.7.0_lightningcss@1.32.0_terser@5.48.0_tsx@4.21.0_yaml@2.8.4/node_modules/vite/dist/node/chunks/config.js:33917:153)
+0.917     at async CAC.<anonymous> (file:///app/node_modules/.pnpm/vite@7.3.3_@types+node@25.6.2_jiti@2.7.0_lightningcss@1.32.0_terser@5.48.0_tsx@4.21.0_yaml@2.8.4/node_modules/vite/dist/node/cli.js:629:3)
+0.953 /app/artifacts/pregasquad-manager:
+0.953  ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @workspace/pregasquad-manager@0.0.0 build: `vite build --config vite.config.ts`
+0.953 Exit status 1
+------
+Dockerfile.api:27
+--------------------
+  25 |     
+  26 |     # Build the React frontend first
+  27 | >>> RUN pnpm --filter @workspace/pregasquad-manager run build
+  28 |     
+  29 |     # Build the API server (esbuild bundle)
+--------------------
+error: failed to solve: process "/bin/sh -c pnpm --filter @workspace/pregasquad-manager run build" did not complete successfully: exit code: 1
+Build failed ❌

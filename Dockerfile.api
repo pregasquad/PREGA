@@ -11,6 +11,7 @@ WORKDIR /app
 
 # Copy workspace manifests and shared libs first (for better layer caching)
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json .npmrc ./
+COPY tsconfig.base.json tsconfig.json ./
 COPY lib/ lib/
 COPY artifacts/api-server/ artifacts/api-server/
 COPY artifacts/pregasquad-manager/ artifacts/pregasquad-manager/
