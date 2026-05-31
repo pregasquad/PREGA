@@ -20,6 +20,30 @@ function playDragPickup() {
   } catch {}
 }
 
+function playErrorSound() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const now = ctx.currentTime;
+    // Two-pulse low "thud" — descending minor third
+    const notes = [220, 185];
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sawtooth";
+      osc.frequency.value = freq;
+      const t0 = now + i * 0.09;
+      gain.gain.setValueAtTime(0, t0);
+      gain.gain.linearRampToValueAtTime(0.18, t0 + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.14);
+      osc.start(t0);
+      osc.stop(t0 + 0.14);
+      if (i === notes.length - 1) osc.onended = () => ctx.close();
+    });
+  } catch {}
+}
+
 function playDragDrop() {
   try {
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -1244,6 +1268,7 @@ export default function Planning() {
       if (appliedLoyaltyPoints) {
         const client = clients.find(c => c.id === appliedLoyaltyPoints.clientId);
         if (!client) {
+          playErrorSound();
           toast({ title: t("common.error"), description: t("planning.clientNotFound", "Client not found for loyalty discount"), variant: "destructive" });
           return;
         }
@@ -1251,6 +1276,7 @@ export default function Planning() {
         const newPoints = appliedLoyaltyPoints.points;
         const delta = newPoints - oldPoints;
         if (delta > 0 && client.loyaltyPoints < delta) {
+          playErrorSound();
           toast({ title: t("common.error"), description: t("planning.insufficientPoints", "Insufficient loyalty points"), variant: "destructive" });
           return;
         }
@@ -1258,6 +1284,7 @@ export default function Planning() {
       if (appliedGiftCardBalance) {
         const client = clients.find(c => c.id === appliedGiftCardBalance.clientId);
         if (!client) {
+          playErrorSound();
           toast({ title: t("common.error"), description: t("planning.clientNotFound", "Client not found for gift card discount"), variant: "destructive" });
           return;
         }
@@ -1265,6 +1292,7 @@ export default function Planning() {
         const newGiftCard = appliedGiftCardBalance.discountAmount;
         const delta = newGiftCard - oldGiftCard;
         if (delta > 0 && Number(client.giftCardBalance) < delta) {
+          playErrorSound();
           toast({ title: t("common.error"), description: t("planning.insufficientGiftCard", "Insufficient gift card balance"), variant: "destructive" });
           return;
         }
@@ -1299,6 +1327,7 @@ export default function Planning() {
             queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
           } catch (e) {
             console.error("Gift card balance client-change adjustment failed:", e);
+            playErrorSound();
             toast({ title: t("common.error"), description: t("planning.giftCardDeductionError", "Gift card deduction failed"), variant: "destructive" });
           }
         } else {
@@ -1319,6 +1348,7 @@ export default function Planning() {
               }
             } catch (e) {
               console.error("Gift card balance delta adjustment failed:", e);
+              playErrorSound();
               toast({ title: t("common.error"), description: t("planning.giftCardDeductionError", "Gift card deduction failed"), variant: "destructive" });
             }
           }
@@ -1391,6 +1421,7 @@ export default function Planning() {
             queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
           } catch (e) {
             console.error("Gift card balance deduction failed:", e);
+            playErrorSound();
             toast({ title: t("common.error"), description: t("planning.giftCardDeductionError", "Gift card deduction failed"), variant: "destructive" });
           }
         }
@@ -1410,6 +1441,7 @@ export default function Planning() {
             queryClient.invalidateQueries({ queryKey: ["/api/loyalty-redemptions"] });
           } catch (e) {
             console.error("Loyalty points deduction failed:", e);
+            playErrorSound();
             toast({ title: t("common.error"), description: t("planning.loyaltyDeductionError", "Loyalty points deduction failed"), variant: "destructive" });
           }
         }
@@ -1710,6 +1742,7 @@ export default function Planning() {
       });
     } catch (error) {
       console.error("Revert payment error:", error);
+      playErrorSound();
       toast({ title: t("common.error"), description: t("planning.paymentError"), variant: "destructive" });
     }
   };
@@ -1789,6 +1822,7 @@ export default function Planning() {
       }
     } catch (error) {
       console.error("Payment error:", error);
+      playErrorSound();
       toast({ title: t("common.error"), description: t("planning.paymentError"), variant: "destructive" });
     }
   };
@@ -1818,6 +1852,7 @@ export default function Planning() {
       toast({ title: t("planning.appointmentMoved"), description: `${appointment.client} → ${staffName} @ ${newTime}` });
       playSuccessSound();
     } catch {
+      playErrorSound();
       toast({ title: t("common.error"), description: t("planning.moveError"), variant: "destructive" });
     }
   };
@@ -2030,6 +2065,7 @@ export default function Planning() {
       queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
     },
     onError: () => {
+      playErrorSound();
       toast({ title: t("common.error"), variant: "destructive" });
     },
   });
@@ -2083,6 +2119,7 @@ export default function Planning() {
       } else if (prev.length < 6) {
         updated = [...prev, serviceId];
       } else {
+        playErrorSound();
         toast({ title: t("planning.maxFavorites"), variant: "destructive" });
         return prev;
       }
