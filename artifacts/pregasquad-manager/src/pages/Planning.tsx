@@ -2894,7 +2894,7 @@ export default function Planning() {
                             ? `1.5px dashed ${s.color}cc`
                             : booking.paid ? 'none' : `1.5px solid ${s.color}bb`,
                           transition: 'opacity 0.15s, transform 0.15s, filter 0.15s, scale 0.15s',
-                          touchAction: (canEdit && !isResizing && !!draggedAppointment) ? 'none' : 'pan-y',
+                          touchAction: (canEdit && !isResizing && !!draggedAppointment) ? 'none' : 'auto',
                         }}
                         onPointerDown={(e) => { if (canEdit && !isResizing) handleCardPointerDown(e, booking, s.color); }}
                         onClick={(e) => { if (!isResizing && !dragJustCompleted.current && !scrollJustCancelled.current) handleAppointmentClick(e, booking); dragJustCompleted.current = false; scrollJustCancelled.current = false; }}
