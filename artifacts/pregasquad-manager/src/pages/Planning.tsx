@@ -516,10 +516,13 @@ export default function Planning() {
     queryKey: ["/api/clients"],
   });
 
-  // O(1) client lookup by name — rebuilt only when clients list changes
+  // O(1) client lookup by name — rebuilt only when clients list changes.
+  // First-match semantics (no overwrite) matches Array.find() on duplicate names.
   const clientsByName = useMemo(() => {
     const m = new Map<string, typeof clients[number]>();
-    for (const c of clients) m.set(c.name, c);
+    for (const c of clients) {
+      if (!m.has(c.name)) m.set(c.name, c);
+    }
     return m;
   }, [clients]);
   
@@ -2152,11 +2155,18 @@ export default function Planning() {
   };
 
   // O(1) appointment lookup map keyed by "staffId_hour" (preferred) or "name_staffName_hour"
+  // Only adds name key when staffId is absent — preserves original getBooking fallback semantics.
+  // Uses first-match (no overwrite) to match Array.find() behaviour on duplicates.
   const appointmentMap = useMemo(() => {
     const map = new Map<string, any>();
     for (const a of appointments) {
-      if (a.staffId) map.set(`${a.staffId}_${a.startTime}`, a);
-      if (a.staff)   map.set(`name_${a.staff}_${a.startTime}`, a);
+      if (a.staffId) {
+        const k = `${a.staffId}_${a.startTime}`;
+        if (!map.has(k)) map.set(k, a);
+      } else if (a.staff) {
+        const k = `name_${a.staff}_${a.startTime}`;
+        if (!map.has(k)) map.set(k, a);
+      }
     }
     return map;
   }, [appointments]);
