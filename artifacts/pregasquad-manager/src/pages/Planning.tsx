@@ -2124,6 +2124,175 @@ export default function Planning() {
     window.addEventListener('pointercancel', onCancel, { once: true });
   }, [canEdit, resizingBooking]);
 
+  // ── Stable refs so the board touchstart effect always sees fresh data ──────
+  // Updated every render; the effect never needs to re-register for data changes.
+  const appointmentsRef = useRef<typeof appointments>(appointments);
+  appointmentsRef.current = appointments;
+  const staffListRef = useRef<typeof staffList>(staffList);
+  staffListRef.current = staffList;
+  const handleDropExecRef = useRef(handleDropExec);
+  handleDropExecRef.current = handleDropExec;
+  const resizingBookingRef = useRef(resizingBooking);
+  resizingBookingRef.current = resizingBooking;
+  // canEditRef must be declared BEFORE the useEffect that reads it
+  const canEditRef = useRef(canEdit);
+  canEditRef.current = canEdit;
+
+  // ── Native PASSIVE touchstart on board ─────────────────────────────────────
+  // React's onPointerDown is non-passive: the browser must wait for it before
+  // deciding to scroll, so first-touch-on-card never starts a scroll.
+  // By delegating touch hold/drag to a passive native listener here instead,
+  // the browser is free to scroll immediately — our hold timer runs in parallel.
+  useEffect(() => {
+    const board = boardRef.current;
+    if (!board || !isMobile) return;
+
+    const onBoardTouchStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      if (!canEditRef.current || resizingBookingRef.current) return;
+      const touch = e.touches[0];
+      const cardEl = (touch.target as HTMLElement).closest('[data-booking-id]') as HTMLElement | null;
+      if (!cardEl) return;
+      const bookingId = parseInt(cardEl.dataset.bookingId ?? '0', 10);
+      const booking = appointmentsRef.current.find((a: any) => a.id === bookingId);
+      if (!booking) return;
+      const staff = staffListRef.current.find((s: any) => s.name === booking.staff);
+      const color: string = staff?.color ?? '#888';
+
+      const startX = touch.clientX;
+      const startY = touch.clientY;
+      const rect = cardEl.getBoundingClientRect();
+      const offsetX = touch.clientX - rect.left;
+      const offsetY = touch.clientY - rect.top;
+
+      let dragActive = false;
+      let cancelled = false;
+      let lastPX = touch.clientX;
+      let lastPY = touch.clientY;
+      let edgeRaf: number | null = null;
+      let holdRingTmr: ReturnType<typeof setTimeout> | undefined;
+      let holdTmr: ReturnType<typeof setTimeout> | undefined;
+      scrollJustCancelled.current = false;
+
+      const moveGhost = (px: number, py: number) => {
+        const el = ghostElRef.current;
+        if (el) el.style.transform = `translate3d(${px - offsetX}px, ${py - offsetY}px, 0)`;
+      };
+
+      const doEdgeScroll = () => {
+        const b = boardRef.current;
+        if (!b || !dragActive) { edgeRaf = null; return; }
+        const r = b.getBoundingClientRect();
+        const EDGE = 80, SPD = 14;
+        let sx = 0, sy = 0;
+        if (lastPX - r.left  < EDGE) sx = -Math.ceil((1 - (lastPX - r.left)  / EDGE) * SPD);
+        if (r.right - lastPX < EDGE) sx =  Math.ceil((1 - (r.right - lastPX) / EDGE) * SPD);
+        if (lastPY - r.top   < EDGE) sy = -Math.ceil((1 - (lastPY - r.top)   / EDGE) * SPD);
+        if (r.bottom - lastPY < EDGE) sy =  Math.ceil((1 - (r.bottom - lastPY) / EDGE) * SPD);
+        if (sx) b.scrollLeft += sx;
+        if (sy) b.scrollTop  += sy;
+        moveGhost(lastPX, lastPY);
+        edgeRaf = requestAnimationFrame(doEdgeScroll);
+      };
+
+      const blockScroll = (te: TouchEvent) => te.preventDefault();
+
+      const cleanup = () => {
+        if (holdRingTmr != null) { clearTimeout(holdRingTmr); holdRingTmr = undefined; }
+        if (holdTmr     != null) { clearTimeout(holdTmr);     holdTmr = undefined; }
+        window.removeEventListener('touchmove',   onMoveHold);
+        window.removeEventListener('touchmove',   onMoveDrag);
+        window.removeEventListener('touchend',    onUp as any);
+        window.removeEventListener('touchcancel', onCancel);
+        boardRef.current?.removeEventListener('touchmove', blockScroll);
+        if (edgeRaf != null) { cancelAnimationFrame(edgeRaf); edgeRaf = null; }
+        if (dragRafRef.current) { cancelAnimationFrame(dragRafRef.current); dragRafRef.current = null; }
+        document.body.style.userSelect = '';
+        (document.body.style as any).webkitUserSelect = '';
+        setHoldingCardId(null);
+      };
+
+      const serviceLabel = (() => {
+        try {
+          const svcs = typeof booking.servicesJson === 'string'
+            ? JSON.parse(booking.servicesJson) : booking.servicesJson;
+          return svcs?.[0]?.name || booking.service || booking.client;
+        } catch { return booking.client; }
+      })();
+
+      const activateDrag = () => {
+        if (dragActive || cancelled) return;
+        dragActive = true;
+        boardRef.current?.addEventListener('touchmove', blockScroll, { passive: false });
+        document.body.style.userSelect = 'none';
+        (document.body.style as any).webkitUserSelect = 'none';
+        window.getSelection()?.removeAllRanges();
+        try { (navigator as any).vibrate?.(40); } catch {}
+        playDragPickup();
+        pDragRef.current = { appointment: booking, offsetX, offsetY, targetStaff: booking.staff, targetTime: booking.startTime };
+        setHoldingCardId(null);
+        setDraggedAppointment(booking);
+        setPDragGhost({ w: rect.width, h: rect.height, color, label: serviceLabel });
+        requestAnimationFrame(() => moveGhost(lastPX, lastPY));
+        window.removeEventListener('touchmove', onMoveHold);
+        window.addEventListener('touchmove', onMoveDrag, { passive: false });
+        edgeRaf = requestAnimationFrame(doEdgeScroll);
+      };
+
+      const onMoveHold = (te: TouchEvent) => {
+        const t = te.touches[0]; if (!t) return;
+        lastPX = t.clientX; lastPY = t.clientY;
+        const dx = Math.abs(t.clientX - startX);
+        const dy = Math.abs(t.clientY - startY);
+        if ((dy > dx && dy > 8) || Math.hypot(dx, dy) > 15) {
+          cancelled = true; scrollJustCancelled.current = true; cleanup();
+        }
+      };
+
+      const onMoveDrag = (te: TouchEvent) => {
+        te.preventDefault();
+        const t = te.touches[0]; if (!t || !pDragRef.current) return;
+        lastPX = t.clientX; lastPY = t.clientY;
+        const el = document.elementFromPoint(t.clientX, t.clientY) as HTMLElement | null;
+        const slotEl = el?.closest('[data-slot-staff]') as HTMLElement | null;
+        if (slotEl?.dataset.slotStaff && slotEl?.dataset.slotTime) {
+          pDragRef.current.targetStaff = slotEl.dataset.slotStaff;
+          pDragRef.current.targetTime  = slotEl.dataset.slotTime;
+          setDragOverSlot({ staff: slotEl.dataset.slotStaff, time: slotEl.dataset.slotTime });
+        }
+        if (dragRafRef.current) cancelAnimationFrame(dragRafRef.current);
+        dragRafRef.current = requestAnimationFrame(() => { moveGhost(t.clientX, t.clientY); dragRafRef.current = null; });
+      };
+
+      const onCancel = () => {
+        cancelled = true; cleanup();
+        if (dragActive) { pDragRef.current = null; setPDragGhost(null); setDraggedAppointment(null); setDragOverSlot(null); }
+      };
+
+      const onUp = async () => {
+        const wasDragging = dragActive; cleanup();
+        if (!wasDragging) return;
+        dragJustCompleted.current = true;
+        const drag = pDragRef.current;
+        pDragRef.current = null; setPDragGhost(null); setDraggedAppointment(null); setDragOverSlot(null);
+        playDragDrop();
+        if (drag && (drag.targetStaff !== drag.appointment.staff || drag.targetTime !== drag.appointment.startTime)) {
+          await handleDropExecRef.current(drag.appointment, drag.targetStaff, drag.targetTime);
+        }
+      };
+
+      holdRingTmr = setTimeout(() => { holdRingTmr = undefined; if (!cancelled) setHoldingCardId(booking.id); }, 150);
+      holdTmr     = setTimeout(() => { if (!cancelled) activateDrag(); }, 500);
+      window.addEventListener('touchmove',   onMoveHold, { passive: true });
+      window.addEventListener('touchend',    onUp as any, { once: true, passive: true });
+      window.addEventListener('touchcancel', onCancel,   { once: true });
+    };
+
+    board.addEventListener('touchstart', onBoardTouchStart, { passive: true });
+    return () => board.removeEventListener('touchstart', onBoardTouchStart);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMobile, canEdit]);
+
   // Resize appointment by dragging the bottom handle
   const resizeMutation = useMutation({
     mutationFn: async ({ id, duration }: { id: number; duration: number }) => {
@@ -2878,7 +3047,7 @@ export default function Planning() {
                             ? "appointment-card h-full text-white relative rounded-md shadow-md"
                             : "appointment-card h-full relative rounded-md shadow-sm",
                           span <= 2 ? "flex items-center gap-1 px-1.5 py-0.5" : span <= 4 ? "flex flex-col px-1.5 py-1" : "flex flex-col px-2 py-1.5",
-                          canEdit && !isResizing ? "cursor-grab active:cursor-grabbing select-none" : "",
+                          canEdit && !isResizing ? "cursor-grab active:cursor-grabbing" : "",
                           isDragging && "opacity-40 scale-95 saturate-50",
                           holdingCardId === booking.id && "scale-[1.03] brightness-110",
                           isResizing && "ring-2 ring-white/60 ring-inset shadow-xl",
@@ -2896,7 +3065,8 @@ export default function Planning() {
                           transition: 'opacity 0.15s, transform 0.15s, filter 0.15s, scale 0.15s',
                           touchAction: (canEdit && !isResizing && !!draggedAppointment) ? 'none' : 'auto',
                         }}
-                        onPointerDown={(e) => { if (canEdit && !isResizing) handleCardPointerDown(e, booking, s.color); }}
+                        data-booking-id={booking.id}
+                        onPointerDown={(e) => { if (canEdit && !isResizing && e.pointerType !== 'touch') handleCardPointerDown(e, booking, s.color); }}
                         onClick={(e) => { if (!isResizing && !dragJustCompleted.current && !scrollJustCancelled.current) handleAppointmentClick(e, booking); dragJustCompleted.current = false; scrollJustCancelled.current = false; }}
                       >
                         <div className="water-shimmer absolute inset-0 opacity-30" />
