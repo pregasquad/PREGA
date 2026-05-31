@@ -4,6 +4,7 @@ import app from "./app";
 import { registerRoutes } from "./routes/routes";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { registerPayPalRoutes } from "./paypal";
+import { serveStatic } from "./static";
 import {
   initializeDatabase,
   warmupDatabase,
@@ -130,6 +131,7 @@ const startServer = async () => {
 
   await registerRoutes(httpServer, app);
   registerPayPalRoutes(app);
+  serveStatic(app);
 
   app.use((err: any, _req: any, res: any, _next: any) => {
     const status = err.status || err.statusCode || 500;

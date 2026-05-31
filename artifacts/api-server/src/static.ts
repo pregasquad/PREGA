@@ -2,15 +2,27 @@ import express, { type Express } from "express";
 import fs from "fs";
 import path from "path";
 
+function resolveDistPath(): string | null {
+  const candidates = [
+    path.resolve(__dirname, "public"),
+    path.resolve(__dirname, "..", "..", "pregasquad-manager", "dist", "public"),
+    path.resolve(process.cwd(), "..", "pregasquad-manager", "dist", "public"),
+  ];
+  for (const p of candidates) {
+    if (fs.existsSync(path.join(p, "index.html"))) return p;
+  }
+  return null;
+}
+
 export function serveStatic(app: Express) {
-  const distPath = path.resolve(__dirname, "public");
-  if (!fs.existsSync(distPath)) {
-    throw new Error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`,
+  const distPath = resolveDistPath();
+  if (!distPath) {
+    console.warn(
+      "[static] Frontend build not found — serving API only. Run the pregasquad-manager build to enable the UI."
     );
+    return;
   }
 
-  // Serve static files from uploads directory first
   const uploadPath = path.resolve(process.cwd(), "uploads");
   if (fs.existsSync(uploadPath)) {
     app.use("/uploads", express.static(uploadPath));
@@ -18,8 +30,7 @@ export function serveStatic(app: Express) {
 
   app.use(express.static(distPath));
 
-  // fall through to index.html if the file doesn't exist
-  app.use("*", (req, res) => {
+  app.use("*splat", (req, res) => {
     const indexPath = path.resolve(distPath, "index.html");
     const portalMatch = req.originalUrl.match(/^\/staff-portal\/([^/?]+)/);
     if (portalMatch) {
