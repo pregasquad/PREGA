@@ -1463,10 +1463,19 @@ export default function Planning() {
       setEditingAppointment(null);
       setTotalInputValue("0");
       setIsDialogOpen(false);
-      playSuccessSound();
+      // Sound plays in onSuccess so it only fires on confirmed save (not on error)
 
       createMutation.mutate({ ...submitData, createdBy: submittingUser }, {
         onSuccess: async (result: any) => {
+          const isOffline = !!(result as any)._offline;
+
+          // Confirmed save — play sound now (not before, to avoid false positives)
+          playSuccessSound();
+
+          // Skip all network-dependent post-save work for offline-queued appointments;
+          // stock, deductions and printing will be reconciled when the queue syncs.
+          if (isOffline) return;
+
           // Background stock check + decrement (appointment card is already visible)
           if (capturedProductNeeds.length > 0) {
             const productQuantities: Record<number, {current: number, name: string}> = {};
@@ -1488,9 +1497,20 @@ export default function Planning() {
                     description: `متوفر: ${info.current}، مطلوب: ${quantity}`,
                     variant: "destructive",
                   });
-                  // Roll back: delete the appointment we just created
-                  if (result?.id && !(result as any)._offline) {
-                    try { await apiRequest("DELETE", `/api/appointments/${result.id}`); } catch {}
+                  // Deterministic rollback: delete the appointment we just created
+                  if (result?.id) {
+                    try {
+                      await apiRequest("DELETE", `/api/appointments/${result.id}`);
+                    } catch (deleteErr) {
+                      console.error("Rollback DELETE failed:", deleteErr);
+                      // Delete failed — force a hard refetch so the board reflects server truth
+                      playErrorSound();
+                      toast({
+                        title: t("common.error"),
+                        description: t("planning.rollbackFailed", "Could not remove appointment — please refresh"),
+                        variant: "destructive",
+                      });
+                    }
                     queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
                   }
                   stockFailed = true;
@@ -1544,6 +1564,11 @@ export default function Planning() {
             }).catch(err => console.error("[print-relay] autoPrint failed:", err));
           }
           await performDeductions();
+        },
+        onError: () => {
+          // Mutation failed — the optimistic card is rolled back by the hook;
+          // play error sound to signal the failure.
+          playErrorSound();
         },
       });
     }
