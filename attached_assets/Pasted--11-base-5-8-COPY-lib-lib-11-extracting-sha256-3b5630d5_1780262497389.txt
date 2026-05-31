@@ -1,0 +1,100 @@
+#11 [base 5/8] COPY lib/ lib/
+#11 extracting sha256:3b5630d5a7c63a03e73a857abd0501f7eba4fc4ff3f95039098216ff6a7f0b93 0.0s done
+#11 extracting sha256:0249975f1eaaed34ee41c9a3553887de156d218f6ded5b4d07300254403a87fb
+#11 extracting sha256:0249975f1eaaed34ee41c9a3553887de156d218f6ded5b4d07300254403a87fb 0.2s done
+#11 extracting sha256:38945bd06ece82b6d5bdfe31064ecc78bad68726001d5c9ca620fc583b9feaf9
+#11 extracting sha256:38945bd06ece82b6d5bdfe31064ecc78bad68726001d5c9ca620fc583b9feaf9 done
+#11 extracting sha256:93706e5a386b2aafd91ee91c6eab2b4bd9b05c76a682cbc918e3c32df1263d4c done
+#11 extracting sha256:bf373bb226689422f0ebfbf8d6186514e6863a0a591c10cb01206401d7979f38 0.0s done
+#11 DONE 9.5s
+
+#13 [base 6/8] COPY artifacts/pregasquad-manager/ artifacts/pregasquad-manager/
+#13 DONE 1.7s
+
+#14 [base 7/8] RUN --mount=type=cache,id=pnpm,target=/pnpm/store     pnpm install --frozen-lockfile --filter @workspace/pregasquad-manager...
+#14 0.525 Scope: 2 of 6 workspace projects
+#14 0.594 Lockfile is up to date, resolution step is skipped
+#14 0.632 Progress: resolved 1, reused 0, downloaded 0, added 0
+#14 0.714 .                                        | +657 ++++++++++++++++++++++++++++++++
+#14 1.633 Progress: resolved 657, reused 0, downloaded 0, added 0
+#14 2.678 Progress: resolved 657, reused 0, downloaded 1, added 0
+#14 3.679 Progress: resolved 657, reused 0, downloaded 6, added 0
+#14 3.947 
+#14 3.947    ╭──────────────────────────────────────────────╮
+#14 3.947    │                                              │
+#14 3.947    │     Update available! 10.26.1 → 11.5.0.      │
+#14 3.947    │     Changelog: https://pnpm.io/v/11.5.0      │
+#14 3.947    │   To update, run: corepack use pnpm@11.5.0   │
+#14 3.947    │                                              │
+#14 3.947    ╰──────────────────────────────────────────────╯
+#14 3.947 
+#14 4.680 Progress: resolved 657, reused 0, downloaded 103, added 44
+#14 5.681 Progress: resolved 657, reused 0, downloaded 176, added 95
+#14 6.682 Progress: resolved 657, reused 0, downloaded 510, added 449
+#14 7.682 Progress: resolved 657, reused 0, downloaded 530, added 449
+#14 8.683 Progress: resolved 657, reused 0, downloaded 657, added 656
+#14 8.697 Progress: resolved 657, reused 0, downloaded 657, added 657, done
+#14 8.868 .../node_modules/better-sqlite3 install$ prebuild-install || node-gyp rebuild --release
+#14 8.878 .../esbuild@0.27.3/node_modules/esbuild postinstall$ node install.js
+#14 8.929 .../esbuild@0.27.3/node_modules/esbuild postinstall: Done
+#14 8.947 .../node_modules/better-sqlite3 install: (node:27) [DEP0176] DeprecationWarning: fs.R_OK is deprecated, use fs.constants.R_OK instead
+#14 8.947 .../node_modules/better-sqlite3 install: (Use `node --trace-deprecation ...` to show where the warning was created)
+#14 9.019 .../node_modules/better-sqlite3 install: Done
+#14 10.29 . preinstall$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+#14 10.30 . preinstall: Done
+#14 10.33 Done in 10.1s using pnpm v10.26.1
+#14 DONE 14.5s
+
+#15 [base 8/8] RUN cd artifacts/pregasquad-manager && PORT=8000 BASE_PATH=/ pnpm run build
+#15 0.454 
+#15 0.454 > @workspace/pregasquad-manager@0.0.0 build /app/artifacts/pregasquad-manager
+#15 0.454 > vite build --config vite.config.ts
+#15 0.454 
+#15 0.563 ▲ [WARNING] Cannot find base config file "../../tsconfig.base.json" [tsconfig.json]
+#15 0.563 
+#15 0.563     tsconfig.json:2:13:
+#15 0.563       2 │   "extends": "../../tsconfig.base.json",
+#15 0.563         ╵              ~~~~~~~~~~~~~~~~~~~~~~~~~~
+#15 0.563 
+#15 0.769 vite v7.3.3 building client environment for production...
+#15 0.811 ✓ 0 modules transformed.
+#15 0.814 ✗ Build failed in 26ms
+#15 0.814 error during build:
+#15 0.814 [vite-plugin-pwa:build] [plugin vite-plugin-pwa:build] index.html: There was an error during the build:
+#15 0.814   failed to resolve "extends":"../../tsconfig.base.json" in /app/artifacts/pregasquad-manager/tsconfig.json
+#15 0.814 Additionally, handling the error in the 'buildEnd' hook caused the following error:
+#15 0.814   failed to resolve "extends":"../../tsconfig.base.json" in /app/artifacts/pregasquad-manager/tsconfig.json
+#15 0.814 file: /app/artifacts/pregasquad-manager/index.html
+#15 0.814     at getRollupError (file:///app/node_modules/.pnpm/rollup@4.60.3/node_modules/rollup/dist/es/shared/parseAst.js:406:41)
+#15 0.814     at file:///app/node_modules/.pnpm/rollup@4.60.3/node_modules/rollup/dist/es/shared/node-entry.js:23883:39
+#15 0.814     at async catchUnfinishedHookActions (file:///app/node_modules/.pnpm/rollup@4.60.3/node_modules/rollup/dist/es/shared/node-entry.js:23341:16)
+#15 0.814     at async rollupInternal (file:///app/node_modules/.pnpm/rollup@4.60.3/node_modules/rollup/dist/es/shared/node-entry.js:23866:5)
+#15 0.814     at async buildEnvironment (file:///app/node_modules/.pnpm/vite@7.3.3_@types+node@25.6.2_jiti@2.7.0_lightningcss@1.32.0_terser@5.48.0_tsx@4.21.0_yaml@2.8.4/node_modules/vite/dist/node/chunks/config.js:33561:12)
+#15 0.814     at async Object.build (file:///app/node_modules/.pnpm/vite@7.3.3_@types+node@25.6.2_jiti@2.7.0_lightningcss@1.32.0_terser@5.48.0_tsx@4.21.0_yaml@2.8.4/node_modules/vite/dist/node/chunks/config.js:33920:19)
+#15 0.814     at async Object.buildApp (file:///app/node_modules/.pnpm/vite@7.3.3_@types+node@25.6.2_jiti@2.7.0_lightningcss@1.32.0_terser@5.48.0_tsx@4.21.0_yaml@2.8.4/node_modules/vite/dist/node/chunks/config.js:33917:153)
+#15 0.814     at async CAC.<anonymous> (file:///app/node_modules/.pnpm/vite@7.3.3_@types+node@25.6.2_jiti@2.7.0_lightningcss@1.32.0_terser@5.48.0_tsx@4.21.0_yaml@2.8.4/node_modules/vite/dist/node/cli.js:629:3)
+#15 0.844  ELIFECYCLE  Command failed with exit code 1.
+#15 ERROR: process "/bin/sh -c cd artifacts/pregasquad-manager && PORT=8000 BASE_PATH=/ pnpm run build" did not complete successfully: exit code: 1
+------
+ > [base 8/8] RUN cd artifacts/pregasquad-manager && PORT=8000 BASE_PATH=/ pnpm run build:
+0.814 file: /app/artifacts/pregasquad-manager/index.html
+0.814     at getRollupError (file:///app/node_modules/.pnpm/rollup@4.60.3/node_modules/rollup/dist/es/shared/parseAst.js:406:41)
+0.814     at file:///app/node_modules/.pnpm/rollup@4.60.3/node_modules/rollup/dist/es/shared/node-entry.js:23883:39
+0.814     at async catchUnfinishedHookActions (file:///app/node_modules/.pnpm/rollup@4.60.3/node_modules/rollup/dist/es/shared/node-entry.js:23341:16)
+0.814     at async rollupInternal (file:///app/node_modules/.pnpm/rollup@4.60.3/node_modules/rollup/dist/es/shared/node-entry.js:23866:5)
+0.814     at async buildEnvironment (file:///app/node_modules/.pnpm/vite@7.3.3_@types+node@25.6.2_jiti@2.7.0_lightningcss@1.32.0_terser@5.48.0_tsx@4.21.0_yaml@2.8.4/node_modules/vite/dist/node/chunks/config.js:33561:12)
+0.814     at async Object.build (file:///app/node_modules/.pnpm/vite@7.3.3_@types+node@25.6.2_jiti@2.7.0_lightningcss@1.32.0_terser@5.48.0_tsx@4.21.0_yaml@2.8.4/node_modules/vite/dist/node/chunks/config.js:33920:19)
+0.814     at async Object.buildApp (file:///app/node_modules/.pnpm/vite@7.3.3_@types+node@25.6.2_jiti@2.7.0_lightningcss@1.32.0_terser@5.48.0_tsx@4.21.0_yaml@2.8.4/node_modules/vite/dist/node/chunks/config.js:33917:153)
+0.814     at async CAC.<anonymous> (file:///app/node_modules/.pnpm/vite@7.3.3_@types+node@25.6.2_jiti@2.7.0_lightningcss@1.32.0_terser@5.48.0_tsx@4.21.0_yaml@2.8.4/node_modules/vite/dist/node/cli.js:629:3)
+0.844  ELIFECYCLE  Command failed with exit code 1.
+------
+Dockerfile:17
+--------------------
+  15 |         pnpm install --frozen-lockfile --filter @workspace/pregasquad-manager...
+  16 |     
+  17 | >>> RUN cd artifacts/pregasquad-manager && PORT=8000 BASE_PATH=/ pnpm run build
+  18 |     
+  19 |     FROM node:24-slim AS runner
+--------------------
+error: failed to solve: process "/bin/sh -c cd artifacts/pregasquad-manager && PORT=8000 BASE_PATH=/ pnpm run build" did not complete successfully: exit code: 1
+Build failed ❌
