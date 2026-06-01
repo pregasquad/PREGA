@@ -76,10 +76,19 @@ setInterval(async () => {
     if (now.getHours() < 6) businessDate.setDate(businessDate.getDate() - 1);
     const todayStr = businessDate.toISOString().split("T")[0];
 
-    // Fetch today's appointments + salon standalone payments in parallel
-    const [todayAppts, allSalonPayments] = await Promise.all([
+    // Month range for net-profit calculation
+    const monthPrefix = todayStr.slice(0, 7); // "YYYY-MM"
+    const monthStart  = `${monthPrefix}-01`;
+    const lastDay     = new Date(businessDate.getFullYear(), businessDate.getMonth() + 1, 0).getDate();
+    const monthEnd    = `${monthPrefix}-${String(lastDay).padStart(2, "0")}`;
+
+    // Fetch today's appointments + salon standalone payments + monthly data in parallel
+    const [todayAppts, allSalonPayments, monthlyAppts, allCharges, allWithdrawals] = await Promise.all([
       storage.getAppointmentsByDateRange(todayStr, todayStr).catch(() => [] as any[]),
       storage.getSalonPayments().catch(() => [] as any[]),
+      storage.getAppointmentsByDateRange(monthStart, monthEnd).catch(() => [] as any[]),
+      storage.getCharges().catch(() => [] as any[]),
+      storage.getOwnerWithdrawals().catch(() => [] as any[]),
     ]);
 
     // Split appointments: paid = actual collected, unpaid = still pending
@@ -99,6 +108,17 @@ setInterval(async () => {
     const collectedStandalone  = salonPaymentsToday.reduce((s: number, p: any) => s + (Number(p.amount) || 0), 0);
     const totalCollected       = collectedFromAppts + collectedStandalone;
     const expectedPending      = unpaidAppts.reduce((s: number, a: any) => s + (Number(a.total) || Number(a.price) || 0), 0);
+
+    // ── Monthly net-profit calculation ────────────────────────────────────────
+    const monthlyPaidAppts = (monthlyAppts as any[]).filter((a: any) => a.paid === true);
+    const monthlySalonShare = monthlyPaidAppts.reduce((s: number, a: any) => s + (Number(a.total) || Number(a.price) || 0), 0);
+    const monthlyCharges    = (allCharges as any[])
+      .filter((c: any) => (c.date || "").startsWith(monthPrefix))
+      .reduce((s: number, c: any) => s + (Number(c.amount) || 0), 0);
+    const monthlyWithdrawals = (allWithdrawals as any[])
+      .filter((w: any) => (w.date || "").startsWith(monthPrefix))
+      .reduce((s: number, w: any) => s + (Number(w.amount) || 0), 0);
+    const monthlyNetProfit  = monthlySalonShare - monthlyCharges - monthlyWithdrawals;
 
     const ARABIC_DAYS_S = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
     const dayLabel = ARABIC_DAYS_S[businessDate.getDay()];
@@ -156,6 +176,23 @@ setInterval(async () => {
     const botPending = (todayAppts as any[]).filter((a: any) => a.botConfirmed && !a.paid);
     if (botPending.length > 0) {
       msg += `\n🤖 مواعيد بوت تحتاج مراجعة: *${botPending.length}*`;
+    }
+
+    // ── Monthly net profit & available withdrawal ─────────────────────────────
+    msg += `\n\n💼 *ملخص الشهر — ${monthPrefix}*\n`;
+    msg += `📈 حصة الصالون: *${monthlySalonShare.toFixed(0)} ${sym}*\n`;
+    if (monthlyCharges > 0) {
+      msg += `🧾 المصاريف: *-${monthlyCharges.toFixed(0)} ${sym}*\n`;
+    }
+    if (monthlyWithdrawals > 0) {
+      msg += `💸 المسحوبات الشخصية: *-${monthlyWithdrawals.toFixed(0)} ${sym}*\n`;
+    }
+    const profitEmoji = monthlyNetProfit >= 0 ? "✅" : "⚠️";
+    msg += `${profitEmoji} *صافي الربح: ${monthlyNetProfit.toFixed(0)} ${sym}*\n`;
+    if (monthlyNetProfit > 0) {
+      msg += `\n💰 *يمكن سحب: ${monthlyNetProfit.toFixed(0)} ${sym}*`;
+    } else {
+      msg += `\n⚠️ لا يوجد رصيد متاح للسحب حالياً`;
     }
 
     const { sendWhatsAppMessage, formatJid } = await import("./baileys.js");
