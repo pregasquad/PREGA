@@ -55,7 +55,8 @@ export function useBusinessSettings() {
       if (offlineData.length > 0) return offlineData[0];
       return { businessName: "PREGA SQUAD", currency: "MAD", currencySymbol: "DH", openingTime: "09:00", closingTime: "19:00", workingDays: [1, 2, 3, 4, 5, 6] };
     },
-    staleTime: 10 * 60 * 1000,
+    staleTime: 30 * 60 * 1000,
+    gcTime: 24 * 60 * 60 * 1000,
     retry: false,
   });
 }
@@ -101,8 +102,9 @@ export function useAppointments(date?: string) {
       throw new Error("No data available - please connect to the internet");
     },
     staleTime: 5 * 60 * 1000,
+    gcTime: 24 * 60 * 60 * 1000,
     refetchOnWindowFocus: false,
-    retry: false, // Don't retry if offline
+    retry: false,
   });
 }
 
@@ -225,6 +227,9 @@ export function useCreateAppointment() {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     },
     onSettled: (_data, _error, variables) => {
+      // Skip server invalidation when offline — the optimistic update already shows
+      // the new appointment; invalidating would trigger a failed refetch.
+      if (!navigator.onLine) return;
       if (variables?.date) {
         queryClient.invalidateQueries({ queryKey: [api.appointments.list.path, variables.date] });
       }
@@ -421,6 +426,7 @@ export function useServices() {
       return [];
     },
     staleTime: 5 * 60 * 1000,
+    gcTime: 24 * 60 * 60 * 1000,
     retry: false,
   });
 }
@@ -782,6 +788,7 @@ export function useStaff() {
       return [];
     },
     staleTime: 5 * 60 * 1000,
+    gcTime: 24 * 60 * 60 * 1000,
     retry: false,
   });
 }
@@ -960,9 +967,10 @@ export function useClients() {
       }
       const offlineData = await getFromOfflineStore<any>('clients');
       if (offlineData.length > 0) return offlineData;
-      throw new Error("No clients available offline");
+      return [];
     },
     staleTime: 5 * 60 * 1000,
+    gcTime: 24 * 60 * 60 * 1000,
     retry: false,
   });
 }

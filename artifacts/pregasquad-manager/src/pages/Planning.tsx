@@ -71,6 +71,8 @@ import { useAppointments, useStaff, useServices, useCreateAppointment, useUpdate
 import { useIsMobile } from "@/hooks/use-mobile";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { refreshSalariesBackground } from "@/lib/salariesRefresher";
+import { onSyncStatusChange } from "@/lib/syncService";
+import { getSyncQueueCount } from "@/lib/offlineDb";
 import { useSearch, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -81,7 +83,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { CalendarIcon, ChevronLeft, ChevronRight, Plus, Trash2, Check, X, Search, Star, RefreshCw, Sparkles, CreditCard, Settings2, Scissors, Clock, User, ChevronsUpDown, ListTodo, Bell, UserCheck, Gift, AlertCircle, AlertTriangle, Wallet, Users, Package, Lock, ShieldCheck, CheckCircle, UserMinus, ChevronDown, Pencil, ArrowDownLeft, Undo2, Bot } from "lucide-react";
+import { CalendarIcon, ChevronLeft, ChevronRight, Plus, Trash2, Check, X, Search, Star, RefreshCw, Sparkles, CreditCard, Settings2, Scissors, Clock, User, ChevronsUpDown, ListTodo, Bell, UserCheck, Gift, AlertCircle, AlertTriangle, Wallet, Users, Package, Lock, ShieldCheck, CheckCircle, UserMinus, ChevronDown, Pencil, ArrowDownLeft, Undo2, Bot, WifiOff } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
@@ -145,6 +147,25 @@ export default function Planning() {
   const isRtl = i18n.language === "ar";
   const isMobile = useIsMobile();
   const [date, setDate] = useState<Date>(getWorkDayDate());
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [pendingSyncCount, setPendingSyncCount] = useState(0);
+
+  useEffect(() => {
+    const refreshPending = () => getSyncQueueCount().then(n => setPendingSyncCount(n)).catch(() => {});
+    refreshPending();
+    const unsub = onSyncStatusChange((_status, count) => { setPendingSyncCount(count); });
+    const onOnline = () => { setIsOnline(true); refreshPending(); };
+    const onOffline = () => { setIsOnline(false); refreshPending(); };
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+    const interval = setInterval(refreshPending, 10000);
+    return () => {
+      unsub();
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
+      clearInterval(interval);
+    };
+  }, []);
   
   // Check if user has permission to edit the cardboard
   const canEditCardboard = useMemo(() => {
@@ -2503,6 +2524,24 @@ export default function Planning() {
       onTouchStart={isMobile ? handleTouchStart : undefined}
       onTouchEnd={isMobile ? handleTouchEnd : undefined}
     >
+      {/* Offline mode banner */}
+      {!isOnline && (
+        <div className="shrink-0 mb-1 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs font-medium">
+          <WifiOff className="w-3.5 h-3.5 shrink-0" />
+          <span>
+            {isRtl ? "وضع بدون إنترنت" : "Offline mode"} —{" "}
+            {isRtl
+              ? "المواعيد تُحفظ محلياً وتُزامن عند الاتصال"
+              : "appointments save locally and sync when connected"}
+          </span>
+          {pendingSyncCount > 0 && (
+            <span className="ml-auto shrink-0 bg-amber-500/25 px-2 py-0.5 rounded-full font-bold">
+              {pendingSyncCount} {isRtl ? "في الانتظار" : "pending"}
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Pinch-to-zoom hint overlay */}
       {pinchHint && (
         <div className="pointer-events-none fixed inset-x-0 bottom-28 z-[100] flex justify-center">
