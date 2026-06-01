@@ -357,6 +357,7 @@ export async function refreshAndCacheData(): Promise<void> {
     { url: '/api/staff-commissions', store: 'staffCommissions' as const },
     { url: '/api/products', store: 'products' as const },
     { url: '/api/business-settings', store: 'businessSettings' as const },
+    { url: '/api/owner-withdrawals', store: 'ownerWithdrawals' as const },
   ];
 
   const promises = endpoints.map(async ({ url, store }) => {
@@ -364,7 +365,11 @@ export async function refreshAndCacheData(): Promise<void> {
       const response = await fetch(url, { credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
-        if (Array.isArray(data) && data.length > 0) {
+        // businessSettings returns a plain object — wrap with a stable id so IndexedDB can store it
+        if (store === 'businessSettings' && data && !Array.isArray(data)) {
+          await saveToOfflineStore(store, [{ ...data, id: 'settings' }]);
+          console.log(`[Sync] Cached businessSettings`);
+        } else if (Array.isArray(data)) {
           await saveToOfflineStore(store, data);
           console.log(`[Sync] Cached ${data.length} items for ${store}`);
         }
@@ -404,6 +409,7 @@ export function getSyncStatus(): SyncStatus {
 }
 
 let syncInterval: NodeJS.Timeout | null = null;
+let onlineListenerRegistered = false;
 
 export function startAutoSync(intervalMs: number = 30000): void {
   if (syncInterval) return;
@@ -414,11 +420,15 @@ export function startAutoSync(intervalMs: number = 30000): void {
     }
   }, intervalMs);
 
-  window.addEventListener('online', async () => {
-    console.log('[Sync] Online - syncing pending changes');
-    await syncPendingChanges();
-    await refreshAndCacheData();
-  });
+  // Guard against duplicate listeners across multiple AppLayout mounts
+  if (!onlineListenerRegistered) {
+    onlineListenerRegistered = true;
+    window.addEventListener('online', async () => {
+      console.log('[Sync] Online - syncing pending changes');
+      await syncPendingChanges();
+      await refreshAndCacheData();
+    });
+  }
 }
 
 export function stopAutoSync(): void {

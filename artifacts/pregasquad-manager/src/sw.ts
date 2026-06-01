@@ -16,13 +16,8 @@ registerRoute(
   new CacheFirst({
     cacheName: 'google-fonts-cache',
     plugins: [
-      new ExpirationPlugin({
-        maxEntries: 10,
-        maxAgeSeconds: 60 * 60 * 24 * 365
-      }),
-      new CacheableResponsePlugin({
-        statuses: [0, 200]
-      })
+      new ExpirationPlugin({ maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 }),
+      new CacheableResponsePlugin({ statuses: [0, 200] })
     ]
   })
 );
@@ -32,31 +27,26 @@ registerRoute(
   new CacheFirst({
     cacheName: 'gstatic-fonts-cache',
     plugins: [
-      new ExpirationPlugin({
-        maxEntries: 10,
-        maxAgeSeconds: 60 * 60 * 24 * 365
-      }),
-      new CacheableResponsePlugin({
-        statuses: [0, 200]
-      })
+      new ExpirationPlugin({ maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 }),
+      new CacheableResponsePlugin({ statuses: [0, 200] })
     ]
   })
 );
 
+// API: NetworkFirst with 3 s timeout (was 10 s) and 24 h cache (was 5 min).
+// Falling back to cache quickly makes the app feel instant offline.
 registerRoute(
   /\/api\/.*/i,
   new NetworkFirst({
     cacheName: 'api-cache',
     plugins: [
       new ExpirationPlugin({
-        maxEntries: 100,
-        maxAgeSeconds: 60 * 5
+        maxEntries: 200,
+        maxAgeSeconds: 60 * 60 * 24,
       }),
-      new CacheableResponsePlugin({
-        statuses: [0, 200]
-      })
+      new CacheableResponsePlugin({ statuses: [0, 200] })
     ],
-    networkTimeoutSeconds: 10
+    networkTimeoutSeconds: 3,
   })
 );
 
@@ -65,25 +55,20 @@ registerRoute(
   new NetworkFirst({
     cacheName: 'html-cache',
     plugins: [
-      new ExpirationPlugin({
-        maxEntries: 10,
-        maxAgeSeconds: 60 * 60 * 24
-      })
-    ]
+      new ExpirationPlugin({ maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 7 })
+    ],
+    networkTimeoutSeconds: 3,
   })
 );
 
 registerRoute(
-  ({ request }) => 
-    request.destination === 'script' || 
+  ({ request }) =>
+    request.destination === 'script' ||
     request.destination === 'style',
   new StaleWhileRevalidate({
     cacheName: 'static-resources',
     plugins: [
-      new ExpirationPlugin({
-        maxEntries: 50,
-        maxAgeSeconds: 60 * 60 * 24 * 7
-      })
+      new ExpirationPlugin({ maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 * 30 })
     ]
   })
 );
@@ -93,32 +78,17 @@ registerRoute(
   new CacheFirst({
     cacheName: 'images-cache',
     plugins: [
-      new ExpirationPlugin({
-        maxEntries: 60,
-        maxAgeSeconds: 60 * 60 * 24 * 30
-      }),
-      new CacheableResponsePlugin({
-        statuses: [0, 200]
-      })
+      new ExpirationPlugin({ maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 30 }),
+      new CacheableResponsePlugin({ statuses: [0, 200] })
     ]
   })
 );
 
 self.addEventListener('push', function(event) {
-  console.log('[SW] Push event received:', event);
-  
   let data = { title: 'PREGA SQUAD', body: 'Nouveau rendez-vous!' };
-  
   if (event.data) {
-    try {
-      data = event.data.json();
-      console.log('[SW] Push data:', data);
-    } catch (e) {
-      console.log('[SW] Push data as text:', event.data.text());
-      data.body = event.data.text();
-    }
+    try { data = event.data.json(); } catch { data.body = event.data.text(); }
   }
-
   const options = {
     body: data.body,
     icon: '/icon-192.png',
@@ -127,23 +97,14 @@ self.addEventListener('push', function(event) {
     tag: 'prega-squad-notification',
     renotify: true,
     requireInteraction: true,
-    data: {
-      url: (data as any).url || '/planning',
-      dateOfArrival: Date.now()
-    }
+    data: { url: (data as any).url || '/planning', dateOfArrival: Date.now() }
   } as NotificationOptions;
-
-  event.waitUntil(
-    self.registration.showNotification(data.title, options)
-  );
+  event.waitUntil(self.registration.showNotification(data.title, options));
 });
 
 self.addEventListener('notificationclick', function(event) {
-  console.log('[SW] Notification clicked:', event);
   event.notification.close();
-
   const urlToOpen = event.notification.data?.url || '/';
-
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
       for (let i = 0; i < clientList.length; i++) {
@@ -153,41 +114,24 @@ self.addEventListener('notificationclick', function(event) {
           return (client as WindowClient).focus();
         }
       }
-      if (self.clients.openWindow) {
-        return self.clients.openWindow(urlToOpen);
-      }
+      if (self.clients.openWindow) return self.clients.openWindow(urlToOpen);
     })
   );
 });
 
-// Background sync for offline changes
 self.addEventListener('sync', (event: any) => {
-  console.log('[SW] Background sync triggered:', event.tag);
-  
   if (event.tag === 'sync-appointments' || event.tag === 'sync-data') {
     event.waitUntil(
       self.clients.matchAll().then((clients) => {
-        clients.forEach((client) => {
-          client.postMessage({ type: 'SYNC_REQUIRED' });
-        });
+        clients.forEach((client) => client.postMessage({ type: 'SYNC_REQUIRED' }));
       })
     );
   }
 });
 
-// Message handling from main app
 self.addEventListener('message', (event) => {
-  if (event.data?.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
-
-// NOTE: No manual fetch handler here — Workbox's registerRoute for documents
-// (NetworkFirst above) already handles offline navigation fallback.
-// A second respondWith() call on the same fetch event throws
-// InvalidStateError and produces a blank page.
 
 self.skipWaiting();
 self.clients.claim();
-
-console.log('[SW] Service worker loaded with offline support');

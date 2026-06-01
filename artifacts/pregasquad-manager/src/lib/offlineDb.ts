@@ -1,5 +1,5 @@
 const DB_NAME = 'pregasquad-offline';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 interface OfflineStore {
   appointments: any[];
@@ -12,6 +12,8 @@ interface OfflineStore {
   staffCommissions: any[];
   products: any[];
   businessSettings: any;
+  ownerWithdrawals: any[];
+  salonPayments: any[];
 }
 
 interface SyncQueueItem {
@@ -42,9 +44,9 @@ export async function initOfflineDb(): Promise<IDBDatabase> {
       const database = (event.target as IDBOpenDBRequest).result;
       
       const stores = [
-        'appointments', 'services', 'categories', 'staff', 
-        'clients', 'charges', 'staffDeductions', 'staffCommissions', 
-        'products', 'businessSettings'
+        'appointments', 'services', 'categories', 'staff',
+        'clients', 'charges', 'staffDeductions', 'staffCommissions',
+        'products', 'businessSettings', 'ownerWithdrawals', 'salonPayments'
       ];
       
       stores.forEach(storeName => {

@@ -36,7 +36,8 @@ export function useBusinessSettings() {
           const res = await fetch("/api/business-settings", { credentials: "include" });
           if (res.ok) {
             const data = await res.json();
-            await saveToOfflineStore('businessSettings', [data]).catch(() => {});
+            // Wrap with stable id so IndexedDB keyPath constraint is satisfied
+            await saveToOfflineStore('businessSettings', [{ ...data, id: 'settings' }]).catch(() => {});
             return data;
           }
           if (res.status === 401) {
@@ -78,10 +79,8 @@ export function useAppointments(date?: string) {
           const res = await fetch(url, { credentials: "include" });
           if (res.ok) {
             const data = api.appointments.list.responses[200].parse(await res.json());
-            // Cache for offline use
-            if (!date) {
-              await saveToOfflineStore('appointments', data).catch(() => {});
-            }
+            // Cache every successful fetch for offline use (date-specific and all)
+            await saveToOfflineStore('appointments', data).catch(() => {});
             return data;
           }
         } catch (e) {
