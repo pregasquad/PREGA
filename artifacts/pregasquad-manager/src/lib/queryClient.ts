@@ -314,6 +314,7 @@ export const queryClient = new QueryClient({
     },
     mutations: {
       retry: false,
+      networkMode: 'always',
     },
   },
 });
