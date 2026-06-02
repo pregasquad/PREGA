@@ -1626,12 +1626,9 @@ export async function registerRoutes(
 
   // Get all appointments (for salaries calculation) — supports ?limit=N&offset=N pagination
   app.get("/api/appointments/all", isPinAuthenticated, async (req, res) => {
-    const items = await storage.getAppointments();
-    const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
-    const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
-    if (limit !== undefined) {
-      return res.json(items.slice(offset, offset + limit));
-    }
+    const limit = req.query.limit ? Math.max(1, parseInt(req.query.limit as string)) : undefined;
+    const offset = req.query.offset ? Math.max(0, parseInt(req.query.offset as string)) : 0;
+    const items = await storage.getAppointments(undefined, limit, offset);
     res.json(items);
   });
 
@@ -1826,92 +1823,116 @@ export async function registerRoutes(
       const input = api.appointments.update.input.parse(req.body);
       const oldAppointment = await storage.getAppointment(Number(req.params.id));
       const item = await storage.updateAppointment(Number(req.params.id), input);
-      
-      // When appointment becomes paid, handle stock and loyalty points
+
+      // ── unpaid → paid: deduct stock + award loyalty atomically ──────────────
       if (item.paid && oldAppointment && !oldAppointment.paid) {
-        // Deduct stock for all linked products (single-service & multi-service)
+        // Phase 1: gather all the data we need (reads, outside the transaction)
         const allProducts = await storage.getProducts();
-        const deductForServiceName = async (serviceName: string) => {
+
+        type StockChange = { productId: number; newQty: number };
+        const stockChanges: StockChange[] = [];
+
+        const collectForServiceName = async (serviceName: string) => {
           const service = await storage.getServiceByName(serviceName);
           if (!service) return;
-          // linkedProductIds: array of {productId, quantity}
-          const multiLinks: { productId: number; quantity: number }[] = Array.isArray(service.linkedProductIds) ? service.linkedProductIds as any : [];
+          const multiLinks: { productId: number; quantity: number }[] = Array.isArray(service.linkedProductIds)
+            ? (service.linkedProductIds as any)
+            : [];
           if (multiLinks.length > 0) {
             for (const link of multiLinks) {
               const product = allProducts.find(p => p.id === link.productId);
               if (product && product.quantity > 0) {
-                const deductQty = Math.min(link.quantity || 1, product.quantity);
-                await storage.updateProductQuantity(product.id, product.quantity - deductQty);
-                checkAndNotifyLowStock(product.id);
+                stockChanges.push({ productId: product.id, newQty: product.quantity - Math.min(link.quantity || 1, product.quantity) });
               }
             }
           } else if (service.linkedProductId) {
-            // Legacy single link
             const product = allProducts.find(p => p.id === service.linkedProductId);
             if (product && product.quantity > 0) {
-              await storage.updateProductQuantity(product.id, product.quantity - 1);
-              checkAndNotifyLowStock(product.id);
+              stockChanges.push({ productId: product.id, newQty: product.quantity - 1 });
             }
           }
         };
-        // Multi-service appointment (servicesJson)
+
         if (item.servicesJson) {
           const svcList = typeof item.servicesJson === 'string' ? JSON.parse(item.servicesJson) : item.servicesJson;
           if (Array.isArray(svcList)) {
-            for (const svc of svcList) { if (svc.name) await deductForServiceName(svc.name); }
+            for (const svc of svcList) { if (svc.name) await collectForServiceName(svc.name); }
           }
         } else if (item.service) {
-          await deductForServiceName(item.service);
+          await collectForServiceName(item.service);
         }
-        
-        // Award loyalty points to client
+
+        let loyaltyResult: { clientId: number; clientName: string; pointsAdded: number; newPoints: number; newVisits: number; newSpent: number } | null = null;
         if (item.total && item.total > 0 && (item.clientId || item.client)) {
           const client = item.clientId ? await storage.getClient(item.clientId) : await storage.getClientByName(item.client!);
           if (client && client.loyaltyEnrolled) {
             const settings = await storage.getBusinessSettings();
-            const pointsPerDh = settings?.loyaltyPointsPerDh ?? 1;
-            const pointsToAdd = Math.floor(item.total * pointsPerDh);
+            const pointsToAdd = Math.floor(item.total * (settings?.loyaltyPointsPerDh ?? 1));
             if (pointsToAdd > 0) {
-              const updatedClient = await storage.updateClientLoyalty(client.id, pointsToAdd, item.total);
-              console.log(`Awarded ${pointsToAdd} loyalty points to ${client.name} for appointment #${item.id}`);
-              io.emit("client:loyaltyUpdated", { 
-                clientId: client.id, 
+              loyaltyResult = {
+                clientId: client.id,
                 clientName: client.name,
-                pointsAdded: pointsToAdd, 
-                newTotal: updatedClient.loyaltyPoints 
-              });
+                pointsAdded: pointsToAdd,
+                newPoints: client.loyaltyPoints + pointsToAdd,
+                newVisits: (client.totalVisits ?? 0) + 1,
+                newSpent: Number(client.totalSpent ?? 0) + item.total,
+              };
             }
           }
         }
+
+        // Phase 2: apply all writes atomically in a single transaction
+        const s = schema();
+        await db().transaction(async (tx: any) => {
+          for (const { productId, newQty } of stockChanges) {
+            await tx.update(s.products).set({ quantity: newQty }).where(eq(s.products.id, productId));
+          }
+          if (loyaltyResult) {
+            await tx.update(s.clients).set({
+              loyaltyPoints: loyaltyResult.newPoints,
+              totalVisits: loyaltyResult.newVisits,
+              totalSpent: loyaltyResult.newSpent,
+            }).where(eq(s.clients.id, loyaltyResult.clientId));
+          }
+        });
+
+        // Phase 3: non-atomic post-tx notifications (fire-and-forget)
+        for (const { productId } of stockChanges) { checkAndNotifyLowStock(productId); }
+        if (loyaltyResult) {
+          const updatedClient = await storage.getClient(loyaltyResult.clientId);
+          console.log(`Awarded ${loyaltyResult.pointsAdded} loyalty points to ${loyaltyResult.clientName} for appointment #${item.id}`);
+          io.emit("client:loyaltyUpdated", {
+            clientId: loyaltyResult.clientId,
+            clientName: loyaltyResult.clientName,
+            pointsAdded: loyaltyResult.pointsAdded,
+            newTotal: updatedClient?.loyaltyPoints ?? loyaltyResult.newPoints,
+          });
+        }
       }
-      
-      // When appointment becomes unpaid (paid→unpaid), reverse loyalty points that were earned
+
+      // ── paid → unpaid: reverse loyalty (single write, no transaction needed) ─
       if (!item.paid && oldAppointment && oldAppointment.paid) {
         if (oldAppointment.total && oldAppointment.total > 0 && (oldAppointment.clientId || oldAppointment.client)) {
           const client = oldAppointment.clientId ? await storage.getClient(oldAppointment.clientId) : await storage.getClientByName(oldAppointment.client!);
           if (client && client.loyaltyEnrolled) {
             const settings = await storage.getBusinessSettings();
-            const pointsPerDh = settings?.loyaltyPointsPerDh ?? 1;
-            const pointsToRemove = Math.floor(oldAppointment.total * pointsPerDh);
+            const pointsToRemove = Math.floor(oldAppointment.total * (settings?.loyaltyPointsPerDh ?? 1));
             if (pointsToRemove > 0) {
               const updatedClient = await storage.subtractClientLoyalty(client.id, pointsToRemove, oldAppointment.total);
               console.log(`Reversed ${pointsToRemove} loyalty points from ${client.name} for appointment #${item.id} (paid→unpaid)`);
-              io.emit("client:loyaltyUpdated", { 
-                clientId: client.id, 
+              io.emit("client:loyaltyUpdated", {
+                clientId: client.id,
                 clientName: client.name,
-                pointsAdded: -pointsToRemove, 
-                newTotal: updatedClient.loyaltyPoints 
+                pointsAdded: -pointsToRemove,
+                newTotal: updatedClient.loyaltyPoints,
               });
             }
           }
         }
       }
-      
+
       io.emit("appointment:updated", item);
-      if (item.paid) {
-        io.emit("appointment:paid", item);
-      }
-      
+      if (item.paid) { io.emit("appointment:paid", item); }
       res.json(item);
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -2724,12 +2745,9 @@ export async function registerRoutes(
 
   // Products/Inventory - protected routes
   app.get("/api/products", isPinAuthenticated, async (req, res) => {
-    const products = await storage.getProducts();
-    const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
-    const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
-    if (limit !== undefined) {
-      return res.json(products.slice(offset, offset + limit));
-    }
+    const limit = req.query.limit ? Math.max(1, parseInt(req.query.limit as string)) : undefined;
+    const offset = req.query.offset ? Math.max(0, parseInt(req.query.offset as string)) : 0;
+    const products = await storage.getProducts(limit, offset);
     res.json(products);
   });
 
@@ -2783,12 +2801,9 @@ export async function registerRoutes(
   // Expenses - protected routes
   app.get("/api/charges", isPinAuthenticated, async (req, res) => {
     try {
-      const items = await storage.getCharges();
-      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
-      const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
-      if (limit !== undefined) {
-        return res.json(items.slice(offset, offset + limit));
-      }
+      const limit = req.query.limit ? Math.max(1, parseInt(req.query.limit as string)) : undefined;
+      const offset = req.query.offset ? Math.max(0, parseInt(req.query.offset as string)) : 0;
+      const items = await storage.getCharges(limit, offset);
       res.json(items);
     } catch (err) {
       console.error("Error fetching charges:", err);
@@ -3032,12 +3047,9 @@ export async function registerRoutes(
 
   // Clients - protected routes
   app.get("/api/clients", isPinAuthenticated, async (req, res) => {
-    const items = await storage.getClients();
-    const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
-    const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
-    if (limit !== undefined) {
-      return res.json(items.slice(offset, offset + limit));
-    }
+    const limit = req.query.limit ? Math.max(1, parseInt(req.query.limit as string)) : undefined;
+    const offset = req.query.offset ? Math.max(0, parseInt(req.query.offset as string)) : 0;
+    const items = await storage.getClients(limit, offset);
     res.json(items);
   });
 

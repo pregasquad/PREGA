@@ -36,7 +36,7 @@ function isMySQL(): boolean {
 }
 
 export interface IStorage extends IAuthStorage {
-  getAppointments(date?: string): Promise<Appointment[]>;
+  getAppointments(date?: string, limit?: number, offset?: number): Promise<Appointment[]>;
   getAppointmentsByDateRange(startDate: string, endDate: string): Promise<Appointment[]>;
   createAppointment(appointment: InsertAppointment): Promise<Appointment>;
   updateAppointment(id: number, appointment: Partial<InsertAppointment>): Promise<Appointment>;
@@ -59,7 +59,7 @@ export interface IStorage extends IAuthStorage {
   updateStaff(id: number, staff: Partial<InsertStaff>): Promise<Staff>;
   deleteStaff(id: number): Promise<void>;
 
-  getProducts(): Promise<Product[]>;
+  getProducts(limit?: number, offset?: number): Promise<Product[]>;
   getProductByName(name: string): Promise<Product | undefined>;
   getProduct(id: number): Promise<Product | undefined>;
   updateProductQuantity(id: number, quantity: number): Promise<Product>;
@@ -70,7 +70,7 @@ export interface IStorage extends IAuthStorage {
   getExpiringProducts(): Promise<Product[]>;
   getBotConfirmedAppointments(cutoffDate: string): Promise<Appointment[]>;
 
-  getClients(): Promise<Client[]>;
+  getClients(limit?: number, offset?: number): Promise<Client[]>;
   getClient(id: number): Promise<Client | undefined>;
   getClientByName(name: string): Promise<Client | undefined>;
   getClientByPhone(phone: string): Promise<Client | undefined>;
@@ -83,7 +83,7 @@ export interface IStorage extends IAuthStorage {
   updateClientGiftCardBalance(id: number, amount: number): Promise<Client>;
   getClientAppointments(clientId: number): Promise<Appointment[]>;
 
-  getCharges(): Promise<Charge[]>;
+  getCharges(limit?: number, offset?: number): Promise<Charge[]>;
   createCharge(charge: InsertCharge): Promise<Charge>;
   updateCharge(id: number, data: Partial<InsertCharge>): Promise<void>;
   deleteCharge(id: number): Promise<void>;
@@ -211,12 +211,13 @@ export class DatabaseStorage implements IStorage {
   getUser = authStorage.getUser;
   upsertUser = authStorage.upsertUser;
 
-  async getAppointments(date?: string): Promise<Appointment[]> {
+  async getAppointments(date?: string, limit?: number, offset?: number): Promise<Appointment[]> {
     const s = schema();
-    if (date) {
-      return await db().select().from(s.appointments).where(eq(s.appointments.date, date));
-    }
-    return await db().select().from(s.appointments);
+    const q = date
+      ? db().select().from(s.appointments).where(eq(s.appointments.date, date))
+      : db().select().from(s.appointments).orderBy(desc(s.appointments.date));
+    if (limit !== undefined) return await q.limit(limit).offset(offset ?? 0);
+    return await q;
   }
 
   async getAppointmentsByDateRange(startDate: string, endDate: string): Promise<Appointment[]> {
@@ -478,9 +479,11 @@ export class DatabaseStorage implements IStorage {
     await db().delete(s.staff).where(eq(s.staff.id, id));
   }
 
-  async getProducts(): Promise<Product[]> {
+  async getProducts(limit?: number, offset?: number): Promise<Product[]> {
     const s = schema();
-    return await db().select().from(s.products);
+    const q = db().select().from(s.products).orderBy(desc(s.products.id));
+    if (limit !== undefined) return await q.limit(limit).offset(offset ?? 0);
+    return await q;
   }
 
   async getProduct(id: number): Promise<Product | undefined> {
@@ -581,9 +584,11 @@ export class DatabaseStorage implements IStorage {
     await db().delete(s.products).where(eq(s.products.id, id));
   }
 
-  async getClients(): Promise<Client[]> {
+  async getClients(limit?: number, offset?: number): Promise<Client[]> {
     const s = schema();
-    return await db().select().from(s.clients).orderBy(desc(s.clients.createdAt));
+    const q = db().select().from(s.clients).orderBy(desc(s.clients.createdAt));
+    if (limit !== undefined) return await q.limit(limit).offset(offset ?? 0);
+    return await q;
   }
 
   async getClient(id: number): Promise<Client | undefined> {
@@ -740,9 +745,10 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(s.appointments.date));
   }
 
-  async getCharges(): Promise<Charge[]> {
+  async getCharges(limit?: number, offset?: number): Promise<Charge[]> {
     const s = schema();
-    const items = await db().select().from(s.charges).orderBy(desc(s.charges.createdAt));
+    const q = db().select().from(s.charges).orderBy(desc(s.charges.createdAt));
+    const items = limit !== undefined ? await q.limit(limit).offset(offset ?? 0) : await q;
     return items.map((item: any) => ({
       ...item,
       amount: Number(item.amount || 0)
