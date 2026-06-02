@@ -1624,45 +1624,36 @@ export async function registerRoutes(
     res.json(items);
   });
 
-  // Get all appointments (for salaries calculation)
+  // Get all appointments (for salaries calculation) — supports ?limit=N&offset=N pagination
   app.get("/api/appointments/all", isPinAuthenticated, async (req, res) => {
     const items = await storage.getAppointments();
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+    const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+    if (limit !== undefined) {
+      return res.json(items.slice(offset, offset + limit));
+    }
     res.json(items);
   });
 
   // Lightweight count of unreviewed bot-confirmed appointments (for nav badge)
   app.get("/api/appointments/bot-confirmed/count", isPinAuthenticated, async (req, res) => {
-    const all = await storage.getAppointments();
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - 7);
     cutoff.setHours(0, 0, 0, 0);
-    const count = all.filter((a: any) => {
-      if (a.bookingStatus !== "bot_confirmed") return false;
-      if (!a.date) return true;
-      return new Date(a.date) >= cutoff;
-    }).length;
-    res.json({ count });
+    const cutoffStr = cutoff.toISOString().slice(0, 10);
+    const items = await storage.getBotConfirmedAppointments(cutoffStr);
+    res.json({ count: items.length });
   });
 
   // Get appointments auto-saved by the AI WhatsApp bot — needs staff review.
   // Only "bot_confirmed" status (AI-created, not yet reviewed by staff).
   // Includes past appointments so staff can spot missed ones, but limits to last 7 days.
   app.get("/api/appointments/bot-confirmed", isPinAuthenticated, async (req, res) => {
-    const all = await storage.getAppointments();
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - 7);
     cutoff.setHours(0, 0, 0, 0);
-    const confirmed = all
-      .filter((a: any) => {
-        if (a.bookingStatus !== "bot_confirmed") return false;
-        if (!a.date) return true;
-        return new Date(a.date) >= cutoff;
-      })
-      .sort((a: any, b: any) => {
-        const da = new Date(`${a.date}T${a.startTime || "00:00"}`).getTime();
-        const db = new Date(`${b.date}T${b.startTime || "00:00"}`).getTime();
-        return db - da;
-      });
+    const cutoffStr = cutoff.toISOString().slice(0, 10);
+    const confirmed = await storage.getBotConfirmedAppointments(cutoffStr);
     res.json(confirmed);
   });
 
@@ -2054,7 +2045,8 @@ export async function registerRoutes(
     try {
       const today = new Date();
       const todayStr = today.toISOString().slice(0, 10);
-      const futureStr = new Date(today.getFullYear() + 2, today.getMonth(), today.getDate()).toISOString().slice(0, 10);
+      // 3-month window is more than enough to find each staff member's next booking
+      const futureStr = new Date(today.getFullYear(), today.getMonth() + 3, today.getDate()).toISOString().slice(0, 10);
       const appointments = await storage.getAppointmentsByDateRange(todayStr, futureStr);
 
       // Sort all future appointments by date+time
@@ -2731,8 +2723,13 @@ export async function registerRoutes(
   });
 
   // Products/Inventory - protected routes
-  app.get("/api/products", isPinAuthenticated, async (_req, res) => {
+  app.get("/api/products", isPinAuthenticated, async (req, res) => {
     const products = await storage.getProducts();
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+    const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+    if (limit !== undefined) {
+      return res.json(products.slice(offset, offset + limit));
+    }
     res.json(products);
   });
 
@@ -2765,7 +2762,7 @@ export async function registerRoutes(
   });
 
   app.get("/api/products/:id", isPinAuthenticated, async (req, res) => {
-    const product = await storage.getProducts().then(prods => prods.find(p => p.id === parseInt(req.params.id)));
+    const product = await storage.getProduct(parseInt(req.params.id));
     if (!product) return res.status(404).json({ message: "Product not found" });
     res.json(product);
   });
@@ -2784,9 +2781,14 @@ export async function registerRoutes(
   });
 
   // Expenses - protected routes
-  app.get("/api/charges", isPinAuthenticated, async (_req, res) => {
+  app.get("/api/charges", isPinAuthenticated, async (req, res) => {
     try {
       const items = await storage.getCharges();
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+      const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+      if (limit !== undefined) {
+        return res.json(items.slice(offset, offset + limit));
+      }
       res.json(items);
     } catch (err) {
       console.error("Error fetching charges:", err);
@@ -3029,8 +3031,13 @@ export async function registerRoutes(
   });
 
   // Clients - protected routes
-  app.get("/api/clients", isPinAuthenticated, async (_req, res) => {
+  app.get("/api/clients", isPinAuthenticated, async (req, res) => {
     const items = await storage.getClients();
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+    const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+    if (limit !== undefined) {
+      return res.json(items.slice(offset, offset + limit));
+    }
     res.json(items);
   });
 

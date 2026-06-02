@@ -185,9 +185,12 @@ startServer().catch((err) => {
 
 process.on("SIGTERM", () => {
   httpServer.close(() => process.exit(0));
+  // Force exit after 3 s so lingering Socket.io connections don't block restarts
+  setTimeout(() => process.exit(0), 3000).unref();
 });
 process.on("SIGINT", () => {
   httpServer.close(() => process.exit(0));
+  setTimeout(() => process.exit(0), 3000).unref();
 });
 
 // ── Boss crash-alert — rate-limited to 1 per 5 min ──────────────────────────

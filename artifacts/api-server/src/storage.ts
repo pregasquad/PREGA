@@ -27,7 +27,7 @@ import {
   type SalonPayment, type InsertSalonPayment,
   type OwnerWithdrawal, type InsertOwnerWithdrawal
 } from "@workspace/db";
-import { eq, desc, and, gte, lte, sql, isNull } from "drizzle-orm";
+import { eq, desc, and, gte, lte, sql, isNull, not } from "drizzle-orm";
 import { authStorage, type IAuthStorage } from "./replit_integrations/auth/storage";
 
 // Helper to check if we're using MySQL (no .returning() support)
@@ -68,6 +68,7 @@ export interface IStorage extends IAuthStorage {
   deleteProduct(id: number): Promise<void>;
   getLowStockProducts(): Promise<Product[]>;
   getExpiringProducts(): Promise<Product[]>;
+  getBotConfirmedAppointments(cutoffDate: string): Promise<Appointment[]>;
 
   getClients(): Promise<Client[]>;
   getClient(id: number): Promise<Client | undefined>;
@@ -254,16 +255,12 @@ export class DatabaseStorage implements IStorage {
         ?? (result as any)[0]?.insertId 
         ?? (result as any)[0]?.[0]?.insertId;
       
-      // If still no insertId, fall back to querying the latest row for this client
+      // Safe fallback: LAST_INSERT_ID() is connection-scoped, no race condition
       if (!insertId) {
-        const [latest] = await db()
-          .select()
-          .from(s.appointments)
-          .where(eq(s.appointments.client, processedAppointment.client))
-          .orderBy(desc(s.appointments.id))
-          .limit(1);
-        if (latest) return latest;
-        throw new Error("Failed to get insert ID from MySQL/TiDB");
+        const rows = await db().execute(sql`SELECT LAST_INSERT_ID() as last_id`);
+        const firstRow = Array.isArray(rows) ? (rows[0] as any)?.[0] ?? (rows[0] as any) : (rows as any);
+        insertId = Number(firstRow?.last_id ?? 0);
+        if (!insertId) throw new Error("Failed to get insert ID from MySQL/TiDB");
       }
       
       const [created] = await db().select().from(s.appointments).where(eq(s.appointments.id, insertId));
@@ -500,27 +497,42 @@ export class DatabaseStorage implements IStorage {
 
   async getLowStockProducts(): Promise<Product[]> {
     const s = schema();
-    const allProducts = await db().select().from(s.products);
-    return allProducts.filter((p: any) => {
-      const quantity = Number(p.quantity || 0);
-      const threshold = Number(p.lowStockThreshold || 0);
-      return quantity <= threshold;
-    });
+    // Filter entirely in SQL — no JS iteration over full table
+    return await db().select().from(s.products)
+      .where(sql`${s.products.quantity} <= ${s.products.lowStockThreshold}`);
   }
 
   async getExpiringProducts(): Promise<Product[]> {
     const s = schema();
-    const allProducts = await db().select().from(s.products);
     const today = new Date();
-    
-    return allProducts.filter((p: any) => {
-      if (!p.expiryDate) return false;
+    // Pre-filter in SQL: only rows with an expiryDate set within the next 365 days
+    // (generous window to cover any per-product warningDays value up to 365)
+    const maxDate = new Date(today);
+    maxDate.setDate(maxDate.getDate() + 365);
+    const maxDateStr = maxDate.toISOString().slice(0, 10);
+    const candidates = await db().select().from(s.products)
+      .where(and(
+        not(isNull(s.products.expiryDate)),
+        lte(s.products.expiryDate, maxDateStr)
+      ));
+    // Apply per-product warningDays in JS (can't be done purely in SQL)
+    return candidates.filter((p: any) => {
       const expiryDate = new Date(p.expiryDate);
       const warningDays = Number(p.expiryWarningDays || 30);
       const warningDate = new Date(today);
       warningDate.setDate(warningDate.getDate() + warningDays);
       return expiryDate <= warningDate;
     });
+  }
+
+  async getBotConfirmedAppointments(cutoffDate: string): Promise<Appointment[]> {
+    const s = schema();
+    return await db().select().from(s.appointments)
+      .where(and(
+        sql`${s.appointments.bookingStatus} = 'bot_confirmed'`,
+        gte(s.appointments.date, cutoffDate)
+      ))
+      .orderBy(desc(s.appointments.date));
   }
 
   async updateProductQuantity(id: number, quantity: number): Promise<Product> {
