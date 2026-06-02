@@ -1838,10 +1838,12 @@ export async function registerRoutes(
       let loyaltyResult: { clientId: number; clientName: string; pointsAdded: number; newPoints: number; newVisits: number; newSpent: number } | null = null;
 
       if (transitionToPaid) {
+        // Merge persisted row with partial payload so { paid: true } still sees service/total/client
+        const effectiveAppt = { ...oldAppointment, ...processedPayload } as Record<string, any>;
         const allProducts = await storage.getProducts();
-        const pendingTotal: number = (processedPayload.total as number) ?? 0;
-        const pendingServicesJson = processedPayload.servicesJson;
-        const pendingService: string | undefined = processedPayload.service as string | undefined;
+        const pendingTotal: number = Number(effectiveAppt.total) || 0;
+        const pendingServicesJson = effectiveAppt.servicesJson;
+        const pendingService: string | undefined = effectiveAppt.service as string | undefined;
 
         const collectForServiceName = async (serviceName: string) => {
           const service = await storage.getServiceByName(serviceName);
@@ -1869,8 +1871,10 @@ export async function registerRoutes(
           await collectForServiceName(pendingService);
         }
 
-        if (pendingTotal > 0 && (input.clientId || input.client)) {
-          const client = input.clientId ? await storage.getClient(input.clientId) : await storage.getClientByName(input.client!);
+        const effectiveClientId: number | undefined = (effectiveAppt.clientId as number | undefined) ?? undefined;
+        const effectiveClientName: string | undefined = (effectiveAppt.client as string | undefined) ?? undefined;
+        if (pendingTotal > 0 && (effectiveClientId || effectiveClientName)) {
+          const client = effectiveClientId ? await storage.getClient(effectiveClientId) : await storage.getClientByName(effectiveClientName!);
           if (client && client.loyaltyEnrolled) {
             const settings = await storage.getBusinessSettings();
             const pointsToAdd = Math.floor(pendingTotal * (settings?.loyaltyPointsPerDh ?? 1));
