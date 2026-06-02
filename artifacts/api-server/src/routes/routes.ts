@@ -508,7 +508,7 @@ export async function registerRoutes(
   registerObjectStorageRoutes(app);
 
   // === UPLOAD ROUTE ===
-  app.post("/api/upload", multer({ 
+  app.post("/api/upload", isPinAuthenticated, multer({ 
     storage: multer.memoryStorage(),
     limits: {
       fileSize: 10 * 1024 * 1024,
@@ -637,12 +637,12 @@ export async function registerRoutes(
   });
 
   // Real-time server log viewer — admin only
-  app.get("/api/logs", (req, res) => {
+  app.get("/api/logs", isPinAuthenticated, requirePermission("admin_settings"), (req, res) => {
     const sinceId = req.query.since !== undefined ? Number(req.query.since) : undefined;
     res.json({ logs: getRecentLogs(sinceId), lastId: getLastId() });
   });
 
-  app.get("/api/logs/stream", (req, res) => {
+  app.get("/api/logs/stream", isPinAuthenticated, requirePermission("admin_settings"), (req, res) => {
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
@@ -1482,7 +1482,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/qz/sign", express.text({ type: "*/*" }), (req, res) => {
+  app.post("/api/qz/sign", isPinAuthenticated, express.text({ type: "*/*" }), (req, res) => {
     try {
       const toSign = typeof req.body === "string" ? req.body : String(req.body);
       const privateKey = fs.readFileSync(qzKeyPath, "utf-8");
@@ -4240,11 +4240,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
           return res.status(401).json({ success: false, message: "No PIN set" });
         }
         
-        // Master password fallback for owner role
-        const MASTER_PASSWORD = "5890";
-        const isMasterPassword = role.role === "owner" && pin === MASTER_PASSWORD;
-        
-        const isValid = isMasterPassword || await bcrypt.compare(pin, role.pin);
+        const isValid = await bcrypt.compare(pin, role.pin);
         if (!isValid) {
           recordFailedAttempt(identifier);
           return res.status(401).json({ 
@@ -4252,12 +4248,6 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
             message: "Invalid PIN",
             remainingAttempts: rateCheck.remainingAttempts - 1
           });
-        }
-        
-        // If master password was used, update the stored PIN hash for future logins
-        if (isMasterPassword) {
-          const hashedPin = await bcrypt.hash(MASTER_PASSWORD, 10);
-          await storage.updateAdminRole(role.id, { pin: hashedPin });
         }
       }
       
@@ -4401,7 +4391,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
   });
 
   // Refresh all users' permissions based on their role
-  app.post("/api/admin-roles/refresh-permissions", isPinAuthenticated, async (req, res) => {
+  app.post("/api/admin-roles/refresh-permissions", isPinAuthenticated, requirePermission("admin_settings"), async (req, res) => {
     try {
       const allRoles = await storage.getAdminRoles();
       let updated = 0;
