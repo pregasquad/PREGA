@@ -928,9 +928,12 @@ export class DatabaseStorage implements IStorage {
     totalCommission: number;
   }> {
     const s = schema();
+    // Prefer staffId lookup (accurate after renames); fall back to name-only when staffId missing
     const appts = await db().select().from(s.appointments)
       .where(and(
-        eq(s.appointments.staff, staffName),
+        staffId
+          ? eq(s.appointments.staffId, staffId)
+          : eq(s.appointments.staff, staffName),
         gte(s.appointments.date, startDate),
         lte(s.appointments.date, endDate)
       ));

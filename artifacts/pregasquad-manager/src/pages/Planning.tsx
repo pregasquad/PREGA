@@ -661,10 +661,26 @@ export default function Planning() {
     let walletRevenue = 0;
     let walletCommission = 0;
     walletAppts.forEach((apt: any) => {
-      const total = apt.total || 0;
+      const total = Number(apt.total) || 0;
       walletRevenue += total;
-      const serviceName = apt.service || "Unknown";
-      walletCommission += (total * getCommission(serviceName)) / 100;
+      // Multi-service: calculate per-service commission weighted by price, then scale to actual total
+      let parsedServices: { name: string; price: number }[] | null = null;
+      if (apt.servicesJson) {
+        try {
+          const raw = typeof apt.servicesJson === 'string' ? JSON.parse(apt.servicesJson) : apt.servicesJson;
+          if (Array.isArray(raw) && raw.length > 0) parsedServices = raw;
+        } catch { /* ignore */ }
+      }
+      if (parsedServices && parsedServices.length > 0) {
+        const sumPrices = parsedServices.reduce((a, sv) => a + Number(sv.price || 0), 0);
+        const discountRatio = sumPrices > 0 && total >= 0 && total < sumPrices ? total / sumPrices : 1;
+        for (const sv of parsedServices) {
+          const effectivePrice = Number(sv.price || 0) * discountRatio;
+          walletCommission += (effectivePrice * getCommission(sv.name)) / 100;
+        }
+      } else {
+        walletCommission += (total * getCommission(apt.service || "Unknown")) / 100;
+      }
     });
 
     const pendingDeductions: any[] = (salaryData.deductions || []).filter((d: any) =>
@@ -1234,7 +1250,9 @@ export default function Planning() {
     });
     
     // Read total price from state (user can override the calculated total)
-    const customTotal = totalInputValue ? parseFloat(totalInputValue) : null;
+    // Guard against NaN from invalid input (e.g. "-", empty, text)
+    const parsedCustom = totalInputValue ? Number(totalInputValue) : NaN;
+    const customTotal = Number.isFinite(parsedCustom) ? parsedCustom : null;
     // Use package discounted price if a package is selected, otherwise sum of services
     const calculatedTotal = selectedPackage 
       ? selectedPackage.discountedPrice 
@@ -1917,15 +1935,22 @@ export default function Planning() {
       try { parsedServicesJson = JSON.parse(parsedServicesJson); } catch { parsedServicesJson = null; }
     }
     try {
+      // Send only the changed fields — avoids overwriting newer server data with stale client copy
       await apiRequest("PUT", `/api/appointments/${appointment.id}`, {
-        ...appointment,
-        servicesJson: parsedServicesJson,
         staff: staffName,
         staffId: staffMember.id,
         startTime: newTime,
-        updatedAt: new Date().toISOString(),
-        _store: 'appointments',
-        _offlineUpdatedAt: new Date().toISOString(),
+        // Preserve current service/price/client fields so backend can compute stock+loyalty correctly
+        service: appointment.service,
+        servicesJson: parsedServicesJson,
+        price: appointment.price,
+        total: appointment.total,
+        client: appointment.client,
+        clientId: appointment.clientId,
+        paid: appointment.paid,
+        duration: appointment.duration,
+        date: appointment.date,
+        privateRoom: appointment.privateRoom,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/appointments/all"] });

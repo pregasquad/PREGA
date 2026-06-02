@@ -1845,6 +1845,8 @@ export async function registerRoutes(
         const pendingServicesJson = effectiveAppt.servicesJson;
         const pendingService: string | undefined = effectiveAppt.service as string | undefined;
 
+        // Aggregate required qty per productId to avoid last-write-wins when multiple services share a product
+        const productQtyNeeded = new Map<number, number>();
         const collectForServiceName = async (serviceName: string) => {
           const service = await storage.getServiceByName(serviceName);
           if (!service) return;
@@ -1853,14 +1855,10 @@ export async function registerRoutes(
             : [];
           if (multiLinks.length > 0) {
             for (const link of multiLinks) {
-              const product = allProducts.find(p => p.id === link.productId);
-              if (product && product.quantity > 0)
-                stockChanges.push({ productId: product.id, newQty: product.quantity - Math.min(link.quantity || 1, product.quantity) });
+              productQtyNeeded.set(link.productId, (productQtyNeeded.get(link.productId) ?? 0) + (link.quantity || 1));
             }
           } else if (service.linkedProductId) {
-            const product = allProducts.find(p => p.id === service.linkedProductId);
-            if (product && product.quantity > 0)
-              stockChanges.push({ productId: product.id, newQty: product.quantity - 1 });
+            productQtyNeeded.set(service.linkedProductId, (productQtyNeeded.get(service.linkedProductId) ?? 0) + 1);
           }
         };
 
@@ -1869,6 +1867,13 @@ export async function registerRoutes(
           if (Array.isArray(svcList)) { for (const svc of svcList) { if (svc.name) await collectForServiceName(svc.name); } }
         } else if (pendingService) {
           await collectForServiceName(pendingService);
+        }
+        // Build stockChanges from aggregated needs (one entry per product, clamped >= 0)
+        for (const [productId, needed] of productQtyNeeded) {
+          const product = allProducts.find(p => p.id === productId);
+          if (product) {
+            stockChanges.push({ productId, newQty: Math.max(0, product.quantity - needed) });
+          }
         }
 
         const effectiveClientId: number | undefined = (effectiveAppt.clientId as number | undefined) ?? undefined;
@@ -1928,9 +1933,42 @@ export async function registerRoutes(
         });
       }
 
-      // ── paid → unpaid: reverse loyalty (single write, no transaction needed) ─
+      // ── paid → unpaid: reverse loyalty AND restock products ────────────────
       if (transitionToUnpaid) {
         const appt = oldAppointment!;
+
+        // 1) Restock linked products that were deducted when the appointment was paid
+        const allProductsForRestock = await storage.getProducts();
+        const restockQtyNeeded = new Map<number, number>();
+        const collectRestockForService = async (serviceName: string) => {
+          const service = await storage.getServiceByName(serviceName);
+          if (!service) return;
+          const multiLinks: { productId: number; quantity: number }[] = Array.isArray(service.linkedProductIds)
+            ? (service.linkedProductIds as any) : [];
+          if (multiLinks.length > 0) {
+            for (const link of multiLinks)
+              restockQtyNeeded.set(link.productId, (restockQtyNeeded.get(link.productId) ?? 0) + (link.quantity || 1));
+          } else if (service.linkedProductId) {
+            restockQtyNeeded.set(service.linkedProductId, (restockQtyNeeded.get(service.linkedProductId) ?? 0) + 1);
+          }
+        };
+        const restoreSvcJson = appt.servicesJson;
+        if (restoreSvcJson) {
+          const svcList = typeof restoreSvcJson === 'string' ? JSON.parse(restoreSvcJson) : restoreSvcJson;
+          if (Array.isArray(svcList)) { for (const svc of svcList) { if (svc.name) await collectRestockForService(svc.name); } }
+        } else if (appt.service) {
+          await collectRestockForService(appt.service);
+        }
+        const s2 = schema();
+        for (const [productId, qty] of restockQtyNeeded) {
+          const product = allProductsForRestock.find(p => p.id === productId);
+          if (product) {
+            await db().update(s2.products).set({ quantity: product.quantity + qty }).where(eq(s2.products.id, productId));
+            checkAndNotifyLowStock(productId);
+          }
+        }
+
+        // 2) Reverse loyalty points
         if (appt.total && appt.total > 0 && (appt.clientId || appt.client)) {
           const client = appt.clientId ? await storage.getClient(appt.clientId) : await storage.getClientByName(appt.client!);
           if (client && client.loyaltyEnrolled) {
