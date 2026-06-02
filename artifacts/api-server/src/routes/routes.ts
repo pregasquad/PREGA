@@ -1894,7 +1894,7 @@ export async function registerRoutes(
       const s = schema();
       let item: any;
       await db().transaction(async (tx: any) => {
-        if (isMySQL()) {
+        if (dbDialect === 'mysql') {
           await tx.update(s.appointments).set(processedPayload).where(eq(s.appointments.id, id));
           const [updated] = await tx.select().from(s.appointments).where(eq(s.appointments.id, id));
           if (!updated) throw new Error("Appointment not found");
