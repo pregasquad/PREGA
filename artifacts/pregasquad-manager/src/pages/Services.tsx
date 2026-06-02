@@ -132,6 +132,9 @@ export default function Services() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/services"] });
       setEditingService(null);
+    },
+    onError: () => {
+      toast({ title: t("common.error"), variant: "destructive" });
     }
   });
 
@@ -144,6 +147,9 @@ export default function Services() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
       setEditingCategory(null);
+    },
+    onError: () => {
+      toast({ title: t("common.error"), variant: "destructive" });
     }
   });
 
@@ -153,6 +159,9 @@ export default function Services() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+    },
+    onError: () => {
+      toast({ title: t("common.error"), variant: "destructive" });
     }
   });
 
@@ -534,7 +543,7 @@ export default function Services() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full">{t("common.save")}</Button>
+              <Button type="submit" className="w-full" disabled={updateServiceMutation.isPending}>{t("common.save")}</Button>
             </form>
           </Form>
         </DialogContent>
@@ -548,7 +557,7 @@ export default function Services() {
               <FormField control={editCForm.control} name="name" render={({ field }) => (
                 <FormItem><FormLabel>{t("common.name")}</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
               )} />
-              <Button type="submit" className="w-full">{t("common.save")}</Button>
+              <Button type="submit" className="w-full" disabled={updateCategoryMutation.isPending}>{t("common.save")}</Button>
             </form>
           </Form>
         </DialogContent>

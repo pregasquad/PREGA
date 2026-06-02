@@ -213,6 +213,9 @@ export default function Salaries() {
       setShowChargeDialog(false);
       setNewCharge({ type: "rent", name: "", amount: 0, date: format(getWorkDayDate(bSettings?.openingTime, bSettings?.closingTime), "yyyy-MM-dd") });
     },
+    onError: () => {
+      toast({ title: t("common.error"), variant: "destructive" });
+    },
   });
 
   const deleteChargeMutation = useMutation({
@@ -221,6 +224,9 @@ export default function Salaries() {
     },
     onSuccess: () => {
       refreshSalariesBackground();
+    },
+    onError: () => {
+      toast({ title: t("common.error"), variant: "destructive" });
     },
   });
 
@@ -234,6 +240,9 @@ export default function Salaries() {
       setShowDeductionDialog(false);
       setNewDeduction({ staffName: "", type: "advance", description: "", amount: 0, date: format(getWorkDayDate(bSettings?.openingTime, bSettings?.closingTime), "yyyy-MM-dd") });
     },
+    onError: () => {
+      toast({ title: t("common.error"), variant: "destructive" });
+    },
   });
 
   const deleteDeductionMutation = useMutation({
@@ -242,6 +251,9 @@ export default function Salaries() {
     },
     onSuccess: () => {
       refreshSalariesBackground();
+    },
+    onError: () => {
+      toast({ title: t("common.error"), variant: "destructive" });
     },
   });
 
@@ -252,6 +264,9 @@ export default function Salaries() {
     onSuccess: () => {
       refreshSalariesBackground();
       toast({ title: t("salaries.cleared") });
+    },
+    onError: () => {
+      toast({ title: t("common.error"), variant: "destructive" });
     },
   });
 
@@ -264,6 +279,9 @@ export default function Salaries() {
       setEditingCharge(null);
       toast({ title: t("common.save") });
     },
+    onError: () => {
+      toast({ title: t("common.error"), variant: "destructive" });
+    },
   });
 
   const updateDeductionMutation = useMutation({
@@ -274,6 +292,9 @@ export default function Salaries() {
       refreshSalariesBackground();
       setEditingDeduction(null);
       toast({ title: t("common.save") });
+    },
+    onError: () => {
+      toast({ title: t("common.error"), variant: "destructive" });
     },
   });
 
@@ -287,6 +308,9 @@ export default function Salaries() {
       setPayBackDeduction(null);
       setPayBackInputAmount("");
       toast({ title: t("salaries.payBackRecorded") });
+    },
+    onError: () => {
+      toast({ title: t("common.error"), variant: "destructive" });
     },
   });
 
@@ -304,6 +328,9 @@ export default function Salaries() {
       } catch {}
       const available = await checkPrintStationAsync();
       if (available) { await remoteOpenDrawer(); }
+    },
+    onError: () => {
+      toast({ title: t("common.error"), variant: "destructive" });
     },
   });
 
@@ -327,6 +354,9 @@ export default function Salaries() {
         await remoteOpenDrawer();
       }
     },
+    onError: () => {
+      toast({ title: t("common.error"), variant: "destructive" });
+    },
   });
 
   const deletePaymentMutation = useMutation({
@@ -336,6 +366,9 @@ export default function Salaries() {
     onSuccess: () => {
       refreshSalariesBackground();
       toast({ title: t("planning.paymentReverted") || "تم إلغاء الدفع" });
+    },
+    onError: () => {
+      toast({ title: t("common.error"), variant: "destructive" });
     },
   });
 
@@ -351,6 +384,9 @@ export default function Salaries() {
       setShowAddWithdrawal(false);
       toast({ title: t("ownerWithdrawals.withdrawalAdded") });
     },
+    onError: () => {
+      toast({ title: t("common.error"), variant: "destructive" });
+    },
   });
 
   const deleteOwnerWithdrawalMutation = useMutation({
@@ -360,6 +396,9 @@ export default function Salaries() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/owner-withdrawals"] });
       toast({ title: t("ownerWithdrawals.withdrawalDeleted") });
+    },
+    onError: () => {
+      toast({ title: t("common.error"), variant: "destructive" });
     },
   });
 

@@ -183,6 +183,9 @@ export default function Clients() {
       resetForm();
       toast({ title: t("clients.clientAdded") });
     },
+    onError: () => {
+      toast({ title: t("common.error"), variant: "destructive" });
+    },
   });
 
   const updateMutation = useMutation({
@@ -201,6 +204,9 @@ export default function Clients() {
       resetForm();
       toast({ title: t("clients.clientUpdated") });
     },
+    onError: () => {
+      toast({ title: t("common.error"), variant: "destructive" });
+    },
   });
 
   const deleteMutation = useMutation({
@@ -210,6 +216,9 @@ export default function Clients() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       toast({ title: t("clients.clientDeleted") });
+    },
+    onError: () => {
+      toast({ title: t("common.error"), variant: "destructive" });
     },
   });
 
@@ -230,6 +239,9 @@ export default function Clients() {
       setQuickBookClient(null);
       setQuickBookData({ date: startOfToday(), time: "", serviceId: "", staffId: "" });
       toast({ title: t("clients.bookingSuccess") });
+    },
+    onError: () => {
+      toast({ title: t("common.error"), variant: "destructive" });
     },
   });
 
@@ -525,8 +537,8 @@ export default function Clients() {
               </DialogHeader>
               <div className="space-y-4">
                 {renderFormFields()}
-                <Button onClick={() => createMutation.mutate(formData)} className="w-full">
-                  {t("common.add")}
+                <Button onClick={() => createMutation.mutate(formData)} className="w-full" disabled={createMutation.isPending}>
+                  {createMutation.isPending ? t("common.loading") : t("common.add")}
                 </Button>
               </div>
             </DialogContent>
@@ -832,8 +844,9 @@ export default function Clients() {
               <Button 
                 onClick={() => updateMutation.mutate({ id: selectedClient.id, data: formData })} 
                 className="w-full"
+                disabled={updateMutation.isPending}
               >
-                {t("common.save")}
+                {updateMutation.isPending ? t("common.loading") : t("common.save")}
               </Button>
             </div>
           )}

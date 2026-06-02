@@ -124,6 +124,9 @@ export default function Charges() {
       setWithdrawalNotes("");
       toast({ title: t("ownerWithdrawals.withdrawalAdded") });
     },
+    onError: () => {
+      toast({ title: t("common.error"), variant: "destructive" });
+    },
   });
 
   const deleteWithdrawalMutation = useMutation({
@@ -133,6 +136,9 @@ export default function Charges() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/owner-withdrawals"] });
       toast({ title: t("ownerWithdrawals.withdrawalDeleted") });
+    },
+    onError: () => {
+      toast({ title: t("common.error"), variant: "destructive" });
     },
   });
 
@@ -158,6 +164,9 @@ export default function Charges() {
       queryClient.invalidateQueries({ queryKey: ["/api/expense-categories"] });
       setNewCategoryName("");
       toast({ title: t("expenses.categoryAdded") });
+    },
+    onError: () => {
+      toast({ title: t("common.error"), variant: "destructive" });
     },
   });
 
@@ -185,6 +194,9 @@ export default function Charges() {
       removeAttachment();
       toast({ title: t("expenses.expenseAdded") });
     },
+    onError: () => {
+      toast({ title: t("common.error"), variant: "destructive" });
+    },
   });
 
   const deleteMutation = useMutation({
@@ -196,6 +208,9 @@ export default function Charges() {
       queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
       refreshSalariesBackground();
       toast({ title: t("expenses.expenseDeleted") });
+    },
+    onError: () => {
+      toast({ title: t("common.error"), variant: "destructive" });
     },
   });
 
@@ -211,6 +226,9 @@ export default function Charges() {
       setProductName("");
       setProductAmount("");
       toast({ title: t("expenses.expenseAdded") });
+    },
+    onError: () => {
+      toast({ title: t("common.error"), variant: "destructive" });
     },
   });
 

@@ -12,13 +12,14 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertProductSchema, insertStaffSchema } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import type { Product } from "@shared/schema";
 import { useTranslation } from "react-i18next";
 
 export default function Inventory() {
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
+  const today = useMemo(() => new Date(), []);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isStaffDialogOpen, setIsStaffDialogOpen] = useState(false);
@@ -35,7 +36,6 @@ export default function Inventory() {
 
   const getExpiryStatus = (product: Product) => {
     if (!product.expiryDate) return null;
-    const today = new Date();
     const expiryDate = new Date(product.expiryDate);
     const warningDays = product.expiryWarningDays || 30;
     const warningDate = new Date(today);
@@ -67,7 +67,10 @@ export default function Inventory() {
       setIsDialogOpen(false);
       productForm.reset();
       toast({ title: t("inventory.productAdded") });
-    }
+    },
+    onError: () => {
+      toast({ title: t("common.error"), variant: "destructive" });
+    },
   });
 
   const createStaffMutation = useMutation({
@@ -80,7 +83,10 @@ export default function Inventory() {
       setIsStaffDialogOpen(false);
       staffForm.reset();
       toast({ title: t("staff.staffAdded") });
-    }
+    },
+    onError: () => {
+      toast({ title: t("common.error"), variant: "destructive" });
+    },
   });
 
   const updateProductMutation = useMutation({
@@ -92,7 +98,10 @@ export default function Inventory() {
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       setEditingProduct(null);
       toast({ title: t("inventory.productUpdated") });
-    }
+    },
+    onError: () => {
+      toast({ title: t("common.error"), variant: "destructive" });
+    },
   });
 
   const deleteProductMutation = useMutation({
@@ -102,7 +111,10 @@ export default function Inventory() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       toast({ title: t("inventory.productDeleted") });
-    }
+    },
+    onError: () => {
+      toast({ title: t("common.error"), variant: "destructive" });
+    },
   });
 
   const updateStockMutation = useMutation({
@@ -112,6 +124,9 @@ export default function Inventory() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+    },
+    onError: () => {
+      toast({ title: t("common.error"), variant: "destructive" });
     },
   });
 
@@ -346,7 +361,7 @@ export default function Inventory() {
                             </FormItem>
                           )}
                         />
-                        <Button type="submit" className="w-full">{t("common.save")}</Button>
+                        <Button type="submit" className="w-full" disabled={updateProductMutation.isPending}>{t("common.save")}</Button>
                       </form>
                     </Form>
                   </DialogContent>
