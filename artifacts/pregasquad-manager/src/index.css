@@ -499,6 +499,185 @@
   );
 }
 
+/* ── Soft Rose Luxury Dialog ─────────────────────────────────── */
+.rose-luxury-modal {
+  background: linear-gradient(180deg, rgba(255,250,252,0.97) 0%, rgba(255,244,247,0.99) 100%);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid rgba(253,164,175,0.3) !important;
+  box-shadow:
+    0 25px 80px -20px rgba(244,63,94,0.2),
+    0 10px 40px -10px rgba(0,0,0,0.12),
+    inset 0 1px 0 rgba(255,255,255,0.95),
+    inset 0 -1px 0 rgba(253,164,175,0.15);
+}
+.dark .rose-luxury-modal {
+  background: linear-gradient(180deg, rgba(50,18,28,0.97) 0%, rgba(38,12,22,0.99) 100%);
+  border: 1px solid rgba(253,164,175,0.12) !important;
+  box-shadow:
+    0 25px 80px -20px rgba(0,0,0,0.65),
+    0 10px 40px -10px rgba(244,63,94,0.12),
+    inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+.rose-luxury-header {
+  background: linear-gradient(135deg, #fda4af 0%, #fb7185 45%, #f43f5e 100%);
+  position: relative;
+  overflow: hidden;
+}
+.rose-luxury-header::before {
+  content: '';
+  position: absolute;
+  top: -48px; right: -32px;
+  width: 130px; height: 130px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+  pointer-events: none;
+}
+.rose-luxury-header::after {
+  content: '';
+  position: absolute;
+  bottom: -24px; left: -20px;
+  width: 90px; height: 90px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.09);
+  pointer-events: none;
+}
+
+.rose-luxury-total-pill {
+  background: rgba(255,255,255,0.22);
+  backdrop-filter: blur(8px);
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.3);
+}
+.rose-luxury-total-input {
+  background: transparent !important;
+  border: none !important;
+  color: white !important;
+  font-size: 1.35rem !important;
+  font-weight: 800 !important;
+  text-align: right;
+  width: 72px;
+  outline: none !important;
+  box-shadow: none !important;
+}
+.rose-luxury-total-input::placeholder { color: rgba(255,255,255,0.5) !important; }
+.rose-luxury-paid-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 700;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+}
+.rose-luxury-paid-btn.unpaid {
+  background: rgba(255,255,255,0.18);
+  color: rgba(255,255,255,0.85);
+  backdrop-filter: blur(6px);
+}
+.rose-luxury-paid-btn.paid {
+  background: #10b981;
+  color: white;
+  box-shadow: 0 4px 12px rgba(16,185,129,0.35);
+}
+
+.rose-luxury-body {
+  background: transparent;
+}
+.rose-luxury-section-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #fb7185;
+  margin-bottom: 3px;
+  padding-left: 2px;
+}
+.dark .rose-luxury-section-label { color: #fda4af; }
+
+.rose-luxury-field {
+  background: rgba(255,241,245,0.7) !important;
+  border: 1px solid rgba(251,113,133,0.25) !important;
+  transition: border-color 0.2s, background 0.2s;
+}
+.rose-luxury-field:hover,
+.rose-luxury-field:focus-within {
+  border-color: rgba(251,113,133,0.55) !important;
+  background: rgba(255,241,245,0.95) !important;
+}
+.dark .rose-luxury-field {
+  background: rgba(60,22,32,0.55) !important;
+  border: 1px solid rgba(251,113,133,0.18) !important;
+}
+.dark .rose-luxury-field:hover,
+.dark .rose-luxury-field:focus-within {
+  border-color: rgba(251,113,133,0.35) !important;
+}
+
+.rose-luxury-chip {
+  background: linear-gradient(135deg, rgba(253,164,175,0.22), rgba(251,113,133,0.16)) !important;
+  border: 1px solid rgba(251,113,133,0.4) !important;
+}
+.dark .rose-luxury-chip {
+  background: linear-gradient(135deg, rgba(253,164,175,0.14), rgba(251,113,133,0.1)) !important;
+  border: 1px solid rgba(251,113,133,0.25) !important;
+}
+.rose-luxury-chip-text { color: #be123c; font-weight: 600; }
+.dark .rose-luxury-chip-text { color: #fda4af; }
+.rose-luxury-chip-price { color: #e11d48; font-weight: 700; font-size: 10px; }
+.dark .rose-luxury-chip-price { color: #fb7185; }
+
+.rose-luxury-service-strip {
+  background: linear-gradient(135deg, rgba(253,164,175,0.12), rgba(251,113,133,0.08)) !important;
+  border: 1px solid rgba(251,113,133,0.2);
+  border-radius: 10px;
+}
+.rose-luxury-add-btn {
+  border: 2px dashed rgba(251,113,133,0.4) !important;
+  background: rgba(253,164,175,0.06) !important;
+  color: #f43f5e !important;
+}
+.rose-luxury-add-btn:hover {
+  border-color: rgba(251,113,133,0.7) !important;
+  background: rgba(253,164,175,0.12) !important;
+}
+.dark .rose-luxury-add-btn {
+  border-color: rgba(251,113,133,0.25) !important;
+  background: rgba(253,164,175,0.04) !important;
+  color: #fda4af !important;
+}
+
+.rose-luxury-confirm-btn {
+  background: linear-gradient(135deg, #fb7185 0%, #f43f5e 55%, #e11d48 100%) !important;
+  border: none !important;
+  box-shadow: 0 6px 20px rgba(244,63,94,0.35), inset 0 1px 0 rgba(255,255,255,0.2) !important;
+  transition: all 0.2s ease !important;
+}
+.rose-luxury-confirm-btn:hover:not(:disabled) {
+  box-shadow: 0 8px 28px rgba(244,63,94,0.45), inset 0 1px 0 rgba(255,255,255,0.25) !important;
+  transform: translateY(-1px);
+}
+.rose-luxury-confirm-btn:active:not(:disabled) {
+  transform: scale(0.98) translateY(0);
+}
+.rose-luxury-confirm-btn:disabled {
+  opacity: 0.55;
+}
+
+.rose-luxury-footer {
+  border-top: 1px solid rgba(253,164,175,0.25) !important;
+  background: rgba(255,248,250,0.6);
+}
+.dark .rose-luxury-footer {
+  border-top: 1px solid rgba(253,164,175,0.12) !important;
+  background: rgba(38,12,22,0.4);
+}
+
 /* Pink shimmer gradient */
 .water-gradient {
   background: linear-gradient(135deg, 

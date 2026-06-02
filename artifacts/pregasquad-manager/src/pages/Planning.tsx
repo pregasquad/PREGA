@@ -3399,7 +3399,7 @@ export default function Planning() {
         }
       }}>
         <DialogContent 
-          className="w-[calc(100vw-16px)] max-w-[400px] max-h-[90dvh] p-0 border-0 rounded-2xl overflow-hidden animate-fade-in-scale flex flex-col liquid-glass-modal" 
+          className="w-[calc(100vw-16px)] max-w-[400px] max-h-[90dvh] p-0 border-0 rounded-3xl overflow-hidden animate-fade-in-scale flex flex-col rose-luxury-modal" 
           dir={isRtl ? "rtl" : "ltr"}
         >
           <Form {...form}>
@@ -3418,55 +3418,66 @@ export default function Planning() {
               }}
               className="flex flex-col flex-1 min-h-0"
             >
-              {/* Header + Price merged row */}
-              <div className="liquid-glass-header px-3 py-2.5 relative overflow-hidden shrink-0">
-                <div className="liquid-glass-shimmer absolute inset-0" />
-                <div className="liquid-glass-reflection absolute inset-0" />
-                <div className="relative z-10 flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-pink-400 to-rose-400 flex items-center justify-center shadow-md shrink-0">
-                    <Sparkles className="w-3.5 h-3.5 text-white" />
-                  </div>
-                  <span className="text-sm font-semibold text-slate-800 dark:text-white truncate">
-                    {editingAppointment ? t("planning.editBooking") : t("planning.newBooking")}
-                  </span>
-                  {editingAppointment?.createdBy && (
-                    <span className="text-[10px] text-slate-500 dark:text-white/60 truncate">
-                      {editingAppointment.createdBy}
+              {/* Header — Soft Rose Luxury */}
+              <div className="rose-luxury-header px-4 py-4 shrink-0">
+                <div className="relative z-10">
+                  {/* Title row */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-8 h-8 rounded-xl bg-white/25 backdrop-blur-sm flex items-center justify-center shrink-0">
+                      <Sparkles className="w-4 h-4 text-white" />
+                    </div>
+                    <span className="text-white font-semibold text-base truncate flex-1" style={{ fontFamily: "'Playfair Display', serif" }}>
+                      {editingAppointment ? t("planning.editBooking") : t("planning.newBooking")}
                     </span>
-                  )}
-                  <div className="flex items-center gap-1.5 ml-auto shrink-0">
-                    <input
-                      type="number"
-                      inputMode="decimal"
-                      value={totalInputValue}
-                      onChange={(e) => {
-                        setTotalInputValue(e.target.value);
-                        form.setValue("total", parseFloat(e.target.value) || 0);
-                        setManualTotalOverride(true);
-                        setAppliedLoyaltyPoints(null);
-                        setAppliedGiftCardBalance(null);
-                      }}
-                      placeholder="0"
-                      onClick={(e) => e.stopPropagation()}
-                      onFocus={(e) => e.target.select()}
-                      className="w-20 h-9 text-lg font-bold border border-white/30 dark:border-white/10 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-lg text-center focus:ring-2 focus:ring-pink-400/50 focus:outline-none"
-                      style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
-                    />
-                    <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">DH</span>
+                    {editingAppointment?.createdBy && (
+                      <span className="text-[10px] text-white/70 truncate shrink-0">
+                        {editingAppointment.createdBy}
+                      </span>
+                    )}
+                  </div>
+                  {/* Total + Paid row */}
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 rose-luxury-total-pill flex items-center gap-2 px-3.5 py-2">
+                      <span className="text-white/70 text-xs font-medium shrink-0">{t("common.total", "Total")}</span>
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        value={totalInputValue}
+                        onChange={(e) => {
+                          setTotalInputValue(e.target.value);
+                          form.setValue("total", parseFloat(e.target.value) || 0);
+                          setManualTotalOverride(true);
+                          setAppliedLoyaltyPoints(null);
+                          setAppliedGiftCardBalance(null);
+                        }}
+                        placeholder="0"
+                        onClick={(e) => e.stopPropagation()}
+                        onFocus={(e) => e.target.select()}
+                        className="rose-luxury-total-input flex-1"
+                        style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
+                      />
+                      <span className="text-white/80 text-sm font-bold shrink-0">DH</span>
+                    </div>
                     <FormField
                       control={form.control}
                       name="paid"
                       render={({ field }) => (
-                        <FormItem className="flex items-center gap-1 space-y-0 px-2 py-1 rounded-lg bg-white/30 dark:bg-slate-800/30">
+                        <FormItem className="space-y-0">
                           <FormControl>
-                            <input
-                              type="checkbox"
-                              checked={field.value}
-                              onChange={field.onChange}
-                              className="w-3.5 h-3.5 accent-emerald-500 rounded"
-                            />
+                            <button
+                              type="button"
+                              aria-label={t("common.paid")}
+                              aria-pressed={field.value}
+                              onClick={() => field.onChange(!field.value)}
+                              className={`rose-luxury-paid-btn ${field.value ? "paid" : "unpaid"}`}
+                            >
+                              {field.value
+                                ? <Check className="w-3.5 h-3.5" />
+                                : <span className="w-3.5 h-3.5 rounded-full border-2 border-white/60 inline-block shrink-0" />
+                              }
+                              {t("common.paid")}
+                            </button>
                           </FormControl>
-                          <FormLabel className="!mt-0 text-[10px] font-medium">{t("common.paid")}</FormLabel>
                         </FormItem>
                       )}
                     />
@@ -3475,7 +3486,7 @@ export default function Planning() {
               </div>
               
               {/* Form body */}
-              <div className="px-3 py-2 space-y-2 overflow-y-auto flex-1 min-h-0" style={{ WebkitOverflowScrolling: 'touch' }}>
+              <div className="px-3 py-3 space-y-2.5 overflow-y-auto flex-1 min-h-0 rose-luxury-body" style={{ WebkitOverflowScrolling: 'touch' }}>
                 {/* Row 1: Client full width */}
                 <FormField
                   control={form.control}
@@ -3490,7 +3501,7 @@ export default function Planning() {
                               role="combobox"
                               aria-expanded={clientPopoverOpen}
                               className={cn(
-                                "w-full h-10 justify-between rounded-xl text-sm font-medium border border-border/60 bg-background shadow-sm hover:shadow transition-all",
+                                "w-full h-10 justify-between rounded-xl text-sm font-medium shadow-sm hover:shadow transition-all rose-luxury-field",
                                 !field.value && "text-muted-foreground"
                               )}
                             >
@@ -3574,9 +3585,10 @@ export default function Planning() {
                     name="staff"
                     render={({ field }) => (
                       <FormItem className="space-y-0">
+                        <span className="rose-luxury-section-label">{t("planning.staff")}</span>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
-                            <SelectTrigger className="h-9 rounded-lg text-[11px] border-0 bg-secondary/50">
+                            <SelectTrigger className="h-9 rounded-lg text-[11px] rose-luxury-field border-0">
                               <SelectValue placeholder={t("planning.staff")} />
                             </SelectTrigger>
                           </FormControl>
@@ -3594,9 +3606,10 @@ export default function Planning() {
                     name="startTime"
                     render={({ field }) => (
                       <FormItem className="space-y-0">
+                        <span className="rose-luxury-section-label">{t("planning.time")}</span>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
-                            <SelectTrigger className="h-9 rounded-lg text-[11px] border-0 bg-secondary/50">
+                            <SelectTrigger className="h-9 rounded-lg text-[11px] rose-luxury-field border-0">
                               <SelectValue placeholder={t("planning.time")} />
                             </SelectTrigger>
                           </FormControl>
@@ -3614,8 +3627,9 @@ export default function Planning() {
                     name="duration"
                     render={({ field }) => (
                       <FormItem className="space-y-0">
+                        <span className="rose-luxury-section-label">{t("common.duration")}</span>
                         <FormControl>
-                          <Input type="number" inputMode="numeric" placeholder={t("common.duration")} className="h-9 rounded-lg text-[11px] border-0 bg-secondary/50" {...field} />
+                          <Input type="number" inputMode="numeric" placeholder={t("common.duration")} className="h-9 rounded-lg text-[11px] rose-luxury-field border-0" {...field} />
                         </FormControl>
                       </FormItem>
                     )}
@@ -3791,10 +3805,10 @@ export default function Planning() {
                 {/* Services section - compact */}
                 <div className="space-y-1.5">
                   {selectedServices.length > 0 && (
-                    <div className="flex flex-wrap gap-1 p-1.5 bg-secondary/30 rounded-lg">
+                    <div className="flex flex-wrap gap-1.5 p-2 bg-rose-50/60 dark:bg-rose-950/20 rounded-xl border border-rose-100/60 dark:border-rose-900/30">
                       {selectedServices.map((s, index) => (
-                        <div key={s.id} className="flex items-center gap-1 px-2 py-1 bg-primary/10 dark:bg-primary/20 rounded-full text-[11px]">
-                          <span className="font-medium truncate max-w-[80px]">{s.name}</span>
+                        <div key={s.id} className="flex items-center gap-1 px-2.5 py-1.5 rose-luxury-chip rounded-full text-[11px]">
+                          <span className="rose-luxury-chip-text truncate max-w-[80px]">{s.name}</span>
                           <input
                             type="number"
                             inputMode="decimal"
@@ -3845,9 +3859,9 @@ export default function Planning() {
                   )}
                   
                   {selectedServices.length > 0 && (
-                    <div className="flex items-center justify-between gap-2 px-2 py-1 bg-primary/5 dark:bg-primary/10 rounded-lg text-[11px]">
-                      <span className="text-muted-foreground">{selectedServices.length} {t("common.services")} / {dialogSummaryDuration}min</span>
-                      <span className="font-bold gradient-text">
+                    <div className="flex items-center justify-between gap-2 px-3 py-1.5 rose-luxury-service-strip text-[11px]">
+                      <span className="text-rose-400 font-medium">{selectedServices.length} {t("common.services")} · {dialogSummaryDuration}min</span>
+                      <span className="font-bold text-rose-600 dark:text-rose-400">
                         {dialogSummaryPrice} DH
                       </span>
                     </div>
@@ -3861,8 +3875,8 @@ export default function Planning() {
                         <Popover open={servicePopoverOpen} onOpenChange={setServicePopoverOpen}>
                           <PopoverTrigger asChild>
                             <FormControl>
-                              <Button variant="outline" role="combobox" className="h-10 w-full justify-between rounded-xl text-sm font-medium border border-dashed border-primary/40 bg-primary/5 dark:bg-primary/10 hover:bg-primary/10 dark:hover:bg-primary/15 transition-colors">
-                                <span className="flex items-center gap-2 text-primary">
+                              <Button variant="outline" role="combobox" className="h-10 w-full justify-between rounded-xl text-sm font-medium transition-colors rose-luxury-add-btn">
+                                <span className="flex items-center gap-2">
                                   <div className="w-6 h-6 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
                                     <Plus className="w-3.5 h-3.5" />
                                   </div>
@@ -3978,7 +3992,7 @@ export default function Planning() {
               </div>
 
               {/* Action Buttons - fixed bottom */}
-              <div className="flex gap-2 px-3 py-2 border-t border-white/10 shrink-0">
+              <div className="flex gap-2 px-3 py-2.5 shrink-0 rose-luxury-footer">
                 {editingAppointment && (
                   <Button
                     type="button"
@@ -4006,7 +4020,7 @@ export default function Planning() {
                 )}
                 <Button 
                   type="submit" 
-                  className="flex-1 h-10 text-sm font-semibold rounded-xl liquid-gradient shadow-md active:scale-[0.98]" 
+                  className="flex-1 h-11 text-sm font-bold rounded-2xl rose-luxury-confirm-btn active:scale-[0.98]" 
                   disabled={!canEdit || createMutation.isPending || updateMutation.isPending}
                 >
                   <Sparkles className="w-4 h-4 ml-1" />
