@@ -1830,8 +1830,8 @@ export async function registerRoutes(
       // Prepare the processed payload (pure compute + staff name→id lookup)
       const processedPayload = await storage.prepareAppointmentPayload(id, input);
 
-      const transitionToPaid = !!input.paid && oldAppointment && !oldAppointment.paid;
-      const transitionToUnpaid = !input.paid && oldAppointment && !!oldAppointment.paid;
+      const transitionToPaid = input.paid === true && !!oldAppointment && !oldAppointment.paid;
+      const transitionToUnpaid = input.paid === false && !!oldAppointment && !!oldAppointment.paid;
 
       type StockChange = { productId: number; newQty: number };
       const stockChanges: StockChange[] = [];
