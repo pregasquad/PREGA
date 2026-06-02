@@ -307,19 +307,20 @@ export class DatabaseStorage implements IStorage {
     return appointment;
   }
 
+  /** Prepare (process + staff lookup) without writing — used to build the payload for atomic tx. */
+  async prepareAppointmentPayload(id: number, appointment: Partial<InsertAppointment>): Promise<Record<string, any>> {
+    const s = schema();
+    const processed = this.processAppointmentServices(appointment as InsertAppointment);
+    if (!processed.staffId && processed.staff) {
+      const [staffMember] = await db().select().from(s.staff).where(eq(s.staff.name, processed.staff));
+      if (staffMember) processed.staffId = staffMember.id;
+    }
+    return processed;
+  }
+
   async updateAppointment(id: number, appointment: Partial<InsertAppointment>): Promise<Appointment> {
     const s = schema();
-    
-    const processedAppointment = this.processAppointmentServices(appointment as InsertAppointment);
-    
-    if (!processedAppointment.staffId && processedAppointment.staff) {
-      const [staffMember] = await db().select().from(s.staff)
-        .where(eq(s.staff.name, processedAppointment.staff));
-      if (staffMember) {
-        processedAppointment.staffId = staffMember.id;
-      }
-    }
-    
+    const processedAppointment = await this.prepareAppointmentPayload(id, appointment);
     if (isMySQL()) {
       await db().update(s.appointments).set(processedAppointment).where(eq(s.appointments.id, id));
       const [updated] = await db().select().from(s.appointments).where(eq(s.appointments.id, id));
