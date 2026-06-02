@@ -1,0 +1,24 @@
+[Error] 500 — isMySQL is not defined ReferenceError: isMySQL is not defined
+    at <anonymous> (/app/artifacts/api-server/src/routes/routes.ts:1897:9)
+    at _MySql2Session.transaction (/app/node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@1.1.0_@types+better-sqlite3@7.6.13_@types+p_f541f80784562e0d93d04b399b5d8d1b/node_modules/src/mysql2/session.ts:311:25)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async <anonymous> (/app/artifacts/api-server/src/routes/routes.ts:1896:7)
+[Error] 500 — isMySQL is not defined ReferenceError: isMySQL is not defined
+    at <anonymous> (/app/artifacts/api-server/src/routes/routes.ts:1897:9)
+    at _MySql2Session.transaction (/app/node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@1.1.0_@types+better-sqlite3@7.6.13_@types+p_f541f80784562e0d93d04b399b5d8d1b/node_modules/src/mysql2/session.ts:311:25)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async <anonymous> (/app/artifacts/api-server/src/routes/routes.ts:1896:7)
+[Error] 500 — isMySQL is not defined ReferenceError: isMySQL is not defined
+    at <anonymous> (/app/artifacts/api-server/src/routes/routes.ts:1897:9)
+    at _MySql2Session.transaction (/app/node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@1.1.0_@types+better-sqlite3@7.6.13_@types+p_f541f80784562e0d93d04b399b5d8d1b/node_modules/src/mysql2/session.ts:311:25)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async <anonymous> (/app/artifacts/api-server/src/routes/routes.ts:1896:7)
+[Error] 500 — isMySQL is not defined ReferenceError: isMySQL is not defined
+    at <anonymous> (/app/artifacts/api-server/src/routes/routes.ts:1897:9)
+    at _MySql2Session.transaction (/app/node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@1.1.0_@types+better-sqlite3@7.6.13_@types+p_f541f80784562e0d93d04b399b5d8d1b/node_modules/src/mysql2/session.ts:311:25)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async <anonymous> (/app/artifacts/api-server/src/routes/routes.ts:1896:7)
+Download
+Copy
+
+Scaling
