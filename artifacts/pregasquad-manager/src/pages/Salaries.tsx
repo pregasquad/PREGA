@@ -596,7 +596,7 @@ export default function Salaries() {
   };
 
   const getSalonWalletData = () => {
-    const lastPayment = salonPayments
+    const lastPayment = [...salonPayments]
       .sort((a, b) => new Date(b.collectedAt).getTime() - new Date(a.collectedAt).getTime())[0];
     const lastCollectedDate = lastPayment ? new Date(lastPayment.collectedAt) : null;
 
@@ -649,7 +649,7 @@ export default function Salaries() {
   };
 
   const getStaffWalletData = (s: Staff) => {
-    const lastPayment = staffPayments
+    const lastPayment = [...staffPayments]
       .filter(p => Number(p.staffId) === s.id)
       .sort((a, b) => new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime())[0];
     const lastPaymentDate = lastPayment ? new Date(lastPayment.paidAt) : null;

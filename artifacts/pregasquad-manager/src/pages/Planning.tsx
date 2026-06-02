@@ -201,6 +201,7 @@ export default function Planning() {
   // Guard against re-entrant scroll during smooth animation
   const isScrollingRef = useRef<boolean>(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const dialogCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Update time using setInterval (more efficient than requestAnimationFrame)
   useEffect(() => {
@@ -3374,8 +3375,10 @@ export default function Planning() {
       <Dialog open={isDialogOpen} onOpenChange={(open) => {
         if (!open) {
           setIsDialogOpen(false);
-          // Delay state reset so close animation finishes without content flash
-          setTimeout(() => {
+          // Clear any pending reset before scheduling a new one (prevents stale timer firing on rapid reopen)
+          if (dialogCloseTimeoutRef.current) clearTimeout(dialogCloseTimeoutRef.current);
+          dialogCloseTimeoutRef.current = setTimeout(() => {
+            dialogCloseTimeoutRef.current = null;
             setIsEditFavoritesOpen(false);
             setSelectedServices([]);
             setPriceInputs({});
@@ -3387,6 +3390,11 @@ export default function Planning() {
             setTotalInputValue("0");
           }, 200);
         } else {
+          // Cancel any pending reset when reopening before the timer fires
+          if (dialogCloseTimeoutRef.current) {
+            clearTimeout(dialogCloseTimeoutRef.current);
+            dialogCloseTimeoutRef.current = null;
+          }
           setIsDialogOpen(true);
         }
       }}>
@@ -3400,7 +3408,9 @@ export default function Planning() {
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   const target = e.target as HTMLElement;
-                  if (target.tagName !== 'TEXTAREA') {
+                  // Never intercept Enter inside textareas, popovers, comboboxes, or command lists
+                  const insidePopover = !!target.closest('[role="listbox"],[role="option"],[data-radix-popper-content-wrapper],[cmdk-root],[cmdk-list]');
+                  if (target.tagName !== 'TEXTAREA' && !insidePopover) {
                     e.preventDefault();
                     form.handleSubmit(onSubmit)();
                   }

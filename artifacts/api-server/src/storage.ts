@@ -1657,7 +1657,9 @@ export class DatabaseStorage implements IStorage {
     const s = schema();
     if (isMySQL()) {
       const result = await db().insert(s.staffPayments).values(payment);
-      const insertId = (result as any)[0]?.insertId;
+      const insertId = (result as any)[0]?.insertId
+        ?? (await db().execute<{ id: number }[]>("SELECT LAST_INSERT_ID() as id"))[0]?.id;
+      if (!insertId) throw new Error("createStaffPayment: could not determine inserted id");
       const [created] = await db().select().from(s.staffPayments).where(eq(s.staffPayments.id, insertId));
       return created;
     }
@@ -1690,7 +1692,9 @@ export class DatabaseStorage implements IStorage {
     const s = schema();
     if (isMySQL()) {
       const result = await db().insert(s.salonPayments).values(payment);
-      const insertId = (result as any)[0]?.insertId;
+      const insertId = (result as any)[0]?.insertId
+        ?? (await db().execute<{ id: number }[]>("SELECT LAST_INSERT_ID() as id"))[0]?.id;
+      if (!insertId) throw new Error("createSalonPayment: could not determine inserted id");
       const [created] = await db().select().from(s.salonPayments).where(eq(s.salonPayments.id, insertId));
       return created;
     }

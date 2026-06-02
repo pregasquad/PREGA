@@ -139,7 +139,7 @@ export const staff = pgTable("staff", {
   baseSalary: doublePrecision("base_salary").notNull().default(0),
   photoUrl: text("photo_url"),
   categories: text("categories"),
-  publicToken: text("public_token"),
+  publicToken: text("public_token").unique(),
   gender: varchar("gender", { length: 10 }).default("female").notNull(),
 });
 
@@ -188,7 +188,11 @@ export const staffDeductions = pgTable("staff_deductions", {
   cleared: boolean("cleared").notNull().default(false),
   clearedAt: timestamp("cleared_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+},
+(table) => [
+  index("idx_staff_deductions_staff_id").on(table.staffId),
+  index("idx_staff_deductions_date").on(table.date),
+]);
 
 export const insertStaffDeductionSchema = createInsertSchema(staffDeductions).omit({ id: true, createdAt: true }).extend({
   staffName: z.string().min(1, "Staff name is required"),
@@ -642,7 +646,11 @@ export const staffPayments = pgTable("staff_payments", {
   amount: doublePrecision("amount").notNull(),
   paidAt: timestamp("paid_at").defaultNow().notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+},
+(table) => [
+  index("idx_staff_payments_staff_id").on(table.staffId),
+  index("idx_staff_payments_paid_at").on(table.paidAt),
+]);
 
 export const insertStaffPaymentSchema = createInsertSchema(staffPayments).omit({ id: true, createdAt: true }).extend({
   staffId: z.number().int(),
@@ -658,7 +666,10 @@ export const salonPayments = pgTable("salon_payments", {
   note: text("note"),
   collectedAt: timestamp("collected_at").defaultNow().notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+},
+(table) => [
+  index("idx_salon_payments_collected_at").on(table.collectedAt),
+]);
 
 export const insertSalonPaymentSchema = createInsertSchema(salonPayments).omit({ id: true, createdAt: true }).extend({
   amount: z.number().min(0),
@@ -682,7 +693,10 @@ export const ownerWithdrawals = pgTable("owner_withdrawals", {
   date: text("date").notNull(),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+},
+(table) => [
+  index("idx_owner_withdrawals_date").on(table.date),
+]);
 
 export const insertOwnerWithdrawalSchema = createInsertSchema(ownerWithdrawals).omit({ id: true, createdAt: true }).extend({
   amount: z.number().min(0, "Amount must be non-negative"),

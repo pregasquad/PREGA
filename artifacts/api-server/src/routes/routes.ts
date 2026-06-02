@@ -4509,8 +4509,32 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
   });
 
   // Reset PIN with business phone verification
+  // Rate-limited: max 5 attempts per IP per 15 minutes to prevent brute-force
+  const pinResetAttempts = new Map<string, { count: number; resetAt: number }>();
   app.post("/api/admin-roles/reset-pin", async (req, res) => {
     try {
+      // IP-based rate limiting — 5 attempts per 15 min window
+      const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.socket.remoteAddress || "unknown";
+      const now = Date.now();
+      const windowMs = 15 * 60 * 1000;
+      const maxAttempts = 5;
+      const existing = pinResetAttempts.get(ip);
+      if (existing) {
+        if (now < existing.resetAt) {
+          if (existing.count >= maxAttempts) {
+            const waitSecs = Math.ceil((existing.resetAt - now) / 1000);
+            return res.status(429).json({ success: false, message: `Too many attempts. Try again in ${waitSecs}s.` });
+          }
+          existing.count += 1;
+        } else {
+          pinResetAttempts.set(ip, { count: 1, resetAt: now + windowMs });
+        }
+      } else {
+        pinResetAttempts.set(ip, { count: 1, resetAt: now + windowMs });
+      }
+      // Throttle response to slow brute-force regardless of outcome
+      await new Promise(r => setTimeout(r, 500));
+
       const { name, businessPhone, newPin } = z.object({
         name: z.string(),
         businessPhone: z.string(),
@@ -4524,7 +4548,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
       }
       
       // Normalize phone numbers for comparison (remove spaces, dashes, etc.)
-      const normalizePhone = (phone: string) => phone.replace(/[\s\-\(\)]/g, "");
+      const normalizePhone = (phone: string) => phone.replace(/[\s\-\(\)\+]/g, "");
       if (normalizePhone(businessPhone) !== normalizePhone(settings.phone)) {
         return res.status(401).json({ success: false, message: "Invalid business phone" });
       }
@@ -4539,6 +4563,8 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
       const hashedPin = await bcrypt.hash(newPin, 10);
       await storage.updateAdminRole(role.id, { pin: hashedPin });
       
+      // Clear rate limit on success
+      pinResetAttempts.delete(ip);
       res.json({ success: true, message: "PIN reset successfully" });
     } catch (err: any) {
       res.status(400).json({ success: false, message: err.message });
