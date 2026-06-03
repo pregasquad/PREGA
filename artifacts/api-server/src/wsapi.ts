@@ -57,7 +57,7 @@ export async function sendWhatsAppMessage(
       })
     });
 
-    const data = await response.json();
+    const data = await response.json() as Record<string, any>;
     console.log('WSAPI response:', JSON.stringify(data));
     
     if (response.ok && (data.success || data.id || data.messageId)) {
@@ -106,7 +106,7 @@ export async function sendWhatsAppImage(
       })
     });
 
-    const data = await response.json();
+    const data = await response.json() as Record<string, any>;
     
     if (response.ok && (data.success || data.id || data.messageId)) {
       return { success: true, messageId: data.id || data.messageId };
@@ -254,7 +254,7 @@ export async function getConnectionStatus(): Promise<{ connected: boolean; error
       }
     });
 
-    const data = await response.json();
+    const data = await response.json() as Record<string, any>;
     return { connected: response.ok && data.status === 'connected' };
   } catch (error: any) {
     return { connected: false, error: error.message };

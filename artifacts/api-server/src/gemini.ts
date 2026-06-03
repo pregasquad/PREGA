@@ -405,7 +405,7 @@ async function callGemini(
   history: ConversationTurn[],
   imageBase64?: string,
   imageMimeType?: string
-): Promise<{ reply: string | null; isQuotaError: boolean; isTruncated: boolean }> {
+): Promise<{ reply: string | null; isQuotaError: boolean; isTruncated: boolean; isNotFound?: boolean }> {
   const url = `${GEMINI_BASE}/${model}:generateContent?key=${apiKey}`;
 
   // Build the current user message parts (text + optional image)

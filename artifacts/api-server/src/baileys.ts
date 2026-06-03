@@ -407,7 +407,7 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
                 jid: lidJid, phone,
                 clientName: null, language: "fr",
                 preferredServices: [], personalityNotes: null,
-                convHistory: [], visitCount: 0, botBlocked: false,
+                convHistory: [], visitCount: 0, botBlocked: false, lastSeen: null,
               });
               log(`contacts.upsert: created new bot_client_memory row for ${lidJid} with phone=${phone}`);
             } else if (!mem.phone) {

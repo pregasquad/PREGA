@@ -55,7 +55,7 @@ export async function sendWhatsAppMessage(
       })
     });
 
-    const data = await response.json();
+    const data = await response.json() as Record<string, any>;
     console.log('Wozzapi response:', JSON.stringify(data));
     
     if (response.ok && data.success) {
@@ -105,7 +105,7 @@ export async function sendWhatsAppImage(
       })
     });
 
-    const data = await response.json();
+    const data = await response.json() as Record<string, any>;
     
     if (response.ok && data.success) {
       return { success: true, messageId: data.data?.id };
@@ -222,7 +222,7 @@ export async function getConnectionStatus(): Promise<{ connected: boolean; statu
       }
     });
 
-    const data = await response.json();
+    const data = await response.json() as Record<string, any>;
     
     if (response.ok && data.success) {
       const status = data.data?.status;

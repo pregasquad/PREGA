@@ -51,7 +51,7 @@ export async function sendWhatsAppTemplate(
       body: JSON.stringify(requestBody)
     });
 
-    const data = await response.json();
+    const data = await response.json() as Record<string, any>;
     console.log('SendZen response:', JSON.stringify(data));
     
     if (response.ok && (data.message?.includes('queued') || data.message?.includes('success') || data.data?.[0]?.message_id)) {
@@ -104,7 +104,7 @@ export async function sendWhatsAppMessage(to: string, message: string): Promise<
       body: JSON.stringify(requestBody)
     });
 
-    const data = await response.json();
+    const data = await response.json() as Record<string, any>;
     console.log('SendZen response:', JSON.stringify(data));
     
     if (response.ok && (data.message?.includes('queued') || data.message?.includes('success') || data.data?.[0]?.message_id)) {

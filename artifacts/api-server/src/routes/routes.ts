@@ -195,6 +195,8 @@ setInterval(async () => {
       msg += `\n⚠️ لا يوجد رصيد متاح للسحب حالياً`;
     }
 
+    // @ts-ignore
+    // @ts-ignore
     const { sendWhatsAppMessage, formatJid } = await import("./baileys.js");
     // Support multiple recipients separated by comma (e.g. "212600000000,212700000000")
     const recipients = ownerPhone.split(",").map((p: string) => p.trim()).filter(Boolean);
@@ -578,7 +580,7 @@ export async function registerRoutes(
 
     try {
       const file = req.file;
-      const roleId = req.params.id;
+      const roleId = String(req.params.id);
       const type = req.query.type || 'admin';
 
       let photoUrl = "";
@@ -783,7 +785,7 @@ export async function registerRoutes(
       let eligibleStaff = allStaff.filter(s => {
         if (excludeStaff.includes(s.name)) return false; // Exclude already used staff
         if (!s.categories) return false;
-        const staffCategories = s.categories.split(",").map(c => c.trim().toLowerCase());
+        const staffCategories = s.categories.split(",").map((c: string) => c.trim().toLowerCase());
         return staffCategories.includes(category.toLowerCase());
       });
       
@@ -1152,6 +1154,8 @@ export async function registerRoutes(
       // Send WhatsApp confirmation for the overall booking (if phone provided)
       if (input.phone && createdAppointments.length > 0) {
         try {
+          // @ts-ignore
+          // @ts-ignore
           const { sendBookingConfirmation, formatJid } = await import("./baileys.js");
           const allServiceNames = createdAppointments.map(a => a.service).join(" + ");
 
@@ -1262,8 +1266,8 @@ export async function registerRoutes(
     } catch (err) {
       console.error("[PUBLIC BOOKING] Error:", err);
       if (err instanceof z.ZodError) {
-        console.error("[PUBLIC BOOKING] Validation error:", JSON.stringify(err.errors));
-        return res.status(400).json({ message: err.errors[0].message });
+        console.error("[PUBLIC BOOKING] Validation error:", JSON.stringify(err.issues));
+        return res.status(400).json({ message: err.issues[0].message });
       }
       return res.status(500).json({ message: "Failed to create appointment", error: String(err) });
     }
@@ -1516,6 +1520,7 @@ export async function registerRoutes(
     try {
       const { phone } = z.object({ phone: z.string().min(6).max(20) }).parse(req.query);
       
+      // @ts-ignore
       const { getClientRecommendations } = await import("./services/recommendations");
       const recommendations = await getClientRecommendations(phone);
       
@@ -1659,7 +1664,7 @@ export async function registerRoutes(
   // Accept a bot-confirmed appointment (move to "confirmed" with optional staff assignment)
   app.patch("/api/appointments/:id/accept-bot", isPinAuthenticated, async (req, res) => {
     try {
-      const id = Number(req.params.id);
+      const id = Number(String(req.params.id));
       const { staff } = req.body;
       const updates: any = { bookingStatus: "confirmed" };
       if (staff) updates.staff = staff;
@@ -1674,6 +1679,8 @@ export async function registerRoutes(
       if (apt) {
         (async () => {
           try {
+            // @ts-ignore
+            // @ts-ignore
             const { sendBookingConfirmation, sendWhatsAppMessage } = await import("./baileys.js");
             const { getBotMemoriesByPhone, getAllBotMemories } = await import("../db");
 
@@ -1760,7 +1767,7 @@ export async function registerRoutes(
   // Delete a bot-confirmed appointment
   app.delete("/api/appointments/:id/bot", isPinAuthenticated, async (req, res) => {
     try {
-      const id = Number(req.params.id);
+      const id = Number(String(req.params.id));
       await storage.deleteAppointment(id);
       io.emit("appointment:deleted", { id });
       res.json({ ok: true });
@@ -1814,7 +1821,7 @@ export async function registerRoutes(
       res.status(201).json(item);
     } catch (err) {
       if (err instanceof z.ZodError) {
-        return res.status(400).json({ message: err.errors[0].message });
+        return res.status(400).json({ message: err.issues[0].message });
       }
       throw err;
     }
@@ -1822,7 +1829,7 @@ export async function registerRoutes(
 
   app.put(api.appointments.update.path, isPinAuthenticated, requirePermission("manage_appointments"), async (req, res) => {
     try {
-      const id = Number(req.params.id);
+      const id = Number(String(req.params.id));
       const input = api.appointments.update.input.parse(req.body);
 
       // ── Phase 1: all reads (outside the transaction) ─────────────────────────
@@ -1991,14 +1998,14 @@ export async function registerRoutes(
       res.json(item);
     } catch (err) {
       if (err instanceof z.ZodError) {
-        return res.status(400).json({ message: err.errors[0].message });
+        return res.status(400).json({ message: err.issues[0].message });
       }
       throw err;
     }
   });
 
   app.delete(api.appointments.delete.path, isPinAuthenticated, requirePermission("manage_appointments"), async (req, res) => {
-    const appointmentId = Number(req.params.id);
+    const appointmentId = Number(String(req.params.id));
     const appointment = await storage.getAppointment(appointmentId);
     
     if (appointment && appointment.paid && (appointment.clientId || appointment.client)) {
@@ -2057,7 +2064,7 @@ export async function registerRoutes(
       res.status(201).json(item);
     } catch (err) {
       if (err instanceof z.ZodError) {
-        return res.status(400).json({ message: err.errors[0].message });
+        return res.status(400).json({ message: err.issues[0].message });
       }
       throw err;
     }
@@ -2065,7 +2072,7 @@ export async function registerRoutes(
 
   app.patch("/api/services/:id", isPinAuthenticated, requirePermission("manage_services"), async (req, res) => {
     try {
-      const item = await storage.updateService(Number(req.params.id), req.body);
+      const item = await storage.updateService(Number(String(req.params.id)), req.body);
       res.json(item);
     } catch (err) {
       res.status(400).json({ message: "Update failed" });
@@ -2073,7 +2080,7 @@ export async function registerRoutes(
   });
 
   app.delete(api.services.delete.path, isPinAuthenticated, requirePermission("manage_services"), async (req, res) => {
-    await storage.deleteService(Number(req.params.id));
+    await storage.deleteService(Number(String(req.params.id)));
     res.status(204).send();
   });
 
@@ -2090,7 +2097,7 @@ export async function registerRoutes(
       res.status(201).json(item);
     } catch (err) {
       if (err instanceof z.ZodError) {
-        return res.status(400).json({ message: err.errors[0].message });
+        return res.status(400).json({ message: err.issues[0].message });
       }
       throw err;
     }
@@ -2098,7 +2105,7 @@ export async function registerRoutes(
 
   app.patch("/api/categories/:id", isPinAuthenticated, requirePermission("manage_services"), async (req, res) => {
     try {
-      const item = await storage.updateCategory(Number(req.params.id), req.body);
+      const item = await storage.updateCategory(Number(String(req.params.id)), req.body);
       res.json(item);
     } catch (err) {
       res.status(400).json({ message: "Update failed" });
@@ -2106,7 +2113,7 @@ export async function registerRoutes(
   });
 
   app.delete("/api/categories/:id", isPinAuthenticated, requirePermission("manage_services"), async (req, res) => {
-    await storage.deleteCategory(Number(req.params.id));
+    await storage.deleteCategory(Number(String(req.params.id)));
     res.status(204).send();
   });
 
@@ -2163,12 +2170,12 @@ export async function registerRoutes(
   });
 
   app.patch("/api/staff/:id", isPinAuthenticated, requirePermission("manage_staff"), async (req, res) => {
-    const item = await storage.updateStaff(Number(req.params.id), req.body);
+    const item = await storage.updateStaff(Number(String(req.params.id)), req.body);
     res.json(item);
   });
 
   app.delete("/api/staff/:id", isPinAuthenticated, requirePermission("manage_staff"), async (req, res) => {
-    await storage.deleteStaff(Number(req.params.id));
+    await storage.deleteStaff(Number(String(req.params.id)));
     res.status(204).send();
   });
 
@@ -2179,12 +2186,12 @@ export async function registerRoutes(
   });
 
   app.get("/api/staff-commissions/staff/:staffId", isPinAuthenticated, async (req, res) => {
-    const commissions = await storage.getStaffCommissionsByStaff(Number(req.params.staffId));
+    const commissions = await storage.getStaffCommissionsByStaff(Number(String(req.params.staffId)));
     res.json(commissions);
   });
 
   app.get("/api/staff-commissions/service/:serviceId", isPinAuthenticated, async (req, res) => {
-    const commissions = await storage.getStaffCommissionsByService(Number(req.params.serviceId));
+    const commissions = await storage.getStaffCommissionsByService(Number(String(req.params.serviceId)));
     res.json(commissions);
   });
 
@@ -2194,12 +2201,12 @@ export async function registerRoutes(
   });
 
   app.patch("/api/staff-commissions/:id", isPinAuthenticated, requirePermission("manage_salaries"), async (req, res) => {
-    const commission = await storage.updateStaffCommission(Number(req.params.id), req.body);
+    const commission = await storage.updateStaffCommission(Number(String(req.params.id)), req.body);
     res.json(commission);
   });
 
   app.delete("/api/staff-commissions/:id", isPinAuthenticated, requirePermission("manage_salaries"), async (req, res) => {
-    await storage.deleteStaffCommission(Number(req.params.id));
+    await storage.deleteStaffCommission(Number(String(req.params.id)));
     res.status(204).send();
   });
 
@@ -2217,7 +2224,7 @@ export async function registerRoutes(
   // Staff Schedule - protected routes
   app.get("/api/staff/:id/schedule", isPinAuthenticated, async (req, res) => {
     try {
-      const schedules = await storage.getStaffSchedules(Number(req.params.id));
+      const schedules = await storage.getStaffSchedules(Number(String(req.params.id)));
       res.json(schedules);
     } catch (err) {
       console.error("Error fetching staff schedule:", err);
@@ -2227,7 +2234,7 @@ export async function registerRoutes(
 
   app.post("/api/staff/:id/schedule", isPinAuthenticated, requirePermission("manage_staff"), async (req, res) => {
     try {
-      const staffId = Number(req.params.id);
+      const staffId = Number(String(req.params.id));
       const schedules = req.body as Array<{ dayOfWeek: number; startTime: string; endTime: string; isActive: boolean }>;
       const results = [];
       for (const schedule of schedules) {
@@ -2250,7 +2257,7 @@ export async function registerRoutes(
   // Staff Breaks - protected routes
   app.get("/api/staff/:id/breaks", isPinAuthenticated, async (req, res) => {
     try {
-      const staffId = Number(req.params.id);
+      const staffId = Number(String(req.params.id));
       const { startDate, endDate } = req.query as { startDate?: string; endDate?: string };
       const breaks = await storage.getStaffBreaks(staffId, startDate, endDate);
       res.json(breaks);
@@ -2272,7 +2279,7 @@ export async function registerRoutes(
 
   app.delete("/api/staff/breaks/:id", isPinAuthenticated, requirePermission("manage_staff"), async (req, res) => {
     try {
-      await storage.deleteStaffBreak(Number(req.params.id));
+      await storage.deleteStaffBreak(Number(String(req.params.id)));
       res.status(204).send();
     } catch (err) {
       console.error("Error deleting staff break:", err);
@@ -2283,7 +2290,7 @@ export async function registerRoutes(
   // Staff Time Off - protected routes
   app.get("/api/staff/:id/time-off", isPinAuthenticated, async (req, res) => {
     try {
-      const timeOffs = await storage.getStaffTimeOff(Number(req.params.id));
+      const timeOffs = await storage.getStaffTimeOff(Number(String(req.params.id)));
       res.json(timeOffs);
     } catch (err) {
       console.error("Error fetching staff time off:", err);
@@ -2313,7 +2320,7 @@ export async function registerRoutes(
 
   app.patch("/api/staff/time-off/:id", isPinAuthenticated, requirePermission("manage_staff"), async (req, res) => {
     try {
-      const timeOff = await storage.updateStaffTimeOff(Number(req.params.id), req.body);
+      const timeOff = await storage.updateStaffTimeOff(Number(String(req.params.id)), req.body);
       res.json(timeOff);
     } catch (err) {
       console.error("Error updating staff time off:", err);
@@ -2323,7 +2330,7 @@ export async function registerRoutes(
 
   app.delete("/api/staff/time-off/:id", isPinAuthenticated, requirePermission("manage_staff"), async (req, res) => {
     try {
-      await storage.deleteStaffTimeOff(Number(req.params.id));
+      await storage.deleteStaffTimeOff(Number(String(req.params.id)));
       res.status(204).send();
     } catch (err) {
       console.error("Error deleting staff time off:", err);
@@ -2346,7 +2353,7 @@ export async function registerRoutes(
 
   app.get("/api/staff/:id/goals", isPinAuthenticated, async (req, res) => {
     try {
-      const staffId = Number(req.params.id);
+      const staffId = Number(String(req.params.id));
       const { period } = req.query as { period?: string };
       const goals = await storage.getStaffGoals(staffId, period);
       res.json(goals);
@@ -2358,7 +2365,7 @@ export async function registerRoutes(
 
   app.post("/api/staff/:id/goals", isPinAuthenticated, requirePermission("manage_salaries"), async (req, res) => {
     try {
-      const staffId = Number(req.params.id);
+      const staffId = Number(String(req.params.id));
       const goalData = { ...req.body, staffId };
       const goal = await storage.upsertStaffGoal(goalData);
       res.json(goal);
@@ -2370,7 +2377,7 @@ export async function registerRoutes(
 
   app.post("/api/staff/:id/goals/calculate", isPinAuthenticated, requirePermission("manage_salaries"), async (req, res) => {
     try {
-      const staffId = Number(req.params.id);
+      const staffId = Number(String(req.params.id));
       const { period } = req.body as { period: string };
       
       if (!period || !/^\d{4}-\d{2}$/.test(period)) {
@@ -2416,7 +2423,7 @@ export async function registerRoutes(
 
   app.delete("/api/staff/:id/goals/:goalId", isPinAuthenticated, requirePermission("manage_salaries"), async (req, res) => {
     try {
-      await storage.deleteStaffGoal(Number(req.params.goalId));
+      await storage.deleteStaffGoal(Number(String(req.params.goalId)));
       res.status(204).send();
     } catch (err) {
       console.error("Error deleting staff goal:", err);
@@ -2427,7 +2434,7 @@ export async function registerRoutes(
   // Public: Get staff availability for booking (schedule + breaks + time off)
   app.get("/api/public/staff/:id/availability", publicRateLimitMiddleware, async (req, res) => {
     try {
-      const staffId = Number(req.params.id);
+      const staffId = Number(String(req.params.id));
       const { date } = req.query as { date?: string };
       
       const schedules = await storage.getStaffSchedules(staffId);
@@ -2462,14 +2469,14 @@ export async function registerRoutes(
   // Staff Portal - dynamic manifest for PWA install
   app.get("/api/public/staff-portal/:token/manifest.json", async (req, res) => {
     try {
-      const staffMember = await storage.getStaffByToken(req.params.token);
+      const staffMember = await storage.getStaffByToken(String(req.params.token));
       const name = staffMember ? `${staffMember.name} - PREGA SQUAD` : "PREGA SQUAD Portal";
       res.json({
         name,
         short_name: staffMember?.name || "Portal",
         description: "Staff Portal - PREGA SQUAD",
-        start_url: `/staff-portal/${req.params.token}`,
-        scope: `/staff-portal/${req.params.token}`,
+        start_url: `/staff-portal/${String(req.params.token)}`,
+        scope: `/staff-portal/${String(req.params.token)}`,
         display: "standalone",
         background_color: "#ffffff",
         theme_color: "#06b6d4",
@@ -2487,7 +2494,7 @@ export async function registerRoutes(
   // Staff Portal - public routes (token-based)
   app.get("/api/public/staff-portal/:token/next-booking", publicRateLimitMiddleware, async (req, res) => {
     try {
-      const staffMember = await storage.getStaffByToken(req.params.token);
+      const staffMember = await storage.getStaffByToken(String(req.params.token));
       if (!staffMember) return res.status(404).json({ message: "Invalid portal link" });
 
       const today = new Date();
@@ -2545,7 +2552,7 @@ export async function registerRoutes(
 
   app.get("/api/public/staff-portal/:token", publicRateLimitMiddleware, async (req, res) => {
     try {
-      const staffMember = await storage.getStaffByToken(req.params.token);
+      const staffMember = await storage.getStaffByToken(String(req.params.token));
       if (!staffMember) {
         return res.status(404).json({ message: "Invalid portal link" });
       }
@@ -2562,7 +2569,7 @@ export async function registerRoutes(
 
   app.get("/api/public/staff-portal/:token/appointments", publicRateLimitMiddleware, async (req, res) => {
     try {
-      const staffMember = await storage.getStaffByToken(req.params.token);
+      const staffMember = await storage.getStaffByToken(String(req.params.token));
       if (!staffMember) {
         return res.status(404).json({ message: "Invalid portal link" });
       }
@@ -2592,7 +2599,7 @@ export async function registerRoutes(
 
   app.get("/api/public/staff-portal/:token/earnings", publicRateLimitMiddleware, async (req, res) => {
     try {
-      const staffMember = await storage.getStaffByToken(req.params.token);
+      const staffMember = await storage.getStaffByToken(String(req.params.token));
       if (!staffMember) {
         return res.status(404).json({ message: "Invalid portal link" });
       }
@@ -2790,7 +2797,7 @@ export async function registerRoutes(
     try {
       const { randomUUID } = await import("crypto");
       const newToken = randomUUID();
-      await storage.updateStaff(Number(req.params.id), { publicToken: newToken } as any);
+      await storage.updateStaff(Number(String(req.params.id)), { publicToken: newToken } as any);
       res.json({ token: newToken });
     } catch (err) {
       console.error("Error regenerating staff token:", err);
@@ -2814,7 +2821,7 @@ export async function registerRoutes(
   });
 
   app.get("/api/products/by-name/:name", isPinAuthenticated, async (req, res) => {
-    const product = await storage.getProductByName(req.params.name);
+    const product = await storage.getProductByName(String(req.params.name));
     if (!product) return res.status(404).json({ message: "Product not found" });
     res.json(product);
   });
@@ -2825,19 +2832,19 @@ export async function registerRoutes(
   });
 
   app.patch("/api/products/:id", isPinAuthenticated, requirePermission("manage_inventory"), async (req, res) => {
-    const item = await storage.updateProduct(Number(req.params.id), req.body);
+    const item = await storage.updateProduct(Number(String(req.params.id)), req.body);
     // Check and notify if product is now low on stock
-    checkAndNotifyLowStock(Number(req.params.id));
+    checkAndNotifyLowStock(Number(String(req.params.id)));
     res.json(item);
   });
 
   app.delete("/api/products/:id", isPinAuthenticated, requirePermission("manage_inventory"), async (req, res) => {
-    await storage.deleteProduct(Number(req.params.id));
+    await storage.deleteProduct(Number(String(req.params.id)));
     res.status(204).send();
   });
 
   app.get("/api/products/:id", isPinAuthenticated, async (req, res) => {
-    const product = await storage.getProduct(parseInt(req.params.id));
+    const product = await storage.getProduct(parseInt(String(req.params.id)));
     if (!product) return res.status(404).json({ message: "Product not found" });
     res.json(product);
   });
@@ -2846,9 +2853,9 @@ export async function registerRoutes(
     const { quantity } = req.body;
     if (typeof quantity !== "number") return res.status(400).json({ message: "Invalid quantity" });
     try {
-      const updated = await storage.updateProductQuantity(parseInt(req.params.id), quantity);
+      const updated = await storage.updateProductQuantity(parseInt(String(req.params.id)), quantity);
       // Check and notify if product is now low on stock
-      checkAndNotifyLowStock(parseInt(req.params.id));
+      checkAndNotifyLowStock(parseInt(String(req.params.id)));
       res.json(updated);
     } catch (e) {
       res.status(404).json({ message: "Product not found" });
@@ -2882,7 +2889,7 @@ export async function registerRoutes(
 
   app.patch("/api/charges/:id", isPinAuthenticated, requirePermission("manage_expenses"), async (req, res) => {
     try {
-      await storage.updateCharge(Number(req.params.id), req.body);
+      await storage.updateCharge(Number(String(req.params.id)), req.body);
       res.status(200).json({ success: true });
     } catch (err) {
       console.error("Error updating charge:", err);
@@ -2892,7 +2899,7 @@ export async function registerRoutes(
 
   app.delete("/api/charges/:id", isPinAuthenticated, requirePermission("manage_expenses"), async (req, res) => {
     try {
-      await storage.deleteCharge(Number(req.params.id));
+      await storage.deleteCharge(Number(String(req.params.id)));
       res.status(204).send();
     } catch (err) {
       console.error("Error deleting charge:", err);
@@ -2927,7 +2934,7 @@ export async function registerRoutes(
 
   app.delete("/api/owner-withdrawals/:id", isPinAuthenticated, requirePermission("manage_expenses"), async (req, res) => {
     try {
-      await storage.deleteOwnerWithdrawal(Number(req.params.id));
+      await storage.deleteOwnerWithdrawal(Number(String(req.params.id)));
       res.status(204).send();
     } catch (err) {
       console.error("Error deleting owner withdrawal:", err);
@@ -2956,7 +2963,7 @@ export async function registerRoutes(
 
   app.patch("/api/staff-deductions/:id", isPinAuthenticated, requirePermission("manage_salaries"), async (req, res) => {
     try {
-      await storage.updateStaffDeduction(Number(req.params.id), req.body);
+      await storage.updateStaffDeduction(Number(String(req.params.id)), req.body);
       res.status(200).json({ success: true });
     } catch (err) {
       res.status(500).json({ message: "Failed to update deduction" });
@@ -2965,7 +2972,7 @@ export async function registerRoutes(
 
   app.delete("/api/staff-deductions/:id", isPinAuthenticated, requirePermission("manage_salaries"), async (req, res) => {
     try {
-      await storage.deleteStaffDeduction(Number(req.params.id));
+      await storage.deleteStaffDeduction(Number(String(req.params.id)));
       res.status(204).send();
     } catch (err) {
       res.status(500).json({ message: "Failed to delete deduction" });
@@ -2974,7 +2981,7 @@ export async function registerRoutes(
 
   app.patch("/api/staff-deductions/:id/clear", isPinAuthenticated, requirePermission("manage_salaries"), async (req, res) => {
     try {
-      const id = Number(req.params.id);
+      const id = Number(String(req.params.id));
       await storage.clearStaffDeduction(id);
       res.json({ success: true });
     } catch (err) {
@@ -2984,7 +2991,7 @@ export async function registerRoutes(
 
   app.patch("/api/staff-deductions/:id/pay-back", isPinAuthenticated, requirePermission("manage_salaries"), async (req, res) => {
     try {
-      const id = Number(req.params.id);
+      const id = Number(String(req.params.id));
       const { amount } = z.object({ amount: z.number().min(0.01, "Amount must be positive") }).parse(req.body);
       const deductions = await storage.getStaffDeductions();
       const deduction = deductions.find(d => d.id === id);
@@ -3066,7 +3073,7 @@ export async function registerRoutes(
 
   app.get("/api/staff-payments/staff/:staffId", isPinAuthenticated, async (req, res) => {
     try {
-      const items = await storage.getStaffPaymentsByStaff(Number(req.params.staffId));
+      const items = await storage.getStaffPaymentsByStaff(Number(String(req.params.staffId)));
       res.json(items);
     } catch (err) {
       res.status(500).json({ message: "Failed to fetch staff payments" });
@@ -3075,7 +3082,7 @@ export async function registerRoutes(
 
   app.get("/api/staff-payments/staff/:staffId/last", isPinAuthenticated, async (req, res) => {
     try {
-      const payment = await storage.getLastStaffPayment(Number(req.params.staffId));
+      const payment = await storage.getLastStaffPayment(Number(String(req.params.staffId)));
       res.json(payment || null);
     } catch (err) {
       res.status(500).json({ message: "Failed to fetch last payment" });
@@ -3097,7 +3104,7 @@ export async function registerRoutes(
 
   app.delete("/api/staff-payments/:id", isPinAuthenticated, requirePermission("manage_salaries"), async (req, res) => {
     try {
-      await storage.deleteStaffPayment(Number(req.params.id));
+      await storage.deleteStaffPayment(Number(String(req.params.id)));
       res.json({ ok: true });
     } catch (err) {
       res.status(500).json({ message: "Failed to delete staff payment" });
@@ -3115,13 +3122,13 @@ export async function registerRoutes(
   });
 
   app.get("/api/clients/:id", isPinAuthenticated, async (req, res) => {
-    const client = await storage.getClient(Number(req.params.id));
+    const client = await storage.getClient(Number(String(req.params.id)));
     if (!client) return res.status(404).json({ message: "Client not found" });
     res.json(client);
   });
 
   app.get("/api/clients/:id/appointments", isPinAuthenticated, async (req, res) => {
-    const appointments = await storage.getClientAppointments(Number(req.params.id));
+    const appointments = await storage.getClientAppointments(Number(String(req.params.id)));
     res.json(appointments);
   });
 
@@ -3136,7 +3143,7 @@ export async function registerRoutes(
 
   app.patch("/api/clients/:id", isPinAuthenticated, requirePermission("manage_clients"), async (req, res) => {
     try {
-      const item = await storage.updateClient(Number(req.params.id), req.body);
+      const item = await storage.updateClient(Number(String(req.params.id)), req.body);
       res.json(item);
     } catch (err) {
       res.status(400).json({ message: "Update failed" });
@@ -3146,7 +3153,7 @@ export async function registerRoutes(
   app.patch("/api/clients/:id/loyalty", isPinAuthenticated, requirePermission("manage_clients"), async (req, res) => {
     try {
       const { points, spent } = req.body;
-      const item = await storage.updateClientLoyalty(Number(req.params.id), points, spent);
+      const item = await storage.updateClientLoyalty(Number(String(req.params.id)), points, spent);
       res.json(item);
     } catch (err) {
       res.status(400).json({ message: "Update failed" });
@@ -3156,7 +3163,7 @@ export async function registerRoutes(
   app.patch("/api/clients/:id/use-points", isPinAuthenticated, requirePermission("manage_clients"), async (req, res) => {
     try {
       const { usePoints } = req.body;
-      const item = await storage.updateClient(Number(req.params.id), { usePoints: !!usePoints });
+      const item = await storage.updateClient(Number(String(req.params.id)), { usePoints: !!usePoints });
       res.json(item);
     } catch (err) {
       res.status(400).json({ message: "Update failed" });
@@ -3169,7 +3176,7 @@ export async function registerRoutes(
       if (!points || points <= 0) {
         return res.status(400).json({ message: "Invalid points amount" });
       }
-      const item = await storage.restoreClientLoyaltyPoints(Number(req.params.id), points);
+      const item = await storage.restoreClientLoyaltyPoints(Number(String(req.params.id)), points);
       res.json(item);
     } catch (err: any) {
       res.status(500).json({ message: err.message || "Failed to restore loyalty points" });
@@ -3179,7 +3186,7 @@ export async function registerRoutes(
   app.patch("/api/clients/:id/use-gift-card-balance", isPinAuthenticated, requirePermission("manage_clients"), async (req, res) => {
     try {
       const { useGiftCardBalance } = req.body;
-      const item = await storage.updateClient(Number(req.params.id), { useGiftCardBalance: !!useGiftCardBalance });
+      const item = await storage.updateClient(Number(String(req.params.id)), { useGiftCardBalance: !!useGiftCardBalance });
       res.json(item);
     } catch (err) {
       res.status(400).json({ message: "Update failed" });
@@ -3189,7 +3196,7 @@ export async function registerRoutes(
   app.patch("/api/clients/:id/gift-card-balance", isPinAuthenticated, requirePermission("manage_appointments"), async (req, res) => {
     try {
       const { amount } = req.body;
-      const clientId = Number(req.params.id);
+      const clientId = Number(String(req.params.id));
       const numAmount = Number(amount);
       console.log(`[GiftCard Route] Updating client ${clientId} balance by ${numAmount} (raw: ${amount})`);
       if (isNaN(numAmount)) {
@@ -3212,7 +3219,7 @@ export async function registerRoutes(
   });
 
   app.delete("/api/clients/:id", isPinAuthenticated, requirePermission("manage_clients"), async (req, res) => {
-    await storage.deleteClient(Number(req.params.id));
+    await storage.deleteClient(Number(String(req.params.id)));
     res.status(204).send();
   });
 
@@ -3237,7 +3244,7 @@ export async function registerRoutes(
 
   app.delete("/api/expense-categories/:id", isPinAuthenticated, requirePermission("manage_expenses"), async (req, res) => {
     try {
-      await storage.deleteExpenseCategory(Number(req.params.id));
+      await storage.deleteExpenseCategory(Number(String(req.params.id)));
       res.status(204).send();
     } catch (err) {
       res.status(500).json({ message: "Failed to delete category" });
@@ -3280,9 +3287,9 @@ export async function registerRoutes(
       }).parse(req.query);
       
       const allStaff = await storage.getStaff();
-      const staffMember = allStaff.find(s => s.name === req.params.staffName);
+      const staffMember = allStaff.find(s => s.name === String(req.params.staffName));
       const performance = await storage.getStaffPerformance(
-        req.params.staffName,
+        String(req.params.staffName),
         startDate,
         endDate,
         staffMember?.id
@@ -3296,6 +3303,8 @@ export async function registerRoutes(
   // ── Baileys WhatsApp management routes ──────────────────────────────────
   app.get("/api/whatsapp/qr", isPinAuthenticated, async (_req, res) => {
     try {
+      // @ts-ignore
+      // @ts-ignore
       const { getQRDataUrl, getStatus, getPairingCode, getPairingCodeExpiresAt, getLastPairingError } = await import("./baileys.js");
       const s = getStatus();
       const qr = getQRDataUrl();
@@ -3311,6 +3320,8 @@ export async function registerRoutes(
 
   app.get("/api/whatsapp/status", isPinAuthenticated, async (_req, res) => {
     try {
+      // @ts-ignore
+      // @ts-ignore
       const { getStatus } = await import("./baileys.js");
       res.json(getStatus());
     } catch (err: any) {
@@ -3323,6 +3334,8 @@ export async function registerRoutes(
       return res.status(400).json({ success: false, error: "REPLIT_DEV" });
     }
     try {
+      // @ts-ignore
+      // @ts-ignore
       const { startQR } = await import("./baileys.js");
       startQR(); // non-blocking — QR arrives via polling /api/whatsapp/qr
       res.json({ success: true });
@@ -3336,6 +3349,8 @@ export async function registerRoutes(
       return res.status(400).json({ success: false, error: "REPLIT_DEV" });
     }
     try {
+      // @ts-ignore
+      // @ts-ignore
       const { startPairingCode } = await import("./baileys.js");
       const { phone } = z.object({ phone: z.string().min(8) }).parse(req.body);
       startPairingCode(phone); // non-blocking — code arrives via polling /api/whatsapp/qr
@@ -3350,6 +3365,8 @@ export async function registerRoutes(
       return res.status(400).json({ success: false, error: "REPLIT_DEV" });
     }
     try {
+      // @ts-ignore
+      // @ts-ignore
       const { reconnect } = await import("./baileys.js");
       await reconnect();
       res.json({ success: true });
@@ -3363,6 +3380,8 @@ export async function registerRoutes(
       return res.status(400).json({ success: false, error: "REPLIT_DEV" });
     }
     try {
+      // @ts-ignore
+      // @ts-ignore
       const { disconnect } = await import("./baileys.js");
       await disconnect();
       res.json({ success: true });
@@ -3376,6 +3395,8 @@ export async function registerRoutes(
       return res.status(400).json({ success: false, error: "REPLIT_DEV" });
     }
     try {
+      // @ts-ignore
+      // @ts-ignore
       const { clearSessionIfDisconnected } = await import("./baileys.js");
       clearSessionIfDisconnected();
       res.json({ success: true });
@@ -3406,6 +3427,8 @@ export async function registerRoutes(
       //      c) If no real phone but has history → leave alone (can't safely touch it).
       const allClientsForCleanup = await storage.getClients();
       const { getBotMemory: _getBotMemSync } = await import("../db");
+      // @ts-ignore
+      // @ts-ignore
       const { getLidPhoneMap } = await import("./baileys.js");
       const lidPhoneMap = getLidPhoneMap();
       let fixed = 0;
@@ -3535,7 +3558,7 @@ export async function registerRoutes(
 
   app.delete("/api/whatsapp/bot-conversations/:jid", isPinAuthenticated, async (req, res) => {
     try {
-      const jid = decodeURIComponent(req.params.jid);
+      const jid = decodeURIComponent(String(req.params.jid));
       const { saveBotMemory } = await import("../db");
       // Wipe conv history only — keep name, language, services
       const { getBotMemory } = await import("../db");
@@ -3551,7 +3574,7 @@ export async function registerRoutes(
 
   app.patch("/api/whatsapp/bot-conversations/:jid/block", isPinAuthenticated, async (req, res) => {
     try {
-      const jid = decodeURIComponent(req.params.jid);
+      const jid = decodeURIComponent(String(req.params.jid));
       const { blocked } = z.object({ blocked: z.boolean() }).parse(req.body);
       const { getBotMemory, saveBotMemory } = await import("../db");
       let mem = await getBotMemory(jid);
@@ -3588,8 +3611,10 @@ export async function registerRoutes(
   // ── Re-trigger BotLearn for a specific JID ───────────────────────────────
   app.post("/api/whatsapp/relearn/:jid", isPinAuthenticated, async (req, res) => {
     try {
-      const jid = decodeURIComponent(req.params.jid);
+      const jid = decodeURIComponent(String(req.params.jid));
       const { getBotMemory, saveBotMemory } = await import("../db");
+      // @ts-ignore
+      // @ts-ignore
       const { learnFromConversation, sanitizeClientName } = await import("./gemini.js");
       const mem = await getBotMemory(jid);
       if (!mem || mem.convHistory.length < 2) {
@@ -3634,7 +3659,7 @@ export async function registerRoutes(
 
   app.patch("/api/bot/complaints/:id/resolve", isPinAuthenticated, async (req, res) => {
     try {
-      const id = parseInt(req.params.id, 10);
+      const id = parseInt(String(req.params.id), 10);
       const { fixNote } = z.object({ fixNote: z.string().min(1) }).parse(req.body);
       const { resolveComplaint } = await import("../db");
       await resolveComplaint(id, fixNote);
@@ -3646,7 +3671,7 @@ export async function registerRoutes(
 
   app.delete("/api/bot/complaints/:id", isPinAuthenticated, async (req, res) => {
     try {
-      const id = parseInt(req.params.id, 10);
+      const id = parseInt(String(req.params.id), 10);
       const { deleteSalonComplaint } = await import("../db");
       await deleteSalonComplaint(id);
       res.json({ success: true });
@@ -3685,7 +3710,7 @@ export async function registerRoutes(
 
   app.delete("/api/whatsapp/boss-instructions/:index", isPinAuthenticated, async (req, res) => {
     try {
-      const idx = parseInt(req.params.index, 10);
+      const idx = parseInt(String(req.params.index), 10);
       const settings = await storage.getBusinessSettings();
       const existing = parseBossInstructions(settings?.bossInstructions);
       if (idx < 0 || idx >= existing.length) {
@@ -3848,6 +3873,8 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
   // WhatsApp Notifications (Baileys) - protected routes
   app.post("/api/notifications/send", isPinAuthenticated, async (req, res) => {
     try {
+      // @ts-ignore
+      // @ts-ignore
       const { sendWhatsAppMessage } = await import("./baileys.js");
       const { phone, message } = z.object({
         phone: z.string(),
@@ -3868,6 +3895,8 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
   app.post("/api/notifications/appointment-reminder", isPinAuthenticated, async (req, res) => {
     try {
+      // @ts-ignore
+      // @ts-ignore
       const { sendAppointmentReminder } = await import("./baileys.js");
       const { clientPhone, clientName, appointmentDate, appointmentTime, serviceName } = z.object({
         clientPhone: z.string(),
@@ -3891,6 +3920,8 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
   app.post("/api/notifications/booking-confirmation", isPinAuthenticated, async (req, res) => {
     try {
+      // @ts-ignore
+      // @ts-ignore
       const { sendBookingConfirmation } = await import("./baileys.js");
       const { clientPhone, clientName, appointmentDate, appointmentTime, serviceName } = z.object({
         clientPhone: z.string(),
@@ -3915,6 +3946,8 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
   // Send gift card notification via WhatsApp
   app.post("/api/notifications/gift-card", isPinAuthenticated, requirePermission("manage_business_settings"), async (req, res) => {
     try {
+      // @ts-ignore
+      // @ts-ignore
       const { sendGiftCardNotification } = await import("./baileys.js");
       const { recipientPhone, recipientName, giftCardCode, amount, senderName } = z.object({
         recipientPhone: z.string().min(1, "Phone is required"),
@@ -3939,6 +3972,8 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
   // Bulk WhatsApp broadcast — starts async job, returns jobId immediately
   app.post("/api/notifications/broadcast", isPinAuthenticated, requirePermission("admin_settings"), async (req, res) => {
     try {
+      // @ts-ignore
+      // @ts-ignore
       const { sendWhatsAppMessage } = await import("./baileys.js");
       const { message, clientIds } = z.object({
         message: z.string().min(1, "Message is required"),
@@ -4001,7 +4036,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
   // Broadcast job progress polling
   app.get("/api/notifications/broadcast/:jobId", isPinAuthenticated, async (req, res) => {
-    if (req.params.jobId === "last") {
+    if (String(req.params.jobId) === "last") {
       // Return in-memory result if available, otherwise load from DB
       if (lastBroadcastResult) return res.json(lastBroadcastResult);
       const dbResult = await getLastBroadcastLog();
@@ -4009,7 +4044,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
       lastBroadcastResult = { ...dbResult, jobId: "db" };
       return res.json(lastBroadcastResult);
     }
-    const job = broadcastJobs.get(req.params.jobId);
+    const job = broadcastJobs.get(String(req.params.jobId));
     if (!job) return res.status(404).json({ error: "Job not found" });
     res.json({ sent: job.sent, failed: job.failed, total: job.total, done: job.done, errors: job.errors, sentClients: job.sentClients, failedClients: job.failedClients });
   });
@@ -4017,6 +4052,8 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
   // Check Baileys connection status (legacy endpoint kept for compatibility)
   app.get("/api/notifications/status", isPinAuthenticated, async (_req, res) => {
     try {
+      // @ts-ignore
+      // @ts-ignore
       const { getConnectionStatus } = await import("./baileys.js");
       const status = await getConnectionStatus();
       res.json(status);
@@ -4170,7 +4207,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
   // Get specific admin role - protected
   app.get("/api/admin-roles/:id", isPinAuthenticated, requirePermission("admin_settings"), async (req, res) => {
-    const role = await storage.getAdminRole(Number(req.params.id));
+    const role = await storage.getAdminRole(Number(String(req.params.id)));
     if (!role) return res.status(404).json({ message: "Admin role not found" });
     res.json({ ...role, pin: role.pin ? "****" : null });
   });
@@ -4196,7 +4233,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
       res.status(201).json(safeRole);
     } catch (err: any) {
       if (err instanceof z.ZodError) {
-        return res.status(400).json({ message: err.errors[0].message });
+        return res.status(400).json({ message: err.issues[0].message });
       }
       res.status(400).json({ message: err.message || "Failed to create admin role" });
     }
@@ -4221,7 +4258,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
         }
       }
       
-      const role = await storage.updateAdminRole(Number(req.params.id), updateData);
+      const role = await storage.updateAdminRole(Number(String(req.params.id)), updateData);
       const safeRole = { ...role, pin: role.pin ? "****" : null };
       res.json(safeRole);
     } catch (err: any) {
@@ -4231,7 +4268,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
   // Delete admin role - protected
   app.delete("/api/admin-roles/:id", isPinAuthenticated, requirePermission("admin_settings"), async (req, res) => {
-    await storage.deleteAdminRole(Number(req.params.id));
+    await storage.deleteAdminRole(Number(String(req.params.id)));
     res.status(204).send();
   });
 
@@ -4393,7 +4430,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
       }
     } catch (err: any) {
       if (err instanceof z.ZodError) {
-        return res.status(400).json({ success: false, message: err.errors[0].message });
+        return res.status(400).json({ success: false, message: err.issues[0].message });
       }
       res.status(400).json({ success: false, message: err.message || "Failed to create admin role" });
     }
@@ -4740,7 +4777,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
   app.get("/api/gift-cards/:id", isPinAuthenticated, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(String(req.params.id));
       const giftCard = await storage.getGiftCard(id);
       if (!giftCard) {
         return res.status(404).json({ message: "Gift card not found" });
@@ -4753,7 +4790,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
   app.get("/api/gift-cards/code/:code", isPinAuthenticated, async (req, res) => {
     try {
-      const giftCard = await storage.getGiftCardByCode(req.params.code);
+      const giftCard = await storage.getGiftCardByCode(String(req.params.code));
       if (!giftCard) {
         return res.status(404).json({ message: "Gift card not found" });
       }
@@ -4800,7 +4837,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
   app.patch("/api/gift-cards/:id", isPinAuthenticated, requirePermission("manage_business_settings"), async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(String(req.params.id));
       const giftCard = await storage.updateGiftCard(id, req.body);
       res.json(giftCard);
     } catch (err: any) {
@@ -4810,7 +4847,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
   app.delete("/api/gift-cards/:id", isPinAuthenticated, requirePermission("manage_business_settings"), async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(String(req.params.id));
       await storage.deleteGiftCard(id);
       res.json({ success: true });
     } catch (err: any) {
@@ -4820,7 +4857,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
   app.post("/api/gift-cards/:id/redeem", isPinAuthenticated, requirePermission("manage_appointments"), async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(String(req.params.id));
       const { amount } = z.object({ amount: z.number().positive() }).parse(req.body);
       
       const giftCard = await storage.getGiftCard(id);
@@ -4842,7 +4879,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
       res.json(updated);
     } catch (err: any) {
       if (err instanceof z.ZodError) {
-        return res.status(400).json({ message: err.errors[0].message });
+        return res.status(400).json({ message: err.issues[0].message });
       }
       res.status(400).json({ message: err.message });
     }
@@ -4860,7 +4897,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
   app.get("/api/referrals/by-referrer/:referrerId", isPinAuthenticated, async (req, res) => {
     try {
-      const referrerId = parseInt(req.params.referrerId);
+      const referrerId = parseInt(String(req.params.referrerId));
       const referrals = await storage.getReferralsByReferrer(referrerId);
       res.json(referrals);
     } catch (err: any) {
@@ -4886,7 +4923,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
   app.patch("/api/referrals/:id", isPinAuthenticated, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(String(req.params.id));
       const referral = await storage.updateReferral(id, req.body);
       res.json(referral);
     } catch (err: any) {
@@ -4906,7 +4943,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
   app.get("/api/packages/:id", isPinAuthenticated, async (req, res) => {
     try {
-      const pkg = await storage.getPackage(Number(req.params.id));
+      const pkg = await storage.getPackage(Number(String(req.params.id)));
       if (!pkg) {
         return res.status(404).json({ message: "Package not found" });
       }
@@ -4927,7 +4964,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
   app.patch("/api/packages/:id", isPinAuthenticated, requirePermission("manage_services"), async (req, res) => {
     try {
-      const pkg = await storage.updatePackage(Number(req.params.id), req.body);
+      const pkg = await storage.updatePackage(Number(String(req.params.id)), req.body);
       res.json(pkg);
     } catch (err: any) {
       res.status(400).json({ message: err.message });
@@ -4936,7 +4973,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
   app.delete("/api/packages/:id", isPinAuthenticated, requirePermission("manage_services"), async (req, res) => {
     try {
-      await storage.deletePackage(Number(req.params.id));
+      await storage.deletePackage(Number(String(req.params.id)));
       res.status(204).send();
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -4955,7 +4992,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
   app.get("/api/package-purchases/:id", isPinAuthenticated, async (req, res) => {
     try {
-      const purchase = await storage.getPackagePurchase(Number(req.params.id));
+      const purchase = await storage.getPackagePurchase(Number(String(req.params.id)));
       if (!purchase) {
         return res.status(404).json({ message: "Package purchase not found" });
       }
@@ -4967,7 +5004,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
   app.get("/api/package-purchases/client/:clientId", isPinAuthenticated, async (req, res) => {
     try {
-      const purchases = await storage.getPackagePurchasesByClient(Number(req.params.clientId));
+      const purchases = await storage.getPackagePurchasesByClient(Number(String(req.params.clientId)));
       res.json(purchases);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -4985,7 +5022,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
   app.patch("/api/package-purchases/:id", isPinAuthenticated, async (req, res) => {
     try {
-      const purchase = await storage.updatePackagePurchase(Number(req.params.id), req.body);
+      const purchase = await storage.updatePackagePurchase(Number(String(req.params.id)), req.body);
       res.json(purchase);
     } catch (err: any) {
       res.status(400).json({ message: err.message });
@@ -5004,7 +5041,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
   app.get("/api/waitlist/date/:date", isPinAuthenticated, async (req, res) => {
     try {
-      const waitlist = await storage.getWaitlistByDate(req.params.date);
+      const waitlist = await storage.getWaitlistByDate(String(req.params.date));
       res.json(waitlist);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -5023,7 +5060,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
   app.patch("/api/waitlist/:id", isPinAuthenticated, async (req, res) => {
     try {
-      const entry = await storage.updateWaitlistEntry(Number(req.params.id), req.body);
+      const entry = await storage.updateWaitlistEntry(Number(String(req.params.id)), req.body);
       io.emit("waitlist:updated", entry);
       res.json(entry);
     } catch (err: any) {
@@ -5033,8 +5070,8 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
   app.delete("/api/waitlist/:id", isPinAuthenticated, async (req, res) => {
     try {
-      await storage.deleteWaitlistEntry(Number(req.params.id));
-      io.emit("waitlist:deleted", { id: Number(req.params.id) });
+      await storage.deleteWaitlistEntry(Number(String(req.params.id)));
+      io.emit("waitlist:deleted", { id: Number(String(req.params.id)) });
       res.status(204).send();
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -5043,7 +5080,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
   app.post("/api/waitlist/:id/notify", isPinAuthenticated, async (req, res) => {
     try {
-      const entry = await storage.updateWaitlistEntry(Number(req.params.id), {
+      const entry = await storage.updateWaitlistEntry(Number(String(req.params.id)), {
         status: "notified",
         notifiedAt: new Date(),
       } as any);
@@ -5066,7 +5103,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
   app.get("/api/message-templates/:id", isPinAuthenticated, async (req, res) => {
     try {
-      const template = await storage.getMessageTemplate(Number(req.params.id));
+      const template = await storage.getMessageTemplate(Number(String(req.params.id)));
       if (!template) {
         return res.status(404).json({ message: "Template not found" });
       }
@@ -5087,7 +5124,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
   app.patch("/api/message-templates/:id", isPinAuthenticated, async (req, res) => {
     try {
-      const template = await storage.updateMessageTemplate(Number(req.params.id), req.body);
+      const template = await storage.updateMessageTemplate(Number(String(req.params.id)), req.body);
       res.json(template);
     } catch (err: any) {
       res.status(400).json({ message: err.message });
@@ -5096,7 +5133,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
   app.delete("/api/message-templates/:id", isPinAuthenticated, async (req, res) => {
     try {
-      await storage.deleteMessageTemplate(Number(req.params.id));
+      await storage.deleteMessageTemplate(Number(String(req.params.id)));
       res.status(204).send();
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -5487,6 +5524,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
     sess.timer = setTimeout(() => runFlush(remoteJid, flush), BUFFER_DELAY_MS);
   }
 
+  // @ts-ignore
   import("./baileys.js").then(({ initBaileys, setSocketIO, setIncomingMessageHandler, setOutgoingMessageHandler, sendBotConfirmed, sendBotCancelled, sendBotModify, sendBotError }) => {
     setSocketIO(io);
 
@@ -5559,6 +5597,8 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
           if (wissalLastTurn) {
             try {
+              // @ts-ignore
+              // @ts-ignore
               const { detectBossCorrection } = await import("./gemini.js");
               const result = await detectBossCorrection(wissalLastTurn.text, bossText.trim());
               if (result?.isCorrection && result.wrongInfo?.trim().length > 3 && result.correctInfo?.trim().length > 3) {
@@ -5604,7 +5644,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
     // The user can still manually link from the WhatsApp settings page when needed;
     // the new session is saved to the DB and Koyeb picks it up on its next restart.
     if (!process.env.REPL_ID) {
-      initBaileys().catch((err) => console.error("[Baileys] Startup error:", err));
+      initBaileys().catch((err: any) => console.error("[Baileys] Startup error:", err));
     } else {
       console.log("[Baileys] Replit dev — skipping auto-connect (Koyeb holds the active session). Link manually when needed.");
     }
@@ -5657,7 +5697,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
             if (phoneArgIsReal && !memEntry?.phone) {
               await _saveBotMem(memEntry
                 ? { ...memEntry, phone }
-                : { jid: remoteJid, phone, clientName: pushName || null, language: "fr", preferredServices: [], personalityNotes: null, convHistory: [], visitCount: 0, botBlocked: false }
+                : { jid: remoteJid, phone, clientName: pushName || null, language: "fr", preferredServices: [], personalityNotes: null, convHistory: [], visitCount: 0, botBlocked: false, lastSeen: null }
               ).catch(() => {});
             }
 
@@ -5759,6 +5799,8 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
           // Do this BEFORE merging so the transcription replaces "[voice message]"
           // Skip transcription entirely if this JID is bot-blocked — voice notes
           // can never be "1"/"2"/"3" quick actions, so there's nothing useful to do.
+          // @ts-ignore
+          // @ts-ignore
           const { transcribeAudio } = await import("./gemini.js");
           for (const msg of msgs) {
             if (msg.isVoice && isHardBlocked) {
@@ -5906,6 +5948,8 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
               .sort((a: any, b: any) => b.id - a.id);
 
             if (cancellableApts.length > 0) {
+              // @ts-ignore
+              // @ts-ignore
               const { sendWhatsAppMessage, sendTypingPresence, stopTypingPresence } = await import("./baileys.js");
               await sendTypingPresence(remoteJid);
               const aptToCancel = cancellableApts[0];
@@ -5938,8 +5982,12 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
 
           // ── Image generation: client asked for a photo ───────────────────
           {
+            // @ts-ignore
+            // @ts-ignore
             const { detectImageRequest, generateImage } = await import("./gemini.js");
             if (detectImageRequest(mergedText) && !mergedImageBase64) {
+              // @ts-ignore
+              // @ts-ignore
               const { sendTypingPresence, stopTypingPresence, sendWhatsAppImageBuffer, sendWhatsAppMessage } = await import("./baileys.js");
               await sendTypingPresence(remoteJid);
               console.log(`[Bot] Image request detected from ${remoteJid}: "${mergedText.slice(0, 60)}"`);
@@ -6004,6 +6052,8 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
             const isFrench = clientLang === "french";
             for (const [pattern, arReplies, frReplies] of shortReplies) {
               if (pattern.test(t)) {
+                // @ts-ignore
+                // @ts-ignore
                 const { sendWhatsAppMessage: _send, sendTypingPresence: _tp, stopTypingPresence: _stp } = await import("./baileys.js");
                 await _tp(remoteJid);
                 await new Promise<void>((r) => setTimeout(r, 700 + Math.floor(Math.random() * 500)));
@@ -6018,7 +6068,11 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
           }
 
           // ── AI assistant reply ───────────────────────────────────────────
+          // @ts-ignore
+          // @ts-ignore
           const { askGemini, FALLBACK_REPLY, learnFromConversation, sanitizeClientName } = await import("./gemini.js");
+          // @ts-ignore
+          // @ts-ignore
           const { sendWhatsAppMessage, sendTypingPresence, stopTypingPresence } = await import("./baileys.js");
 
           // Show typing immediately — client sees we're working on a reply
@@ -6085,8 +6139,8 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
           // Load resolved complaints + bot corrections so the bot can use them for all clients
           const { getResolvedComplaints, getBossInstructions } = await import("../db");
           const [allResolved, bossInstructions] = await Promise.all([
-            getResolvedComplaints().catch(() => []),
-            getBossInstructions().catch(() => []),
+            getResolvedComplaints().catch((): any[] => []),
+            getBossInstructions().catch((): any[] => []),
           ]);
           const resolvedComplaints = allResolved.filter((rc) => rc.complaintType !== "bot_error" && rc.fixNote);
           const botCorrections = allResolved.filter((rc) => rc.complaintType === "bot_error" && rc.fixNote);
@@ -6238,6 +6292,8 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
             const detectedLang = currentLang;
             // Use WhatsApp pushName (display name) as primary source — only if
             // no name is already stored and the push name looks like a real name
+            // @ts-ignore
+            // @ts-ignore
             const { sanitizeClientName: _sanitize } = await import("./gemini.js");
             const pushNameCleaned = _sanitize(pushName || null);
             const detectedName = extractName(mergedText) || pushNameCleaned;
@@ -6279,7 +6335,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
             if (shouldLearn) {
               const serviceNames = serviceList.map((s: any) => s.name);
               learnFromConversation(newHistory, updatedMem, serviceNames)
-                .then(async (insights) => {
+                .then(async (insights: any) => {
                   if (!insights) return;
 
                   // Re-load from cache to get latest state (another message may have arrived)
@@ -6365,7 +6421,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
                     })
                   );
                 })
-                .catch((err) =>
+                .catch((err: any) =>
                   console.error("[BotLearn] Background learning failed:", err)
                 );
             }
@@ -6392,7 +6448,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
           // Strip any [رد المدير]: prefix that the AI may have mimicked from history
           const finalReply = aiReply
             .split("\n")
-            .map((line) => line.replace(/^\s*\[رد المدير\]\s*:\s*/u, ""))
+            .map((line: string) => line.replace(/^\s*\[رد المدير\]\s*:\s*/u, ""))
             .join("\n")
             .trim();
 
@@ -6407,7 +6463,11 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
           const ttsEnabled = (bizSettings as any)?.ttsEnabled !== false;
           if (batchHasVoice && !isLocationRequest && ttsEnabled) {
             try {
+              // @ts-ignore
+              // @ts-ignore
               const { textToSpeech } = await import("./gemini.js");
+              // @ts-ignore
+              // @ts-ignore
               const { sendWhatsAppVoiceNote } = await import("./baileys.js");
               const ttsResult = await textToSpeech(finalReply, bizSettings?.ttsVoice || "Aoede");
               if (ttsResult) {
@@ -6465,6 +6525,8 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
           // either update the existing pending appointment OR create a new DB
           // record so it shows in "حجوزات أكّدها البوت".
           try {
+            // @ts-ignore
+            // @ts-ignore
             const { extractBotConfirmedAppointment } = await import("./gemini.js");
             const todayStr = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD in local TZ
             const extracted = extractBotConfirmedAppointment(finalReply, newHistory, todayStr, serviceList);
@@ -6639,6 +6701,8 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
         } catch (err: any) {
           console.error("[Bot] Error handling buffered batch:", err.message);
           try {
+            // @ts-ignore
+            // @ts-ignore
             const { sendWhatsAppMessage, stopTypingPresence } = await import("./baileys.js");
             await stopTypingPresence(remoteJid);
             // Use a language-aware fallback — clientLang is available in this closure scope
@@ -6697,74 +6761,74 @@ async function seedDatabase() {
   const services = await storage.getServices();
   if (services.length === 0) {
     // BEAUTE
-    await storage.createService({ name: "Maquillage Simple", price: 100, duration: 30, category: "Beauté" });
-    await storage.createService({ name: "Maquillage et faux-cils", price: 150, duration: 45, category: "Beauté" });
-    await storage.createService({ name: "Maquillage Pro", price: 300, duration: 60, category: "Beauté" });
-    await storage.createService({ name: "Maquillage Fiancé & Marié", price: 600, duration: 90, category: "Beauté" });
-    await storage.createService({ name: "Extension de cils Permanent", price: 350, duration: 90, category: "Beauté" });
-    await storage.createService({ name: "Cils Normaux", price: 50, duration: 30, category: "Beauté" });
-    await storage.createService({ name: "Cils Mèche/Mèche", price: 100, duration: 45, category: "Beauté" });
-    await storage.createService({ name: "Cils Naturel", price: 150, duration: 60, category: "Beauté" });
-    await storage.createService({ name: "Coloration des Sourcils", price: 20, duration: 15, category: "Beauté" });
+    await storage.createService({ name: "Maquillage Simple", price: 100, duration: 30, category: "Beauté", linkedProductIds: [] });
+    await storage.createService({ name: "Maquillage et faux-cils", price: 150, duration: 45, category: "Beauté", linkedProductIds: [] });
+    await storage.createService({ name: "Maquillage Pro", price: 300, duration: 60, category: "Beauté", linkedProductIds: [] });
+    await storage.createService({ name: "Maquillage Fiancé & Marié", price: 600, duration: 90, category: "Beauté", linkedProductIds: [] });
+    await storage.createService({ name: "Extension de cils Permanent", price: 350, duration: 90, category: "Beauté", linkedProductIds: [] });
+    await storage.createService({ name: "Cils Normaux", price: 50, duration: 30, category: "Beauté", linkedProductIds: [] });
+    await storage.createService({ name: "Cils Mèche/Mèche", price: 100, duration: 45, category: "Beauté", linkedProductIds: [] });
+    await storage.createService({ name: "Cils Naturel", price: 150, duration: 60, category: "Beauté", linkedProductIds: [] });
+    await storage.createService({ name: "Coloration des Sourcils", price: 20, duration: 15, category: "Beauté", linkedProductIds: [] });
 
     // COIFFURE
-    await storage.createService({ name: "Shampoing", price: 20, duration: 15, category: "Coiffure" });
-    await storage.createService({ name: "Brushing", price: 50, duration: 30, category: "Coiffure" });
-    await storage.createService({ name: "Coupe Unique", price: 40, duration: 30, category: "Coiffure" });
-    await storage.createService({ name: "Coupe et Brushing", price: 80, duration: 60, category: "Coiffure" });
-    await storage.createService({ name: "Soin Cheveux", price: 100, duration: 45, category: "Coiffure" });
-    await storage.createService({ name: "Soin Tanino", price: 200, duration: 75, category: "Coiffure" });
-    await storage.createService({ name: "Coloration", price: 250, duration: 90, category: "Coiffure" });
-    await storage.createService({ name: "Mèche", price: 300, duration: 90, category: "Coiffure" });
-    await storage.createService({ name: "Permanent", price: 300, duration: 90, category: "Coiffure" });
-    await storage.createService({ name: "Défrisage", price: 300, duration: 90, category: "Coiffure" });
-    await storage.createService({ name: "Balayage", price: 600, duration: 120, category: "Coiffure" });
-    await storage.createService({ name: "Soin Lissage", price: 600, duration: 120, category: "Coiffure" });
-    await storage.createService({ name: "Tanino Plastie", price: 1000, duration: 180, category: "Coiffure" });
-    await storage.createService({ name: "Chignon", price: 150, duration: 60, category: "Coiffure" });
-    await storage.createService({ name: "Chignon marié", price: 600, duration: 120, category: "Coiffure" });
+    await storage.createService({ name: "Shampoing", price: 20, duration: 15, category: "Coiffure", linkedProductIds: [] });
+    await storage.createService({ name: "Brushing", price: 50, duration: 30, category: "Coiffure", linkedProductIds: [] });
+    await storage.createService({ name: "Coupe Unique", price: 40, duration: 30, category: "Coiffure", linkedProductIds: [] });
+    await storage.createService({ name: "Coupe et Brushing", price: 80, duration: 60, category: "Coiffure", linkedProductIds: [] });
+    await storage.createService({ name: "Soin Cheveux", price: 100, duration: 45, category: "Coiffure", linkedProductIds: [] });
+    await storage.createService({ name: "Soin Tanino", price: 200, duration: 75, category: "Coiffure", linkedProductIds: [] });
+    await storage.createService({ name: "Coloration", price: 250, duration: 90, category: "Coiffure", linkedProductIds: [] });
+    await storage.createService({ name: "Mèche", price: 300, duration: 90, category: "Coiffure", linkedProductIds: [] });
+    await storage.createService({ name: "Permanent", price: 300, duration: 90, category: "Coiffure", linkedProductIds: [] });
+    await storage.createService({ name: "Défrisage", price: 300, duration: 90, category: "Coiffure", linkedProductIds: [] });
+    await storage.createService({ name: "Balayage", price: 600, duration: 120, category: "Coiffure", linkedProductIds: [] });
+    await storage.createService({ name: "Soin Lissage", price: 600, duration: 120, category: "Coiffure", linkedProductIds: [] });
+    await storage.createService({ name: "Tanino Plastie", price: 1000, duration: 180, category: "Coiffure", linkedProductIds: [] });
+    await storage.createService({ name: "Chignon", price: 150, duration: 60, category: "Coiffure", linkedProductIds: [] });
+    await storage.createService({ name: "Chignon marié", price: 600, duration: 120, category: "Coiffure", linkedProductIds: [] });
 
     // ONGLERIE
-    await storage.createService({ name: "Manicure Simple", price: 50, duration: 30, category: "Onglerie" });
-    await storage.createService({ name: "Manicure + vernis permanent", price: 150, duration: 60, category: "Onglerie" });
-    await storage.createService({ name: "Pose vernis simple", price: 30, duration: 20, category: "Onglerie" });
-    await storage.createService({ name: "Pédicure simple", price: 100, duration: 45, category: "Onglerie" });
-    await storage.createService({ name: "Pédicure + vernis permanent", price: 200, duration: 75, category: "Onglerie" });
-    await storage.createService({ name: "SPA Manicure", price: 80, duration: 45, category: "Onglerie" });
-    await storage.createService({ name: "SPA Pédicure", price: 150, duration: 60, category: "Onglerie" });
-    await storage.createService({ name: "Soin Paraffine", price: 40, duration: 30, category: "Onglerie" });
-    await storage.createService({ name: "Dépose vernis permanent", price: 40, duration: 20, category: "Onglerie" });
-    await storage.createService({ name: "Dépose Gel ou Résine", price: 80, duration: 30, category: "Onglerie" });
-    await storage.createService({ name: "Ongle Normale", price: 100, duration: 45, category: "Onglerie" });
-    await storage.createService({ name: "Ongle en Gel", price: 300, duration: 90, category: "Onglerie" });
-    await storage.createService({ name: "Pose vernis permanent", price: 100, duration: 45, category: "Onglerie" });
-    await storage.createService({ name: "Remplissage", price: 150, duration: 60, category: "Onglerie" });
-    await storage.createService({ name: "Baby boomer ou French", price: 50, duration: 30, category: "Onglerie" });
+    await storage.createService({ name: "Manicure Simple", price: 50, duration: 30, category: "Onglerie", linkedProductIds: [] });
+    await storage.createService({ name: "Manicure + vernis permanent", price: 150, duration: 60, category: "Onglerie", linkedProductIds: [] });
+    await storage.createService({ name: "Pose vernis simple", price: 30, duration: 20, category: "Onglerie", linkedProductIds: [] });
+    await storage.createService({ name: "Pédicure simple", price: 100, duration: 45, category: "Onglerie", linkedProductIds: [] });
+    await storage.createService({ name: "Pédicure + vernis permanent", price: 200, duration: 75, category: "Onglerie", linkedProductIds: [] });
+    await storage.createService({ name: "SPA Manicure", price: 80, duration: 45, category: "Onglerie", linkedProductIds: [] });
+    await storage.createService({ name: "SPA Pédicure", price: 150, duration: 60, category: "Onglerie", linkedProductIds: [] });
+    await storage.createService({ name: "Soin Paraffine", price: 40, duration: 30, category: "Onglerie", linkedProductIds: [] });
+    await storage.createService({ name: "Dépose vernis permanent", price: 40, duration: 20, category: "Onglerie", linkedProductIds: [] });
+    await storage.createService({ name: "Dépose Gel ou Résine", price: 80, duration: 30, category: "Onglerie", linkedProductIds: [] });
+    await storage.createService({ name: "Ongle Normale", price: 100, duration: 45, category: "Onglerie", linkedProductIds: [] });
+    await storage.createService({ name: "Ongle en Gel", price: 300, duration: 90, category: "Onglerie", linkedProductIds: [] });
+    await storage.createService({ name: "Pose vernis permanent", price: 100, duration: 45, category: "Onglerie", linkedProductIds: [] });
+    await storage.createService({ name: "Remplissage", price: 150, duration: 60, category: "Onglerie", linkedProductIds: [] });
+    await storage.createService({ name: "Baby boomer ou French", price: 50, duration: 30, category: "Onglerie", linkedProductIds: [] });
 
     // ÉPILATION À LA CIRE
-    await storage.createService({ name: "Sourcils", price: 30, duration: 15, category: "Épilation à la Cire" });
-    await storage.createService({ name: "Duvet", price: 20, duration: 10, category: "Épilation à la Cire" });
-    await storage.createService({ name: "Menton", price: 20, duration: 10, category: "Épilation à la Cire" });
-    await storage.createService({ name: "Visage", price: 70, duration: 30, category: "Épilation à la Cire" });
-    await storage.createService({ name: "Aisselles", price: 30, duration: 15, category: "Épilation à la Cire" });
-    await storage.createService({ name: "Avant-Bras", price: 50, duration: 20, category: "Épilation à la Cire" });
-    await storage.createService({ name: "Bras Complet", price: 80, duration: 30, category: "Épilation à la Cire" });
-    await storage.createService({ name: "Ventre", price: 60, duration: 20, category: "Épilation à la Cire" });
-    await storage.createService({ name: "Bord Maillot", price: 50, duration: 20, category: "Épilation à la Cire" });
-    await storage.createService({ name: "Maillot Brésilien", price: 100, duration: 30, category: "Épilation à la Cire" });
-    await storage.createService({ name: "Maillot Complet", price: 120, duration: 45, category: "Épilation à la Cire" });
-    await storage.createService({ name: "Demi-Jambe", price: 60, duration: 30, category: "Épilation à la Cire" });
-    await storage.createService({ name: "Jambe Complet", price: 100, duration: 45, category: "Épilation à la Cire" });
-    await storage.createService({ name: "Dos", price: 100, duration: 30, category: "Épilation à la Cire" });
-    await storage.createService({ name: "Cire Complet", price: 380, duration: 120, category: "Épilation à la Cire" });
+    await storage.createService({ name: "Sourcils", price: 30, duration: 15, category: "Épilation à la Cire", linkedProductIds: [] });
+    await storage.createService({ name: "Duvet", price: 20, duration: 10, category: "Épilation à la Cire", linkedProductIds: [] });
+    await storage.createService({ name: "Menton", price: 20, duration: 10, category: "Épilation à la Cire", linkedProductIds: [] });
+    await storage.createService({ name: "Visage", price: 70, duration: 30, category: "Épilation à la Cire", linkedProductIds: [] });
+    await storage.createService({ name: "Aisselles", price: 30, duration: 15, category: "Épilation à la Cire", linkedProductIds: [] });
+    await storage.createService({ name: "Avant-Bras", price: 50, duration: 20, category: "Épilation à la Cire", linkedProductIds: [] });
+    await storage.createService({ name: "Bras Complet", price: 80, duration: 30, category: "Épilation à la Cire", linkedProductIds: [] });
+    await storage.createService({ name: "Ventre", price: 60, duration: 20, category: "Épilation à la Cire", linkedProductIds: [] });
+    await storage.createService({ name: "Bord Maillot", price: 50, duration: 20, category: "Épilation à la Cire", linkedProductIds: [] });
+    await storage.createService({ name: "Maillot Brésilien", price: 100, duration: 30, category: "Épilation à la Cire", linkedProductIds: [] });
+    await storage.createService({ name: "Maillot Complet", price: 120, duration: 45, category: "Épilation à la Cire", linkedProductIds: [] });
+    await storage.createService({ name: "Demi-Jambe", price: 60, duration: 30, category: "Épilation à la Cire", linkedProductIds: [] });
+    await storage.createService({ name: "Jambe Complet", price: 100, duration: 45, category: "Épilation à la Cire", linkedProductIds: [] });
+    await storage.createService({ name: "Dos", price: 100, duration: 30, category: "Épilation à la Cire", linkedProductIds: [] });
+    await storage.createService({ name: "Cire Complet", price: 380, duration: 120, category: "Épilation à la Cire", linkedProductIds: [] });
 
     // SOINS DU VISAGE
-    await storage.createService({ name: "Gommage + Masque", price: 100, duration: 30, category: "Soins du Visage" });
-    await storage.createService({ name: "Mini soin de Visage", price: 150, duration: 30, category: "Soins du Visage" });
-    await storage.createService({ name: "Soin Classique", price: 200, duration: 45, category: "Soins du Visage" });
-    await storage.createService({ name: "Soin Eclaircissant", price: 300, duration: 60, category: "Soins du Visage" });
-    await storage.createService({ name: "Soin Hydratant", price: 300, duration: 60, category: "Soins du Visage" });
-    await storage.createService({ name: "Soin Hydrafaciale", price: 450, duration: 90, category: "Soins du Visage" });
+    await storage.createService({ name: "Gommage + Masque", price: 100, duration: 30, category: "Soins du Visage", linkedProductIds: [] });
+    await storage.createService({ name: "Mini soin de Visage", price: 150, duration: 30, category: "Soins du Visage", linkedProductIds: [] });
+    await storage.createService({ name: "Soin Classique", price: 200, duration: 45, category: "Soins du Visage", linkedProductIds: [] });
+    await storage.createService({ name: "Soin Eclaircissant", price: 300, duration: 60, category: "Soins du Visage", linkedProductIds: [] });
+    await storage.createService({ name: "Soin Hydratant", price: 300, duration: 60, category: "Soins du Visage", linkedProductIds: [] });
+    await storage.createService({ name: "Soin Hydrafaciale", price: 450, duration: 90, category: "Soins du Visage", linkedProductIds: [] });
   }
 
   const prods = await storage.getProducts();

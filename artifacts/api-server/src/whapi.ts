@@ -50,7 +50,7 @@ export async function sendWhatsAppMessage(
       })
     });
 
-    const data = await response.json();
+    const data = await response.json() as Record<string, any>;
     console.log('Whapi response:', JSON.stringify(data));
     
     if (response.ok && data.sent) {
@@ -93,7 +93,7 @@ export async function sendWhatsAppImage(
       })
     });
 
-    const data = await response.json();
+    const data = await response.json() as Record<string, any>;
     
     if (response.ok && data.sent) {
       return { success: true, messageId: data.message?.id };

@@ -173,7 +173,7 @@ export async function sendWhatsAppMessage(
       body: formData.toString()
     });
 
-    const data = await response.json();
+    const data = await response.json() as Record<string, any>;
     console.log('Wawp response:', JSON.stringify(data));
     
     if (response.ok && (data.success || data.id || data.sent)) {
@@ -224,7 +224,7 @@ export async function sendWhatsAppImage(
       body: formData.toString()
     });
 
-    const data = await response.json();
+    const data = await response.json() as Record<string, any>;
     
     if (response.ok && (data.success || data.id || data.sent)) {
       return { success: true, messageId: data.id || data.messageId };
@@ -361,7 +361,7 @@ export async function getConnectionStatus(): Promise<{ connected: boolean; statu
       body: formData.toString()
     });
 
-    const data = await response.json();
+    const data = await response.json() as Record<string, any>;
     console.log('Wawp status response:', JSON.stringify(data));
     
     if (response.ok) {

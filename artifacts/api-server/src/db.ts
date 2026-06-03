@@ -69,6 +69,7 @@ export async function initializeDatabase(): Promise<boolean> {
       console.log("Using MySQL/TiDB database");
     } else {
       const { drizzle } = await import("drizzle-orm/node-postgres");
+      // @ts-ignore - pg types not available in this environment
       const pg = await import("pg");
       const postgresSchema = await import("@workspace/db");
       schema = postgresSchema;
