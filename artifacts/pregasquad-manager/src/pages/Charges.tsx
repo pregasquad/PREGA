@@ -279,7 +279,7 @@ export default function Charges() {
       if (done) break;
       chunks.push(value);
     }
-    const compressedBlob = new Blob(chunks);
+    const compressedBlob = new Blob(chunks as Uint8Array<ArrayBuffer>[]);
     const dataUrl = await blobToDataURL(compressedBlob);
     const base64Part = dataUrl.split(",")[1];
     return `data:application/gzip;name=${encodeURIComponent(file.type)};base64,${base64Part}`;
@@ -358,7 +358,7 @@ export default function Charges() {
         if (done) break;
         chunks.push(value);
       }
-      const blob = new Blob(chunks, { type: originalMime });
+      const blob = new Blob(chunks as Uint8Array<ArrayBuffer>[], { type: originalMime });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;

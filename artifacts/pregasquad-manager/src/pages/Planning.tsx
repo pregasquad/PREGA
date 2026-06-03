@@ -1044,7 +1044,7 @@ export default function Planning() {
   useEffect(() => {
     if (!pendingAppointmentId.current || loadingApps) return;
     
-    const targetApp = appointments.find(app => app.id === parseInt(pendingAppointmentId.current!));
+    const targetApp = appointments.find((app: any) => app.id === parseInt(pendingAppointmentId.current!));
     if (targetApp) {
       const appDate = parseISO(targetApp.date);
       if (canEditCardboard && !isDateAutoLocked(appDate)) {
@@ -1057,12 +1057,12 @@ export default function Planning() {
   }, [loadingApps, appointments]);
 
   const stats = useMemo(() => {
-    const paidAppointments = appointments.filter(app => app.paid);
-    const total = paidAppointments.reduce((sum, app) => sum + (app.total || 0), 0);
+    const paidAppointments = appointments.filter((app: any) => app.paid);
+    const total = paidAppointments.reduce((sum: number, app: any) => sum + (app.total || 0), 0);
     const perStaff = staffList.map(s => {
       const staffTotal = paidAppointments
-        .filter(app => app.staffId === s.id || (!app.staffId && app.staff === s.name))
-        .reduce((sum, app) => sum + (app.total || 0), 0);
+        .filter((app: any) => app.staffId === s.id || (!app.staffId && app.staff === s.name))
+        .reduce((sum: number, app: any) => sum + (app.total || 0), 0);
       return { ...s, total: staffTotal };
     });
     return { total, perStaff };

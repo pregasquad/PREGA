@@ -115,6 +115,7 @@ self.addEventListener('notificationclick', function(event) {
         }
       }
       if (self.clients.openWindow) return self.clients.openWindow(urlToOpen);
+      return undefined;
     })
   );
 });

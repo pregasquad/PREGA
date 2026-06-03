@@ -122,6 +122,7 @@ function DayOpeningBriefing({ appointments, todayDate, businessName, currency }:
       }, 800);
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [todayDate, appointments.length]);
 
   const timeToMinutes = (time: string) => {
@@ -426,8 +427,8 @@ export default function Home() {
   });
 
   const todayStats = useMemo(() => {
-    const totalRevenue = appointments.reduce((sum, app: any) => sum + (app.total || 0), 0);
-    const paidRevenue = appointments.filter((app: any) => app.paid).reduce((sum, app: any) => sum + (app.total || 0), 0);
+    const totalRevenue = appointments.reduce((sum: number, app: any) => sum + (app.total || 0), 0);
+    const paidRevenue = appointments.filter((app: any) => app.paid).reduce((sum: number, app: any) => sum + (app.total || 0), 0);
     const unpaidRevenue = totalRevenue - paidRevenue;
 
     // Commissions computed only on PAID appointments — unpaid cash isn't in the register yet
