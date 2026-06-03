@@ -11,6 +11,12 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Staff, Service } from "@shared/schema";
 
+// Stable module-level defaults — avoids new array references on every render
+// which would cause useEffect infinite re-render loops (React error #185)
+const EMPTY_STAFF: Staff[] = [];
+const EMPTY_SERVICES: Service[] = [];
+const EMPTY_COMMISSIONS: StaffCommission[] = [];
+
 interface StaffCommission {
   id: number;
   staffId: number;
@@ -28,19 +34,19 @@ export default function StaffCommissions() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [savedServices, setSavedServices] = useState<Set<number>>(new Set());
 
-  const { data: staff = [] } = useQuery<Staff[]>({
+  const { data: staff = EMPTY_STAFF } = useQuery<Staff[]>({
     queryKey: ["/api/staff"],
   });
 
-  const { data: services = [] } = useQuery<Service[]>({
+  const { data: services = EMPTY_SERVICES } = useQuery<Service[]>({
     queryKey: ["/api/services"],
   });
 
-  const { data: allCommissions = [] } = useQuery<StaffCommission[]>({
+  const { data: allCommissions = EMPTY_COMMISSIONS } = useQuery<StaffCommission[]>({
     queryKey: ["/api/staff-commissions"],
   });
 
-  const { data: staffCommissions = [], refetch: refetchStaffCommissions } = useQuery<StaffCommission[]>({
+  const { data: staffCommissions = EMPTY_COMMISSIONS, refetch: refetchStaffCommissions } = useQuery<StaffCommission[]>({
     queryKey: [`/api/staff-commissions/staff/${selectedStaffId}`],
     enabled: !!selectedStaffId,
   });
