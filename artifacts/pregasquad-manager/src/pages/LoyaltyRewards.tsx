@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { io } from "socket.io-client";
+import { getAppSocket } from "@/lib/appSocket";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -138,9 +138,9 @@ export default function LoyaltyRewards() {
 
   // Listen for real-time loyalty points updates
   useEffect(() => {
-    const socket = io();
+    const socket = getAppSocket();
     
-    socket.on("client:loyaltyUpdated", (data: { clientId: number; clientName: string; pointsAdded: number; newTotal: number }) => {
+    const handleLoyaltyUpdated = (data: { clientId: number; clientName: string; pointsAdded: number; newTotal: number }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       toast({
         title: t("loyalty.pointsAwarded", { defaultValue: "Points attribués" }),
@@ -150,11 +150,13 @@ export default function LoyaltyRewards() {
           name: data.clientName
         }),
       });
-    });
+    };
+
+    socket.on("client:loyaltyUpdated", handleLoyaltyUpdated);
 
     return () => {
-      socket.off("client:loyaltyUpdated");
-      socket.disconnect();
+      socket.off("client:loyaltyUpdated", handleLoyaltyUpdated);
+      // Do NOT disconnect — getAppSocket() is a shared singleton used across the whole app
     };
   }, [queryClient, toast, t]);
 
