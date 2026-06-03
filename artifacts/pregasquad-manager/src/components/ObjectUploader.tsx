@@ -36,8 +36,13 @@ export function ObjectUploader({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
+    let files = Array.from(e.target.files || []);
     if (!files.length) return;
+
+    // Enforce hard file count limit (browser `multiple` only enables multi-select)
+    if (files.length > maxNumberOfFiles) {
+      files = files.slice(0, maxNumberOfFiles);
+    }
 
     const successful: File[] = [];
     const failed: File[] = [];

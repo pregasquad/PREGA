@@ -21,8 +21,6 @@ import StaffScheduleManager from "@/components/StaffScheduleManager";
 import { useToast } from "@/hooks/use-toast";
 
 import { ImageCropper } from "@/components/ImageCropper";
-import { ObjectUploader } from "@/components/ObjectUploader";
-import { useUpload } from "@/hooks/use-upload";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const staffFormSchema = insertStaffSchema.extend({
