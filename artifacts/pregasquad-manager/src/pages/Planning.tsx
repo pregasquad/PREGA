@@ -115,7 +115,7 @@ function generateTimeSlots(openingTime: string, closingTime: string): string[] {
   const [openHour, openMin] = openingTime.split(":").map(Number);
   const [closeHour, closeMin] = closingTime.split(":").map(Number);
   
-  let openingMinutes = openHour * 60 + openMin;
+  const openingMinutes = openHour * 60 + openMin;
   let closingMinutes = closeHour * 60 + closeMin;
   
   if (closingMinutes <= openingMinutes) {
@@ -2338,7 +2338,7 @@ export default function Planning() {
 
     board.addEventListener('touchstart', onBoardTouchStart, { passive: true });
     return () => board.removeEventListener('touchstart', onBoardTouchStart);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [isMobile, canEdit]);
 
   // Resize appointment by dragging the bottom handle
@@ -2627,8 +2627,11 @@ export default function Planning() {
               const dx = e.changedTouches[0].clientX - swipeDateStartX.current;
               swipeDateStartX.current = null;
               if (Math.abs(dx) < swipeThreshold) return;
-              if (isRtl) { dx < 0 ? setDate(d => addDays(d, -1)) : setDate(d => addDays(d, 1)); }
-              else       { dx > 0 ? setDate(d => addDays(d, -1)) : setDate(d => addDays(d, 1)); }
+              if (isRtl) {
+                if (dx < 0) setDate(d => addDays(d, -1)); else setDate(d => addDays(d, 1));
+              } else {
+                if (dx > 0) setDate(d => addDays(d, -1)); else setDate(d => addDays(d, 1));
+              }
             }}
           >
             <Button variant="ghost" size="icon" className="h-8 w-8 md:h-9 md:w-9 rounded-full p-0 touch-manipulation" onClick={() => setDate(d => addDays(d, -1))} data-testid="button-prev-day">

@@ -944,7 +944,7 @@ export class DatabaseStorage implements IStorage {
     const allServices = await db().select().from(s.services);
     const serviceMap: Map<string, any> = new Map(allServices.map((svc: any) => [svc.name, svc]));
     
-    let customCommissions: Map<number, number> = new Map();
+    const customCommissions: Map<number, number> = new Map();
     if (staffId) {
       const staffComms = await db().select().from(s.staffCommissions)
         .where(eq(s.staffCommissions.staffId, staffId));
@@ -1451,7 +1451,7 @@ export class DatabaseStorage implements IStorage {
 
   async getStaffBreaks(staffId: number, startDate?: string, endDate?: string): Promise<StaffBreak[]> {
     const s = schema();
-    let query = db().select().from(s.staffBreaks).where(eq(s.staffBreaks.staffId, staffId));
+    const query = db().select().from(s.staffBreaks).where(eq(s.staffBreaks.staffId, staffId));
     
     if (startDate && endDate) {
       return await db().select().from(s.staffBreaks)

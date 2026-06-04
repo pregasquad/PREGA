@@ -104,7 +104,7 @@ export function PushNotifications() {
       try {
         data = JSON.parse(text);
       } catch (e) {
-        throw new Error(`Invalid JSON response: ${text.substring(0, 100)}`);
+        throw new Error(`Invalid JSON response: ${text.substring(0, 100)}`, { cause: e });
       }
       
       const publicKey = data.publicKey;

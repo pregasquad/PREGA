@@ -619,7 +619,7 @@ export default function Salaries() {
 
     let walletRevenue = 0;
     let walletCommissions = 0;
-    let walletApptCount = walletAppointments.length;
+    const walletApptCount = walletAppointments.length;
 
     walletAppointments.forEach(apt => {
       const total = apt.total || 0;
