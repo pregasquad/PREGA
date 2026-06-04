@@ -24,6 +24,10 @@ args = "Start application"
 task = "workflow.run"
 args = "typecheck"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "build"
+
 [[workflows.workflow]]
 name = "Start application"
 author = "agent"
@@ -46,6 +50,17 @@ args = "pnpm run typecheck"
 
 [workflows.workflow.metadata]
 isValidation = true
+
+[[workflows.workflow]]
+name = "build"
+author = "agent"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm run typecheck:libs && pnpm --filter @workspace/pregasquad-manager run build && pnpm --filter @workspace/api-server run build"
 
 [agent]
 stack = "BEST_EFFORT_FALLBACK"
