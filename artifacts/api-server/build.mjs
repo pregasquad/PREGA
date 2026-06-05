@@ -61,6 +61,7 @@ async function buildAll() {
       "knex",
       "typeorm",
       "protobufjs",
+      "ffmpeg-static",
       "onnxruntime-node",
       "@tensorflow/*",
       "@prisma/client",
