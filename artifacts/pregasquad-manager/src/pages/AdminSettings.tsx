@@ -21,6 +21,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
 import { SHORTCUT_OPTIONS, DEFAULT_SHORTCUTS } from "@/lib/shortcuts";
+import { getMoroccanHolidayGroups, type MoroccoHolidayGroup } from "@/lib/morocco-holidays";
 
 interface AdminRole {
   id: number;
@@ -758,6 +759,81 @@ export default function AdminSettings() {
                         {t("admin.holidays", { defaultValue: "أيام العطل والإجازات" })}
                       </Label>
                       <p className="text-xs text-muted-foreground">{t("admin.holidaysDesc", { defaultValue: "الصالون مسدود في هذه الأيام — البوت يخبر العملاء تلقائياً" })}</p>
+
+                      {/* Moroccan national holidays quick-toggle */}
+                      {(() => {
+                        const currentYear = new Date().getFullYear();
+                        const years = [currentYear, currentYear + 1];
+                        return years.map(year => {
+                          const groups = getMoroccanHolidayGroups(year);
+                          return (
+                            <div key={year} className="mt-3 space-y-1.5">
+                              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                                🇲🇦 {t("admin.moroccanHolidays", { defaultValue: "العطل الوطنية المغربية" })} {year}
+                              </p>
+                              <div className="rounded-xl border border-border/40 overflow-hidden divide-y divide-border/30">
+                                {groups.map((group: MoroccoHolidayGroup) => {
+                                  const allClosed = group.dates.every(d => (businessForm.holidays || []).includes(d));
+                                  const someClosed = !allClosed && group.dates.some(d => (businessForm.holidays || []).includes(d));
+                                  const label = group.dates.length === 1
+                                    ? new Date(group.dates[0] + "T12:00:00").toLocaleDateString("ar-MA", { day: "numeric", month: "long" })
+                                    : `${new Date(group.dates[0] + "T12:00:00").toLocaleDateString("ar-MA", { day: "numeric", month: "long" })} — ${new Date(group.dates[group.dates.length - 1] + "T12:00:00").toLocaleDateString("ar-MA", { day: "numeric", month: "long" })}`;
+                                  return (
+                                    <div key={group.dates[0]} className="flex items-center justify-between px-3 py-2 bg-background/60 hover:bg-muted/30 transition-colors">
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        <span className="text-base leading-none">{group.emoji}</span>
+                                        <div className="min-w-0">
+                                          <p className="text-xs font-medium text-foreground truncate">{group.nameAr}</p>
+                                          <p className="text-[10px] text-muted-foreground">{label}</p>
+                                        </div>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          if (allClosed) {
+                                            setBusinessForm(prev => ({
+                                              ...prev,
+                                              holidays: (prev.holidays || []).filter(d => !group.dates.includes(d))
+                                            }));
+                                          } else {
+                                            const existing = new Set(businessForm.holidays || []);
+                                            const toAdd = group.dates.filter(d => !existing.has(d));
+                                            setBusinessForm(prev => ({
+                                              ...prev,
+                                              holidays: [...(prev.holidays || []), ...toAdd].sort()
+                                            }));
+                                          }
+                                        }}
+                                        className={`flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all ${
+                                          allClosed
+                                            ? "bg-destructive/15 text-destructive border border-destructive/25 hover:bg-destructive/25"
+                                            : someClosed
+                                            ? "bg-orange-500/10 text-orange-600 border border-orange-500/25 hover:bg-destructive/15 hover:text-destructive hover:border-destructive/25"
+                                            : "bg-emerald-500/10 text-emerald-600 border border-emerald-500/25 hover:bg-destructive/15 hover:text-destructive hover:border-destructive/25"
+                                        }`}
+                                      >
+                                        {allClosed ? (
+                                          <><CalendarOff className="w-3 h-3" /> {t("admin.closed", { defaultValue: "مغلق" })}</>
+                                        ) : (
+                                          <><Check className="w-3 h-3" /> {t("admin.open", { defaultValue: "مفتوح" })}</>
+                                        )}
+                                      </button>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        });
+                      })()}
+
+                      {/* Divider before manual range picker */}
+                      <div className="flex items-center gap-2 mt-4">
+                        <div className="flex-1 h-px bg-border/40" />
+                        <span className="text-[10px] text-muted-foreground/60 font-medium uppercase tracking-wider">{t("admin.customDays", { defaultValue: "أيام مخصصة" })}</span>
+                        <div className="flex-1 h-px bg-border/40" />
+                      </div>
+
                       {/* Range picker */}
                       <div className="grid grid-cols-2 gap-2 mt-2">
                         <div className="space-y-1">
