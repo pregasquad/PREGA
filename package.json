@@ -24,7 +24,6 @@
       "@google/genai",
       "@whiskeysockets/baileys",
       "better-sqlite3",
-      "es5-ext",
       "esbuild",
       "ffmpeg-static",
       "protobufjs"

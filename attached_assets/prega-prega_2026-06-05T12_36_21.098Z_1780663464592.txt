@@ -1,0 +1,303 @@
+[Bot] Transcribing voice note (133 KB) for 198114493345997@lid
+[Transcription] gemini-3.1-flash-lite: "واو لا تمنيت ديال مرجان وكارفور راه ماشي ما كيكونوش كيما في لابليكاسيون كيما في "
+[Bot] Voice transcript: "واو لا تمنيت ديال مرجان وكارفور راه ماشي ما كيكونوش كيما في لابليكاسيون كيما في الواقع راه كتكون شي "
+[Gemini] gemini-3.1-flash-lite replied (turn 6)
+[BotLearn] Gemini gemini-2.5-flash-lite extracted insights
+[BotLearn] Auto-saved 2 bot error correction(s) for 198114493345997@lid
+[BotLearn] Memory enriched for 198114493345997@lid: {"name":"في","lang":"darija","services":[],"notes":"العميل يبدو أنه يستخدم خدمة توصيل أو لديه مشكلة في تحديد موق"}
+[TTS] gemini-2.5-flash-preview-tts: 1015 KB PCM @ 24000Hz
+[Baileys] Voice note send error: spawn /app/artifacts/api-server/dist/ffmpeg ENOENT
+[Bot] Voice send failed — falling back to text
+[Bot] ↩ returning client ما (198114493345997@lid) — turn 6
+[Baileys] Connection state → close
+[Baileys] Connection closed. Code: 503. Message: "Stream Errored (unknown)"
+[Baileys] Reconnect attempt 1/5 in 10s…
+[Baileys] Connecting… WA version: 2,3000,1035194821 (latest: true)
+[Baileys] Connection state → connecting
+[Baileys] Connection state → open
+[Baileys] Connected as +212669640496
+[Baileys] Connection state → close
+[Baileys] Connection closed. Code: 503. Message: "Stream Errored (unknown)"
+[Baileys] Reconnect attempt 1/5 in 10s…
+[Baileys] Connecting… WA version: 2,3000,1035194821 (latest: true)
+[Baileys] Connection state → connecting
+[Baileys] Connection state → open
+[Baileys] Connected as +212669640496
+[Baileys] Connection state → close
+[Baileys] Connection closed. Code: 503. Message: "Stream Errored (unknown)"
+[Baileys] Reconnect attempt 1/5 in 10s…
+[Baileys] Connecting… WA version: 2,3000,1035194821 (latest: true)
+[Baileys] Connection state → connecting
+[Baileys] Connection state → open
+[Baileys] Connected as +212669640496
+Client connected: o5nNYfpdE9RjxMUzAACF
+Client connected: mdzZkhKTAAZoUn-RAACI
+Client connected: tZhBfdVv9Y-WeKq8AACJ
+[print-relay] Station check from: mdzZkhKTAAZoUn-RAACI available: false stationId: null
+Client disconnected: o5nNYfpdE9RjxMUzAACF
+Client disconnected: tZhBfdVv9Y-WeKq8AACJ
+Client disconnected: mdzZkhKTAAZoUn-RAACI
+Client connected: WAWQsUxtx_kUCaAiAACL
+Client connected: mOMrxzrGFuFpub6LAACN
+Client connected: RerdXJgflFFoicCzAACP
+Client disconnected: WAWQsUxtx_kUCaAiAACL
+Client disconnected: mOMrxzrGFuFpub6LAACN
+Client disconnected: RerdXJgflFFoicCzAACP
+Client connected: JRsU2DLyrU8PsYCmAACS
+Client connected: U6T6AzJvA3Ko0aamAACT
+Client connected: HkhgOtfF2NuwFkwRAACV
+Client disconnected: JRsU2DLyrU8PsYCmAACS
+Client disconnected: U6T6AzJvA3Ko0aamAACT
+Client disconnected: HkhgOtfF2NuwFkwRAACV
+Client connected: tHU4-3B7CUUEMNePAACa
+Client connected: Brzh4eJqAm2HBlgbAACc
+Client connected: A_B9s3OQho5MCpMzAACe
+[print-relay] Station check from: Brzh4eJqAm2HBlgbAACc available: false stationId: null
+Client connected: 5JIXXxu-N2meCzWFAACk
+Client connected: 6o7uHXbv3orgVO2hAACm
+Client connected: 8xuYIhjEl4_D-9kEAACn
+Client disconnected: 5JIXXxu-N2meCzWFAACk
+Client disconnected: 8xuYIhjEl4_D-9kEAACn
+Client disconnected: 6o7uHXbv3orgVO2hAACm
+Client disconnected: Brzh4eJqAm2HBlgbAACc
+Client disconnected: tHU4-3B7CUUEMNePAACa
+Client disconnected: A_B9s3OQho5MCpMzAACe
+Closing session: SessionEntry {
+  _chains: {
+    'BUHONm+LOkE1clwTd5RFhEDRK+zyg2TLBJNyjSeOt+Bw': { chainKey: [Object], chainType: 1, messageKeys: {} }
+  },
+  registrationId: 1814778568,
+  currentRatchet: {
+    ephemeralKeyPair: {
+      pubKey: <Buffer 05 41 ce 36 6f 8b 3a 41 35 72 5c 13 77 94 45 84 40 d1 2b ec f2 83 64 cb 04 93 72 8d 27 8e b7 e0 70>,
+      privKey: <Buffer 88 21 9f 7f da a3 c9 32 1b 46 34 93 52 62 5e e4 5c 7e 42 a9 77 f9 c8 6f 98 c6 dd 42 8a 51 44 70>
+    },
+    lastRemoteEphemeralKey: <Buffer 05 fd 06 6f b7 e7 c3 8c 78 cd 51 f7 a0 1d 82 a5 9f df 89 27 4a 05 1a a7 6f 03 51 9f 38 e6 1d 9c 5b>,
+    previousCounter: 0,
+    rootKey: <Buffer f3 04 97 54 52 3c 94 4e 29 e6 fd 86 17 44 39 75 c3 26 ca 8a 97 2c 1d 86 97 73 27 27 56 70 73 ea>
+  },
+  indexInfo: {
+    baseKey: <Buffer 05 c3 7a 74 a5 08 ea ca 96 31 d1 33 97 e3 0a 93 2a a1 3f ba 3d dd 66 cc cf 93 f2 9c 32 0f 40 22 47>,
+    baseKeyType: 1,
+    closed: -1,
+    used: 1780534841185,
+    created: 1780534841185,
+    remoteIdentityKey: <Buffer 05 9d b5 69 30 91 5e 13 7a 39 81 07 12 f4 54 30 d8 96 15 ec 2e e5 6a 4b 15 4a 79 d6 e8 b5 02 db 49>
+  },
+  pendingPreKey: {
+    signedKeyId: 9264289,
+    baseKey: <Buffer 05 c3 7a 74 a5 08 ea ca 96 31 d1 33 97 e3 0a 93 2a a1 3f ba 3d dd 66 cc cf 93 f2 9c 32 0f 40 22 47>,
+    preKeyId: 5438
+  }
+}
+Closing session: SessionEntry {
+  _chains: {
+    'BdegvCP1ywLlgWTTPO/eQ/zVLzqwY9fvNC83S952SSVd': { chainKey: [Object], chainType: 2, messageKeys: {} },
+    BUFVnZb4WY4kiSo9UQNEeeuIG3d85sXt9ZrlQURQ6gBP: { chainKey: [Object], chainType: 2, messageKeys: [Object] },
+    'BWw89imh3LtWa/6CfNXrmlW2mb3tn/pJufk2++Bn1h8E': { chainKey: [Object], chainType: 2, messageKeys: {} },
+    'Ba0gCFDcPe3MgEdoJfvRs0w8zJ/ERWVgmAANb+E1r0ll': { chainKey: [Object], chainType: 1, messageKeys: {} }
+  },
+  registrationId: 1776926759,
+  currentRatchet: {
+    ephemeralKeyPair: {
+      pubKey: <Buffer 05 ad 20 08 50 dc 3d ed cc 80 47 68 25 fb d1 b3 4c 3c cc 9f c4 45 65 60 98 00 0d 6f e1 35 af 49 65>,
+      privKey: <Buffer f0 30 cb f0 b2 9f 32 32 88 2a ea 71 99 64 00 02 2a 7c 74 03 62 1d ac 4d 28 d2 20 ab 4a 69 48 63>
+    },
+    lastRemoteEphemeralKey: <Buffer 05 6c 3c f6 29 a1 dc bb 56 6b fe 82 7c d5 eb 9a 55 b6 99 bd ed 9f fa 49 b9 f9 36 fb e0 67 d6 1f 04>,
+    previousCounter: 2,
+    rootKey: <Buffer f6 30 c6 28 fb 54 9e c0 55 e1 7e 07 c4 9b da be 88 6a 9f 4a b0 f2 37 0f 02 7a a3 ce 28 1b b9 7c>
+  },
+  indexInfo: {
+    baseKey: <Buffer 05 38 bd 26 6c 41 16 4d 8f 4c a9 09 f0 f2 44 67 29 d4 78 05 69 ad ae 19 82 4a 11 28 df fc 09 5c 4e>,
+    baseKeyType: 1,
+    closed: -1,
+    used: 1780609305758,
+    created: 1780534841197,
+    remoteIdentityKey: <Buffer 05 33 4e 0f 5c 8a 80 d6 67 4a 62 99 33 d9 d6 e8 83 98 60 c5 c6 af 9b e4 6b 85 ee 89 53 3a 1b 15 05>
+  }
+}
+Removing old closed session: SessionEntry {
+  _chains: {
+    'BZFolaRzVsO12txnI3k3HqML4KGGsHzwL6DPXG/VVhom': { chainKey: [Object], chainType: 2, messageKeys: {} },
+    BbQaCBISWqXaEBJqdiVS56rvzOlbwkIyQHg1fTRLhjYt: { chainKey: [Object], chainType: 2, messageKeys: {} },
+    'BVRuPk9UQT8sa+zGM4dKTlPmU2GaJv6AyZPdD9NENNRG': { chainKey: [Object], chainType: 2, messageKeys: {} },
+    'BajcetHFCAVSnNlxaiPOkqL/svFyzxkegi1Hqt71d+t1': { chainKey: [Object], chainType: 1, messageKeys: {} }
+  },
+  registrationId: 1776926759,
+  currentRatchet: {
+    ephemeralKeyPair: {
+      pubKey: <Buffer 05 a8 dc 7a d1 c5 08 05 52 9c d9 71 6a 23 ce 92 a2 ff b2 f1 72 cf 19 1e 82 2d 47 aa de f5 77 eb 75>,
+      privKey: <Buffer c8 71 33 35 f8 09 ef 46 4b e8 c4 dc b3 8a 8a fe 48 86 13 30 7e 2e ca db 0f 1e b9 d6 99 3a 89 55>
+    },
+    lastRemoteEphemeralKey: <Buffer 05 54 6e 3e 4f 54 41 3f 2c 6b ec c6 33 87 4a 4e 53 e6 53 61 9a 26 fe 80 c9 93 dd 0f d3 44 34 d4 46>,
+    previousCounter: 6,
+    rootKey: <Buffer 51 c8 55 20 41 76 ba 8e 7e eb f7 cb 7f 12 2f a8 e8 5b bf e7 8e ad ad 0f 62 26 26 4b 5e 12 f0 7f>
+  },
+  indexInfo: {
+    baseKey: <Buffer 05 19 a3 c1 01 2b 19 c5 34 0c 8d 16 f0 55 a4 02 bd 59 92 e5 ad 18 bc 10 ab 1f f6 ad e1 fe 91 96 44>,
+    baseKeyType: 1,
+    closed: 1779730847647,
+    used: 1779735539795,
+    created: 1779729047551,
+    remoteIdentityKey: <Buffer 05 33 4e 0f 5c 8a 80 d6 67 4a 62 99 33 d9 d6 e8 83 98 60 c5 c6 af 9b e4 6b 85 ee 89 53 3a 1b 15 05>
+  }
+}
+[DailySummary] Sent to 212713446214‬ at 01:00
+Client connected: fESlRZAVMluMG7EHAACp
+Client disconnected: fESlRZAVMluMG7EHAACp
+Instance created. Preparing to start...
+Starting download for registry01.prod.koyeb.com/k-e7439398-3c51-4910-ae36-64250f99e91e/2e832d5a-5224-456c-9d97-81a2f4b02a1c:4972c3b1-05b3-44d5-b818-293df48aad7e
+Download progress: 100% |[32m++++++++[0m| (21.1 MiB/s)
+Download complete for registry01.prod.koyeb.com/k-e7439398-3c51-4910-ae36-64250f99e91e/2e832d5a-5224-456c-9d97-81a2f4b02a1c:4972c3b1-05b3-44d5-b818-293df48aad7e
+Instance is healthy. All health checks are passing.
+Using MySQL/TiDB database
+Database connection ready
+Push subscriptions table ready
+Appointments audit columns ready
+Admin roles photo column ready
+Product expiry columns ready
+Service starting price column ready
+Service max price column ready
+Service emoji column ready
+Deduction cleared columns ready
+Deduction paid_back column ready
+Auto-lock column ready
+Charge attachment columns ready
+Planning shortcuts column ready
+Planning slot height column ready
+Appointment discount columns ready
+Staff ID backfill ready (MySQL/TiDB)
+Staff payments table ready
+Staff public tokens ready
+Tombola spins table ready
+Salon payments table ready
+Booking status column ready
+Baileys sessions table ready
+Bot client memory table ready
+Bot memory phone column ready
+Bot blocked column ready
+TTS voice column ready
+TTS enabled column ready
+maps_link column ready
+Bot enabled column ready
+Bot filter columns ready
+Bot silence after booking column ready
+Owner withdrawals table ready
+Owner withdrawals notes column ready
+Categories color column ready
+Salon complaints table ready
+Complaint type column ready
+Private room column ready
+Staff gender column ready
+Staff gender defaults applied
+Boss instructions column ready
+Wissal personality column ready
+Business settings row ready
+PayPal order ID column ready
+Holidays column ready
+Broadcast logs table ready
+Daily summary columns ready
+Foreign key constraints are only added for PostgreSQL
+Not on Replit - auth routes disabled
+Server listening on port 8080
+[Baileys] Saved session found in DB — reconnecting…
+[Baileys] Connecting… WA version: 2,3000,1035194821 (latest: true)
+[Baileys] Connection state → connecting
+[Baileys] Connection state → close
+[Baileys] Connection closed. Code: 440. Message: "Stream Errored (conflict)"
+[Baileys] Session conflict (440) — attempt 1/4, retrying in 10s…
+[Baileys] Connection state → open
+[Baileys] Connected as +212669640496
+[Baileys] Connecting… WA version: 2,3000,1035194821 (latest: true)
+[Baileys] Connection state → connecting
+[Baileys] Connection state → close
+[Baileys] Connection closed. Code: 440. Message: "Stream Errored (conflict)"
+[Baileys] Session conflict (440) — attempt 1/4, retrying in 10s…
+[Baileys] Connection state → open
+[Baileys] Connected as +212669640496
+[Baileys] Connecting… WA version: 2,3000,1035194821 (latest: true)
+[Baileys] Connection state → connecting
+[Baileys] Connection state → close
+[Baileys] Connection closed. Code: 440. Message: "Stream Errored (conflict)"
+[Baileys] Session conflict (440) — attempt 1/4, retrying in 10s…
+[Baileys] Connection state → open
+[Baileys] Connected as +212669640496
+Instance is stopping.
+[Baileys] Connecting… WA version: 2,3000,1035194821 (latest: true)
+[Baileys] Connection state → connecting
+[Baileys] Connection state → close
+[Baileys] Connection closed. Code: 440. Message: "Stream Errored (conflict)"
+[Baileys] Session conflict (440) — attempt 1/4, retrying in 10s…
+[Baileys] Connection state → open
+[Baileys] Connected as +212669640496
+[Baileys] Connecting… WA version: 2,3000,1035194821 (latest: true)
+[Baileys] Connection state → connecting
+[Baileys] Connection state → close
+[Baileys] Connection closed. Code: 440. Message: "Stream Errored (conflict)"
+[Baileys] Session conflict (440) — attempt 1/4, retrying in 10s…
+[Baileys] Connection state → open
+[Baileys] Connected as +212669640496
+[Baileys] Connecting… WA version: 2,3000,1035194821 (latest: true)
+[Baileys] Connection state → connecting
+[Baileys] Connection state → close
+[Baileys] Connection closed. Code: 440. Message: "Stream Errored (conflict)"
+[Baileys] Session conflict (440) — attempt 1/4, retrying in 10s…
+Instance stopped.
+[Baileys] Connecting… WA version: 2,3000,1035194821 (latest: true)
+[Baileys] Connection state → connecting
+[Baileys] Connection state → open
+[Baileys] Connected as +212669640496
+(node:1) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[Push] Sent closing day reminder for 2026-06-05
+Client connected: JUTmpSMEIggHwN_HAAAB
+Client disconnected: JUTmpSMEIggHwN_HAAAB
+[Baileys] Connection state → close
+[Baileys] Connection closed. Code: 503. Message: "Stream Errored (unknown)"
+[Baileys] Reconnect attempt 1/5 in 10s…
+[Baileys] Connecting… WA version: 2,3000,1035194821 (latest: true)
+[Baileys] Connection state → connecting
+[Baileys] Connection state → open
+[Baileys] Connected as +212669640496
+Closing session: SessionEntry {
+  _chains: {
+    'BRL0hfszIHn9Dz+ttVo/DUTGCzokLle4E61IFyOaLaYq': { chainKey: [Object], chainType: 1, messageKeys: {} }
+  },
+  registrationId: 1933177362,
+  currentRatchet: {
+    ephemeralKeyPair: {
+      pubKey: <Buffer 05 12 f4 85 fb 33 20 79 fd 0f 3f ad b5 5a 3f 0d 44 c6 0b 3a 24 2e 57 b8 13 ad 48 17 23 9a 2d a6 2a>,
+      privKey: <Buffer e8 07 f5 c3 27 a3 51 db 90 72 21 1a 16 41 f3 c7 a0 62 f8 2a 00 cd cd 25 4f fc d4 c7 9c 58 ab 76>
+    },
+    lastRemoteEphemeralKey: <Buffer 05 1d b8 9c 9b 6b fd a9 20 e4 67 62 ac c5 a5 d0 be d2 9a 60 52 c5 87 a5 e7 0d 87 d0 b5 d4 c3 97 20>,
+    previousCounter: 0,
+    rootKey: <Buffer 17 f0 a3 4b 37 1a d8 9f c1 d1 0c 07 9d 80 d4 c1 37 cf 61 02 8b eb 2d 1b d9 7e 53 a6 79 51 0c a3>
+  },
+  indexInfo: {
+    baseKey: <Buffer 05 58 b8 b8 86 c0 2e 6e 85 d7 3f cb 86 4d 16 39 73 83 e2 8d ee fb ed 8c a9 e6 03 1f ce d0 fd 41 22>,
+    baseKeyType: 1,
+    closed: -1,
+    used: 1780474416095,
+    created: 1780474416095,
+    remoteIdentityKey: <Buffer 05 75 30 50 fc 95 91 de 16 00 28 0b 6b e0 6d 76 49 8c b0 bc b9 06 89 6f e7 95 68 14 37 55 f4 ee 44>
+  },
+  pendingPreKey: {
+    signedKeyId: 11663953,
+    baseKey: <Buffer 05 58 b8 b8 86 c0 2e 6e 85 d7 3f cb 86 4d 16 39 73 83 e2 8d ee fb ed 8c a9 e6 03 1f ce d0 fd 41 22>,
+    preKeyId: 16454045
+  }
+}
+Client connected: d7tFlI94zE3Vjzg5AAAD
+[PayPal] Exchange rates refreshed from open.er-api.com
+Client connected: eYU8Us6N9o3hHUz3AAAF
+Client disconnected: d7tFlI94zE3Vjzg5AAAD
+Client disconnected: eYU8Us6N9o3hHUz3AAAF
+[Baileys] contacts.upsert: 2 new LID→phone pair(s), total=2 — persisting to DB…
+[Baileys] contacts.upsert: created new bot_client_memory row for 212523706007615@lid with phone=212670646262
+[Baileys] contacts.upsert: created new bot_client_memory row for 157355052408909@lid with phone=16478774941
+Client connected: BK58A-rZPl20pi7rAAAH
+Client connected: LIMlj4q-EM8Kre5XAAAK
+Client connected: fLskwc7jxrtbZVUdAAAL
+Client disconnected: LIMlj4q-EM8Kre5XAAAK
+Client disconnected: BK58A-rZPl20pi7rAAAH
+Client disconnected: fLskwc7jxrtbZVUdAAAL

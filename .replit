@@ -1,4 +1,4 @@
-modules = ["nodejs-20", "web", "bash", "python-3.11"]
+modules = ["nodejs-20", "web", "bash", "python-3.11", "postgresql-16"]
 
 [deployment]
 router = "application"
@@ -26,23 +26,19 @@ args = "typecheck"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "build"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
 args = "lint"
 
 [[workflows.workflow]]
 name = "Start application"
 author = "agent"
 
+[workflows.workflow.metadata]
+outputType = "webview"
+
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "PORT=5000 node --enable-source-maps /home/runner/workspace/artifacts/api-server/dist/index.js"
 waitForPort = 5000
-
-[workflows.workflow.metadata]
-outputType = "webview"
 
 [[workflows.workflow]]
 name = "typecheck"
@@ -54,17 +50,6 @@ args = "pnpm run typecheck"
 
 [workflows.workflow.metadata]
 isValidation = true
-
-[[workflows.workflow]]
-name = "build"
-author = "agent"
-
-[workflows.workflow.metadata]
-isValidation = true
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "pnpm run typecheck:libs && pnpm --filter @workspace/pregasquad-manager run build && pnpm --filter @workspace/api-server run build"
 
 [[workflows.workflow]]
 name = "lint"
@@ -80,6 +65,7 @@ args = "pnpm run lint"
 [agent]
 stack = "BEST_EFFORT_FALLBACK"
 expertMode = true
+integrations = ["javascript_gemini_ai_integrations:2.0.0"]
 
 [postMerge]
 path = "scripts/post-merge.sh"
@@ -88,10 +74,6 @@ timeoutMs = 20000
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 8080
-externalPort = 8080
 
 [[ports]]
 localPort = 8081
