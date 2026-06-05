@@ -1,4 +1,5 @@
 import { useState, useRef, useMemo, useEffect } from "react";
+import { MonthlyGoalBanner } from "@/components/MonthlyGoalBanner";
 import { calcAppointmentCommission } from "@/lib/commissionCalc";
 import { getWorkDayDate } from "@/lib/workday";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -592,6 +593,9 @@ export default function Charges() {
           </Button>
         </div>
       </div>
+
+      {/* ── Monthly Goal Banner — always visible ── */}
+      <MonthlyGoalBanner />
 
       {/* ── Owner Withdrawals (admin only) — TOP ── */}
       {isAdmin && (

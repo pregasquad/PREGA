@@ -3,6 +3,7 @@ import { calcAppointmentCommission } from "@/lib/commissionCalc";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Scissors, CalendarCheck, TrendingUp, Clock, Package, UserPlus, Pencil, Trash2, LogOut, AlertTriangle, Banknote, CreditCard, RefreshCw, ClipboardCheck, CheckCircle2, XCircle, CircleDot, ArrowUpRight, ArrowDownRight, Minus, Bell, BellRing, ChevronDown, ChevronUp } from "lucide-react";
+import { MonthlyGoalBanner } from "@/components/MonthlyGoalBanner";
 import { format, startOfToday, subDays, parseISO } from "date-fns";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -516,6 +517,7 @@ export default function Home() {
           </div>
         </div>
 
+        <MonthlyGoalBanner />
         <DayOpeningBriefing appointments={appointments} todayDate={todayDate} businessName={bSettings?.businessName} currency={bSettings?.currencySymbol} />
         <TodayScheduleReminder appointments={appointments} currency={bSettings?.currencySymbol} />
 

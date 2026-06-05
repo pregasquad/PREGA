@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { MonthlyGoalBanner } from "@/components/MonthlyGoalBanner";
 
 // ── Drag sound effects via Web Audio API ──────────────────────────────────────
 function playDragPickup() {
@@ -2579,6 +2580,13 @@ export default function Planning() {
             {slotHeight === 76 && t("admin.slotLarge", { defaultValue: "كبير جداً" })}
             <span className="opacity-70 text-xs font-normal">({slotHeight}px)</span>
           </div>
+        </div>
+      )}
+
+      {/* Monthly Goal — admin only */}
+      {isAdmin && (
+        <div className="shrink-0 mb-1">
+          <MonthlyGoalBanner />
         </div>
       )}
 

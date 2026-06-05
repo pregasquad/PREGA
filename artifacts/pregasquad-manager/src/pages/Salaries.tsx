@@ -938,6 +938,76 @@ export default function Salaries() {
         </Select>
       </div>
 
+      {/* Monthly Revenue Goal - Top */}
+      {period === "month" && (
+        <Card className="glass-card" data-testid="card-monthly-goal">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-violet-500/15 flex items-center justify-center">
+                  <TrendingUp className="h-3.5 w-3.5 text-violet-600" />
+                </div>
+                <span className="text-sm font-semibold">{t("salaries.monthlyGoal") || "هدف الشهر"}</span>
+              </div>
+              {!showGoalEdit ? (
+                <button
+                  className="text-xs text-muted-foreground underline underline-offset-2"
+                  onClick={() => { setGoalEditValue(monthlyGoal > 0 ? String(monthlyGoal) : ""); setShowGoalEdit(true); }}
+                  data-testid="button-edit-goal"
+                >
+                  {monthlyGoal > 0 ? `${formatCurrency(monthlyGoal)} DH` : (t("salaries.setGoal") || "تعيين الهدف")}
+                </button>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <Input
+                    type="number"
+                    value={goalEditValue}
+                    onChange={e => setGoalEditValue(e.target.value)}
+                    className="h-7 w-28 text-sm text-end"
+                    placeholder="0"
+                    data-testid="input-monthly-goal"
+                    autoFocus
+                  />
+                  <Button size="sm" className="h-7 px-2 text-xs" onClick={() => {
+                    const val = Number(goalEditValue) || 0;
+                    setMonthlyGoal(val);
+                    localStorage.setItem("monthly_revenue_goal", String(val));
+                    setShowGoalEdit(false);
+                  }} data-testid="button-save-goal">✓</Button>
+                  <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setShowGoalEdit(false)}>✕</Button>
+                </div>
+              )}
+            </div>
+            {monthlyGoal > 0 ? (
+              <>
+                <div className="relative h-3 rounded-full bg-secondary overflow-hidden mb-1.5">
+                  <div
+                    className={`absolute inset-y-0 start-0 rounded-full transition-all duration-500 ${
+                      salonPortion >= monthlyGoal
+                        ? "bg-emerald-500"
+                        : salonPortion / monthlyGoal >= 0.7
+                        ? "bg-violet-500"
+                        : "bg-violet-400/70"
+                    }`}
+                    style={{ width: `${Math.min((salonPortion / monthlyGoal) * 100, 100)}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-[11px] text-muted-foreground tabular-nums">
+                  <span data-testid="text-goal-revenue">{formatCurrency(salonPortion)} DH</span>
+                  <span className={`font-semibold ${salonPortion >= monthlyGoal ? "text-emerald-600 dark:text-emerald-400" : "text-violet-600 dark:text-violet-400"}`}>
+                    {Math.round((salonPortion / monthlyGoal) * 100)}%
+                    {salonPortion >= monthlyGoal && " ✓"}
+                  </span>
+                  <span>{formatCurrency(monthlyGoal)} DH</span>
+                </div>
+              </>
+            ) : (
+              <p className="text-xs text-muted-foreground text-center py-1">{t("salaries.noGoalSet") || "لم يتم تعيين هدف شهري بعد"}</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Summary Stats - Glass Cards */}
       <div className="grid grid-cols-2 gap-2">
         <Card className="glass-card" data-testid="stat-total-revenue">
@@ -996,76 +1066,6 @@ export default function Salaries() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Monthly Revenue Goal */}
-      {period === "month" && (
-        <Card className="glass-card" data-testid="card-monthly-goal">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-violet-500/15 flex items-center justify-center">
-                  <TrendingUp className="h-3.5 w-3.5 text-violet-600" />
-                </div>
-                <span className="text-sm font-semibold">{t("salaries.monthlyGoal") || "هدف الشهر"}</span>
-              </div>
-              {!showGoalEdit ? (
-                <button
-                  className="text-xs text-muted-foreground underline underline-offset-2"
-                  onClick={() => { setGoalEditValue(monthlyGoal > 0 ? String(monthlyGoal) : ""); setShowGoalEdit(true); }}
-                  data-testid="button-edit-goal"
-                >
-                  {monthlyGoal > 0 ? `${formatCurrency(monthlyGoal)} DH` : (t("salaries.setGoal") || "تعيين الهدف")}
-                </button>
-              ) : (
-                <div className="flex items-center gap-1.5">
-                  <Input
-                    type="number"
-                    value={goalEditValue}
-                    onChange={e => setGoalEditValue(e.target.value)}
-                    className="h-7 w-28 text-sm text-end"
-                    placeholder="0"
-                    data-testid="input-monthly-goal"
-                    autoFocus
-                  />
-                  <Button size="sm" className="h-7 px-2 text-xs" onClick={() => {
-                    const val = Number(goalEditValue) || 0;
-                    setMonthlyGoal(val);
-                    localStorage.setItem("monthly_revenue_goal", String(val));
-                    setShowGoalEdit(false);
-                  }} data-testid="button-save-goal">✓</Button>
-                  <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setShowGoalEdit(false)}>✕</Button>
-                </div>
-              )}
-            </div>
-            {monthlyGoal > 0 ? (
-              <>
-                <div className="relative h-3 rounded-full bg-secondary overflow-hidden mb-1.5">
-                  <div
-                    className={`absolute inset-y-0 start-0 rounded-full transition-all duration-500 ${
-                      totalRevenue >= monthlyGoal
-                        ? "bg-emerald-500"
-                        : totalRevenue / monthlyGoal >= 0.7
-                        ? "bg-violet-500"
-                        : "bg-violet-400/70"
-                    }`}
-                    style={{ width: `${Math.min((totalRevenue / monthlyGoal) * 100, 100)}%` }}
-                  />
-                </div>
-                <div className="flex justify-between text-[11px] text-muted-foreground tabular-nums">
-                  <span data-testid="text-goal-revenue">{formatCurrency(totalRevenue)} DH</span>
-                  <span className={`font-semibold ${totalRevenue >= monthlyGoal ? "text-emerald-600 dark:text-emerald-400" : "text-violet-600 dark:text-violet-400"}`}>
-                    {Math.round((totalRevenue / monthlyGoal) * 100)}%
-                    {totalRevenue >= monthlyGoal && " ✓"}
-                  </span>
-                  <span>{formatCurrency(monthlyGoal)} DH</span>
-                </div>
-              </>
-            ) : (
-              <p className="text-xs text-muted-foreground text-center py-1">{t("salaries.noGoalSet") || "لم يتم تعيين هدف شهري بعد"}</p>
-            )}
-          </CardContent>
-        </Card>
-      )}
 
       {/* Salon Budget - Glass Card */}
       <Card className="glass-card" data-testid="card-salon-budget">
