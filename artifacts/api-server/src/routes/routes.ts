@@ -729,7 +729,10 @@ export async function registerRoutes(
 
   // Public: Get appointments for a date (for availability checking - minimal info only)
   app.get("/api/public/appointments", publicRateLimitMiddleware, async (req, res) => {
-    const { date } = z.object({ date: z.string().optional() }).parse(req.query);
+    // date is required — reject requests that omit it to avoid exposing all appointments
+    const parsed = z.object({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }).safeParse(req.query);
+    if (!parsed.success) return res.json([]);
+    const { date } = parsed.data;
     const items = await storage.getAppointments(date);
     const minimalItems = items.map(a => ({
       staff: a.staff,
@@ -764,7 +767,7 @@ export async function registerRoutes(
     paypalOrderId: z.string().max(100).optional(), // PayPal order reference
     privateRoom: z.boolean().optional(),
   }).refine(
-    (data) => data.servicesJson?.length || (data.service && data.duration && data.price && data.total),
+    (data) => (data.servicesJson && data.servicesJson.length > 0) || (data.service != null && data.duration != null && data.price != null && data.total != null),
     { message: "Either servicesJson or service/duration/price/total fields are required" }
   );
 
@@ -973,7 +976,7 @@ export async function registerRoutes(
           group.totalDuration += svc.duration;
           group.totalPrice += svc.price;
         }
-      } else if (input.service && input.duration && input.price && input.total) {
+      } else if (input.service != null && input.duration != null && input.price != null && input.total != null) {
         // Single service booking (validated by refine)
         const matchedService = allServices.find(s => s.name === input.service);
         const category = matchedService?.category || "Général";
@@ -1024,6 +1027,24 @@ export async function registerRoutes(
           servicesJson: input.servicesJson,
         };
         
+        // Double-booking guard: re-fetch live appointments and check for overlap right before insert
+        if (assignedStaff !== "À assigner") {
+          const liveAppts = await storage.getAppointments(input.date);
+          const [reqH, reqM] = input.startTime.split(":").map(Number);
+          const reqStart = reqH * 60 + reqM;
+          const reqEnd = reqStart + effectiveDuration;
+          const conflictExists = liveAppts.some(a => {
+            if (a.staff !== assignedStaff) return false;
+            const [aH, aM] = (a.startTime || "00:00").split(":").map(Number);
+            const aStart = aH * 60 + aM;
+            const aEnd = aStart + (a.duration || 30);
+            return !(reqEnd <= aStart || reqStart >= aEnd);
+          });
+          if (conflictExists) {
+            return res.status(409).json({ message: "Ce créneau vient d'être réservé. Veuillez choisir un autre horaire." });
+          }
+        }
+
         console.log("[PUBLIC BOOKING] Creating single appointment:", JSON.stringify(appointmentData));
         const item = await storage.createAppointment(appointmentData);
         createdAppointments.push(item);
@@ -1044,13 +1065,22 @@ export async function registerRoutes(
         let distributedTotal = 0;
         
         let currentStartMinutes = timeToMinutes(input.startTime);
+        let dateOffsetDays = 0;
         const usedStaff: string[] = [];
         
         const categoryGroupEntries = Array.from(categoryGroups.entries());
         for (let gi = 0; gi < categoryGroupEntries.length; gi++) {
           const [category, group] = categoryGroupEntries[gi];
           const isLastGroup = gi === categoryGroupEntries.length - 1;
-          const currentStartTime = minutesToTime(currentStartMinutes);
+
+          // Handle midnight rollover: if chained start crosses 24 h, increment date
+          const slotMinutes = currentStartMinutes % 1440;
+          const currentStartTime = minutesToTime(slotMinutes);
+          const currentDate = dateOffsetDays === 0 ? input.date : (() => {
+            const d = new Date(input.date + "T12:00:00");
+            d.setDate(d.getDate() + dateOffsetDays);
+            return d.toISOString().split("T")[0];
+          })();
           
           // Find available staff for this category - priority order:
           // 1. Specialist for this category (excluding already used staff)
@@ -1060,7 +1090,7 @@ export async function registerRoutes(
           // Step 1: Try specialists only, excluding used staff
           let assignedStaff = await findAvailableStaffForCategory(
             category,
-            input.date,
+            currentDate,
             currentStartTime,
             group.totalDuration,
             usedStaff,
@@ -1071,7 +1101,7 @@ export async function registerRoutes(
           if (assignedStaff === "À assigner" && usedStaff.length > 0) {
             assignedStaff = await findAvailableStaffForCategory(
               category,
-              input.date,
+              currentDate,
               currentStartTime,
               group.totalDuration,
               [], // No exclusion
@@ -1083,7 +1113,7 @@ export async function registerRoutes(
           if (assignedStaff === "À assigner") {
             assignedStaff = await findAvailableStaffForCategory(
               category,
-              input.date,
+              currentDate,
               currentStartTime,
               group.totalDuration,
               usedStaff,
@@ -1107,6 +1137,22 @@ export async function registerRoutes(
             discountedPrice = Math.round(group.totalPrice * discountRatio * 100) / 100;
             distributedTotal += discountedPrice;
           }
+
+          // Double-booking guard: re-fetch live appointments and check for overlap right before insert
+          const liveAppts = await storage.getAppointments(currentDate);
+          const [reqH, reqM] = currentStartTime.split(":").map(Number);
+          const reqStart = reqH * 60 + reqM;
+          const reqEnd = reqStart + group.totalDuration;
+          const conflictExists = assignedStaff !== "À assigner" && liveAppts.some(a => {
+            if (a.staff !== assignedStaff) return false;
+            const [aH, aM] = (a.startTime || "00:00").split(":").map(Number);
+            const aStart = aH * 60 + aM;
+            const aEnd = aStart + (a.duration || 30);
+            return !(reqEnd <= aStart || reqStart >= aEnd);
+          });
+          if (conflictExists) {
+            return res.status(409).json({ message: "Ce créneau vient d'être réservé. Veuillez choisir un autre horaire." });
+          }
           
           const appointmentData: any = {
             client: input.client,
@@ -1115,7 +1161,7 @@ export async function registerRoutes(
             duration: group.totalDuration,
             price: discountedPrice,
             total: discountedPrice,
-            date: input.date,
+            date: currentDate,
             startTime: currentStartTime,
             paid: input.paid === true,
             paypalOrderId: input.paypalOrderId || null,
@@ -1130,8 +1176,9 @@ export async function registerRoutes(
           createdAppointments.push(item);
           syncClientPhone(null, input.client, input.phone).catch(() => {});
           
-          // Move start time forward for next appointment
+          // Move start time forward for next appointment; track date rollover
           currentStartMinutes += group.totalDuration;
+          dateOffsetDays = Math.floor(currentStartMinutes / 1440);
         }
       }
       

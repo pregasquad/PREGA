@@ -139,6 +139,16 @@ export default function Booking() {
     fetch("/api/paypal/config")
       .then(r => { if (r.ok) setPaypalAvailable(true); })
       .catch(() => {});
+
+    // Prefill phone and service from deep-link query params (e.g. from MyBookings)
+    const params = new URLSearchParams(window.location.search);
+    const phoneParam = params.get("phone");
+    const serviceParam = params.get("service");
+    if (phoneParam) form.setValue("phone", phoneParam);
+    if (serviceParam) {
+      // Pre-select the service once service list is loaded — stored for later matching
+      (window as any).__prefillService = serviceParam;
+    }
   }, []);
 
   // Defer socket connection to after initial render
@@ -195,6 +205,17 @@ export default function Booking() {
         
         setStaffList(staffData);
         setServices(servicesData);
+
+        // Apply service deep-link prefill now that services are loaded
+        const prefillName = (window as any).__prefillService as string | undefined;
+        if (prefillName) {
+          delete (window as any).__prefillService;
+          const match = (servicesData as Service[]).find(s => s.name === prefillName);
+          if (match) {
+            setSelectedServices([{ name: match.name, price: match.price, duration: match.duration }]);
+            setSelectedCategory(match.category);
+          }
+        }
         
         const validPackages = (packagesData as Package[]).filter(pkg => 
           pkg.discountedPrice < pkg.originalPrice && pkg.originalPrice > 0
