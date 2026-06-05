@@ -771,6 +771,7 @@
   "permissions": {
     "viewHome": "Voir Accueil",
     "viewPlanning": "Voir Planning",
+    "viewBookingHistory": "Voir Historique Réservations",
     "manageAppointments": "Gérer Rendez-vous",
     "editCardboard": "Modifier le Tableau",
     "viewServices": "Voir Services",
@@ -798,6 +799,7 @@
     "manageUsers": "Gérer Utilisateurs",
     "viewReports": "Voir Rapports",
     "adminSettings": "Paramètres Admin",
+    "manageBusinessSettings": "Gérer Paramètres Salon",
     "exportData": "Exporter Données",
     "editPastAppointments": "Modifier Rendez-vous Passés/Hors Horaires",
     "openCashDrawer": "Ouvrir Tiroir-Caisse"

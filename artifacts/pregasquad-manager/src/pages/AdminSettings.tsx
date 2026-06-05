@@ -97,6 +97,7 @@ const ALL_PERMISSIONS = [
   { key: "manage_users", labelKey: "permissions.manageUsers", icon: "UserCheck" },
   { key: "view_reports", labelKey: "permissions.viewReports", icon: "BarChart" },
   { key: "admin_settings", labelKey: "permissions.adminSettings", icon: "Settings" },
+  { key: "manage_business_settings", labelKey: "permissions.manageBusinessSettings", icon: "Settings2" },
   { key: "export_data", labelKey: "permissions.exportData", icon: "Download" },
   { key: "edit_past_appointments", labelKey: "permissions.editPastAppointments", icon: "Lock" },
   { key: "open_cash_drawer", labelKey: "permissions.openCashDrawer", icon: "Wallet" },

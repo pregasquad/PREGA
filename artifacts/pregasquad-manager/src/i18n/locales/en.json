@@ -771,6 +771,7 @@
   "permissions": {
     "viewHome": "View Home",
     "viewPlanning": "View Planning",
+    "viewBookingHistory": "View Booking History",
     "manageAppointments": "Manage Appointments",
     "editCardboard": "Edit Cardboard",
     "viewServices": "View Services",
@@ -798,6 +799,7 @@
     "manageUsers": "Manage Users",
     "viewReports": "View Reports",
     "adminSettings": "Admin Settings",
+    "manageBusinessSettings": "Manage Business Settings",
     "exportData": "Export Data",
     "editPastAppointments": "Edit Past/After-Hours Appointments",
     "openCashDrawer": "Open Cash Drawer"

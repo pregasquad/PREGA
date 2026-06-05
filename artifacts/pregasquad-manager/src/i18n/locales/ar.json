@@ -731,6 +731,7 @@
   "permissions": {
     "viewHome": "عرض الرئيسية",
     "viewPlanning": "عرض التخطيط",
+    "viewBookingHistory": "عرض سجل الحجوزات",
     "manageAppointments": "إدارة المواعيد",
     "editCardboard": "تعديل اللوحة",
     "viewServices": "عرض الخدمات",
@@ -758,6 +759,7 @@
     "manageUsers": "إدارة المستخدمين",
     "viewReports": "عرض التقارير",
     "adminSettings": "إعدادات المدير",
+    "manageBusinessSettings": "إدارة إعدادات الصالون",
     "exportData": "تصدير البيانات",
     "editPastAppointments": "تعديل المواعيد السابقة/بعد ساعات العمل",
     "openCashDrawer": "فتح درج النقود"

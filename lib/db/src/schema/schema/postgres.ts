@@ -296,6 +296,7 @@ export const ROLE_PERMISSIONS = {
   owner: [
     "view_home",
     "view_planning", "manage_appointments", "edit_cardboard",
+    "view_booking_history",
     "view_clients", "manage_clients",
     "view_services", "manage_services",
     "view_inventory", "manage_inventory",
@@ -305,33 +306,42 @@ export const ROLE_PERMISSIONS = {
     "view_staff", "view_staff_performance",
     "manage_staff",
     "admin_settings",
+    "manage_business_settings",
     "export_data",
     "view_packages", "manage_packages",
     "view_loyalty", "manage_loyalty",
     "view_gift_cards", "manage_gift_cards",
     "manage_staff_goals",
-    "manage_waitlist"
+    "manage_waitlist",
+    "view_users", "manage_users",
+    "edit_past_appointments",
+    "open_cash_drawer"
   ],
   manager: [
     "view_home",
     "view_planning", "manage_appointments", "edit_cardboard",
-    "view_clients", "manage_clients", 
+    "view_booking_history",
+    "view_clients", "manage_clients",
     "view_services", "manage_services",
     "view_inventory", "manage_inventory",
     "view_expenses", "manage_expenses",
     "view_salaries",
     "view_reports",
-    "view_staff_performance",
+    "view_staff", "view_staff_performance",
     "export_data",
     "view_packages",
     "view_loyalty",
-    "view_gift_cards"
+    "view_gift_cards",
+    "view_users",
+    "manage_waitlist"
   ],
   receptionist: [
     "view_home",
     "view_planning", "manage_appointments",
+    "view_booking_history",
     "view_clients",
-    "view_services"
+    "view_services",
+    "manage_waitlist"
   ]
 } as const;
 
