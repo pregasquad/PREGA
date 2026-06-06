@@ -563,7 +563,7 @@ export default function Planning() {
     prevServerHeight.current = serverH;
   }, [businessSettings?.planningSlotHeight]);
 
-  const { data: adminRoles = [] } = useQuery<Array<{id: number; name: string; role: string; permissions: string[]}>>({
+  const { data: adminRoles = [] } = useQuery<Array<{id: number; name: string; role: string; permissions: string[]; photoUrl?: string | null}>>({
     queryKey: ["/api/admin-roles"],
   });
 
@@ -2993,37 +2993,42 @@ export default function Planning() {
         >
           {/* Time-column: boss net profit circle (admin only) or empty cell */}
           <div className={cn("bg-white dark:bg-slate-900 py-1 px-0 flex flex-col items-center justify-center gap-0.5 overflow-hidden", isRtl ? "border-l border-slate-200 dark:border-slate-600" : "border-r border-slate-200 dark:border-slate-600")}>
-            {isAdmin && ownerNetProfit !== null && (
-              <div className="flex flex-col items-center gap-0.5 w-full px-0.5">
-                {salonSettings?.logo ? (
-                  <img
-                    src={salonSettings.logo}
-                    alt="Boss"
-                    className="w-9 h-9 rounded-full object-cover border-2 shadow-sm"
-                    style={{ borderColor: ownerNetProfit >= 0 ? "#10b981" : "#ef4444" }}
-                  />
-                ) : (
-                  <div
-                    className="w-9 h-9 rounded-full flex items-center justify-center shadow-sm border-2"
-                    style={{
-                      background: ownerNetProfit >= 0
-                        ? "linear-gradient(135deg,#10b981,#059669)"
-                        : "linear-gradient(135deg,#ef4444,#dc2626)",
-                      borderColor: ownerNetProfit >= 0 ? "#10b981" : "#ef4444",
-                    }}
+            {isAdmin && ownerNetProfit !== null && (() => {
+              const ownerRole = adminRoles.find((r: any) => r.role === "owner");
+              const ownerPhoto = ownerRole?.photoUrl || salonSettings?.logo || null;
+              const profitColor = ownerNetProfit >= 0 ? "#10b981" : "#ef4444";
+              return (
+                <div className="flex flex-col items-center gap-0.5 w-full px-0.5">
+                  {ownerPhoto ? (
+                    <img
+                      src={ownerPhoto}
+                      alt="Boss"
+                      className="w-9 h-9 rounded-full object-cover border-2 shadow-sm"
+                      style={{ borderColor: profitColor }}
+                    />
+                  ) : (
+                    <div
+                      className="w-9 h-9 rounded-full flex items-center justify-center shadow-sm border-2"
+                      style={{
+                        background: ownerNetProfit >= 0
+                          ? "linear-gradient(135deg,#10b981,#059669)"
+                          : "linear-gradient(135deg,#ef4444,#dc2626)",
+                        borderColor: profitColor,
+                      }}
+                    >
+                      <Wallet className="w-4 h-4 text-white" />
+                    </div>
+                  )}
+                  <span
+                    className="text-[8px] font-black leading-none text-center w-full truncate"
+                    style={{ color: profitColor }}
                   >
-                    <Wallet className="w-4 h-4 text-white" />
-                  </div>
-                )}
-                <span
-                  className="text-[8px] font-black leading-none text-center w-full truncate"
-                  style={{ color: ownerNetProfit >= 0 ? "#10b981" : "#ef4444" }}
-                >
-                  {ownerNetProfit >= 0 ? "+" : ""}{ownerNetProfit.toFixed(0)}
-                </span>
-                <span className="text-[7px] text-muted-foreground leading-none">{salonSettings?.currencySymbol || "DH"}</span>
-              </div>
-            )}
+                    {ownerNetProfit >= 0 ? "+" : ""}{ownerNetProfit.toFixed(0)}
+                  </span>
+                  <span className="text-[7px] text-muted-foreground leading-none">{salonSettings?.currencySymbol || "DH"}</span>
+                </div>
+              );
+            })()}
           </div>
           {staffList.map((s, staffIndex) => (
             <div 
