@@ -133,6 +133,8 @@ export default function Charges() {
 
   // Use the same data source as Salaries so salonPortion is always identical.
   // Scoped to the relevant date range so the server skips all other appointments (fast).
+  // refetchOnMount:'always' ensures we get the latest value when navigating back to this page
+  // (socket events only run while this page is mounted, so we can miss events from Planning).
   const { data: salaryData } = useQuery<any>({
     queryKey: ["/api/salaries/compute", salaryFromDate, salaryToDate],
     queryFn: async () => {
@@ -143,8 +145,9 @@ export default function Charges() {
       if (!res.ok) throw new Error("Failed to fetch salary data");
       return res.json();
     },
-    staleTime: 60 * 1000,
+    staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,
+    refetchOnMount: "always",
   });
 
   const defaultChargeTypes = DEFAULT_CHARGE_TYPES_KEYS.map(item => ({
