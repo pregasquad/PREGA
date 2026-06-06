@@ -248,6 +248,8 @@ export default function Planning() {
     const intervalId = setInterval(() => {
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/owner-withdrawals"] });
     }, refreshInterval);
     
     // Refresh on visibility change (when returning to PWA) - throttled
@@ -257,6 +259,8 @@ export default function Planning() {
       if (document.visibilityState === 'visible' && now - lastRefresh > 5000) {
         lastRefresh = now;
         queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/owner-withdrawals"] });
       }
     };
     
@@ -585,14 +589,12 @@ export default function Planning() {
   }>({
     queryKey: ["/api/salaries/compute"],
     enabled: !!walletStaffId || canViewNetProfit,
-    staleTime: 60_000,
   });
 
   // Owner withdrawals for net profit circle
   const { data: ownerWithdrawals = [] } = useQuery<any[]>({
     queryKey: ["/api/owner-withdrawals"],
     enabled: canViewNetProfit,
-    staleTime: 60_000,
   });
 
   const createDeductionMutation = useMutation({
@@ -1956,6 +1958,7 @@ export default function Planning() {
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/appointments/all"] });
       queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/owner-withdrawals"] });
       refreshSalariesBackground();
       toast({ title: t("planning.paymentConfirmed"), description: t("planning.paymentConfirmedDesc") });
 
@@ -2414,6 +2417,7 @@ export default function Planning() {
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/appointments/all"] });
       queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/owner-withdrawals"] });
     },
     onError: () => {
       playErrorSound();
