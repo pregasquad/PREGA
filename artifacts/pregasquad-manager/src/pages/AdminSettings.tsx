@@ -102,6 +102,7 @@ const ALL_PERMISSIONS = [
   { key: "export_data", labelKey: "permissions.exportData", icon: "Download" },
   { key: "edit_past_appointments", labelKey: "permissions.editPastAppointments", icon: "Lock" },
   { key: "open_cash_drawer", labelKey: "permissions.openCashDrawer", icon: "Wallet" },
+  { key: "view_net_profit", labelKey: "permissions.viewNetProfit", icon: "TrendingUp" },
 ];
 
 const DAYS_OF_WEEK = [

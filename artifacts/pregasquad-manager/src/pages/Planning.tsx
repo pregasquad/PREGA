@@ -2993,7 +2993,7 @@ export default function Planning() {
         >
           {/* Time-column: boss net profit circle (admin only) or empty cell */}
           <div className={cn("bg-white dark:bg-slate-900 py-1 px-0 flex flex-col items-center justify-center gap-0.5 overflow-hidden", isRtl ? "border-l border-slate-200 dark:border-slate-600" : "border-r border-slate-200 dark:border-slate-600")}>
-            {isAdmin && ownerNetProfit !== null && (() => {
+            {(isAdmin || hasPermission("view_net_profit")) && ownerNetProfit !== null && (() => {
               const ownerRole = adminRoles.find((r: any) => r.role === "owner");
               const ownerPhoto = ownerRole?.photoUrl || salonSettings?.logo || null;
               const profitColor = ownerNetProfit >= 0 ? "#10b981" : "#ef4444";

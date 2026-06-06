@@ -762,7 +762,8 @@
     "manageBusinessSettings": "إدارة إعدادات الصالون",
     "exportData": "تصدير البيانات",
     "editPastAppointments": "تعديل المواعيد السابقة/بعد ساعات العمل",
-    "openCashDrawer": "فتح درج النقود"
+    "openCashDrawer": "فتح درج النقود",
+    "viewNetProfit": "عرض صافي الربح (التخطيط)"
   },
   "schedule": {
     "manageSchedule": "إدارة الجدول",

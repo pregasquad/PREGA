@@ -802,7 +802,8 @@
     "manageBusinessSettings": "Manage Business Settings",
     "exportData": "Export Data",
     "editPastAppointments": "Edit Past/After-Hours Appointments",
-    "openCashDrawer": "Open Cash Drawer"
+    "openCashDrawer": "Open Cash Drawer",
+    "viewNetProfit": "View Net Profit (Planning)"
   },
   "home": {
     "dashboard": "Dashboard",

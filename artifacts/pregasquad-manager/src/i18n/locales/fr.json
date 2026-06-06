@@ -802,7 +802,8 @@
     "manageBusinessSettings": "Gérer Paramètres Salon",
     "exportData": "Exporter Données",
     "editPastAppointments": "Modifier Rendez-vous Passés/Hors Horaires",
-    "openCashDrawer": "Ouvrir Tiroir-Caisse"
+    "openCashDrawer": "Ouvrir Tiroir-Caisse",
+    "viewNetProfit": "Voir Bénéfice Net (Planning)"
   },
   "home": {
     "dashboard": "Tableau de Bord",
