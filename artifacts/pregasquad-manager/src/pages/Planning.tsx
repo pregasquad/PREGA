@@ -325,10 +325,15 @@ export default function Planning() {
     const onBookingChange = () => {
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
     };
+    // When an appointment is paid, net profit changes → also refresh salary data.
+    const onPaid = () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+    };
     socket.on("booking:created",      onBookingChange);
     socket.on("booking:updated",      onBookingChange);
     socket.on("appointment:updated",  onBookingChange);
-    socket.on("appointment:paid",     onBookingChange);
+    socket.on("appointment:paid",     onPaid);
     socket.on("appointment:deleted",  onBookingChange);
 
     // Mobile: refresh every 2 minutes, Desktop: every 90 seconds as fallback
@@ -363,7 +368,7 @@ export default function Planning() {
       socket.off("booking:created",      onBookingChange);
       socket.off("booking:updated",      onBookingChange);
       socket.off("appointment:updated",  onBookingChange);
-      socket.off("appointment:paid",     onBookingChange);
+      socket.off("appointment:paid",     onPaid);
       socket.off("appointment:deleted",  onBookingChange);
       clearInterval(intervalId);
       clearInterval(salaryIntervalId);
@@ -681,14 +686,27 @@ export default function Planning() {
   });
 
   // Salary data: always fetched for admin (net profit circle) + lazily for wallet portal
-  // placeholderData keeps previous value while background-refetching → no jump/flash
+  // refetchOnMount:'always' ensures the circle shows the correct value immediately on load.
+  // placeholderData keeps previous value while background-refetching → no jump/flash.
+  const salaryMonthFrom = format(startOfMonth(new Date()), "yyyy-MM-dd");
+  const salaryMonthTo   = format(endOfMonth(new Date()),   "yyyy-MM-dd");
   const { data: salaryData } = useQuery<{
     staff: any[]; services: any[]; staffCommissions: any[];
     appointments: any[]; charges: any[]; deductions: any[];
     staffPayments: any[]; salonPayments: any[];
   }>({
-    queryKey: ["/api/salaries/compute"],
+    queryKey: ["/api/salaries/compute", salaryMonthFrom, salaryMonthTo],
+    queryFn: async () => {
+      const res = await fetch(
+        `/api/salaries/compute?from=${salaryMonthFrom}&to=${salaryMonthTo}`,
+        { credentials: "include" }
+      );
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
     enabled: !!walletStaffId || canViewNetProfit,
+    staleTime: 30 * 1000,
+    refetchOnMount: "always",
     placeholderData: (prev: any) => prev,
   });
 
