@@ -181,6 +181,16 @@ export default function Planning() {
   }, []);
 
   const currentUserRole = typeof window !== 'undefined' ? sessionStorage.getItem("current_user_role") : null;
+  const canViewNetProfit = useMemo(() => {
+    if (currentUserRole === "owner") return true;
+    try {
+      const permissions = JSON.parse(sessionStorage.getItem("current_user_permissions") || "[]");
+      if (permissions.length === 0) return true;
+      return permissions.includes("view_net_profit");
+    } catch {
+      return false;
+    }
+  }, [currentUserRole]);
   const canEditPastAppointments = useMemo(() => {
     if (currentUserRole === "owner") return true;
     try {
@@ -574,14 +584,14 @@ export default function Planning() {
     staffPayments: any[]; salonPayments: any[];
   }>({
     queryKey: ["/api/salaries/compute"],
-    enabled: !!walletStaffId || sessionStorage.getItem("admin_authenticated") === "true",
+    enabled: !!walletStaffId || canViewNetProfit,
     staleTime: 60_000,
   });
 
-  // Owner withdrawals for net profit circle (admin only)
+  // Owner withdrawals for net profit circle
   const { data: ownerWithdrawals = [] } = useQuery<any[]>({
     queryKey: ["/api/owner-withdrawals"],
-    enabled: sessionStorage.getItem("admin_authenticated") === "true",
+    enabled: canViewNetProfit,
     staleTime: 60_000,
   });
 
@@ -920,7 +930,7 @@ export default function Planning() {
 
   // ── Owner net profit for the current month (mirrors Charges.tsx formula) ──
   const ownerNetProfit = useMemo(() => {
-    if (!isAdmin || !salaryData) return null;
+    if (!canViewNetProfit || !salaryData) return null;
     const now = new Date();
     const monthStart = startOfMonth(now);
     const monthEnd = endOfMonth(now);
@@ -960,7 +970,7 @@ export default function Planning() {
       .reduce((s: number, w: any) => s + Number(w.amount || 0), 0);
 
     return monthRevenue - totalWithdrawals - totalCharges;
-  }, [isAdmin, salaryData, ownerWithdrawals]);
+  }, [canViewNetProfit, salaryData, ownerWithdrawals]);
 
   // Sync horizontal scroll between header and board
   // Re-attaches when loading finishes so refs are connected to actual DOM
@@ -2993,7 +3003,7 @@ export default function Planning() {
         >
           {/* Time-column: boss net profit circle (admin only) or empty cell */}
           <div className={cn("bg-white dark:bg-slate-900 py-1 px-0 flex flex-col items-center justify-center gap-0.5 overflow-hidden", isRtl ? "border-l border-slate-200 dark:border-slate-600" : "border-r border-slate-200 dark:border-slate-600")}>
-            {(isAdmin || hasPermission("view_net_profit")) && ownerNetProfit !== null && (() => {
+            {canViewNetProfit && ownerNetProfit !== null && (() => {
               const ownerRole = adminRoles.find((r: any) => r.role === "owner");
               const ownerPhoto = ownerRole?.photoUrl || salonSettings?.logo || null;
               const profitColor = ownerNetProfit >= 0 ? "#10b981" : "#ef4444";
