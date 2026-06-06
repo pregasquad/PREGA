@@ -3066,14 +3066,23 @@ export async function registerRoutes(
   // Single-shot salary data endpoint — fetches all data sources in parallel
   // on the server and returns them in one response so the client renders once,
   // with no cascading updates from independent queries completing at different times.
-  app.get("/api/salaries/compute", isPinAuthenticated, async (_req, res) => {
+  app.get("/api/salaries/compute", isPinAuthenticated, async (req, res) => {
     try {
+      const from = typeof req.query.from === 'string' ? req.query.from : undefined;
+      const to = typeof req.query.to === 'string' ? req.query.to : undefined;
+
+      // If a date range is provided, only load appointments for that range (much faster).
+      // Fall back to all appointments when no range is given (legacy behaviour).
+      const appointmentsPromise = (from && to)
+        ? storage.getAppointmentsByDateRange(from, to)
+        : storage.getAppointments();
+
       const [staff, services, staffCommissions, appointments, charges, deductions, staffPayments, salonPayments] =
         await Promise.all([
           storage.getStaff(),
           storage.getServices(),
           storage.getStaffCommissions(),
-          storage.getAppointments(),
+          appointmentsPromise,
           storage.getCharges(),
           storage.getStaffDeductions(),
           storage.getStaffPayments(),

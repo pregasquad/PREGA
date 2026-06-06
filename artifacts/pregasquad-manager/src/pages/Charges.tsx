@@ -18,6 +18,7 @@ import { Plus, Trash2, TrendingDown, FolderPlus, RefreshCw, ChevronLeft, Chevron
 import { autoPrintExpense } from "@/lib/printReceipt";
 import { useBusinessSettings } from "@/hooks/use-salon-data";
 import { refreshSalariesBackground } from "@/lib/salariesRefresher";
+import { getAppSocket } from "@/lib/appSocket";
 
 const DEFAULT_CHARGE_TYPES_KEYS = [
   { id: 1, key: "expenses.product", value: "Produit" },
@@ -61,6 +62,27 @@ export default function Charges() {
       setSelectedMonth(workDay);
     }
   }, [salonSettings?.openingTime, salonSettings?.closingTime]);
+
+  // Real-time invalidation: when an appointment is paid/updated, net-profit changes immediately.
+  useEffect(() => {
+    const socket = getAppSocket();
+    const invalidate = () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/charges"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/owner-withdrawals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+    };
+    socket.on("booking:created",     invalidate);
+    socket.on("appointment:updated", invalidate);
+    socket.on("appointment:paid",    invalidate);
+    socket.on("booking:updated",     invalidate);
+    return () => {
+      socket.off("booking:created",     invalidate);
+      socket.off("appointment:updated", invalidate);
+      socket.off("appointment:paid",    invalidate);
+      socket.off("booking:updated",     invalidate);
+    };
+  }, [queryClient]);
+
   const [withdrawalNotes, setWithdrawalNotes] = useState("");
   const [productName, setProductName] = useState("");
   const [productAmount, setProductAmount] = useState("");
@@ -88,20 +110,41 @@ export default function Charges() {
 
   const { data: charges = [] } = useQuery<any[]>({
     queryKey: ["/api/charges"],
+    staleTime: 60 * 1000,
   });
 
   const { data: categories = [] } = useQuery<any[]>({
     queryKey: ["/api/expense-categories"],
+    staleTime: 10 * 60 * 1000,
   });
 
   const { data: ownerWithdrawals = [] } = useQuery<any[]>({
     queryKey: ["/api/owner-withdrawals"],
+    staleTime: 60 * 1000,
   });
 
-  // Use the same data source as Salaries so salonPortion is always identical
+  // Compute date range for the salary query — covers from productsStartDate (or month start,
+  // whichever is earlier) to end of the selected month, so products budget carry-over is correct.
+  const salaryFromDate = (() => {
+    const mStartStr = format(startOfMonth(selectedMonth), "yyyy-MM-dd");
+    return productsStartDate && productsStartDate < mStartStr ? productsStartDate : mStartStr;
+  })();
+  const salaryToDate = format(endOfMonth(selectedMonth), "yyyy-MM-dd");
+
+  // Use the same data source as Salaries so salonPortion is always identical.
+  // Scoped to the relevant date range so the server skips all other appointments (fast).
   const { data: salaryData } = useQuery<any>({
-    queryKey: ["/api/salaries/compute"],
-    staleTime: 0,
+    queryKey: ["/api/salaries/compute", salaryFromDate, salaryToDate],
+    queryFn: async () => {
+      const res = await fetch(
+        `/api/salaries/compute?from=${salaryFromDate}&to=${salaryToDate}`,
+        { credentials: "include" }
+      );
+      if (!res.ok) throw new Error("Failed to fetch salary data");
+      return res.json();
+    },
+    staleTime: 60 * 1000,
+    gcTime: 5 * 60 * 1000,
   });
 
   const defaultChargeTypes = DEFAULT_CHARGE_TYPES_KEYS.map(item => ({

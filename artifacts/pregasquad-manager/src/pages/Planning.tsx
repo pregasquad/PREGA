@@ -73,6 +73,7 @@ import { useAppointments, useStaff, useServices, useCreateAppointment, useUpdate
 import { useIsMobile } from "@/hooks/use-mobile";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { refreshSalariesBackground } from "@/lib/salariesRefresher";
+import { getAppSocket } from "@/lib/appSocket";
 import { onSyncStatusChange } from "@/lib/syncService";
 import { getSyncQueueCount } from "@/lib/offlineDb";
 import { useSearch, useLocation } from "wouter";
@@ -316,11 +317,22 @@ export default function Planning() {
     };
   }, [isMobile]);
 
-  // Refresh data - rely on socket.io for real-time updates, use long interval as fallback
-  // Socket.io in Sidebar handles instant notifications, this is just a safety net
+  // Refresh data — socket.io delivers instant invalidation; polling is just a safety net.
   useEffect(() => {
-    // Mobile: refresh every 1 minute, Desktop: every 45 seconds for better sync
-    const refreshInterval = isMobile ? 60000 : 45000;
+    const socket = getAppSocket();
+
+    // Instantly invalidate appointments whenever a booking event fires.
+    const onBookingChange = () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+    };
+    socket.on("booking:created",      onBookingChange);
+    socket.on("booking:updated",      onBookingChange);
+    socket.on("appointment:updated",  onBookingChange);
+    socket.on("appointment:paid",     onBookingChange);
+    socket.on("appointment:deleted",  onBookingChange);
+
+    // Mobile: refresh every 2 minutes, Desktop: every 90 seconds as fallback
+    const refreshInterval = isMobile ? 120_000 : 90_000;
     
     const intervalId = setInterval(() => {
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
@@ -348,6 +360,11 @@ export default function Planning() {
     document.addEventListener('visibilitychange', handleVisibilityRefresh);
     
     return () => {
+      socket.off("booking:created",      onBookingChange);
+      socket.off("booking:updated",      onBookingChange);
+      socket.off("appointment:updated",  onBookingChange);
+      socket.off("appointment:paid",     onBookingChange);
+      socket.off("appointment:deleted",  onBookingChange);
       clearInterval(intervalId);
       clearInterval(salaryIntervalId);
       document.removeEventListener('visibilitychange', handleVisibilityRefresh);
