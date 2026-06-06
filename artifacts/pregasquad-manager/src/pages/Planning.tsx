@@ -65,7 +65,8 @@ function playDragDrop() {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
-import { format, addDays, startOfToday, parseISO, subDays } from "date-fns";
+import { format, addDays, startOfToday, parseISO, subDays, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
+import { calcAppointmentCommission } from "@/lib/commissionCalc";
 import { getWorkDayDate } from "@/lib/workday";
 import { useTranslation } from "react-i18next";
 import { useAppointments, useStaff, useServices, useCreateAppointment, useUpdateAppointment, useDeleteAppointment, useBusinessSettings } from "@/hooks/use-salon-data";
@@ -566,14 +567,22 @@ export default function Planning() {
     queryKey: ["/api/admin-roles"],
   });
 
-  // Salary data for wallet portal (fetched lazily when wallet opens)
+  // Salary data: always fetched for admin (net profit circle) + lazily for wallet portal
   const { data: salaryData } = useQuery<{
     staff: any[]; services: any[]; staffCommissions: any[];
     appointments: any[]; charges: any[]; deductions: any[];
     staffPayments: any[]; salonPayments: any[];
   }>({
     queryKey: ["/api/salaries/compute"],
-    enabled: !!walletStaffId,
+    enabled: !!walletStaffId || sessionStorage.getItem("admin_authenticated") === "true",
+    staleTime: 60_000,
+  });
+
+  // Owner withdrawals for net profit circle (admin only)
+  const { data: ownerWithdrawals = [] } = useQuery<any[]>({
+    queryKey: ["/api/owner-withdrawals"],
+    enabled: sessionStorage.getItem("admin_authenticated") === "true",
+    staleTime: 60_000,
   });
 
   const createDeductionMutation = useMutation({
@@ -908,6 +917,50 @@ export default function Planning() {
   // Only treat as auth error on explicit 401 — not offline/network failures
   const hasAuthError = staffError?.message === "UNAUTHORIZED_401" || servicesError?.message === "UNAUTHORIZED_401";
   const isAdmin = sessionStorage.getItem("admin_authenticated") === "true";
+
+  // ── Owner net profit for the current month (mirrors Charges.tsx formula) ──
+  const ownerNetProfit = useMemo(() => {
+    if (!isAdmin || !salaryData) return null;
+    const now = new Date();
+    const monthStart = startOfMonth(now);
+    const monthEnd = endOfMonth(now);
+
+    const allAppointments: any[] = salaryData.appointments ?? [];
+    const allStaff: any[] = salaryData.staff ?? [];
+    const allServices: any[] = salaryData.services ?? [];
+    const allStaffCommissions: any[] = salaryData.staffCommissions ?? [];
+    const allCharges: any[] = salaryData.charges ?? [];
+
+    const monthApts = allAppointments.filter((a: any) => {
+      if (!a.paid || !a.date) return false;
+      try { return isWithinInterval(parseISO(a.date), { start: monthStart, end: monthEnd }); }
+      catch { return false; }
+    });
+
+    let totalRevenue = 0;
+    let totalCommissions = 0;
+    for (const app of monthApts) {
+      totalRevenue += Number(app.total || 0);
+      totalCommissions += calcAppointmentCommission(app, allServices, allStaff, allStaffCommissions);
+    }
+    const monthRevenue = totalRevenue - totalCommissions;
+
+    const totalCharges = allCharges
+      .filter((c: any) => {
+        try { return isWithinInterval(parseISO(c.date), { start: monthStart, end: monthEnd }); }
+        catch { return false; }
+      })
+      .reduce((s: number, c: any) => s + Number(c.amount || 0), 0);
+
+    const totalWithdrawals = (ownerWithdrawals as any[])
+      .filter((w: any) => {
+        try { return isWithinInterval(parseISO(w.date), { start: monthStart, end: monthEnd }); }
+        catch { return false; }
+      })
+      .reduce((s: number, w: any) => s + Number(w.amount || 0), 0);
+
+    return monthRevenue - totalWithdrawals - totalCharges;
+  }, [isAdmin, salaryData, ownerWithdrawals]);
 
   // Sync horizontal scroll between header and board
   // Re-attaches when loading finishes so refs are connected to actual DOM
@@ -2938,7 +2991,40 @@ export default function Planning() {
             gridTemplateColumns: `52px repeat(${staffList.length}, minmax(80px, 1fr))`,
           }}
         >
-          <div className={cn("bg-white dark:bg-slate-900 py-1 px-0.5", isRtl ? "border-l border-slate-200 dark:border-slate-600" : "border-r border-slate-200 dark:border-slate-600")}></div>
+          {/* Time-column: boss net profit circle (admin only) or empty cell */}
+          <div className={cn("bg-white dark:bg-slate-900 py-1 px-0 flex flex-col items-center justify-center gap-0.5 overflow-hidden", isRtl ? "border-l border-slate-200 dark:border-slate-600" : "border-r border-slate-200 dark:border-slate-600")}>
+            {isAdmin && ownerNetProfit !== null && (
+              <div className="flex flex-col items-center gap-0.5 w-full px-0.5">
+                {salonSettings?.logo ? (
+                  <img
+                    src={salonSettings.logo}
+                    alt="Boss"
+                    className="w-9 h-9 rounded-full object-cover border-2 shadow-sm"
+                    style={{ borderColor: ownerNetProfit >= 0 ? "#10b981" : "#ef4444" }}
+                  />
+                ) : (
+                  <div
+                    className="w-9 h-9 rounded-full flex items-center justify-center shadow-sm border-2"
+                    style={{
+                      background: ownerNetProfit >= 0
+                        ? "linear-gradient(135deg,#10b981,#059669)"
+                        : "linear-gradient(135deg,#ef4444,#dc2626)",
+                      borderColor: ownerNetProfit >= 0 ? "#10b981" : "#ef4444",
+                    }}
+                  >
+                    <Wallet className="w-4 h-4 text-white" />
+                  </div>
+                )}
+                <span
+                  className="text-[8px] font-black leading-none text-center w-full truncate"
+                  style={{ color: ownerNetProfit >= 0 ? "#10b981" : "#ef4444" }}
+                >
+                  {ownerNetProfit >= 0 ? "+" : ""}{ownerNetProfit.toFixed(0)}
+                </span>
+                <span className="text-[7px] text-muted-foreground leading-none">{salonSettings?.currencySymbol || "DH"}</span>
+              </div>
+            )}
+          </div>
           {staffList.map((s, staffIndex) => (
             <div 
               key={s.id} 
