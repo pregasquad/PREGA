@@ -99,6 +99,83 @@ import { useToast } from "@/hooks/use-toast";
 import { autoPrint } from "@/lib/printReceipt";
 import { connectQz, openCashDrawer, isQzConnected, checkPrintStationAsync, remoteOpenDrawer } from "@/lib/qzPrint";
 
+// Smoothly animates a number from its previous value to the new one (400 ms ease-out)
+function useAnimatedNumber(target: number | null, duration = 400): number | null {
+  const [displayed, setDisplayed] = React.useState<number | null>(target);
+  const rafRef = React.useRef<number | null>(null);
+  const startRef = React.useRef<number | null>(null);
+  const fromRef = React.useRef<number>(0);
+
+  React.useEffect(() => {
+    if (target === null) { setDisplayed(null); return; }
+    const from = displayed ?? target;
+    fromRef.current = from;
+    startRef.current = null;
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+
+    const step = (ts: number) => {
+      if (startRef.current === null) startRef.current = ts;
+      const elapsed = ts - startRef.current;
+      const t = Math.min(elapsed / duration, 1);
+      // ease-out cubic
+      const eased = 1 - Math.pow(1 - t, 3);
+      setDisplayed(Math.round(fromRef.current + (target - fromRef.current) * eased));
+      if (t < 1) rafRef.current = requestAnimationFrame(step);
+    };
+    rafRef.current = requestAnimationFrame(step);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  }, [target]);
+
+  return displayed;
+}
+
+// Sub-component: boss net profit circle with animated number
+function BossNetProfitCircle({
+  ownerNetProfit,
+  ownerPhoto,
+  currency,
+}: {
+  ownerNetProfit: number;
+  ownerPhoto: string | null;
+  currency: string;
+}) {
+  const animatedValue = useAnimatedNumber(ownerNetProfit);
+  const display = animatedValue ?? ownerNetProfit;
+  const profitColor = ownerNetProfit >= 0 ? "#10b981" : "#ef4444";
+
+  return (
+    <div className="flex flex-col items-center gap-0.5 w-full px-0.5">
+      {ownerPhoto ? (
+        <img
+          src={ownerPhoto}
+          alt="Boss"
+          className="w-9 h-9 rounded-full object-cover border-2 shadow-sm"
+          style={{ borderColor: profitColor }}
+        />
+      ) : (
+        <div
+          className="w-9 h-9 rounded-full flex items-center justify-center shadow-sm border-2"
+          style={{
+            background: ownerNetProfit >= 0
+              ? "linear-gradient(135deg,#10b981,#059669)"
+              : "linear-gradient(135deg,#ef4444,#dc2626)",
+            borderColor: profitColor,
+          }}
+        >
+          <Wallet className="w-4 h-4 text-white" />
+        </div>
+      )}
+      <span
+        className="text-[8px] font-black leading-none text-center w-full truncate tabular-nums"
+        style={{ color: profitColor }}
+      >
+        {display >= 0 ? "+" : ""}{display}
+      </span>
+      <span className="text-[7px] text-muted-foreground leading-none">{currency}</span>
+    </div>
+  );
+}
+
 const DEFAULT_HOURS = [
   "10:00","10:15","10:30","10:45","11:00","11:15","11:30","11:45",
   "12:00","12:15","12:30","12:45","13:00","13:15","13:30","13:45",
@@ -248,9 +325,13 @@ export default function Planning() {
     const intervalId = setInterval(() => {
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
+      // salary/compute is expensive — background-refetch at a slower rate (3 min)
+    }, refreshInterval);
+
+    const salaryIntervalId = setInterval(() => {
       queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
       queryClient.invalidateQueries({ queryKey: ["/api/owner-withdrawals"] });
-    }, refreshInterval);
+    }, 180_000);
     
     // Refresh on visibility change (when returning to PWA) - throttled
     let lastRefresh = 0;
@@ -268,6 +349,7 @@ export default function Planning() {
     
     return () => {
       clearInterval(intervalId);
+      clearInterval(salaryIntervalId);
       document.removeEventListener('visibilitychange', handleVisibilityRefresh);
     };
   }, [isMobile]);
@@ -582,6 +664,7 @@ export default function Planning() {
   });
 
   // Salary data: always fetched for admin (net profit circle) + lazily for wallet portal
+  // placeholderData keeps previous value while background-refetching → no jump/flash
   const { data: salaryData } = useQuery<{
     staff: any[]; services: any[]; staffCommissions: any[];
     appointments: any[]; charges: any[]; deductions: any[];
@@ -589,12 +672,14 @@ export default function Planning() {
   }>({
     queryKey: ["/api/salaries/compute"],
     enabled: !!walletStaffId || canViewNetProfit,
+    placeholderData: (prev: any) => prev,
   });
 
   // Owner withdrawals for net profit circle
   const { data: ownerWithdrawals = [] } = useQuery<any[]>({
     queryKey: ["/api/owner-withdrawals"],
     enabled: canViewNetProfit,
+    placeholderData: (prev: any) => prev ?? [],
   });
 
   const createDeductionMutation = useMutation({
@@ -3007,42 +3092,13 @@ export default function Planning() {
         >
           {/* Time-column: boss net profit circle (admin only) or empty cell */}
           <div className={cn("bg-white dark:bg-slate-900 py-1 px-0 flex flex-col items-center justify-center gap-0.5 overflow-hidden", isRtl ? "border-l border-slate-200 dark:border-slate-600" : "border-r border-slate-200 dark:border-slate-600")}>
-            {canViewNetProfit && ownerNetProfit !== null && (() => {
-              const ownerRole = adminRoles.find((r: any) => r.role === "owner");
-              const ownerPhoto = ownerRole?.photoUrl || salonSettings?.logo || null;
-              const profitColor = ownerNetProfit >= 0 ? "#10b981" : "#ef4444";
-              return (
-                <div className="flex flex-col items-center gap-0.5 w-full px-0.5">
-                  {ownerPhoto ? (
-                    <img
-                      src={ownerPhoto}
-                      alt="Boss"
-                      className="w-9 h-9 rounded-full object-cover border-2 shadow-sm"
-                      style={{ borderColor: profitColor }}
-                    />
-                  ) : (
-                    <div
-                      className="w-9 h-9 rounded-full flex items-center justify-center shadow-sm border-2"
-                      style={{
-                        background: ownerNetProfit >= 0
-                          ? "linear-gradient(135deg,#10b981,#059669)"
-                          : "linear-gradient(135deg,#ef4444,#dc2626)",
-                        borderColor: profitColor,
-                      }}
-                    >
-                      <Wallet className="w-4 h-4 text-white" />
-                    </div>
-                  )}
-                  <span
-                    className="text-[8px] font-black leading-none text-center w-full truncate"
-                    style={{ color: profitColor }}
-                  >
-                    {ownerNetProfit >= 0 ? "+" : ""}{ownerNetProfit.toFixed(0)}
-                  </span>
-                  <span className="text-[7px] text-muted-foreground leading-none">{salonSettings?.currencySymbol || "DH"}</span>
-                </div>
-              );
-            })()}
+            {canViewNetProfit && ownerNetProfit !== null && (
+              <BossNetProfitCircle
+                ownerNetProfit={ownerNetProfit}
+                ownerPhoto={adminRoles.find((r: any) => r.role === "owner")?.photoUrl ?? salonSettings?.logo ?? null}
+                currency={salonSettings?.currencySymbol || "DH"}
+              />
+            )}
           </div>
           {staffList.map((s, staffIndex) => (
             <div 
