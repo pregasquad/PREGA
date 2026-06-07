@@ -1316,6 +1316,9 @@ export default function Planning() {
     return { matches, total, count: matches.length };
   }, [allAppointments, appointmentSearch]);
 
+  // Watch the staff field so the service dropdown filters by that staff's category
+  const watchedStaff = form.watch("staff");
+
   // Watch the client field to trigger recalculation when client changes
   const watchedClient = form.watch("client");
   
@@ -2617,8 +2620,15 @@ export default function Planning() {
   }, [resizingBooking]);
 
   const favoriteServices = useMemo(() => {
-    return favoriteIds.map(id => services.find(s => s.id === id)).filter(Boolean);
-  }, [services, favoriteIds]);
+    const selectedStaffMember = staffList.find((s: any) => s.name === watchedStaff);
+    const staffCategory = selectedStaffMember?.category as string | undefined;
+    const all = favoriteIds.map(id => services.find(s => s.id === id)).filter(Boolean) as typeof services;
+    if (staffCategory && staffCategory !== "general") {
+      const filtered = all.filter((s: any) => (s.category || "").toLowerCase() === staffCategory.toLowerCase());
+      if (filtered.length > 0) return filtered;
+    }
+    return all;
+  }, [services, favoriteIds, staffList, watchedStaff]);
 
   // Memoized dialog summary — avoids two .reduce() calls in JSX on every render
   const dialogSummaryDuration = useMemo(
@@ -2635,16 +2645,30 @@ export default function Planning() {
 
   const groupedServices = useMemo(() => {
     const groups: Record<string, typeof services> = {};
-    const list = serviceSearch.trim() 
+    // Find the category of the currently selected staff member
+    const selectedStaffMember = staffList.find((s: any) => s.name === watchedStaff);
+    const staffCategory = selectedStaffMember?.category as string | undefined;
+
+    let list = serviceSearch.trim()
       ? services.filter(s => s.name.toLowerCase().includes(serviceSearch.toLowerCase()))
       : services;
+
+    // Filter to show only services matching the staff's category (if the staff has one)
+    if (staffCategory && staffCategory !== "general" && !serviceSearch.trim()) {
+      const filtered = list.filter((s: any) =>
+        (s.category || "").toLowerCase() === staffCategory.toLowerCase()
+      );
+      // Fall back to all services if no match (e.g. salon hasn't set service categories yet)
+      if (filtered.length > 0) list = filtered;
+    }
+
     list.forEach(s => {
       const cat = s.category || t("common.other");
       if (!groups[cat]) groups[cat] = [];
       groups[cat].push(s);
     });
     return groups;
-  }, [services, serviceSearch, t]);
+  }, [services, serviceSearch, staffList, watchedStaff, t]);
 
   const toggleFavorite = (serviceId: number) => {
     setFavoriteIds(prev => {
