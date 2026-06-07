@@ -63,9 +63,6 @@ export default function Salaries() {
   const { toast } = useToast();
   const { data: bSettings } = useBusinessSettings();
   const workDayToday = getWorkDayDate(bSettings?.openingTime, bSettings?.closingTime);
-  // Reactive business hours — recomputes every minute so the button state
-  // stays accurate as time passes without requiring a page reload.
-  const [isBusinessOpen, setIsBusinessOpen] = useState<boolean>(true);
   const [selectedDate, setSelectedDate] = useState<Date>(workDayToday);
   const [period, setPeriod] = useState<PeriodType>("day");
   const [customStartDate, setCustomStartDate] = useState<Date>(workDayToday);
@@ -86,7 +83,7 @@ export default function Salaries() {
   const [goalEditValue, setGoalEditValue] = useState("");
   const [showGoalEdit, setShowGoalEdit] = useState(false);
   const [pendingPayment, setPendingPayment] = useState<{ staffId: number; staffName: string; amount: number } | null>(null);
-  const [pendingSalonCollect, setPendingSalonCollect] = useState(false);
+  const [pendingSalonCollect, setPendingSalonCollect] = useState<number | null>(null);
   const [openPaymentHistories, setOpenPaymentHistories] = useState<Record<number, boolean>>({});
   const [openDeductions, setOpenDeductions] = useState<Record<number, boolean>>({});
   const [salonHistoryOpen, setSalonHistoryOpen] = useState(false);
@@ -113,15 +110,6 @@ export default function Salaries() {
       setCustomStartDate(wd);
       setCustomEndDate(wd);
     }
-  }, [bSettings?.openingTime, bSettings?.closingTime]);
-
-  // Keep business-open flag accurate in real time (rechecks every 30 s)
-  useEffect(() => {
-    const check = () =>
-      setIsBusinessOpen(isWithinBusinessHours(bSettings?.openingTime, bSettings?.closingTime));
-    check();
-    const id = setInterval(check, 30_000);
-    return () => clearInterval(id);
   }, [bSettings?.openingTime, bSettings?.closingTime]);
 
   useEffect(() => {
@@ -1583,7 +1571,7 @@ export default function Salaries() {
                         size="sm"
                         variant="outline"
                         disabled={createSalonPaymentMutation.isPending}
-                        onClick={() => setPendingSalonCollect(true)}
+                        onClick={() => setPendingSalonCollect(salonWallet.walletBalance)}
                         data-testid="button-collect-salon-wallet"
                       >
                         <CheckCircle className="h-3 w-3 me-1" />
@@ -2107,7 +2095,7 @@ export default function Salaries() {
       </Dialog>
 
       {/* Salon wallet collect confirmation */}
-      <Dialog open={pendingSalonCollect} onOpenChange={(open) => { if (!open) setPendingSalonCollect(false); }}>
+      <Dialog open={pendingSalonCollect !== null} onOpenChange={(open) => { if (!open) setPendingSalonCollect(null); }}>
         <DialogContent className="max-w-xs" data-testid="dialog-confirm-salon-collect">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -2115,13 +2103,13 @@ export default function Salaries() {
               Collecter la recette salon
             </DialogTitle>
             <DialogDescription>
-              {formatCurrency(salonWallet.walletBalance)} DH
+              {formatCurrency(pendingSalonCollect ?? 0)} DH
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button
               variant="outline"
-              onClick={() => setPendingSalonCollect(false)}
+              onClick={() => setPendingSalonCollect(null)}
               data-testid="button-cancel-salon-collect"
             >
               {t("common.cancel")}
@@ -2129,10 +2117,12 @@ export default function Salaries() {
             <Button
               disabled={createSalonPaymentMutation.isPending}
               onClick={() => {
-                createSalonPaymentMutation.mutate({ amount: salonWallet.walletBalance }, {
-                  onSuccess: () => setPendingSalonCollect(false),
-                  onError: () => setPendingSalonCollect(false),
-                });
+                if (pendingSalonCollect !== null) {
+                  createSalonPaymentMutation.mutate({ amount: pendingSalonCollect }, {
+                    onSuccess: () => setPendingSalonCollect(null),
+                    onError: () => setPendingSalonCollect(null),
+                  });
+                }
               }}
               data-testid="button-confirm-salon-collect"
             >
