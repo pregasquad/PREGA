@@ -63,6 +63,36 @@ function playDragDrop() {
     osc.onended = () => ctx.close();
   } catch {}
 }
+
+// Payment confirmed — ascending "cha-ching" two-note chime + haptic pulse
+function playPaymentSuccess() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const now = ctx.currentTime;
+    // C5 → E5 → G5 quick ascending arpeggio
+    const notes = [
+      { freq: 523.25, t: 0.00 },   // C5
+      { freq: 659.25, t: 0.09 },   // E5
+      { freq: 783.99, t: 0.18 },   // G5
+    ];
+    notes.forEach(({ freq, t }, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "triangle";
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, now + t);
+      gain.gain.linearRampToValueAtTime(0.28, now + t + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + t + 0.30);
+      osc.start(now + t);
+      osc.stop(now + t + 0.30);
+      if (i === notes.length - 1) osc.onended = () => ctx.close();
+    });
+  } catch {}
+  // Haptic: short tap → pause → strong pulse (feels like "confirmed")
+  try { if (navigator.vibrate) navigator.vibrate([40, 60, 120]); } catch {}
+}
 // ─────────────────────────────────────────────────────────────────────────────
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { format, addDays, startOfToday, parseISO, subDays, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
@@ -130,7 +160,7 @@ function useAnimatedNumber(target: number | null, duration = 400): number | null
   return displayed;
 }
 
-// Sub-component: boss net profit circle with animated number
+// Sub-component: boss net profit circle with animated number + pulse on change
 function BossNetProfitCircle({
   ownerNetProfit,
   ownerPhoto,
@@ -144,28 +174,48 @@ function BossNetProfitCircle({
   const display = animatedValue ?? ownerNetProfit;
   const profitColor = ownerNetProfit >= 0 ? "#10b981" : "#ef4444";
 
+  // Pulse ring whenever the value changes
+  const [pulsing, setPulsing] = React.useState(false);
+  const prevValueRef = React.useRef<number>(ownerNetProfit);
+  React.useEffect(() => {
+    if (prevValueRef.current !== ownerNetProfit) {
+      prevValueRef.current = ownerNetProfit;
+      setPulsing(true);
+      const t = setTimeout(() => setPulsing(false), 700);
+      return () => clearTimeout(t);
+    }
+  }, [ownerNetProfit]);
+
   return (
     <div className="flex flex-col items-center gap-0.5 w-full px-0.5">
-      {ownerPhoto ? (
-        <img
-          src={ownerPhoto}
-          alt="Boss"
-          className="w-9 h-9 rounded-full object-cover border-2 shadow-sm"
-          style={{ borderColor: profitColor }}
-        />
-      ) : (
-        <div
-          className="w-9 h-9 rounded-full flex items-center justify-center shadow-sm border-2"
-          style={{
-            background: ownerNetProfit >= 0
-              ? "linear-gradient(135deg,#10b981,#059669)"
-              : "linear-gradient(135deg,#ef4444,#dc2626)",
-            borderColor: profitColor,
-          }}
-        >
-          <Wallet className="w-4 h-4 text-white" />
-        </div>
-      )}
+      <div className="relative">
+        {pulsing && (
+          <span
+            className="absolute inset-0 rounded-full animate-ping"
+            style={{ backgroundColor: profitColor, opacity: 0.35 }}
+          />
+        )}
+        {ownerPhoto ? (
+          <img
+            src={ownerPhoto}
+            alt="Boss"
+            className="w-9 h-9 rounded-full object-cover border-2 shadow-sm relative"
+            style={{ borderColor: profitColor }}
+          />
+        ) : (
+          <div
+            className="w-9 h-9 rounded-full flex items-center justify-center shadow-sm border-2 relative"
+            style={{
+              background: ownerNetProfit >= 0
+                ? "linear-gradient(135deg,#10b981,#059669)"
+                : "linear-gradient(135deg,#ef4444,#dc2626)",
+              borderColor: profitColor,
+            }}
+          >
+            <Wallet className="w-4 h-4 text-white" />
+          </div>
+        )}
+      </div>
       <span
         className="text-[8px] font-black leading-none text-center w-full truncate tabular-nums"
         style={{ color: profitColor }}
@@ -2076,6 +2126,7 @@ export default function Planning() {
       queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
       queryClient.invalidateQueries({ queryKey: ["/api/owner-withdrawals"] });
       refreshSalariesBackground();
+      playPaymentSuccess();
       toast({ title: t("planning.paymentConfirmed"), description: t("planning.paymentConfirmedDesc") });
 
       // Print receipt and open cash drawer
