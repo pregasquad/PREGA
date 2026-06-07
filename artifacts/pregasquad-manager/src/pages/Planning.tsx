@@ -302,7 +302,7 @@ export default function Planning() {
     try {
       const permissions = JSON.parse(sessionStorage.getItem("current_user_permissions") || "[]");
       if (permissions.length === 0) return true;
-      return permissions.includes("edit_cardboard");
+      return permissions.includes("edit_cardboard") && permissions.includes("manage_appointments");
     } catch {
       return true;
     }

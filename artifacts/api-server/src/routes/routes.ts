@@ -1829,9 +1829,11 @@ export async function registerRoutes(
       const item = await storage.createAppointment(input);
       syncClientPhone(input.clientId, input.client, input.phone).catch(() => {});
       
-      // Emit real-time notification for new booking (only unpaid reservations)
+      // Emit real-time notification for new booking
       if (!item.paid) {
         io.emit("booking:created", item);
+      } else {
+        io.emit("appointment:created", item);
       }
       
       // Award loyalty points if appointment is created as paid
@@ -2055,46 +2057,50 @@ export async function registerRoutes(
     const appointmentId = Number(String(req.params.id));
     const appointment = await storage.getAppointment(appointmentId);
     
-    if (appointment && appointment.paid && (appointment.clientId || appointment.client)) {
+    if (appointment && (appointment.clientId || appointment.client)) {
       const client = appointment.clientId ? await storage.getClient(appointment.clientId) : await storage.getClientByName(appointment.client!);
       
-      // Remove loyalty points if appointment was paid
-      if (client && client.loyaltyEnrolled && appointment.total && appointment.total > 0) {
-        const settings = await storage.getBusinessSettings();
-        const pointsPerDh = settings?.loyaltyPointsPerDh ?? 1;
-        const pointsToRemove = Math.floor(appointment.total * pointsPerDh);
-        if (pointsToRemove > 0) {
-          const updatedClient = await storage.subtractClientLoyalty(client.id, pointsToRemove, appointment.total);
-          console.log(`Removed ${pointsToRemove} loyalty points from ${client.name} for deleted appointment #${appointmentId}`);
-          io.emit("client:loyaltyUpdated", { 
-            clientId: client.id, 
+      if (client) {
+        // Remove earned loyalty points only if appointment was paid (points were only awarded on payment)
+        if (appointment.paid && client.loyaltyEnrolled && appointment.total && appointment.total > 0) {
+          const settings = await storage.getBusinessSettings();
+          const pointsPerDh = settings?.loyaltyPointsPerDh ?? 1;
+          const pointsToRemove = Math.floor(appointment.total * pointsPerDh);
+          if (pointsToRemove > 0) {
+            const updatedClient = await storage.subtractClientLoyalty(client.id, pointsToRemove, appointment.total);
+            console.log(`Removed ${pointsToRemove} loyalty points from ${client.name} for deleted appointment #${appointmentId}`);
+            io.emit("client:loyaltyUpdated", { 
+              clientId: client.id, 
+              clientName: client.name,
+              pointsAdded: -pointsToRemove, 
+              newTotal: updatedClient.loyaltyPoints 
+            });
+          }
+        }
+
+        // Restore redeemed loyalty points regardless of paid status —
+        // deductions are applied at booking time (not payment time)
+        if (appointment.loyaltyPointsRedeemed && appointment.loyaltyPointsRedeemed > 0) {
+          await storage.restoreClientLoyaltyPoints(client.id, appointment.loyaltyPointsRedeemed);
+          console.log(`Restored ${appointment.loyaltyPointsRedeemed} redeemed loyalty points to ${client.name} for deleted appointment #${appointmentId}`);
+        }
+        
+        // Restore gift card balance regardless of paid status — same reason
+        if (appointment.giftCardDiscountAmount && appointment.giftCardDiscountAmount > 0) {
+          await storage.updateClientGiftCardBalance(client.id, appointment.giftCardDiscountAmount);
+          console.log(`Restored ${appointment.giftCardDiscountAmount} gift card balance to ${client.name} for deleted appointment #${appointmentId}`);
+          io.emit("client:giftCardUpdated", {
+            clientId: client.id,
             clientName: client.name,
-            pointsAdded: -pointsToRemove, 
-            newTotal: updatedClient.loyaltyPoints 
+            amountDeducted: -appointment.giftCardDiscountAmount,
+            newBalance: (Number(client.giftCardBalance) || 0) + appointment.giftCardDiscountAmount
           });
         }
-      }
-      
-      // Restore loyalty points that were redeemed for this appointment
-      if (client && appointment.loyaltyPointsRedeemed && appointment.loyaltyPointsRedeemed > 0) {
-        await storage.restoreClientLoyaltyPoints(client.id, appointment.loyaltyPointsRedeemed);
-        console.log(`Restored ${appointment.loyaltyPointsRedeemed} redeemed loyalty points to ${client.name} for deleted appointment #${appointmentId}`);
-      }
-      
-      // Restore gift card balance that was used for this appointment
-      if (client && appointment.giftCardDiscountAmount && appointment.giftCardDiscountAmount > 0) {
-        await storage.updateClientGiftCardBalance(client.id, appointment.giftCardDiscountAmount);
-        console.log(`Restored ${appointment.giftCardDiscountAmount} gift card balance to ${client.name} for deleted appointment #${appointmentId}`);
-        io.emit("client:giftCardUpdated", {
-          clientId: client.id,
-          clientName: client.name,
-          amountDeducted: -appointment.giftCardDiscountAmount,
-          newBalance: (Number(client.giftCardBalance) || 0) + appointment.giftCardDiscountAmount
-        });
       }
     }
     
     await storage.deleteAppointment(appointmentId);
+    io.emit("appointment:deleted", { id: appointmentId });
     res.status(204).send();
   });
 
