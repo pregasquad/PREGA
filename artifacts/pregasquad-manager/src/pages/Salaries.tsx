@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -85,6 +85,8 @@ export default function Salaries() {
   const [monthlyGoal, setMonthlyGoal] = useState<number>(() => Number(localStorage.getItem("monthly_revenue_goal") || 0));
   const [goalEditValue, setGoalEditValue] = useState("");
   const [showGoalEdit, setShowGoalEdit] = useState(false);
+  const [pendingPayment, setPendingPayment] = useState<{ staffId: number; staffName: string; amount: number } | null>(null);
+  const [pendingSalonCollect, setPendingSalonCollect] = useState(false);
   const [openPaymentHistories, setOpenPaymentHistories] = useState<Record<number, boolean>>({});
   const [openDeductions, setOpenDeductions] = useState<Record<number, boolean>>({});
   const [salonHistoryOpen, setSalonHistoryOpen] = useState(false);
@@ -1305,7 +1307,7 @@ export default function Salaries() {
                     {wallet.walletBalance > 0 && (
                       <button
                         disabled={createPaymentMutation.isPending}
-                        onClick={() => createPaymentMutation.mutate({
+                        onClick={() => setPendingPayment({
                           staffId: s.id,
                           staffName: s.name,
                           amount: Math.max(0, wallet.walletBalance),
@@ -1581,7 +1583,7 @@ export default function Salaries() {
                         size="sm"
                         variant="outline"
                         disabled={createSalonPaymentMutation.isPending}
-                        onClick={() => createSalonPaymentMutation.mutate({ amount: salonWallet.walletBalance })}
+                        onClick={() => setPendingSalonCollect(true)}
                         data-testid="button-collect-salon-wallet"
                       >
                         <CheckCircle className="h-3 w-3 me-1" />
@@ -2058,6 +2060,89 @@ export default function Salaries() {
               </div>
             );
           })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Staff salary pay confirmation */}
+      <Dialog open={!!pendingPayment} onOpenChange={(open) => { if (!open) setPendingPayment(null); }}>
+        <DialogContent className="max-w-xs" data-testid="dialog-confirm-pay-staff">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-emerald-500" />
+              {t("salaries.markAsPaid")}
+            </DialogTitle>
+            <DialogDescription>
+              {pendingPayment?.staffName} — {formatCurrency(pendingPayment?.amount ?? 0)} DH
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setPendingPayment(null)}
+              data-testid="button-cancel-pay-staff"
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              className="bg-emerald-500 hover:bg-emerald-600 text-white"
+              disabled={createPaymentMutation.isPending}
+              onClick={() => {
+                if (pendingPayment) {
+                  createPaymentMutation.mutate(pendingPayment, {
+                    onSuccess: () => setPendingPayment(null),
+                    onError: () => setPendingPayment(null),
+                  });
+                }
+              }}
+              data-testid="button-confirm-pay-staff"
+            >
+              {createPaymentMutation.isPending
+                ? <RefreshCw className="h-4 w-4 animate-spin me-1" />
+                : <CheckCircle className="h-4 w-4 me-1" />
+              }
+              {t("salaries.markAsPaid")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Salon wallet collect confirmation */}
+      <Dialog open={pendingSalonCollect} onOpenChange={(open) => { if (!open) setPendingSalonCollect(false); }}>
+        <DialogContent className="max-w-xs" data-testid="dialog-confirm-salon-collect">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Store className="h-5 w-5 text-primary" />
+              Collecter la recette salon
+            </DialogTitle>
+            <DialogDescription>
+              {formatCurrency(salonWallet.walletBalance)} DH
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setPendingSalonCollect(false)}
+              data-testid="button-cancel-salon-collect"
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              disabled={createSalonPaymentMutation.isPending}
+              onClick={() => {
+                createSalonPaymentMutation.mutate({ amount: salonWallet.walletBalance }, {
+                  onSuccess: () => setPendingSalonCollect(false),
+                  onError: () => setPendingSalonCollect(false),
+                });
+              }}
+              data-testid="button-confirm-salon-collect"
+            >
+              {createSalonPaymentMutation.isPending
+                ? <RefreshCw className="h-4 w-4 animate-spin me-1" />
+                : <CheckCircle className="h-4 w-4 me-1" />
+              }
+              Confirmer
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
