@@ -1304,7 +1304,7 @@ export default function Salaries() {
                     </div>
                     {wallet.walletBalance > 0 && (
                       <button
-                        disabled={createPaymentMutation.isPending || !isBusinessOpen}
+                        disabled={createPaymentMutation.isPending}
                         onClick={() => createPaymentMutation.mutate({
                           staffId: s.id,
                           staffName: s.name,
@@ -1312,7 +1312,7 @@ export default function Salaries() {
                         })}
                         className="shrink-0 flex flex-col items-center justify-center gap-0.5 w-14 h-14 rounded-2xl bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white transition-all shadow-md disabled:opacity-60"
                         data-testid={`button-pay-staff-${s.id}`}
-                        title={`${t("salaries.markAsPaid")} · ${!isBusinessOpen ? (bSettings?.openingTime && bSettings?.closingTime ? `${bSettings.openingTime}–${bSettings.closingTime}` : "Business closed") : ""}`}
+                        title={t("salaries.markAsPaid")}
                       >
                         {createPaymentMutation.isPending
                           ? <RefreshCw className="h-5 w-5 animate-spin" />
@@ -1580,20 +1580,13 @@ export default function Salaries() {
                       <Button
                         size="sm"
                         variant="outline"
-                        disabled={createSalonPaymentMutation.isPending || !isBusinessOpen}
+                        disabled={createSalonPaymentMutation.isPending}
                         onClick={() => createSalonPaymentMutation.mutate({ amount: salonWallet.walletBalance })}
                         data-testid="button-collect-salon-wallet"
                       >
                         <CheckCircle className="h-3 w-3 me-1" />
                         Collecter
                       </Button>
-                      {!isBusinessOpen && (
-                        <span className="text-[9px] text-muted-foreground text-end leading-tight">
-                          {bSettings?.openingTime && bSettings?.closingTime
-                            ? `${bSettings.openingTime} – ${bSettings.closingTime}`
-                            : "Fermé"}
-                        </span>
-                      )}
                     </div>
                   )}
                 </div>
