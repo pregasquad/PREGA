@@ -321,19 +321,15 @@ export default function Planning() {
   useEffect(() => {
     const socket = getAppSocket();
 
-    // Instantly invalidate appointments whenever a booking event fires.
+    // Any booking event → refresh appointments + net profit circle immediately.
     const onBookingChange = () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
-    };
-    // When an appointment is paid, net profit changes → also refresh salary data.
-    const onPaid = () => {
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
     };
     socket.on("booking:created",      onBookingChange);
     socket.on("booking:updated",      onBookingChange);
     socket.on("appointment:updated",  onBookingChange);
-    socket.on("appointment:paid",     onPaid);
+    socket.on("appointment:paid",     onBookingChange);
     socket.on("appointment:deleted",  onBookingChange);
 
     // Mobile: refresh every 2 minutes, Desktop: every 90 seconds as fallback
@@ -368,7 +364,7 @@ export default function Planning() {
       socket.off("booking:created",      onBookingChange);
       socket.off("booking:updated",      onBookingChange);
       socket.off("appointment:updated",  onBookingChange);
-      socket.off("appointment:paid",     onPaid);
+      socket.off("appointment:paid",     onBookingChange);
       socket.off("appointment:deleted",  onBookingChange);
       clearInterval(intervalId);
       clearInterval(salaryIntervalId);

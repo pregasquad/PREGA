@@ -10,14 +10,8 @@ export function refreshSalariesBackground(delayMs = 0): void {
 
   pendingRefresh = setTimeout(() => {
     pendingRefresh = null;
-    fetch("/api/salaries/compute", { credentials: "include" })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (data) {
-          queryClient.setQueryData(["/api/salaries/compute"], data);
-          saveSalariesCache(data).catch(() => {});
-        }
-      })
-      .catch(() => {});
+    // Use invalidateQueries so the refetch uses whatever queryFn (with date params)
+    // is registered for the active query — works regardless of which key format is in use.
+    queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
   }, delayMs);
 }
