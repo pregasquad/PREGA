@@ -2624,7 +2624,10 @@ export default function Planning() {
     const staffCategory = selectedStaffMember?.category as string | undefined;
     const all = favoriteIds.map(id => services.find(s => s.id === id)).filter(Boolean) as typeof services;
     if (staffCategory && staffCategory !== "general") {
-      const filtered = all.filter((s: any) => (s.category || "").toLowerCase() === staffCategory.toLowerCase());
+      const filtered = all.filter((s: any) => {
+        const scat = (s.category || "").toLowerCase().trim();
+        return scat === staffCategory.toLowerCase() || scat === "" || scat === "general" || scat === "other";
+      });
       if (filtered.length > 0) return filtered;
     }
     return all;
@@ -2653,12 +2656,13 @@ export default function Planning() {
       ? services.filter(s => s.name.toLowerCase().includes(serviceSearch.toLowerCase()))
       : services;
 
-    // Filter to show only services matching the staff's category (if the staff has one)
+    // Filter to show only services matching the staff's category + uncategorised services
     if (staffCategory && staffCategory !== "general" && !serviceSearch.trim()) {
-      const filtered = list.filter((s: any) =>
-        (s.category || "").toLowerCase() === staffCategory.toLowerCase()
-      );
-      // Fall back to all services if no match (e.g. salon hasn't set service categories yet)
+      const filtered = list.filter((s: any) => {
+        const scat = (s.category || "").toLowerCase().trim();
+        return scat === staffCategory.toLowerCase() || scat === "" || scat === "general" || scat === "other";
+      });
+      // Fall back to all services if nothing matches (salon hasn't set categories yet)
       if (filtered.length > 0) list = filtered;
     }
 
