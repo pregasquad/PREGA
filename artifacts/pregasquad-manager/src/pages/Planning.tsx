@@ -165,10 +165,12 @@ function BossNetProfitCircle({
   ownerNetProfit,
   ownerPhoto,
   currency,
+  isSyncing = false,
 }: {
   ownerNetProfit: number;
   ownerPhoto: string | null;
   currency: string;
+  isSyncing?: boolean;
 }) {
   const animatedValue = useAnimatedNumber(ownerNetProfit);
   const display = animatedValue ?? ownerNetProfit;
@@ -216,6 +218,13 @@ function BossNetProfitCircle({
             <Wallet className="w-4 h-4 text-white" />
           </div>
         )}
+        {/* Live sync dot — top-right corner of the avatar */}
+        {isSyncing && (
+          <span
+            className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-sky-400 animate-ping"
+            style={{ opacity: 0.85 }}
+          />
+        )}
       </div>
       <span
         className="text-[8px] font-black leading-none text-center w-full truncate tabular-nums"
@@ -223,7 +232,12 @@ function BossNetProfitCircle({
       >
         {display >= 0 ? "+" : ""}{display}
       </span>
-      <span className="text-[7px] text-muted-foreground leading-none">{currency}</span>
+      {/* "syncing…" label replaces currency label while updating */}
+      {isSyncing ? (
+        <span className="text-[7px] text-sky-400 leading-none animate-pulse">syncing…</span>
+      ) : (
+        <span className="text-[7px] text-muted-foreground leading-none">{currency}</span>
+      )}
     </div>
   );
 }
@@ -713,7 +727,7 @@ export default function Planning() {
   }, []);
   
   const { data: appointments = [], isLoading: loadingApps } = useAppointments(formattedDate);
-  const { data: allAppointments = [] } = useAppointments();
+  const { data: allAppointments = [], isFetching: fetchingAllApts } = useAppointments();
   const { data: staffList = [], isLoading: loadingStaff, error: staffError } = useStaff();
   const { data: services = [], isLoading: loadingServices, error: servicesError } = useServices();
   const { data: clients = [] } = useQuery<Array<{id: number, name: string, phone: string | null, loyaltyPoints: number, usePoints: boolean, loyaltyEnrolled: boolean, totalSpent: number, giftCardBalance: number, useGiftCardBalance: boolean}>>({
@@ -772,7 +786,7 @@ export default function Planning() {
 
   // Fast parallel queries for the net profit circle — loaded immediately on page open
   // without waiting for the heavy /api/salaries/compute endpoint.
-  const { data: monthCharges = [] } = useQuery<any[]>({
+  const { data: monthCharges = [], isFetching: fetchingCharges } = useQuery<any[]>({
     queryKey: ["/api/charges"],
     enabled: canViewNetProfit,
     staleTime: 30 * 1000,
@@ -780,7 +794,7 @@ export default function Planning() {
     placeholderData: (prev: any) => prev ?? [],
   });
 
-  const { data: allStaffCommissions = [] } = useQuery<any[]>({
+  const { data: allStaffCommissions = [], isFetching: fetchingCommissions } = useQuery<any[]>({
     queryKey: ["/api/staff-commissions"],
     enabled: canViewNetProfit,
     staleTime: 5 * 60 * 1000,
@@ -788,13 +802,16 @@ export default function Planning() {
   });
 
   // Owner withdrawals for net profit circle
-  const { data: ownerWithdrawals = [] } = useQuery<any[]>({
+  const { data: ownerWithdrawals = [], isFetching: fetchingWithdrawals } = useQuery<any[]>({
     queryKey: ["/api/owner-withdrawals"],
     enabled: canViewNetProfit,
     staleTime: 30 * 1000,
     refetchOnMount: "always",
     placeholderData: (prev: any) => prev ?? [],
   });
+
+  // True while any of the four fast queries that power the profit circle are refetching
+  const isProfitSyncing = canViewNetProfit && (fetchingAllApts || fetchingCharges || fetchingCommissions || fetchingWithdrawals);
 
   const createDeductionMutation = useMutation({
     mutationFn: async (data: { staffName: string; type: string; description: string; amount: number; date: string }) => {
@@ -3235,6 +3252,7 @@ export default function Planning() {
                 ownerNetProfit={ownerNetProfit}
                 ownerPhoto={adminRoles.find((r: any) => r.role === "owner")?.photoUrl ?? null}
                 currency={salonSettings?.currencySymbol || "DH"}
+                isSyncing={isProfitSyncing}
               />
             )}
           </div>
