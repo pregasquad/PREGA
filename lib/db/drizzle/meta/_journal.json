@@ -15,6 +15,13 @@
       "when": 1780095962211,
       "tag": "0001_amusing_blazing_skull",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780961127574,
+      "tag": "0002_reflective_zeigeist",
+      "breakpoints": true
     }
   ]
 }

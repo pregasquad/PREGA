@@ -4,6 +4,14 @@ packages:
   - lib/integrations/*
   - scripts
 
+allowBuilds:
+  '@google/genai': true
+  '@whiskeysockets/baileys': true
+  better-sqlite3: true
+  esbuild: true
+  ffmpeg-static: true
+  protobufjs: true
+
 autoInstallPeers: false
 
 catalog:
@@ -37,9 +45,14 @@ minimumReleaseAgeExclude:
   - stripe-replit-sync
 
 onlyBuiltDependencies:
+  - '@google/genai'
   - '@swc/core'
+  - '@whiskeysockets/baileys'
+  - better-sqlite3
   - esbuild
+  - ffmpeg-static
   - msw
+  - protobufjs
   - unrs-resolver
 
 overrides:
