@@ -603,7 +603,7 @@ export default function Salaries() {
 
     const walletAppointments = appointments.filter(apt => {
       if (!apt.paid) return false;
-      if (sinceDate) return apt.date >= sinceDate;
+      if (sinceDate) return apt.date > sinceDate;
       return true;
     });
 
@@ -621,7 +621,7 @@ export default function Salaries() {
     const walletSalonPortion = walletRevenue - walletCommissions;
 
     const walletExpenses = charges.filter(c =>
-      sinceDate ? c.date >= sinceDate : true
+      sinceDate ? c.date > sinceDate : true
     ).reduce((sum, c) => sum + c.amount, 0);
 
     const walletBalance = walletSalonPortion - walletExpenses;
@@ -661,7 +661,7 @@ export default function Salaries() {
       if (!apt.paid) return false;
       const matchesStaff = Number(apt.staffId) === s.id || (!apt.staffId && apt.staff === s.name);
       if (!matchesStaff) return false;
-      if (sinceDate) return apt.date >= sinceDate;
+      if (sinceDate) return apt.date > sinceDate;
       return true;
     });
 

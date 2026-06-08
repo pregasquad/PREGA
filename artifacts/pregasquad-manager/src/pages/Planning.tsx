@@ -869,7 +869,7 @@ export default function Planning() {
       if (!apt.paid) return false;
       const match = Number(apt.staffId) === walletStaffId || (!apt.staffId && apt.staff === s.name);
       if (!match) return false;
-      if (sinceDate) return apt.date >= sinceDate;
+      if (sinceDate) return apt.date > sinceDate;
       return true;
     });
 
