@@ -184,6 +184,7 @@ function BossNetProfitCircle({
       const t = setTimeout(() => setPulsing(false), 700);
       return () => clearTimeout(t);
     }
+    return undefined;
   }, [ownerNetProfit]);
 
   return (
@@ -3222,7 +3223,7 @@ export default function Planning() {
             {canViewNetProfit && ownerNetProfit !== null && (
               <BossNetProfitCircle
                 ownerNetProfit={ownerNetProfit}
-                ownerPhoto={adminRoles.find((r: any) => r.role === "owner")?.photoUrl ?? salonSettings?.logo ?? null}
+                ownerPhoto={adminRoles.find((r: any) => r.role === "owner")?.photoUrl ?? null}
                 currency={salonSettings?.currencySymbol || "DH"}
               />
             )}
