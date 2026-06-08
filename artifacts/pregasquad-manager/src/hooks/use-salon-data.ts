@@ -113,6 +113,7 @@ export function useCreateAppointment() {
   const { toast } = useToast();
 
   return useMutation({
+    mutationKey: ["appointment-create"],
     mutationFn: async (data: InsertAppointment & { _tempId?: number }) => {
       // Use tempId from onMutate context if available, otherwise generate one
       const tempId = data._tempId || -Date.now();

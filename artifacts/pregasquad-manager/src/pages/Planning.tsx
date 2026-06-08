@@ -391,13 +391,17 @@ export default function Planning() {
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
     };
-    // For booking:created specifically, skip the invalidation if we have an active
-    // create/update mutation — our mutation's own onSettled handles the cache update.
-    // This prevents the socket event (which the server emits before sending its HTTP
-    // response back to us) from triggering a refetch that races with the optimistic
-    // update and makes the new appointment flash/disappear.
+    // For booking:created specifically, skip the invalidation if WE have an active
+    // appointment-create mutation — our mutation's own onSettled handles the cache
+    // update. This prevents the socket echo (server emits before HTTP response) from
+    // racing with the optimistic update and making the new appointment flash/disappear.
+    // We scope to the "appointment-create" mutationKey so unrelated mutations
+    // (charges, deductions, etc.) never suppress remote booking:created events.
     const onBookingCreated = () => {
-      if (queryClient.isMutating() > 0) return;
+      const activeSelfCreate = queryClient.isMutating({
+        predicate: (m) => Array.isArray(m.options.mutationKey) && m.options.mutationKey[0] === "appointment-create",
+      });
+      if (activeSelfCreate > 0) return;
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
     };
@@ -436,7 +440,7 @@ export default function Planning() {
     document.addEventListener('visibilitychange', handleVisibilityRefresh);
     
     return () => {
-      socket.off("booking:created",      onBookingChange);
+      socket.off("booking:created",      onBookingCreated);
       socket.off("booking:updated",      onBookingChange);
       socket.off("appointment:updated",  onBookingChange);
       socket.off("appointment:paid",     onBookingChange);
