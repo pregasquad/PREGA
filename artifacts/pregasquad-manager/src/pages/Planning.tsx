@@ -377,7 +377,17 @@ export default function Planning() {
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
     };
-    socket.on("booking:created",      onBookingChange);
+    // For booking:created specifically, skip the invalidation if we have an active
+    // create/update mutation — our mutation's own onSettled handles the cache update.
+    // This prevents the socket event (which the server emits before sending its HTTP
+    // response back to us) from triggering a refetch that races with the optimistic
+    // update and makes the new appointment flash/disappear.
+    const onBookingCreated = () => {
+      if (queryClient.isMutating() > 0) return;
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+    };
+    socket.on("booking:created",      onBookingCreated);
     socket.on("booking:updated",      onBookingChange);
     socket.on("appointment:updated",  onBookingChange);
     socket.on("appointment:paid",     onBookingChange);

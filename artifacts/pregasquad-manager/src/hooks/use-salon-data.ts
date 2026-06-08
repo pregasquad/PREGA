@@ -206,8 +206,17 @@ export function useCreateAppointment() {
     },
     onSuccess: (data, _variables, context) => {
       if (context) {
-        queryClient.setQueryData(context.dateQueryKey, (old: any) => old ? old.map((apt: any) => apt.id === context.tempId ? data : apt) : [data]);
-        queryClient.setQueryData(context.allQueryKey, (old: any) => old ? old.map((apt: any) => apt.id === context.tempId ? data : apt) : [data]);
+        // Replace the optimistic temp-id with the real appointment in the date query.
+        queryClient.setQueryData(context.dateQueryKey, (old: any) =>
+          old ? old.map((apt: any) => apt.id === context.tempId ? data : apt) : [data]
+        );
+        // Only update the all-appointments cache if it was already populated.
+        // If it wasn't loaded yet, don't replace it with [data] — onSettled's
+        // invalidation will trigger the full refetch instead.
+        queryClient.setQueryData(context.allQueryKey, (old: any) => {
+          if (!old) return old;
+          return old.map((apt: any) => apt.id === context.tempId ? data : apt);
+        });
       }
       const isOffline = (data as any)?._offline;
       toast({ 
