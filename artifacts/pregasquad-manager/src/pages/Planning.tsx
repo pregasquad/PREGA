@@ -695,6 +695,10 @@ export default function Planning() {
     queryClient.invalidateQueries({ queryKey: ["/api/services"] });
     queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
     queryClient.invalidateQueries({ queryKey: ["/api/business-settings"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/owner-withdrawals"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/charges"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/staff-commissions"] });
   }, []);
   
   const { data: appointments = [], isLoading: loadingApps } = useAppointments(formattedDate);
@@ -731,12 +735,11 @@ export default function Planning() {
     queryKey: ["/api/admin-roles"],
   });
 
-  // Salary data: always fetched for admin (net profit circle) + lazily for wallet portal
-  // refetchOnMount:'always' ensures the circle shows the correct value immediately on load.
-  // placeholderData keeps previous value while background-refetching → no jump/flash.
+  // Salary data: only fetched when the wallet portal is open (heavy endpoint).
+  // Net profit circle uses lightweight parallel queries instead (see below).
   const salaryMonthFrom = format(startOfMonth(new Date()), "yyyy-MM-dd");
   const salaryMonthTo   = format(endOfMonth(new Date()),   "yyyy-MM-dd");
-  const { data: salaryData } = useQuery<{
+  const { data: salaryData, isFetching: salaryDataFetching } = useQuery<{
     staff: any[]; services: any[]; staffCommissions: any[];
     appointments: any[]; charges: any[]; deductions: any[];
     staffPayments: any[]; salonPayments: any[];
@@ -750,16 +753,35 @@ export default function Planning() {
       if (!res.ok) throw new Error("Failed");
       return res.json();
     },
-    enabled: !!walletStaffId || canViewNetProfit,
+    enabled: !!walletStaffId,
     staleTime: 30 * 1000,
     refetchOnMount: "always",
     placeholderData: (prev: any) => prev,
+  });
+
+  // Fast parallel queries for the net profit circle — loaded immediately on page open
+  // without waiting for the heavy /api/salaries/compute endpoint.
+  const { data: monthCharges = [] } = useQuery<any[]>({
+    queryKey: ["/api/charges"],
+    enabled: canViewNetProfit,
+    staleTime: 30 * 1000,
+    refetchOnMount: "always",
+    placeholderData: (prev: any) => prev ?? [],
+  });
+
+  const { data: allStaffCommissions = [] } = useQuery<any[]>({
+    queryKey: ["/api/staff-commissions"],
+    enabled: canViewNetProfit,
+    staleTime: 5 * 60 * 1000,
+    placeholderData: (prev: any) => prev ?? [],
   });
 
   // Owner withdrawals for net profit circle
   const { data: ownerWithdrawals = [] } = useQuery<any[]>({
     queryKey: ["/api/owner-withdrawals"],
     enabled: canViewNetProfit,
+    staleTime: 30 * 1000,
+    refetchOnMount: "always",
     placeholderData: (prev: any) => prev ?? [],
   });
 
@@ -784,6 +806,9 @@ export default function Planning() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
       toast({ title: t("salaries.markAsPaid") });
+    },
+    onError: () => {
+      toast({ title: t("common.error"), variant: "destructive" });
     },
   });
 
@@ -1096,20 +1121,16 @@ export default function Planning() {
   const hasAuthError = staffError?.message === "UNAUTHORIZED_401" || servicesError?.message === "UNAUTHORIZED_401";
   const isAdmin = sessionStorage.getItem("admin_authenticated") === "true";
 
-  // ── Owner net profit for the current month (mirrors Charges.tsx formula) ──
+  // ── Owner net profit for the current month ──
+  // Uses fast parallel queries (charges, commissions, withdrawals) + appointments already
+  // on the page — no dependency on the heavy /api/salaries/compute endpoint.
   const ownerNetProfit = useMemo(() => {
-    if (!canViewNetProfit || !salaryData) return null;
+    if (!canViewNetProfit) return null;
     const now = new Date();
     const monthStart = startOfMonth(now);
     const monthEnd = endOfMonth(now);
 
-    const allAppointments: any[] = salaryData.appointments ?? [];
-    const allStaff: any[] = salaryData.staff ?? [];
-    const allServices: any[] = salaryData.services ?? [];
-    const allStaffCommissions: any[] = salaryData.staffCommissions ?? [];
-    const allCharges: any[] = salaryData.charges ?? [];
-
-    const monthApts = allAppointments.filter((a: any) => {
+    const monthApts = (allAppointments as any[]).filter((a: any) => {
       if (!a.paid || !a.date) return false;
       try { return isWithinInterval(parseISO(a.date), { start: monthStart, end: monthEnd }); }
       catch { return false; }
@@ -1119,11 +1140,11 @@ export default function Planning() {
     let totalCommissions = 0;
     for (const app of monthApts) {
       totalRevenue += Number(app.total || 0);
-      totalCommissions += calcAppointmentCommission(app, allServices, allStaff, allStaffCommissions);
+      totalCommissions += calcAppointmentCommission(app, services, staffList, allStaffCommissions);
     }
     const monthRevenue = totalRevenue - totalCommissions;
 
-    const totalCharges = allCharges
+    const totalCharges = (monthCharges as any[])
       .filter((c: any) => {
         try { return isWithinInterval(parseISO(c.date), { start: monthStart, end: monthEnd }); }
         catch { return false; }
@@ -1138,7 +1159,7 @@ export default function Planning() {
       .reduce((s: number, w: any) => s + Number(w.amount || 0), 0);
 
     return monthRevenue - totalWithdrawals - totalCharges;
-  }, [canViewNetProfit, salaryData, ownerWithdrawals]);
+  }, [canViewNetProfit, allAppointments, services, staffList, allStaffCommissions, monthCharges, ownerWithdrawals]);
 
   // Sync horizontal scroll between header and board
   // Re-attaches when loading finishes so refs are connected to actual DOM
@@ -4390,7 +4411,7 @@ export default function Planning() {
                     {/* Mark as Paid */}
                     {canManage && walletPortalData.walletBalance > 0 && (
                       <button
-                        disabled={markStaffPaidMutation.isPending}
+                        disabled={markStaffPaidMutation.isPending || salaryDataFetching}
                         onClick={() => markStaffPaidMutation.mutate({ staffId: walletStaffId!, staffName: walletPortalData.staffName, amount: Math.max(0, walletPortalData.walletBalance) })}
                         className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] text-white text-sm font-semibold transition-all shadow-sm disabled:opacity-60"
                         data-testid="button-wallet-mark-paid"

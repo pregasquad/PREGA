@@ -765,7 +765,7 @@ export default function Salaries() {
             disabled={isRefreshing}
             onClick={async () => {
               setIsRefreshing(true);
-              await queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+              await queryClient.invalidateQueries();
               setLastUpdate(new Date());
               setIsRefreshing(false);
               toast({ title: t("common.refreshed"), description: t("common.dataUpdated") });
