@@ -1,7 +1,7 @@
 import {
   Home, CalendarDays, Scissors, Users, Wallet, Package,
   PackageOpen, CreditCard, BarChart3, User, Star, Briefcase,
-  Gift, History, LayoutGrid, MessageCircle,
+  Gift, History, LayoutGrid, MessageCircle, ShoppingCart,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -24,6 +24,7 @@ export const SHORTCUT_OPTIONS: ShortcutOption[] = [
   { key: "expenses",        route: "/charges",           icon: CreditCard,    labelKey: "nav.expenses",        permission: "view_expenses" },
   { key: "reports",         route: "/reports",           icon: BarChart3,     labelKey: "nav.reports",         permission: "view_reports" },
   { key: "bookingHistory",  route: "/booking-history",   icon: History,       labelKey: "nav.bookingHistory",  permission: "view_booking_history" },
+  { key: "pos",             route: "/pos",               icon: ShoppingCart,  labelKey: "nav.pos",             permission: "manage_appointments" },
   { key: "loyalty",         route: "/loyalty-rewards",   icon: Gift,          labelKey: "nav.loyaltyRewards",  permission: "view_loyalty" },
   { key: "whatsapp",        route: "/whatsapp",          icon: MessageCircle, labelKey: "nav.whatsapp",        permission: "admin_settings" },
   { key: "staff",           route: "/staff",             icon: User,          labelKey: "nav.staffManagement", permission: "view_staff" },

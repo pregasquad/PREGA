@@ -31,7 +31,8 @@ import {
   History,
   Sparkles,
   MessageCircle,
-  Terminal
+  Terminal,
+  ShoppingCart,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
@@ -55,6 +56,7 @@ const NAV_ITEMS = [
   { labelKey: "nav.home", href: "/home", icon: Home, permission: "view_home" },
   { labelKey: "nav.planning", href: "/planning", icon: CalendarDays, permission: "view_planning" },
   { labelKey: "nav.bookingHistory", href: "/booking-history", icon: History, permission: "view_booking_history" },
+  { labelKey: "nav.pos", href: "/pos", icon: ShoppingCart, permission: "manage_appointments" },
   { labelKey: "nav.services", href: "/services", icon: Scissors, permission: "view_services" },
   { labelKey: "nav.packages", href: "/packages", icon: PackageOpen, permission: "view_packages" },
   { labelKey: "nav.clients", href: "/clients", icon: Users, permission: "view_clients" },

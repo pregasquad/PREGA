@@ -36,6 +36,7 @@ const BookingHistory = lazy(() => import("@/pages/BookingHistory"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 const StaffPortal = lazy(() => import("@/pages/StaffPortal"));
 const Tombola = lazy(() => import("@/pages/Tombola"));
+const POS = lazy(() => import("@/pages/POS"));
 
 function PageLoader() {
   return (
@@ -222,6 +223,10 @@ function Router() {
 
       <Route path="/booking-history">
         <PageRoute component={BookingHistory} permission="view_booking_history" />
+      </Route>
+
+      <Route path="/pos">
+        <PageRoute component={POS} permission="manage_appointments" />
       </Route>
 
       <Route path="/tombola">
