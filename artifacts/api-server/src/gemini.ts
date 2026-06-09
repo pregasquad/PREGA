@@ -6,11 +6,11 @@ const GEMINI_BASE = REPLIT_GEMINI_BASE || "https://generativelanguage.googleapis
 const GROQ_BASE = "https://api.groq.com/openai/v1";
 
 const MODEL_CASCADE = [
-  "gemini-3.1-flash-lite",  // GA — fast, cost-efficient (preview shut down May 25 2026)
-  "gemini-3.5-flash",       // GA — most capable flash (released May 19 2026)
-  "gemini-3-flash",         // GA — production default
-  "gemini-2.5-flash",       // GA — stable fallback
-  "gemini-2.5-flash-lite",  // GA — cheapest fallback
+  "gemini-3.1-flash-lite",  // Free — fastest, cost-efficient
+  "gemini-3.5-flash",       // Free — most capable flash (GA May 2026)
+  "gemini-3-flash-preview", // Free — preview (stable gemini-3-flash is paid-only)
+  "gemini-2.5-flash",       // Free — stable fallback
+  "gemini-2.5-flash-lite",  // Free — highest free RPD fallback
 ];
 
 // Models confirmed unavailable (404) — skipped instantly with no delay
@@ -544,7 +544,7 @@ async function callGroq(
  * Confirmed audio-capable Gemini models (all support multimodal input):
  *   gemini-3.1-flash-lite   — fastest, GA (preview shut down May 25 2026) ✅
  *   gemini-3.5-flash        — most capable, GA (released May 19 2026)     ✅
- *   gemini-3-flash          — production default, GA                       ✅
+ *   gemini-3-flash-preview  — free preview (stable is paid-only)           ✅
  *   gemini-2.5-flash        — stable fallback                              ✅
  *   gemini-2.5-flash-lite   — cheapest fallback                            ✅
  *
@@ -559,11 +559,11 @@ export async function transcribeAudio(
 
   // ── 1. Gemini cascade — try from fastest to most capable ─────────────────
   const TRANSCRIPTION_MODELS = [
-    "gemini-3.1-flash-lite",  // GA — fastest, cost-efficient                ✅
-    "gemini-3.5-flash",       // GA — most capable (released May 19 2026)    ✅
-    "gemini-3-flash",         // GA — production default                     ✅
-    "gemini-2.5-flash",       // GA — stable fallback                        ✅
-    "gemini-2.5-flash-lite",  // GA — cheapest fallback                      ✅
+    "gemini-3.1-flash-lite",  // Free — fastest, cost-efficient
+    "gemini-3.5-flash",       // Free — most capable (GA May 2026)
+    "gemini-3-flash-preview", // Free — preview (stable is paid-only)
+    "gemini-2.5-flash",       // Free — stable fallback
+    "gemini-2.5-flash-lite",  // Free — cheapest fallback
   ];
 
   const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
