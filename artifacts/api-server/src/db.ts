@@ -2506,6 +2506,60 @@ export async function getLastBroadcastLog(): Promise<any | null> {
   }
 }
 
+export async function ensureReminderSentColumn(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      try {
+        const [rows] = await connection.query(`SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'appointments' AND COLUMN_NAME = 'reminder_sent'`);
+        if ((rows as any[]).length === 0) {
+          await connection.query(`ALTER TABLE appointments ADD COLUMN reminder_sent BOOLEAN NOT NULL DEFAULT FALSE`);
+          console.log("Added reminder_sent column to appointments");
+        }
+      } finally { connection.release(); }
+    } else {
+      await pool.query(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'appointments' AND column_name = 'reminder_sent') THEN
+            ALTER TABLE appointments ADD COLUMN reminder_sent BOOLEAN NOT NULL DEFAULT FALSE;
+          END IF;
+        END $$;
+      `);
+    }
+    console.log("Reminder sent column ready");
+  } catch (error) {
+    console.error("Failed to ensure reminder_sent column:", error);
+  }
+}
+
+export async function ensureClientTagsColumn(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      try {
+        const [rows] = await connection.query(`SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'clients' AND COLUMN_NAME = 'tags'`);
+        if ((rows as any[]).length === 0) {
+          await connection.query(`ALTER TABLE clients ADD COLUMN tags TEXT NULL`);
+          console.log("Added tags column to clients");
+        }
+      } finally { connection.release(); }
+    } else {
+      await pool.query(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'clients' AND column_name = 'tags') THEN
+            ALTER TABLE clients ADD COLUMN tags TEXT NULL;
+          END IF;
+        END $$;
+      `);
+    }
+    console.log("Client tags column ready");
+  } catch (error) {
+    console.error("Failed to ensure client tags column:", error);
+  }
+}
+
 export async function ensurePaypalOrderIdColumn(): Promise<void> {
   try {
     if (dbDialect === 'mysql') {

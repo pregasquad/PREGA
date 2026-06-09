@@ -1054,3 +1054,38 @@ export async function getConnectionStatus(): Promise<{ connected: boolean; statu
   const s = getStatus();
   return { connected: s.connected, status: s.status };
 }
+
+// ── 24h appointment reminder with 1/2/3 reply options ─────────────────────
+export async function sendAppointmentReminderWithOptions(
+  clientPhone: string,
+  clientName: string,
+  appointmentDate: string,
+  appointmentTime: string,
+  serviceName: string,
+  salonName?: string,
+  language?: string
+): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const salon = salonName || "PREGA SQUAD";
+  const firstName = clientName.split(" ")[0];
+  const relDate = formatRelativeDate(appointmentDate);
+  const isFrench = language === "french";
+  const msg = isFrench
+    ? `Bonjour ${firstName} 🌸\n\nRappel : votre rendez-vous est *demain* !\n\n📅 ${relDate}\n⏰ ${appointmentTime}\n💅 ${serviceName}\n\nchez ${salon} 💕\n\nRépondez :\n*1* ✅ Confirmer\n*2* ❌ Annuler\n*3* 🔄 Modifier`
+    : `مرحبا ${firstName} 🌸\n\nتذكير : rendez-vousك *غدًا* !\n\n📅 ${relDate}\n⏰ ${appointmentTime}\n💅 ${serviceName}\n\nفي ${salon} 💕\n\nردّي بـ :\n*1* ✅ تأكيد\n*2* ❌ إلغاء\n*3* 🔄 تعديل`;
+  return sendWhatsAppMessage(clientPhone, msg);
+}
+
+// ── WhatsApp Status (Today's available slots) ─────────────────────────────
+export async function sendWhatsAppStatus(
+  text: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!sock) return { success: false, error: "WhatsApp not connected" };
+  try {
+    await sock.sendMessage("status@broadcast", { text });
+    console.log("[Status] Posted WhatsApp status");
+    return { success: true };
+  } catch (err: any) {
+    console.error("[Status] Failed to post WhatsApp status:", err.message);
+    return { success: false, error: err.message };
+  }
+}

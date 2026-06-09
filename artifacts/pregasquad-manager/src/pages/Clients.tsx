@@ -22,6 +22,19 @@ import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { Client, Appointment, Service, Staff } from "@shared/schema";
 
+const TAG_OPTIONS = [
+  { label: "VIP", color: "bg-yellow-500" },
+  { label: "منتظم", color: "bg-green-500" },
+  { label: "جديد", color: "bg-blue-500" },
+  { label: "غائب", color: "bg-orange-500" },
+  { label: "مميز", color: "bg-purple-500" },
+];
+
+function parseClientTags(tags: string | null | undefined): string[] {
+  if (!tags) return [];
+  return tags.split(",").map(t => t.trim()).filter(Boolean);
+}
+
 const TIME_SLOTS = [
   "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
   "12:00", "12:30", "13:00", "13:30", "14:00", "14:30",
@@ -208,6 +221,29 @@ export default function Clients() {
       toast({ title: t("common.error"), variant: "destructive" });
     },
   });
+
+  const tagsMutation = useMutation({
+    mutationFn: async ({ id, tags }: { id: number; tags: string[] }) => {
+      const res = await fetch(`/api/clients/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tags: tags.join(",") }),
+      });
+      if (!res.ok) throw new Error("Failed to update tags");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+    },
+  });
+
+  const toggleTag = (client: Client, tag: string) => {
+    const current = parseClientTags((client as any).tags);
+    const updated = current.includes(tag)
+      ? current.filter((t) => t !== tag)
+      : [...current, tag];
+    tagsMutation.mutate({ id: client.id, tags: updated });
+  };
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -681,11 +717,22 @@ export default function Clients() {
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end max-w-[50%]">
                       <Badge className={`${tier.color} text-white text-[10px] px-1.5 py-0.5`}>
                         <TierIcon className="w-2.5 h-2.5" />
                         {tier.name}
                       </Badge>
+                      {parseClientTags((client as any).tags).map((tag) => {
+                        const opt = TAG_OPTIONS.find((o) => o.label === tag);
+                        return (
+                          <span
+                            key={tag}
+                            className={cn("text-[9px] px-1.5 py-0.5 rounded-full font-medium text-white", opt?.color ?? "bg-gray-500")}
+                          >
+                            {tag}
+                          </span>
+                        );
+                      })}
                     </div>
                   </div>
                   <div className="flex items-center justify-between mt-2 pt-2 border-t">
@@ -754,6 +801,7 @@ export default function Clients() {
                   <TableHead>{t("clients.loyaltyPoints")}</TableHead>
                   <TableHead>{t("giftCard.balance", "Gift Card")}</TableHead>
                   <TableHead>{t("common.status")}</TableHead>
+                  <TableHead>Tags</TableHead>
                   <TableHead>{t("common.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -793,6 +841,29 @@ export default function Clients() {
                           <TierIcon className="w-3 h-3 ml-1" />
                           {tier.name}
                         </Badge>
+                      </TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <div className="flex flex-wrap gap-1">
+                          {TAG_OPTIONS.map((tag) => {
+                            const clientTags = parseClientTags((client as any).tags);
+                            const active = clientTags.includes(tag.label);
+                            return (
+                              <button
+                                key={tag.label}
+                                title={tag.label}
+                                onClick={() => toggleTag(client, tag.label)}
+                                className={cn(
+                                  "text-[10px] px-1.5 py-0.5 rounded-full font-medium transition-all border",
+                                  active
+                                    ? `${tag.color} text-white border-transparent`
+                                    : "bg-muted text-muted-foreground border-border hover:bg-muted/70"
+                                )}
+                              >
+                                {tag.label}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         <div className="flex gap-1">

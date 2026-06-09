@@ -3995,6 +3995,52 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
     }
   });
 
+  // ── Post WhatsApp Status (today's available slots) ──────────────────────────
+  app.post("/api/whatsapp/post-status", isPinAuthenticated, async (req, res) => {
+    try {
+      const { text } = z.object({ text: z.string().min(1).max(700) }).parse(req.body);
+      const { sendWhatsAppStatus } = await import("./baileys.js");
+      const result = await sendWhatsAppStatus(text);
+      if (result.success) {
+        res.json({ success: true });
+      } else {
+        res.status(500).json({ success: false, error: result.error || "Failed to post status" });
+      }
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: err.message });
+    }
+  });
+
+  // ── Manual 24h reminder for a single appointment ────────────────────────────
+  app.post("/api/appointments/:id/remind", isPinAuthenticated, async (req, res) => {
+    try {
+      const aptId = parseInt(req.params.id);
+      const apt = await storage.getAppointmentById(aptId).catch(() => null);
+      if (!apt) return res.status(404).json({ error: "Appointment not found" });
+
+      const phone = (apt as any).phone || (apt as any).client?.match(/\(([^)]+)\)/)?.[1] || null;
+      if (!phone) return res.status(400).json({ error: "No phone number for this appointment" });
+
+      const settings = await storage.getBusinessSettings().catch(() => null);
+      const salonName = (settings as any)?.businessName || "PREGA SQUAD";
+      const clientName = (apt as any).client?.split(' (')[0]?.trim() || 'Client';
+      const serviceName = (apt as any).service || 'RDV';
+
+      const { sendAppointmentReminderWithOptions } = await import("./baileys.js");
+      const result = await sendAppointmentReminderWithOptions(
+        phone, clientName, (apt as any).date, (apt as any).startTime, serviceName, salonName
+      );
+      if (result.success) {
+        await pool.query(`UPDATE appointments SET reminder_sent = TRUE WHERE id = $1`, [aptId]).catch(() => {});
+        res.json({ success: true });
+      } else {
+        res.status(500).json({ success: false, error: result.error });
+      }
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: err.message });
+    }
+  });
+
   // WhatsApp Notifications (Baileys) - protected routes
   app.post("/api/notifications/send", isPinAuthenticated, async (req, res) => {
     try {

@@ -9,7 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, User, Clock, Calendar, Check, UserPlus, Filter, RefreshCw, Trash2 } from "lucide-react";
+import { Search, User, Clock, Calendar, Check, UserPlus, Filter, RefreshCw, Trash2, RotateCcw, Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -56,6 +57,9 @@ export default function BookingHistory() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStaff, setFilterStaff] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [rebookApt, setRebookApt] = useState<Appointment | null>(null);
+  const [rebookDate, setRebookDate] = useState<string>("");
+  const [rebookTime, setRebookTime] = useState<string>("");
 
   const getDateLocale = () => {
     switch (i18n.language) {
@@ -94,6 +98,40 @@ export default function BookingHistory() {
         title: t("common.success"),
         description: t("bookingHistory.staffAssigned", { defaultValue: "Staff assigné avec succès" }),
       });
+    },
+  });
+
+  const rebookMutation = useMutation({
+    mutationFn: async ({ apt, date, time }: { apt: Appointment; date: string; time: string }) => {
+      const res = await fetch("/api/appointments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client: apt.client,
+          service: apt.service,
+          staff: apt.staff,
+          staffId: apt.staffId,
+          date,
+          startTime: time,
+          duration: apt.duration,
+          price: apt.price,
+          total: apt.total,
+          paid: false,
+          bookingStatus: "confirmed",
+          createdBy: "rebook",
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to rebook");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments/all"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+      setRebookApt(null);
+      toast({ title: t("bookingHistory.rebookSuccess", { defaultValue: "Rendez-vous réservé ✅" }) });
+    },
+    onError: () => {
+      toast({ title: t("common.error"), variant: "destructive" });
     },
   });
 
@@ -330,6 +368,22 @@ export default function BookingHistory() {
                       <span className="font-semibold text-sm text-primary">{appt.total} DH</span>
                     </div>
                     <div className="mt-2 flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-xs px-2 gap-1 text-primary border-primary/30 hover:bg-primary/5"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const tomorrow = new Date();
+                          tomorrow.setDate(tomorrow.getDate() + 1);
+                          setRebookDate(tomorrow.toISOString().split("T")[0]);
+                          setRebookTime(appt.startTime);
+                          setRebookApt(appt);
+                        }}
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                        {t("bookingHistory.rebook", { defaultValue: "إعادة حجز" })}
+                      </Button>
                       <Select
                         value={appt.staff || "À assigner"}
                         onValueChange={(value) => {
@@ -490,6 +544,22 @@ export default function BookingHistory() {
                           </Select>
                         </TableCell>
                         <TableCell>
+                          <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+                            title={t("bookingHistory.rebook", { defaultValue: "إعادة حجز" })}
+                            onClick={() => {
+                              const tomorrow = new Date();
+                              tomorrow.setDate(tomorrow.getDate() + 1);
+                              setRebookDate(tomorrow.toISOString().split("T")[0]);
+                              setRebookTime(appt.startTime);
+                              setRebookApt(appt);
+                            }}
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                          </Button>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10">
@@ -515,6 +585,7 @@ export default function BookingHistory() {
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -529,6 +600,59 @@ export default function BookingHistory() {
           </div>
         </CardContent>
       </Card>
+
+      {/* ── Rebook Dialog ── */}
+      <Dialog open={!!rebookApt} onOpenChange={(open) => { if (!open) setRebookApt(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RotateCcw className="w-5 h-5 text-primary" />
+              {t("bookingHistory.rebook", { defaultValue: "إعادة حجز" })}
+            </DialogTitle>
+          </DialogHeader>
+          {rebookApt && (
+            <div className="space-y-4">
+              <div className="p-3 bg-muted rounded-lg text-sm">
+                <p className="font-medium">{rebookApt.client}</p>
+                <p className="text-muted-foreground">{rebookApt.service} · {rebookApt.duration} min</p>
+                <p className="text-muted-foreground">{t("bookingHistory.staff")}: {rebookApt.staff}</p>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">{t("common.date")}</label>
+                <Input
+                  type="date"
+                  value={rebookDate}
+                  min={new Date().toISOString().split("T")[0]}
+                  onChange={(e) => setRebookDate(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">{t("planning.time")}</label>
+                <Input
+                  type="time"
+                  value={rebookTime}
+                  onChange={(e) => setRebookTime(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRebookApt(null)}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              disabled={!rebookDate || !rebookTime || rebookMutation.isPending}
+              onClick={() => rebookApt && rebookMutation.mutate({ apt: rebookApt, date: rebookDate, time: rebookTime })}
+            >
+              {rebookMutation.isPending ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{t("common.loading")}</>
+              ) : (
+                <><RotateCcw className="w-4 h-4 mr-2" />{t("bookingHistory.rebook", { defaultValue: "إعادة حجز" })}</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

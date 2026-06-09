@@ -246,6 +246,120 @@ export async function checkAndSendAppointmentReminders(): Promise<void> {
   }
 }
 
+// ── 24h appointment reminder scheduler ───────────────────────────────────────
+const sent24hReminderIds = new Set<number>();
+let last24hCheckDate = "";
+
+export async function checkAndSend24hReminders(): Promise<void> {
+  try {
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    // Only run between 09:00 and 21:00
+    if (currentMinutes < 9 * 60 || currentMinutes > 21 * 60) return;
+
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowDate = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth()+1).padStart(2,'0')}-${String(tomorrow.getDate()).padStart(2,'0')}`;
+
+    const tomorrowAppointments = await storage.getAppointments(tomorrowDate);
+    if (!tomorrowAppointments || tomorrowAppointments.length === 0) return;
+
+    const { sendAppointmentReminderWithOptions } = await import('./baileys.js');
+    const { pool } = await import('./db.js');
+    const settings = await storage.getBusinessSettings().catch(() => null);
+    const salonName = (settings as any)?.businessName || "PREGA SQUAD";
+
+    for (const apt of tomorrowAppointments) {
+      if (sent24hReminderIds.has(apt.id)) continue;
+      if ((apt as any).bookingStatus === 'cancelled') continue;
+      if ((apt as any).reminderSent) continue;
+
+      const phone = apt.phone || apt.client?.match(/\(([^)]+)\)/)?.[1] || null;
+      if (!phone) continue;
+
+      sent24hReminderIds.add(apt.id);
+      try {
+        const clientName = apt.client?.split(' (')[0]?.trim() || 'Client';
+        const serviceName = apt.service || 'RDV';
+        await sendAppointmentReminderWithOptions(phone, clientName, apt.date, apt.startTime, serviceName, salonName);
+        // Mark reminder_sent in DB
+        await pool.query(`UPDATE appointments SET reminder_sent = TRUE WHERE id = $1`, [apt.id]).catch(() => {});
+        console.log(`[24hReminder] Sent to ${clientName} for ${apt.date} at ${apt.startTime}`);
+        await new Promise(r => setTimeout(r, 1500));
+      } catch (err) {
+        console.error(`[24hReminder] Failed for appointment ${apt.id}:`, err);
+        sent24hReminderIds.delete(apt.id);
+      }
+    }
+
+    // Reset daily
+    const todayStr = getLocalDateString(now);
+    if (last24hCheckDate !== todayStr) last24hCheckDate = todayStr;
+  } catch (error) {
+    console.error('[24hReminder] Error:', error);
+  }
+}
+
+// ── Morning WhatsApp Status — post available slots at opening ─────────────────
+let lastMorningStatusDate = "";
+
+export async function checkAndSendMorningStatus(): Promise<void> {
+  try {
+    const now = new Date();
+    const todayDate = getLocalDateString(now);
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    // Fire once per day between 09:00 and 09:10
+    if (lastMorningStatusDate === todayDate) return;
+    if (currentMinutes < 9 * 60 || currentMinutes > 9 * 60 + 10) return;
+    lastMorningStatusDate = todayDate;
+
+    const settings = await storage.getBusinessSettings().catch(() => null);
+    if (!(settings as any)?.morningStatusEnabled) return;
+
+    const salonName = (settings as any)?.businessName || "PREGA SQUAD";
+    const todayAppointments = (await storage.getAppointments(todayDate)) || [];
+
+    // Build list of booked time slots
+    const bookedSlots = new Set(todayAppointments.map((a: any) => a.startTime));
+
+    // Generate available half-hour slots between opening and closing
+    const openingTime: string = (settings as any)?.openingTime || "09:00";
+    const closingTime: string = (settings as any)?.closingTime || "20:00";
+    const [openH, openM] = openingTime.split(':').map(Number);
+    const [closeH, closeM] = closingTime.split(':').map(Number);
+    const openMin = openH * 60 + openM;
+    const closeMin = closeH * 60 + closeM;
+
+    const available: string[] = [];
+    for (let m = openMin; m < closeMin; m += 30) {
+      const hh = String(Math.floor(m / 60)).padStart(2, '0');
+      const mm = String(m % 60).padStart(2, '0');
+      const slot = `${hh}:${mm}`;
+      if (!bookedSlots.has(slot)) available.push(slot);
+    }
+
+    if (available.length === 0) return;
+
+    // Format day name in Arabic
+    const days = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+    const dayName = days[now.getDay()];
+    const dateFormatted = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}`;
+
+    const slotLines = available.slice(0, 12).join('  •  ');
+    const statusText = `🌸 *${salonName}*\n\n✨ مواعيد متاحة اليوم — ${dayName} ${dateFormatted}\n\n⏰ ${slotLines}\n\n📲 للحجز راسليني هنا 💕`;
+
+    const { sendWhatsAppStatus } = await import('./baileys.js');
+    const result = await sendWhatsAppStatus(statusText);
+    if (result.success) {
+      console.log(`[MorningStatus] Posted ${available.length} available slots`);
+    }
+  } catch (error) {
+    console.error('[MorningStatus] Error:', error);
+  }
+}
+
 const sentRebookingJids = new Set<string>();
 let lastRebookingCheckDate = "";
 

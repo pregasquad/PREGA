@@ -32,6 +32,7 @@ export const clients = pgTable("clients", {
   email: text("email"),
   birthday: text("birthday"),
   notes: text("notes"),
+  tags: text("tags"),
   loyaltyPoints: integer("loyalty_points").notNull().default(0),
   loyaltyEnrolled: boolean("loyalty_enrolled").notNull().default(false),
   usePoints: boolean("use_points").notNull().default(false),
@@ -102,6 +103,7 @@ export const appointments = pgTable("appointments", {
   bookingStatus: varchar("booking_status", { length: 20 }).default("pending"),
   privateRoom: boolean("private_room").default(false).notNull(),
   paypalOrderId: text("paypal_order_id"),
+  reminderSent: boolean("reminder_sent").default(false).notNull(),
 },
 (table) => [
   index("idx_appointments_date").on(table.date),

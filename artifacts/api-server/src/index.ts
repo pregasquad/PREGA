@@ -56,8 +56,10 @@ import {
   ensureHolidaysColumn,
   ensureBroadcastLogsTable,
   ensureDailySummaryColumns,
+  ensureReminderSentColumn,
+  ensureClientTagsColumn,
 } from "./db";
-import { checkAndSendClosingReminder, checkAndSendAppointmentReminders, checkAndSendRebookingReminders } from "./push";
+import { checkAndSendClosingReminder, checkAndSendAppointmentReminders, checkAndSendRebookingReminders, checkAndSend24hReminders, checkAndSendMorningStatus } from "./push";
 
 const httpServer = createServer(app);
 
@@ -123,6 +125,8 @@ const startServer = async () => {
       await ensureHolidaysColumn();
       await ensureBroadcastLogsTable();
       await ensureDailySummaryColumns();
+      await ensureReminderSentColumn();
+      await ensureClientTagsColumn();
       await ensureForeignKeyConstraints();
     }
   } else {
@@ -161,6 +165,12 @@ const startServer = async () => {
         checkAndSendRebookingReminders().catch((err) =>
           console.error("[Rebooking Reminder] Error:", err)
         );
+        checkAndSend24hReminders().catch((err) =>
+          console.error("[24h Reminder] Error:", err)
+        );
+        checkAndSendMorningStatus().catch((err) =>
+          console.error("[Morning Status] Error:", err)
+        );
       }, 15 * 1000);
 
       setInterval(() => {
@@ -172,6 +182,12 @@ const startServer = async () => {
         );
         checkAndSendRebookingReminders().catch((err) =>
           console.error("[Rebooking Reminder] Error:", err)
+        );
+        checkAndSend24hReminders().catch((err) =>
+          console.error("[24h Reminder] Error:", err)
+        );
+        checkAndSendMorningStatus().catch((err) =>
+          console.error("[Morning Status] Error:", err)
         );
       }, 5 * 60 * 1000);
     }

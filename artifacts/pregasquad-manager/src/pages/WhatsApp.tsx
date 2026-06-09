@@ -169,6 +169,8 @@ export default function WhatsApp() {
   const [lastSearch, setLastSearch] = useState("");
   const [selectedVoice, setSelectedVoice] = useState("Aoede");
   const [selectedPersonalities, setSelectedPersonalities] = useState<string[]>(["warm"]);
+  const [statusOpen, setStatusOpen] = useState(false);
+  const [statusText, setStatusText] = useState("");
 
   // ── Collapsible section states ────────────────────────────────────────────
   const [testOpen, setTestOpen] = useState(false);
@@ -464,6 +466,19 @@ export default function WhatsApp() {
     },
     onError: (err: any) =>
       toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const postStatusMutation = useMutation({
+    mutationFn: () =>
+      apiRequest("POST", "/api/whatsapp/post-status", {
+        text: statusText,
+      }).then((r) => r.json()),
+    onSuccess: () => {
+      toast({ title: "تم نشر الحالة ✅", description: "تم نشر حالة واتساب بنجاح" });
+      setStatusText("");
+    },
+    onError: (err: any) =>
+      toast({ title: "خطأ", description: err.message, variant: "destructive" }),
   });
 
   const sendTestMutation = useMutation({
@@ -1430,6 +1445,58 @@ export default function WhatsApp() {
           </div>
         </div>
       )}
+
+      {/* ── POST WHATSAPP STATUS ── */}
+      <div className="glass-card rounded-2xl overflow-hidden">
+        <button
+          className="liquid-glass-header w-full flex items-center gap-3 p-5 text-left hover:brightness-105 transition-all"
+          onClick={() => setStatusOpen((o) => !o)}
+          data-testid="button-toggle-status"
+        >
+          <div className="w-10 h-10 rounded-xl liquid-gradient flex items-center justify-center shrink-0 shadow-lg">
+            <Sparkles className="w-5 h-5 text-white" />
+          </div>
+          <div className="flex-1">
+            <span className="font-semibold text-sm">نشر حالة واتساب</span>
+            <p className="text-xs text-muted-foreground mt-0.5">انشر حالة بالمواعيد المتاحة لهذا اليوم</p>
+          </div>
+          {statusOpen ? (
+            <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+          )}
+        </button>
+        {statusOpen && (
+          <div className="border-t border-border/30 p-5 space-y-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wider">
+                نص الحالة (اختياري — سيُنشأ تلقائياً إذا تُرك فارغاً)
+              </Label>
+              <Textarea
+                placeholder="اتركه فارغاً لإنشاء رسالة تلقائية بالمواعيد المتاحة اليوم..."
+                value={statusText}
+                onChange={(e) => setStatusText(e.target.value)}
+                rows={3}
+                className="resize-none text-sm"
+              />
+            </div>
+            <Button
+              className="w-full gap-2"
+              disabled={postStatusMutation.isPending}
+              onClick={() => postStatusMutation.mutate()}
+            >
+              {postStatusMutation.isPending ? (
+                <><Loader2 className="w-4 h-4 animate-spin" />جارٍ النشر...</>
+              ) : (
+                <><Sparkles className="w-4 h-4" />نشر الحالة الآن</>
+              )}
+            </Button>
+            <p className="text-xs text-muted-foreground text-center">
+              يُنشر تلقائياً كل صباح عند 09:00 عندما يكون البوت متصلاً
+            </p>
+          </div>
+        )}
+      </div>
 
       {/* ── TEST MESSAGE ── */}
       <div className="glass-card rounded-2xl overflow-hidden">
