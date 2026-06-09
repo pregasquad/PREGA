@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Minus, Trash2, Tag, Scissors, Edit2, Package, RefreshCw, X, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Minus, Trash2, Tag, Scissors, Edit2, Package, RefreshCw, X, ChevronDown, ChevronRight, ImagePlus } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,7 +14,7 @@ import { z } from "zod";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import type { Product, Service, Category } from "@shared/schema";
 import { useTranslation } from "react-i18next";
@@ -30,7 +30,59 @@ const serviceFormSchema = insertServiceSchema.extend({
   linkedProductIds: z.array(linkedProductItemSchema).default([]),
   commissionPercent: z.coerce.number().min(0).max(100).default(50),
   emoji: z.string().max(10).optional().nullable(),
+  imageUrl: z.string().optional().nullable(),
 });
+
+function ServiceImagePicker({ value, onChange }: { value?: string | null; onChange: (url: string | null) => void }) {
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => onChange(ev.target?.result as string);
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  return (
+    <div className="flex items-center gap-3">
+      <div
+        onClick={() => fileRef.current?.click()}
+        className="relative w-20 h-20 rounded-xl border-2 border-dashed border-border bg-muted/30 flex items-center justify-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all overflow-hidden shrink-0"
+      >
+        {value ? (
+          <img src={value} alt="صورة الخدمة" className="w-full h-full object-cover" />
+        ) : (
+          <div className="flex flex-col items-center gap-1 text-muted-foreground">
+            <ImagePlus className="w-6 h-6" />
+            <span className="text-[10px]">صورة</span>
+          </div>
+        )}
+      </div>
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+      <div className="flex flex-col gap-1.5">
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          className="text-xs text-primary hover:underline text-start"
+        >
+          {value ? "تغيير الصورة" : "رفع صورة"}
+        </button>
+        {value && (
+          <button
+            type="button"
+            onClick={() => onChange(null)}
+            className="text-xs text-destructive hover:underline text-start"
+          >
+            حذف الصورة
+          </button>
+        )}
+        <p className="text-[10px] text-muted-foreground leading-tight">تُعرض في شاشة البيع</p>
+      </div>
+    </div>
+  );
+}
 
 function normalizeLinkedProducts(raw: any): LinkedProductItem[] {
   if (!Array.isArray(raw)) return [];
@@ -169,7 +221,7 @@ export default function Services() {
 
   const sForm = useForm({
     resolver: zodResolver(serviceFormSchema),
-    defaultValues: { name: "", price: 0, duration: 30, category: "", linkedProductId: null, linkedProductIds: [] as LinkedProductItem[], commissionPercent: 50, isStartingPrice: false, emoji: "" }
+    defaultValues: { name: "", price: 0, duration: 30, category: "", linkedProductId: null, linkedProductIds: [] as LinkedProductItem[], commissionPercent: 50, isStartingPrice: false, emoji: "", imageUrl: null }
   });
 
   const cForm = useForm({
@@ -291,9 +343,14 @@ export default function Services() {
                         ) : (
                           categoryServices.map(service => (
                             <div key={service.id} data-testid={`card-service-${service.id}`} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/50 group">
-                              <div className="min-w-0">
+                              {(service as any).imageUrl && (
+                                <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 mr-2 border border-border/40">
+                                  <img src={(service as any).imageUrl} alt={service.name} className="w-full h-full object-cover" />
+                                </div>
+                              )}
+                              <div className="min-w-0 flex-1">
                                 <h4 className="font-semibold text-sm truncate">
-                                  {(service as any).emoji && <span className="mr-1">{(service as any).emoji}</span>}
+                                  {!(service as any).imageUrl && (service as any).emoji && <span className="mr-1">{(service as any).emoji}</span>}
                                   {service.name}
                                 </h4>
                                 <p className="text-xs text-muted-foreground">{service.duration} {t("common.minutes")} • {service.isStartingPrice ? `${t("services.startingFrom")} ` : ''}{service.price} DH • {t("services.commission")} {service.commissionPercent ?? 50}%</p>
@@ -346,6 +403,18 @@ export default function Services() {
             <form onSubmit={sForm.handleSubmit((data) => {
               createService.mutate(data, { onSuccess: () => { sForm.reset(); setShowAddService(false); } });
             })} className="space-y-4">
+              <FormField
+                control={sForm.control}
+                name="imageUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("services.serviceImage", "صورة الخدمة")}</FormLabel>
+                    <FormControl>
+                      <ServiceImagePicker value={field.value} onChange={field.onChange} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
               <div className="flex gap-3">
                 <FormField
                   control={sForm.control}
@@ -489,6 +558,14 @@ export default function Services() {
           <DialogHeader><DialogTitle>{t("services.editService")}</DialogTitle></DialogHeader>
           <Form {...editSForm}>
             <form onSubmit={editSForm.handleSubmit((data) => updateServiceMutation.mutate({ id: editingService!.id, data }))} className="space-y-4">
+              <FormField control={editSForm.control} name="imageUrl" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("services.serviceImage", "صورة الخدمة")}</FormLabel>
+                  <FormControl>
+                    <ServiceImagePicker value={field.value} onChange={field.onChange} />
+                  </FormControl>
+                </FormItem>
+              )} />
               <div className="flex gap-3">
                 <FormField control={editSForm.control} name="emoji" render={({ field }) => (
                   <FormItem className="w-20 shrink-0">

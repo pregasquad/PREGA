@@ -124,6 +124,7 @@ export const services = pgTable("services", {
   isStartingPrice: boolean("is_starting_price").notNull().default(false),
   maxPrice: doublePrecision("max_price"),
   emoji: varchar("emoji", { length: 10 }),
+  imageUrl: text("image_url"),
 });
 
 export const categories = pgTable("categories", {

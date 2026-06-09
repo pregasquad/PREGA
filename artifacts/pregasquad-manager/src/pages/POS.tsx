@@ -241,15 +241,32 @@ export default function POS() {
               <button
                 key={svc.id}
                 onClick={() => addToCart(svc)}
-                className="group flex flex-col items-start gap-1.5 p-3 rounded-xl border bg-card hover:bg-primary/5 hover:border-primary/40 active:scale-95 transition-all text-left shadow-sm"
+                className="group flex flex-col items-start gap-0 rounded-xl border bg-card hover:bg-primary/5 hover:border-primary/40 active:scale-95 transition-all text-left shadow-sm overflow-hidden"
               >
-                {svc.emoji && <span className="text-2xl leading-none">{svc.emoji}</span>}
-                <span className="text-sm font-medium leading-tight line-clamp-2 group-hover:text-primary transition-colors w-full">
-                  {svc.name}
-                </span>
-                <div className="flex items-center justify-between w-full mt-auto pt-1.5 border-t border-border/40">
-                  <span className="text-[10px] text-muted-foreground">{svc.duration} min</span>
-                  <span className="text-sm font-bold text-primary">{svc.price} {currency}</span>
+                {svc.imageUrl ? (
+                  <div className="w-full h-24 overflow-hidden bg-muted/40 shrink-0">
+                    <img
+                      src={svc.imageUrl}
+                      alt={svc.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-full h-16 flex items-center justify-center bg-muted/20 shrink-0">
+                    {svc.emoji
+                      ? <span className="text-3xl leading-none">{svc.emoji}</span>
+                      : <Scissors className="w-7 h-7 text-muted-foreground/25" />
+                    }
+                  </div>
+                )}
+                <div className="flex flex-col gap-1.5 p-2.5 w-full flex-1">
+                  <span className="text-sm font-medium leading-tight line-clamp-2 group-hover:text-primary transition-colors w-full">
+                    {svc.name}
+                  </span>
+                  <div className="flex items-center justify-between w-full mt-auto pt-1.5 border-t border-border/40">
+                    <span className="text-[10px] text-muted-foreground">{svc.duration} min</span>
+                    <span className="text-sm font-bold text-primary">{svc.price} {currency}</span>
+                  </div>
                 </div>
               </button>
             ))}
