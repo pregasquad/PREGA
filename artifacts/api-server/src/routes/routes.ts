@@ -4751,8 +4751,16 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
       }
       // Parse bossInstructions from JSON string to array before sending
       const { bossInstructions, ...rest } = settings as any;
+      // MySQL stores booleans as TINYINT(1) — coerce 0/1 to proper JS booleans
+      const BOOL_FIELDS = ["ttsEnabled","botEnabled","botSilenceAfterBooking","dailySummaryEnabled","autoLockEnabled","botVoiceReplyEnabled"];
+      const coerced: Record<string, any> = { ...rest };
+      for (const f of BOOL_FIELDS) {
+        if (f in coerced && coerced[f] !== null && coerced[f] !== undefined) {
+          coerced[f] = Boolean(coerced[f]);
+        }
+      }
       res.json({
-        ...rest,
+        ...coerced,
         bossInstructions: bossInstructions ? (() => { try { return JSON.parse(bossInstructions); } catch { return []; } })() : [],
       });
     } catch (err: any) {
