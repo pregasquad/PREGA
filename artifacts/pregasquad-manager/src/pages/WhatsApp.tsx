@@ -603,6 +603,21 @@ export default function WhatsApp() {
       toast({ title: "خطأ", description: err.message, variant: "destructive" }),
   });
 
+  const [manualSummaryDate, setManualSummaryDate] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().split("T")[0];
+  });
+
+  const sendManualSummaryMutation = useMutation({
+    mutationFn: (date: string) =>
+      apiRequest("POST", "/api/daily-summary/send", { date }).then((r) => r.json()),
+    onSuccess: (_data, date) =>
+      toast({ title: "✅ تم الإرسال", description: `تم إرسال ملخص يوم ${date} بنجاح` }),
+    onError: (err: any) =>
+      toast({ title: "خطأ في الإرسال", description: err.message, variant: "destructive" }),
+  });
+
   // ── Conversation log query & mutations ────────────────────────────────────
   interface ConvEntry {
     jid: string;
@@ -1113,6 +1128,37 @@ export default function WhatsApp() {
                 <><Save className="w-4 h-4 mr-1" />حفظ الإعدادات</>
               )}
             </Button>
+
+            {/* ── Manual send for any date ── */}
+            <div className="pt-2 border-t border-border/20 space-y-2">
+              <label className="text-xs text-muted-foreground block">إرسال ملخص يوم محدد يدوياً</label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+                  <Input
+                    type="date"
+                    value={manualSummaryDate}
+                    max={new Date().toISOString().split("T")[0]}
+                    onChange={(e) => setManualSummaryDate(e.target.value)}
+                    className="h-9 text-sm rounded-xl pl-8"
+                    dir="ltr"
+                  />
+                </div>
+                <Button
+                  size="sm"
+                  disabled={sendManualSummaryMutation.isPending || !manualSummaryDate}
+                  onClick={() => sendManualSummaryMutation.mutate(manualSummaryDate)}
+                  className="rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0"
+                  variant="ghost"
+                >
+                  {sendManualSummaryMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <><Send className="w-4 h-4 mr-1" />إرسال</>
+                  )}
+                </Button>
+              </div>
+            </div>
           </div>
         )}
       </div>

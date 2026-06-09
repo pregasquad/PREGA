@@ -44,37 +44,16 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000);
 
-// ── Daily summary scheduler — checks every minute if it's time to send ────────
-let lastDailySummarySentDate: string | null = null;
-setInterval(async () => {
+// ── Daily summary: reusable core ─────────────────────────────────────────────
+async function buildAndSendDailySummary(dateStr: string, label?: string): Promise<{ sent: boolean; error?: string }> {
   try {
     const settings = await storage.getBusinessSettings().catch(() => null);
-    if (!settings) return;
-    const enabled = (settings as any).dailySummaryEnabled;
+    if (!settings) return { sent: false, error: "No settings" };
     const ownerPhone: string | undefined = (settings as any).ownerPhone;
-    // Use explicit summary time → fallback to closing time → fallback to 20:00
-    const summaryTime: string =
-      (settings as any).dailySummaryTime ||
-      (settings as any).closingTime ||
-      "20:00";
-    if (!enabled || !ownerPhone) return;
+    if (!ownerPhone) return { sent: false, error: "No owner phone configured" };
 
-    const now = new Date();
-    const hh = String(now.getHours()).padStart(2, "0");
-    const mm = String(now.getMinutes()).padStart(2, "0");
-    const currentTime = `${hh}:${mm}`;
-    const calendarDateStr = now.toISOString().split("T")[0];
-
-    // Fire only once per day at the configured time (within the same minute)
-    if (currentTime !== summaryTime) return;
-    if (lastDailySummarySentDate === calendarDateStr) return;
-    lastDailySummarySentDate = calendarDateStr;
-
-    // If summary fires after midnight (00:00–05:59) the business day being
-    // summarised is actually yesterday (e.g. salon closes at 02:00).
-    const businessDate = new Date(now);
-    if (now.getHours() < 6) businessDate.setDate(businessDate.getDate() - 1);
-    const todayStr = businessDate.toISOString().split("T")[0];
+    const businessDate = new Date(dateStr + "T12:00:00");
+    const todayStr = dateStr;
 
     // Month range for net-profit calculation
     const monthPrefix = todayStr.slice(0, 7); // "YYYY-MM"
@@ -256,21 +235,45 @@ setInterval(async () => {
     }
 
     // @ts-ignore
-    // @ts-ignore
     const { sendWhatsAppMessage, formatJid } = await import("./baileys.js");
-    // Support multiple recipients separated by comma (e.g. "212600000000,212700000000")
     const recipients = ownerPhone.split(",").map((p: string) => p.trim()).filter(Boolean);
     for (const phone of recipients) {
       try {
         const jid = formatJid(phone);
         await sendWhatsAppMessage(jid, msg);
-        console.log(`[DailySummary] Sent to ${phone} at ${currentTime}`);
+        console.log(`[DailySummary] Sent to ${phone} for date ${dateStr}`);
       } catch (sendErr: any) {
         console.error(`[DailySummary] Failed to send to ${phone}:`, sendErr.message);
       }
     }
+    return { sent: true };
   } catch (err: any) {
     console.error("[DailySummary] Error:", err.message);
+    return { sent: false, error: err.message };
+  }
+}
+
+// ── Daily summary scheduler — fires once per day at the configured time ───────
+let lastDailySummarySentDate: string | null = null;
+setInterval(async () => {
+  try {
+    const settings = await storage.getBusinessSettings().catch(() => null);
+    if (!settings) return;
+    if (!(settings as any).dailySummaryEnabled || !(settings as any).ownerPhone) return;
+    const summaryTime: string = (settings as any).dailySummaryTime || (settings as any).closingTime || "20:00";
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, "0");
+    const mm = String(now.getMinutes()).padStart(2, "0");
+    if (`${hh}:${mm}` !== summaryTime) return;
+    const calendarDateStr = now.toISOString().split("T")[0];
+    if (lastDailySummarySentDate === calendarDateStr) return;
+    lastDailySummarySentDate = calendarDateStr;
+    // After-midnight salons: summarise the previous business day
+    const businessDate = new Date(now);
+    if (now.getHours() < 6) businessDate.setDate(businessDate.getDate() - 1);
+    await buildAndSendDailySummary(businessDate.toISOString().split("T")[0]);
+  } catch (err: any) {
+    console.error("[DailySummary] Scheduler error:", err.message);
   }
 }, 60 * 1000);
 
@@ -4754,6 +4757,26 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
       });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/daily-summary/send", isPinAuthenticated, requirePermission("manage_business_settings"), async (req, res) => {
+    try {
+      const { date } = req.body;
+      // Validate or default: if no date supplied, use yesterday
+      let targetDate = date;
+      if (!targetDate || !/^\d{4}-\d{2}-\d{2}$/.test(targetDate)) {
+        const d = new Date();
+        d.setDate(d.getDate() - 1);
+        targetDate = d.toISOString().split("T")[0];
+      }
+      const result = await buildAndSendDailySummary(targetDate);
+      if (!result.sent) {
+        return res.status(400).json({ ok: false, error: result.error || "Failed to send" });
+      }
+      res.json({ ok: true, date: targetDate });
+    } catch (err: any) {
+      res.status(500).json({ ok: false, error: err.message });
     }
   });
 
