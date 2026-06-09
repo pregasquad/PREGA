@@ -5104,11 +5104,14 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
     }
   });
 
-  app.post("/api/referrals", isPinAuthenticated, async (req, res) => {
+  app.post("/api/referrals", isPinAuthenticated, requirePermission("manage_clients"), async (req, res) => {
     try {
+      const referrerId = Number(req.body.referrerId);
+      const refereeId = Number(req.body.refereeId);
+      if (!referrerId || !refereeId) return res.status(400).json({ message: "referrerId and refereeId are required" });
       const referralData = {
-        referrerId: req.body.referrerId,
-        refereeId: req.body.refereeId,
+        referrerId,
+        refereeId,
         status: 'pending' as const,
         referrerPointsAwarded: 0,
         refereePointsAwarded: 0,
@@ -5120,9 +5123,10 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
     }
   });
 
-  app.patch("/api/referrals/:id", isPinAuthenticated, async (req, res) => {
+  app.patch("/api/referrals/:id", isPinAuthenticated, requirePermission("manage_clients"), async (req, res) => {
     try {
       const id = parseInt(String(req.params.id));
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid referral ID" });
       const referral = await storage.updateReferral(id, req.body);
       res.json(referral);
     } catch (err: any) {
@@ -5210,7 +5214,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
     }
   });
 
-  app.post("/api/package-purchases", isPinAuthenticated, async (req, res) => {
+  app.post("/api/package-purchases", isPinAuthenticated, requirePermission("manage_clients"), async (req, res) => {
     try {
       const purchase = await storage.createPackagePurchase(req.body);
       res.status(201).json(purchase);
@@ -5219,7 +5223,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
     }
   });
 
-  app.patch("/api/package-purchases/:id", isPinAuthenticated, async (req, res) => {
+  app.patch("/api/package-purchases/:id", isPinAuthenticated, requirePermission("manage_clients"), async (req, res) => {
     try {
       const purchase = await storage.updatePackagePurchase(Number(String(req.params.id)), req.body);
       res.json(purchase);
@@ -5247,7 +5251,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
     }
   });
 
-  app.post("/api/waitlist", async (req, res) => {
+  app.post("/api/waitlist", isPinAuthenticated, async (req, res) => {
     try {
       const entry = await storage.createWaitlistEntry(req.body);
       io.emit("waitlist:created", entry);
@@ -5312,7 +5316,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
     }
   });
 
-  app.post("/api/message-templates", isPinAuthenticated, async (req, res) => {
+  app.post("/api/message-templates", isPinAuthenticated, requirePermission("admin_settings"), async (req, res) => {
     try {
       const template = await storage.createMessageTemplate(req.body);
       res.status(201).json(template);
@@ -5321,7 +5325,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
     }
   });
 
-  app.patch("/api/message-templates/:id", isPinAuthenticated, async (req, res) => {
+  app.patch("/api/message-templates/:id", isPinAuthenticated, requirePermission("admin_settings"), async (req, res) => {
     try {
       const template = await storage.updateMessageTemplate(Number(String(req.params.id)), req.body);
       res.json(template);

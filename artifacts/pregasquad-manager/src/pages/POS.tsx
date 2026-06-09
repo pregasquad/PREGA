@@ -43,7 +43,7 @@ export default function POS() {
 
   const currency = biz?.currency || "DH";
   const loyaltyRate = Number(biz?.loyaltyPointsRate ?? 10);
-  const pointsPerDirham = Number(biz?.loyaltyPointsPerDirham ?? 1);
+  const pointsPerDirham = Number(biz?.loyaltyPointsPerDh ?? biz?.loyaltyPointsPerDirham ?? 1);
   const loyaltyMultiplier = Number(biz?.loyaltyPointsMultiplier ?? 1);
 
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -129,7 +129,7 @@ export default function POS() {
         clientId: selectedClient?.id ?? null,
         phone: selectedClient?.phone ?? null,
         service: cart.map(c => c.name).join(" + ").slice(0, 255),
-        servicesJson: JSON.stringify(cart.map(c => ({ name: c.name, price: c.price, duration: c.duration, serviceId: c.serviceId }))),
+        servicesJson: cart.map(c => ({ name: c.name, price: c.price, duration: c.duration })),
         staff: selectedStaff?.name || "—",
         staffId: staffId ?? null,
         price: subtotal,
@@ -152,24 +152,21 @@ export default function POS() {
     },
     onSuccess: async (apt) => {
       if (selectedClient) {
-        if (pointsEarned > 0) {
-          await fetch(`/api/clients/${selectedClient.id}/loyalty`, {
-            method: "PATCH", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ points: pointsEarned, spent: total }),
-          }).catch(() => {});
-        }
+        // Server already awards points for paid appointments — only handle redemptions & gift card deductions here
         if (useLoyalty && loyaltyDiscount > 0) {
           const redeem = Math.ceil(loyaltyDiscount / (loyaltyRate / 100));
-          await fetch(`/api/clients/${selectedClient.id}/loyalty`, {
+          const r = await fetch(`/api/clients/${selectedClient.id}/loyalty`, {
             method: "PATCH", headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ points: -redeem, spent: 0 }),
-          }).catch(() => {});
+          });
+          if (!r.ok) toast({ title: "تحذير", description: "لم يتم خصم نقاط الولاء", variant: "destructive" });
         }
         if (giftCardDiscount > 0) {
-          await fetch(`/api/clients/${selectedClient.id}/gift-card-balance`, {
+          const r = await fetch(`/api/clients/${selectedClient.id}/gift-card-balance`, {
             method: "PATCH", headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ amount: -giftCardDiscount }),
-          }).catch(() => {});
+          });
+          if (!r.ok) toast({ title: "تحذير", description: "لم يتم خصم رصيد بطاقة الهدية", variant: "destructive" });
         }
       }
       autoPrint({
