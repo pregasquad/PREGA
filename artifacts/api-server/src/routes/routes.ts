@@ -83,13 +83,50 @@ setInterval(async () => {
     const monthEnd    = `${monthPrefix}-${String(lastDay).padStart(2, "0")}`;
 
     // Fetch today's appointments + salon standalone payments + monthly data in parallel
-    const [todayAppts, allSalonPayments, monthlyAppts, allCharges, allWithdrawals] = await Promise.all([
+    const [todayAppts, allSalonPayments, monthlyAppts, allCharges, allWithdrawals, allStaff, allServices, allStaffCommissions] = await Promise.all([
       storage.getAppointmentsByDateRange(todayStr, todayStr).catch(() => [] as any[]),
       storage.getSalonPayments().catch(() => [] as any[]),
       storage.getAppointmentsByDateRange(monthStart, monthEnd).catch(() => [] as any[]),
       storage.getCharges().catch(() => [] as any[]),
       storage.getOwnerWithdrawals().catch(() => [] as any[]),
+      storage.getStaff().catch(() => [] as any[]),
+      storage.getServices().catch(() => [] as any[]),
+      storage.getStaffCommissions().catch(() => [] as any[]),
     ]);
+
+    // ── Commission calculation (mirrors commissionCalc.ts) ────────────────────
+    function calcCommission(apt: any): number {
+      const staffMember = (allStaff as any[]).find(
+        (s: any) => s.name === apt.staff || s.id === apt.staffId
+      );
+      let items: Array<{ name: string; price: number }> | null = null;
+      if (apt.servicesJson) {
+        try {
+          const parsed = typeof apt.servicesJson === "string" ? JSON.parse(apt.servicesJson) : apt.servicesJson;
+          if (Array.isArray(parsed) && parsed.length > 0) items = parsed;
+        } catch { items = null; }
+      }
+      function getRate(svcName: string | undefined): number {
+        const svcDef = svcName
+          ? (allServices as any[]).find((s: any) => s.name === svcName || s.name?.toLowerCase() === svcName?.toLowerCase())
+          : undefined;
+        const base = svcDef?.commissionPercent ?? 50;
+        if (svcDef && staffMember) {
+          const custom = (allStaffCommissions as any[]).find(
+            (c: any) => c.staffId === staffMember.id && c.serviceId === svcDef.id
+          );
+          if (custom != null) return custom.percentage;
+        }
+        return base;
+      }
+      if (items && items.length > 0) {
+        const sumPrices = items.reduce((s: number, i: any) => s + Number(i.price || 0), 0);
+        const appTotal  = Number(apt.total || 0);
+        const ratio     = sumPrices > 0 && appTotal >= 0 && appTotal < sumPrices ? appTotal / sumPrices : 1;
+        return items.reduce((s: number, i: any) => s + Number(i.price || 0) * ratio * (getRate(i.name) / 100), 0);
+      }
+      return Number(apt.total || 0) * (getRate(apt.service) / 100);
+    }
 
     // Split appointments: paid = actual collected, unpaid = still pending
     const paidAppts   = (todayAppts as any[]).filter((a: any) => a.paid === true);
@@ -109,9 +146,19 @@ setInterval(async () => {
     const totalCollected       = collectedFromAppts + collectedStandalone;
     const expectedPending      = unpaidAppts.reduce((s: number, a: any) => s + (Number(a.total) || Number(a.price) || 0), 0);
 
-    // ── Monthly net-profit calculation ────────────────────────────────────────
+    // ── Today's net-profit (salon share − today's charges) ────────────────────
+    const todayStaffCommissions  = paidAppts.reduce((s: number, a: any) => s + calcCommission(a), 0);
+    const todaySalonShare        = totalCollected - todayStaffCommissions;   // what the salon keeps today
+    const todayChargesAmount     = (allCharges as any[])
+      .filter((c: any) => (c.date || "") === todayStr)
+      .reduce((s: number, c: any) => s + (Number(c.amount) || 0), 0);
+    const todayNetProfit         = todaySalonShare - todayChargesAmount;
+
+    // ── Monthly net-profit calculation (commissions correctly deducted) ────────
     const monthlyPaidAppts = (monthlyAppts as any[]).filter((a: any) => a.paid === true);
-    const monthlySalonShare = monthlyPaidAppts.reduce((s: number, a: any) => s + (Number(a.total) || Number(a.price) || 0), 0);
+    const monthlyRevenue    = monthlyPaidAppts.reduce((s: number, a: any) => s + (Number(a.total) || Number(a.price) || 0), 0);
+    const monthlyCommissions = monthlyPaidAppts.reduce((s: number, a: any) => s + calcCommission(a), 0);
+    const monthlySalonShare = monthlyRevenue - monthlyCommissions;
     const monthlyCharges    = (allCharges as any[])
       .filter((c: any) => (c.date || "").startsWith(monthPrefix))
       .reduce((s: number, c: any) => s + (Number(c.amount) || 0), 0);
@@ -140,6 +187,17 @@ setInterval(async () => {
     if (grandTotal > 0) {
       msg += `📊 الإجمالي الكلي: *${grandTotal.toFixed(0)} ${sym}*\n`;
     }
+
+    // ── Today's net profit (salon share − today charges) ─────────────────────
+    msg += `\n🏦 *حصة الصالون اليوم*\n`;
+    msg += `💵 الإيرادات المحصّلة: *${totalCollected.toFixed(0)} ${sym}*\n`;
+    msg += `👩‍💼 عمولات الموظفات: *-${todayStaffCommissions.toFixed(0)} ${sym}*\n`;
+    msg += `🏪 حصة الصالون الصافية: *${todaySalonShare.toFixed(0)} ${sym}*\n`;
+    if (todayChargesAmount > 0) {
+      msg += `🧾 مصاريف اليوم: *-${todayChargesAmount.toFixed(0)} ${sym}*\n`;
+    }
+    const todayProfitEmoji = todayNetProfit >= 0 ? "✅" : "⚠️";
+    msg += `${todayProfitEmoji} *صافي ربح اليوم: ${todayNetProfit.toFixed(0)} ${sym}*\n`;
 
     // ── Appointments block ────────────────────────────────────────────────────
     msg += `\n📅 *المواعيد (${totalAppts})*`;
@@ -180,7 +238,9 @@ setInterval(async () => {
 
     // ── Monthly net profit & available withdrawal ─────────────────────────────
     msg += `\n\n💼 *ملخص الشهر — ${monthPrefix}*\n`;
-    msg += `📈 حصة الصالون: *${monthlySalonShare.toFixed(0)} ${sym}*\n`;
+    msg += `💵 إيرادات الشهر: *${monthlyRevenue.toFixed(0)} ${sym}*\n`;
+    msg += `👩‍💼 عمولات الموظفات: *-${monthlyCommissions.toFixed(0)} ${sym}*\n`;
+    msg += `🏪 حصة الصالون: *${monthlySalonShare.toFixed(0)} ${sym}*\n`;
     if (monthlyCharges > 0) {
       msg += `🧾 المصاريف: *-${monthlyCharges.toFixed(0)} ${sym}*\n`;
     }
@@ -188,7 +248,7 @@ setInterval(async () => {
       msg += `💸 المسحوبات الشخصية: *-${monthlyWithdrawals.toFixed(0)} ${sym}*\n`;
     }
     const profitEmoji = monthlyNetProfit >= 0 ? "✅" : "⚠️";
-    msg += `${profitEmoji} *صافي الربح: ${monthlyNetProfit.toFixed(0)} ${sym}*\n`;
+    msg += `${profitEmoji} *صافي الربح الشهري: ${monthlyNetProfit.toFixed(0)} ${sym}*\n`;
     if (monthlyNetProfit > 0) {
       msg += `\n💰 *يمكن سحب: ${monthlyNetProfit.toFixed(0)} ${sym}*`;
     } else {
