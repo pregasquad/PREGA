@@ -1,4 +1,4 @@
-modules = ["web", "bash", "nodejs-22", "postgresql-16"]
+modules = ["nodejs-20", "web", "bash", "postgresql-16"]
 
 [deployment]
 router = "application"
@@ -29,7 +29,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd artifacts/pregasquad-manager && pnpm run build && cd /home/runner/workspace/artifacts/api-server && pnpm run dev"
+args = "bash /home/runner/workspace/start.sh"
 waitForPort = 5000
 
 [agent]
@@ -44,18 +44,6 @@ timeoutMs = 20000
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 8080
-externalPort = 8080
-
-[[ports]]
-localPort = 22977
-externalPort = 3000
-
-[[ports]]
-localPort = 22978
-externalPort = 3001
 
 [[ports]]
 localPort = 23636
