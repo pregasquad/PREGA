@@ -1886,6 +1886,7 @@ export default function Planning() {
 
           autoPrint({
             ...printData,
+            paid: !!submitData.paid,
             appointmentId: result?.id,
             loyaltyPointsEarned: loyaltyPointsEarned > 0 ? loyaltyPointsEarned : undefined,
             loyaltyPointsBalance: loyaltyPointsBalance > 0 ? loyaltyPointsBalance : undefined,
@@ -2203,6 +2204,7 @@ export default function Planning() {
           time: app.startTime || "",
           duration: app.duration || 0,
           total: app.total ?? app.price ?? 0,
+          paid: true,
           appointmentId: appId,
         });
       } catch (printErr) {
@@ -3016,8 +3018,10 @@ export default function Planning() {
                   }
                 }
                 setDrawerState(opened ? "success" : "fail");
-                setTimeout(() => setDrawerState("idle"), 1800);
-                setLocation("/pos");
+                setTimeout(() => {
+                  setDrawerState("idle");
+                  setLocation("/pos");
+                }, 1800);
               }}
               data-testid="button-open-cash-drawer"
             >

@@ -16,7 +16,13 @@ function printViaIframe(html: string): void {
   doc.write(html);
   doc.close();
 
+  let printed = false;
+  let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
+
   const doPrint = () => {
+    if (printed) return;
+    printed = true;
+    if (fallbackTimer) clearTimeout(fallbackTimer);
     try {
       iframe.contentWindow?.focus();
       iframe.contentWindow?.print();
@@ -30,7 +36,7 @@ function printViaIframe(html: string): void {
     doPrint();
   } else {
     iframe.onload = doPrint;
-    setTimeout(doPrint, 800);
+    fallbackTimer = setTimeout(doPrint, 800);
   }
 }
 
@@ -45,6 +51,7 @@ export interface ReceiptData {
   time: string;
   duration: number;
   total: number;
+  paid?: boolean;
   appointmentId?: number;
   loyaltyPointsEarned?: number;
   loyaltyPointsBalance?: number;
@@ -218,6 +225,7 @@ function browserPrint(data: ReceiptData): void {
   <div class="total-box">
     <div class="total-label">TOTAL / المجموع</div>
     <div class="total-amount">${data.total.toFixed(2)} ${e(data.currency)}</div>
+    ${data.paid !== undefined ? `<div class="paid-status" style="margin-top:2mm;font-size:13px;font-weight:bold;letter-spacing:2px;color:${data.paid ? '#000' : '#555'};">${data.paid ? '✓ PAYÉ / مدفوع' : '◻ NON PAYÉ / غير مدفوع'}</div>` : ""}
   </div>
 
   ${loyaltyHtml}
