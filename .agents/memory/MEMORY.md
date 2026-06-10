@@ -1,6 +1,4 @@
-- [Express 5 path-to-regexp compat](express5-path-compat.md) — Express 5 uses path-to-regexp v8 which rejects `(*)` and bare `*` wildcards; use RegExp routes instead.
-- [Frontend shared schema alias](frontend-shared-schema.md) — @shared/schema and @shared/routes are resolved via Vite aliases pointing to local copies in src/lib/.
-- [API server externals](api-server-externals.md) — @whiskeysockets/baileys, zod/v4, and dynamic ./db imports need special handling in build.mjs.
-- [SIGTERM forced exit](sigterm-forced-exit.md) — httpServer.close() alone never resolves when Socket.io connections are open; always add a 3-second forced exit timeout.
-- [Dev env port 5000 squatting](dev-env-port-squatting.md) — stale server processes can hold port 5000; find via /proc/net/tcp inode then kill -9 the owning PID.
-- [esbuild-plugin-pino missing symlink](esbuild-plugin-pino.md) — package exists in pnpm store but may not be symlinked to node_modules; fix with ln -sf from .pnpm store path.
+- [Commission calc scaleFactor](commission-calc-scalefactor.md) — servicesJson commission must use appTotal/sumPrices ratio always, not just when total < sum
+- [DB migration pattern](db-migration-pattern.md) — db.ts migrations run at startup but only take effect after api-server rebuild; apply SQL directly for urgent fixes
+- [Server file layout](server-file-layout.md) — real server is artifacts/api-server/src/, NOT server/. Frontend at artifacts/pregasquad-manager/src/
+- [Permission security fix](permission-security-fix.md) — empty permissions array must deny access, not grant full access

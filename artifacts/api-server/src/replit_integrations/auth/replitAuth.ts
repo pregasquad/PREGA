@@ -291,9 +291,9 @@ export function requirePermission(permission: string): RequestHandler {
       return next();
     }
     
-    // Empty permissions array means full access (opt-in restriction model)
+    // Empty permissions array means NO access (explicit opt-in required)
     if (!pinAuth.permissions || pinAuth.permissions.length === 0) {
-      return next();
+      return res.status(403).json({ message: "Forbidden - No permissions assigned to this account" });
     }
     
     if (pinAuth.permissions.includes(permission)) {

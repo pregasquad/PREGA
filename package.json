@@ -28,5 +28,9 @@
       "ffmpeg-static",
       "protobufjs"
     ]
+  },
+  "dependencies": {
+    "esbuild-plugin-pino": "^2.3.3",
+    "pino-pretty": "^13.1.3"
   }
 }
