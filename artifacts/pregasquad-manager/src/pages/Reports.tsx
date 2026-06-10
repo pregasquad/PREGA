@@ -266,10 +266,16 @@ export default function Reports() {
       }
       if (serviceItems && serviceItems.length > 0) {
         const sumPrices = serviceItems.reduce((s, i) => s + Number(i.price || 0), 0);
-        const discountRatio = sumPrices > 0 && appTotal >= 0 && appTotal < sumPrices ? appTotal / sumPrices : 1;
-        for (const item of serviceItems) {
-          const cat = serviceToCategory[item.name] || "Other";
-          catRevenue[cat] = (catRevenue[cat] || 0) + Number(item.price || 0) * discountRatio;
+        if (sumPrices > 0) {
+          const scaleFactor = appTotal / sumPrices;
+          for (const item of serviceItems) {
+            const cat = serviceToCategory[item.name] || "Other";
+            catRevenue[cat] = (catRevenue[cat] || 0) + Number(item.price || 0) * scaleFactor;
+          }
+        } else {
+          // All item prices zero — attribute full total to main service category
+          const cat = serviceToCategory[app.service || ""] || "Other";
+          catRevenue[cat] = (catRevenue[cat] || 0) + appTotal;
         }
       } else {
         const cat = serviceToCategory[app.service || ""] || "Other";

@@ -2782,29 +2782,46 @@ export async function registerRoutes(
 
         if (serviceItems && serviceItems.length > 0) {
           const sumPrices = serviceItems.reduce((acc, i) => acc + Number(i.price || 0), 0);
-          const discountRatio = sumPrices > 0 && apptTotal >= 0 && apptTotal < sumPrices ? apptTotal / sumPrices : 1;
-          for (const item of serviceItems) {
-            const effectivePrice = Number(item.price || 0) * discountRatio;
-            // Case-insensitive fallback mirrors frontend findService() in commissionCalc.ts
-            const svc = serviceMap.get(item.name) ||
-              [...serviceMap.values()].find((s: any) => s.name.toLowerCase() === (item.name || "").toLowerCase());
-            let rate = Number(svc?.commissionPercent ?? 50);
-            const cc = staffCommissions.find(c => svc && c.serviceId === svc.id);
-            if (cc) rate = cc.percentage;
-            commission += effectivePrice * (rate / 100);
-            const svcName = item.name || "Unknown";
-            if (!serviceBreakdown[svcName]) {
-              serviceBreakdown[svcName] = { name: svcName, count: 0, revenue: 0, commission: 0 };
+          if (sumPrices > 0) {
+            const scaleFactor = apptTotal / sumPrices;
+            for (const item of serviceItems) {
+              const effectivePrice = Number(item.price || 0) * scaleFactor;
+              // Case-insensitive fallback mirrors frontend findService() in commissionCalc.ts
+              const svc = serviceMap.get(item.name) ||
+                [...serviceMap.values()].find((s: any) => s.name.toLowerCase() === (item.name || "").toLowerCase());
+              let rate = Number(svc?.commissionPercent ?? 50);
+              const cc = staffCommissions.find(c => svc && c.serviceId === svc.id);
+              if (cc) rate = cc.percentage;
+              commission += effectivePrice * (rate / 100);
+              const svcName = item.name || "Unknown";
+              if (!serviceBreakdown[svcName]) {
+                serviceBreakdown[svcName] = { name: svcName, count: 0, revenue: 0, commission: 0 };
+              }
+              serviceBreakdown[svcName].revenue += effectivePrice;
+              serviceBreakdown[svcName].commission += effectivePrice * (rate / 100);
             }
-            serviceBreakdown[svcName].revenue += effectivePrice;
-            serviceBreakdown[svcName].commission += effectivePrice * (rate / 100);
+            // Count appointment once under its primary service label
+            const primaryName = appt.service || serviceItems[0]?.name || "Unknown";
+            if (!serviceBreakdown[primaryName]) {
+              serviceBreakdown[primaryName] = { name: primaryName, count: 0, revenue: 0, commission: 0 };
+            }
+            serviceBreakdown[primaryName].count++;
+          } else {
+            // All servicesJson prices zero — fall back to app.total with main service rate
+            const serviceName = appt.service || serviceItems[0]?.name || "Unknown";
+            const service = serviceMap.get(serviceName) ||
+              [...serviceMap.values()].find((s: any) => s.name.toLowerCase() === serviceName.toLowerCase());
+            let commissionRate = Number(service?.commissionPercent ?? 50);
+            const customComm = staffCommissions.find(c => service && c.serviceId === service.id);
+            if (customComm) commissionRate = customComm.percentage;
+            commission = apptTotal * (commissionRate / 100);
+            if (!serviceBreakdown[serviceName]) {
+              serviceBreakdown[serviceName] = { name: serviceName, count: 0, revenue: 0, commission: 0 };
+            }
+            serviceBreakdown[serviceName].count++;
+            serviceBreakdown[serviceName].revenue += apptTotal;
+            serviceBreakdown[serviceName].commission += commission;
           }
-          // Count appointment once under its primary service label
-          const primaryName = appt.service || serviceItems[0]?.name || "Unknown";
-          if (!serviceBreakdown[primaryName]) {
-            serviceBreakdown[primaryName] = { name: primaryName, count: 0, revenue: 0, commission: 0 };
-          }
-          serviceBreakdown[primaryName].count++;
         } else {
           const serviceName = appt.service || "Unknown";
           const service = serviceMap.get(serviceName);
@@ -2858,16 +2875,26 @@ export async function registerRoutes(
           }
           if (wServiceItems && wServiceItems.length > 0) {
             const sumPrices = wServiceItems.reduce((acc, i) => acc + Number(i.price || 0), 0);
-            const discountRatio = sumPrices > 0 && wTotal >= 0 && wTotal < sumPrices ? wTotal / sumPrices : 1;
-            for (const item of wServiceItems) {
-              const effectivePrice = Number(item.price || 0) * discountRatio;
-              // Case-insensitive fallback mirrors frontend findService() in commissionCalc.ts
-              const svc = serviceMap.get(item.name) ||
-                [...serviceMap.values()].find((s: any) => s.name.toLowerCase() === (item.name || "").toLowerCase());
-              let rate = Number(svc?.commissionPercent ?? 50);
-              const cc = staffCommissions.find(c => svc && c.serviceId === svc.id);
-              if (cc) rate = cc.percentage;
-              wCommission += effectivePrice * (rate / 100);
+            if (sumPrices > 0) {
+              const scaleFactor = wTotal / sumPrices;
+              for (const item of wServiceItems) {
+                const effectivePrice = Number(item.price || 0) * scaleFactor;
+                // Case-insensitive fallback mirrors frontend findService() in commissionCalc.ts
+                const svc = serviceMap.get(item.name) ||
+                  [...serviceMap.values()].find((s: any) => s.name.toLowerCase() === (item.name || "").toLowerCase());
+                let rate = Number(svc?.commissionPercent ?? 50);
+                const cc = staffCommissions.find(c => svc && c.serviceId === svc.id);
+                if (cc) rate = cc.percentage;
+                wCommission += effectivePrice * (rate / 100);
+              }
+            } else {
+              // All item prices zero — fall back to app.total with main service rate
+              const service = serviceMap.get(appt.service || "") ||
+                [...serviceMap.values()].find((s: any) => s.name.toLowerCase() === (appt.service || "").toLowerCase());
+              let cr = Number(service?.commissionPercent ?? 50);
+              const cc = staffCommissions.find(c => service && c.serviceId === service.id);
+              if (cc) cr = cc.percentage;
+              wCommission = wTotal * (cr / 100);
             }
           } else {
             const service = serviceMap.get(appt.service || "") ||

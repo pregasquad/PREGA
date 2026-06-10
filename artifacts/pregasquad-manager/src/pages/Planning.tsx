@@ -925,10 +925,15 @@ export default function Planning() {
       }
       if (parsedServices && parsedServices.length > 0) {
         const sumPrices = parsedServices.reduce((a, sv) => a + Number(sv.price || 0), 0);
-        const discountRatio = sumPrices > 0 && total >= 0 && total < sumPrices ? total / sumPrices : 1;
-        for (const sv of parsedServices) {
-          const effectivePrice = Number(sv.price || 0) * discountRatio;
-          walletCommission += (effectivePrice * getCommission(sv.name)) / 100;
+        if (sumPrices > 0) {
+          const scaleFactor = total / sumPrices;
+          for (const sv of parsedServices) {
+            const effectivePrice = Number(sv.price || 0) * scaleFactor;
+            walletCommission += (effectivePrice * getCommission(sv.name)) / 100;
+          }
+        } else {
+          // All item prices zero — fall back to app.total with main service rate
+          walletCommission += (total * getCommission(apt.service || "Unknown")) / 100;
         }
       } else {
         walletCommission += (total * getCommission(apt.service || "Unknown")) / 100;
