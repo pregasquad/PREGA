@@ -33,20 +33,20 @@ registerRoute(
   })
 );
 
-// API: NetworkFirst with 3 s timeout (was 10 s) and 24 h cache (was 5 min).
-// Falling back to cache quickly makes the app feel instant offline.
+// API: NetworkFirst with 3 s timeout and 5 min cache.
+// Cache name bumped to v2 to bust any stale cached responses (e.g. old null imageUrls).
 registerRoute(
   /\/api\/.*/i,
   new NetworkFirst({
-    cacheName: 'api-cache',
+    cacheName: 'api-cache-v2',
     plugins: [
       new ExpirationPlugin({
         maxEntries: 200,
-        maxAgeSeconds: 60 * 60 * 24,
+        maxAgeSeconds: 60 * 5,
       }),
       new CacheableResponsePlugin({ statuses: [0, 200] })
     ],
-    networkTimeoutSeconds: 3,
+    networkTimeoutSeconds: 5,
   })
 );
 
