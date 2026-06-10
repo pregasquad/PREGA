@@ -115,9 +115,11 @@ async function _doConnectQz(): Promise<boolean> {
     if (isQzConnected()) {
       registerAsPrintStation();
     }
+    notifyPrintStatus();
     return true;
   } catch {
     connected = false;
+    notifyPrintStatus();
     return false;
   }
 }
@@ -404,6 +406,7 @@ function ensurePrintSocket(): Socket {
     });
     printSocket.on("print:station-status", (available: boolean) => {
       printStationAvailable = available;
+      notifyPrintStatus();
     });
     printSocket.on("connect", () => {
       console.log("[print-relay] Socket connected:", printSocket?.id);
@@ -486,6 +489,19 @@ export function unregisterPrintStation(): void {
   printSocket.off("print:execute-receipt");
   printSocket.off("print:execute-expense");
   printSocket.off("print:execute-drawer");
+}
+
+type PrintStatusListener = (status: { qz: boolean; station: boolean }) => void;
+const _statusListeners = new Set<PrintStatusListener>();
+
+export function subscribePrintStatus(cb: PrintStatusListener): () => void {
+  _statusListeners.add(cb);
+  return () => _statusListeners.delete(cb);
+}
+
+export function notifyPrintStatus(): void {
+  const status = { qz: isQzConnected(), station: printStationAvailable };
+  _statusListeners.forEach(cb => cb(status));
 }
 
 export async function checkPrintStationAsync(): Promise<boolean> {

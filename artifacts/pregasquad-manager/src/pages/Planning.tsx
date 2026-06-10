@@ -128,7 +128,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { insertAppointmentSchema, insertStaffSchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { autoPrint } from "@/lib/printReceipt";
-import { connectQz, openCashDrawer, isQzConnected, checkPrintStationAsync, remoteOpenDrawer } from "@/lib/qzPrint";
+import { connectQz, openCashDrawer, isQzConnected, checkPrintStationAsync, remoteOpenDrawer, subscribePrintStatus } from "@/lib/qzPrint";
 
 // Smoothly animates a number from its previous value to the new one (400 ms ease-out)
 function useAnimatedNumber(target: number | null, duration = 400): number | null {
@@ -347,6 +347,11 @@ export default function Planning() {
   const [serviceSearch, setServiceSearch] = useState("");
   const [currentTime, setCurrentTime] = useState(new Date());
   const [drawerState, setDrawerState] = useState<"idle" | "opening" | "success" | "fail">("idle");
+  const [printStatus, setPrintStatus] = useState<{ qz: boolean; station: boolean }>({ qz: isQzConnected(), station: false });
+  useEffect(() => {
+    const unsub = subscribePrintStatus(setPrintStatus);
+    return unsub;
+  }, []);
   const boardRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const liveLineRef = useRef<HTMLDivElement>(null);
@@ -3024,12 +3029,23 @@ export default function Planning() {
                 }, 1800);
               }}
               data-testid="button-open-cash-drawer"
+              title={printStatus.qz ? "🖨️ Imprimante connectée (QZ)" : printStatus.station ? "🖨️ Station d'impression active" : "⚠️ Aucune imprimante connectée"}
             >
-              {drawerState === "success" ? (
-                <Check className="w-4 h-4 md:w-5 md:h-5" />
-              ) : (
-                <Wallet className="w-4 h-4 md:w-5 md:h-5" />
-              )}
+              <span className="relative inline-flex items-center justify-center">
+                {drawerState === "success" ? (
+                  <Check className="w-4 h-4 md:w-5 md:h-5" />
+                ) : (
+                  <Wallet className="w-4 h-4 md:w-5 md:h-5" />
+                )}
+                {drawerState === "idle" && (
+                  <span
+                    className={cn(
+                      "absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full border border-white",
+                      printStatus.qz || printStatus.station ? "bg-emerald-500" : "bg-red-400"
+                    )}
+                  />
+                )}
+              </span>
             </Button>
           )}
 

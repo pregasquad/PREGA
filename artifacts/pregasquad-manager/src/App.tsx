@@ -10,7 +10,7 @@ import { Suspense, lazy, useEffect, Component, type ReactNode } from "react";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
 import { initGA } from "./lib/analytics";
 import { useAnalytics } from "./hooks/use-analytics";
-import { connectQz, initPrintSocket } from "./lib/qzPrint";
+import { connectQz, initPrintSocket, isQzConnected } from "./lib/qzPrint";
 import { saveSalariesCache } from "./lib/offlineDb";
 
 // All pages lazy-loaded so a single page error never blanks the whole app
@@ -270,6 +270,13 @@ function App() {
     initPrintSocket();
     connectQz().catch(() => {});
 
+    // Retry QZ connection every 30s when not connected (keeps laptop registered as print station)
+    const qzRetry = setInterval(() => {
+      if (!isQzConnected()) {
+        connectQz().catch(() => {});
+      }
+    }, 30000);
+
     const isAuth = sessionStorage.getItem("user_authenticated") === "true" ||
                    localStorage.getItem("user_authenticated") === "true";
     if (isAuth) {
@@ -283,6 +290,8 @@ function App() {
         })
         .catch(() => {});
     }
+
+    return () => clearInterval(qzRetry);
   }, []);
 
   return (

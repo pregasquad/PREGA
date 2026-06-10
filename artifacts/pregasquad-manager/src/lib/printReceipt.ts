@@ -1,6 +1,70 @@
 import { isQzConnected, silentPrint, silentPrintExpense, remotePrint, remotePrintExpense, remoteOpenDrawer, openCashDrawer, checkPrintStationAsync, ensureQzConnected } from "./qzPrint";
 
+function isMobileDevice(): boolean {
+  return /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent) ||
+    (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
+}
+
+function printViaMobileOverlay(receiptHtml: string): void {
+  const existing = document.getElementById("__receipt_mobile_overlay__");
+  if (existing) existing.remove();
+
+  // Inject print-only style to hide everything except the overlay
+  const styleId = "__receipt_print_style__";
+  if (!document.getElementById(styleId)) {
+    const style = document.createElement("style");
+    style.id = styleId;
+    style.textContent = `@media print { body > *:not(#__receipt_mobile_overlay__) { display: none !important; } #__receipt_mobile_overlay__ .overlay-bg { display: none !important; } #__receipt_mobile_overlay__ .overlay-card { box-shadow: none !important; margin: 0 !important; max-height: none !important; overflow: visible !important; } #__receipt_mobile_overlay__ .overlay-actions { display: none !important; } }`;
+    document.head.appendChild(style);
+  }
+
+  const overlay = document.createElement("div");
+  overlay.id = "__receipt_mobile_overlay__";
+  overlay.style.cssText = "position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;";
+
+  overlay.innerHTML = `
+    <div class="overlay-bg" style="position:absolute;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(2px);"></div>
+    <div class="overlay-card" style="position:relative;z-index:1;background:#fff;border-radius:12px 12px 0 0;width:100%;max-width:400px;margin-top:auto;max-height:90vh;overflow-y:auto;padding:0 0 8px 0;box-shadow:0 -4px 32px rgba(0,0,0,0.25);">
+      <div class="overlay-actions" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px 8px;border-bottom:1px solid #eee;gap:8px;position:sticky;top:0;background:#fff;z-index:2;">
+        <button id="__receipt_close_btn__" style="padding:8px 18px;border:1px solid #ddd;border-radius:8px;background:#fff;font-size:14px;cursor:pointer;font-weight:500;">✕ إغلاق</button>
+        <button id="__receipt_print_btn__" style="padding:8px 22px;border:none;border-radius:8px;background:#d63384;color:#fff;font-size:15px;font-weight:700;cursor:pointer;flex:1;max-width:180px;">🖨️ طباعة</button>
+      </div>
+      <div style="padding:0 12px 12px;">${receiptHtml}</div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  const closeOverlay = () => {
+    overlay.remove();
+    const style = document.getElementById(styleId);
+    if (style) style.remove();
+  };
+
+  overlay.querySelector("#__receipt_close_btn__")?.addEventListener("click", closeOverlay);
+  overlay.querySelector(".overlay-bg")?.addEventListener("click", closeOverlay);
+
+  overlay.querySelector("#__receipt_print_btn__")?.addEventListener("click", () => {
+    window.print();
+  });
+}
+
 function printViaIframe(html: string): void {
+  if (isMobileDevice()) {
+    // Extract just the <body> content to embed cleanly in the overlay
+    const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+    const bodyContent = bodyMatch ? bodyMatch[1] : html;
+
+    // Extract styles to keep the receipt looking correct
+    const styleMatch = html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+    const receiptHtml = styleMatch
+      ? `<style>${styleMatch[1]}</style>${bodyContent}`
+      : bodyContent;
+
+    printViaMobileOverlay(receiptHtml);
+    return;
+  }
+
   const existingFrame = document.getElementById("__receipt_print_frame__");
   if (existingFrame) existingFrame.remove();
 
