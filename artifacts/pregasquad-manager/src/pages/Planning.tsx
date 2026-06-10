@@ -3025,7 +3025,6 @@ export default function Planning() {
                 setDrawerState(opened ? "success" : "fail");
                 setTimeout(() => {
                   setDrawerState("idle");
-                  setLocation("/pos");
                 }, 1800);
               }}
               data-testid="button-open-cash-drawer"
