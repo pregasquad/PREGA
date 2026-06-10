@@ -282,6 +282,7 @@ const formSchema = insertAppointmentSchema.extend({
   duration: z.coerce.number().min(1),
   total: z.coerce.number().min(0),
   privateRoom: z.boolean().optional(),
+  staff: z.string().optional().nullable(),
 });
 
 type AppointmentFormValues = z.infer<typeof formSchema>;
@@ -1451,13 +1452,14 @@ export default function Planning() {
       setAppliedGiftCardBalance(null);
     }
     
+    const staffInList = staffList.some((s: any) => s.name === app.staff);
     form.reset({
       date: app.date,
       startTime: app.startTime,
       duration: app.duration,
       client: app.client,
       service: app.service || "",
-      staff: app.staff,
+      staff: staffInList ? app.staff : "__none__",
       price: app.price,
       total: app.total,
       paid: app.paid,
@@ -1559,6 +1561,7 @@ export default function Planning() {
     
     const submitData = {
       ...data,
+      staff: (data.staff === "__none__" || !data.staff) ? "" : data.staff,
       clientId,
       servicesJson: servicesToSave.length > 0 ? servicesToSave : undefined,
       service: serviceDescription,
@@ -3981,6 +3984,7 @@ export default function Planning() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent className="rounded-xl glass-card shadow-xl">
+                            <SelectItem value="__none__">بدون موظف</SelectItem>
                             {staffList.map(s => (
                               <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
                             ))}
@@ -4388,7 +4392,7 @@ export default function Planning() {
                     size="icon"
                     className="h-10 w-10 rounded-xl shrink-0"
                     onClick={() => {
-                      if (!canEdit) return;
+                      if (!canEditCardboard) return;
                       if (confirm(t("planning.deleteConfirm"))) {
                         deleteMutation.mutate(editingAppointment.id);
                         setSelectedServices([]);
