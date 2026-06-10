@@ -3690,6 +3690,44 @@ export default function Planning() {
         </div>
       </div>
 
+      {/* Unassigned / walk-in POS sales for today */}
+      {(() => {
+        const staffIds = new Set(staffList.map((s: any) => s.id));
+        const staffNames = new Set(staffList.map((s: any) => s.name));
+        const unassigned = appointments.filter((a: any) =>
+          !staffIds.has(a.staffId) && !staffNames.has(a.staff)
+        );
+        if (unassigned.length === 0) return null;
+        return (
+          <div className="shrink-0 mx-2 mb-2 rounded-xl border bg-background overflow-hidden">
+            <div className="flex items-center gap-2 px-3 py-2 bg-muted/60 border-b">
+              <CreditCard className="w-4 h-4 text-muted-foreground" />
+              <span className="text-xs font-semibold text-muted-foreground">
+                مبيعات بدون موظف ({unassigned.length})
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2 p-2">
+              {unassigned.map((a: any) => (
+                <div
+                  key={a.id}
+                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs border bg-muted/30 cursor-pointer hover:bg-muted/60 transition-colors"
+                  onClick={() => canEditCardboard && openAppointmentForEdit(a)}
+                >
+                  <User className="w-3 h-3 text-muted-foreground shrink-0" />
+                  <span className="font-medium">{a.client}</span>
+                  <span className="text-muted-foreground">·</span>
+                  <span className="text-muted-foreground truncate max-w-[120px]">{a.service}</span>
+                  <span className="text-muted-foreground">·</span>
+                  <span className="text-muted-foreground">{a.startTime}</span>
+                  {a.paid && <Check className="w-3 h-3 text-green-500 shrink-0" />}
+                  <span className="font-semibold text-primary shrink-0">{a.total} DH</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Smooth drag ghost — position driven by direct DOM manipulation (no React re-render per frame) */}
       {pDragGhost && (
         <div

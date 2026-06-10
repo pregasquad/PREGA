@@ -167,9 +167,13 @@ export default function POS() {
   const sellMutation = useMutation({
     mutationFn: async () => {
       const now = new Date();
+      // Round to nearest 15-minute slot so it lands on a Planning grid row
+      const roundedMins = Math.round(now.getMinutes() / 15) * 15;
+      const roundedTime = new Date(now);
+      roundedTime.setMinutes(roundedMins, 0, 0);
       const body = {
-        date: format(now, "yyyy-MM-dd"),
-        startTime: format(now, "HH:mm"),
+        date: format(roundedTime, "yyyy-MM-dd"),
+        startTime: format(roundedTime, "HH:mm"),
         duration: totalDur || 30,
         client: selectedClient?.name || "عميل عابر",
         clientId: selectedClient?.id ?? null,
