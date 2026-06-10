@@ -67,6 +67,7 @@ export default function POS() {
   const [clientSearch, setClientSearch] = useState("");
   const [showClients, setShowClients] = useState(false);
   const [staffId, setStaffId] = useState<number | null>(null);
+  const [imgErrors, setImgErrors] = useState<Record<number, boolean>>({});
   const [discountAmt, setDiscountAmt] = useState(0);
   const [payMethod, setPayMethod] = useState<PaymentMethod>("cash");
   const [cashGiven, setCashGiven] = useState(0);
@@ -312,12 +313,13 @@ export default function POS() {
                     {useCount}×
                   </span>
                 )}
-                {svc.imageUrl ? (
+                {svc.imageUrl && !imgErrors[svc.id] ? (
                   <div className="w-full h-24 overflow-hidden bg-muted/40 shrink-0">
                     <img
                       src={svc.imageUrl}
                       alt={svc.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      onError={() => setImgErrors(prev => ({ ...prev, [svc.id]: true }))}
                     />
                   </div>
                 ) : (
@@ -396,15 +398,68 @@ export default function POS() {
         )}
       </div>
 
-      {/* Staff */}
-      <select
-        value={staffId ?? ""}
-        onChange={e => setStaffId(e.target.value ? Number(e.target.value) : null)}
-        className="w-full p-2.5 rounded-xl border bg-muted/40 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-      >
-        <option value="">— اختر الموظفة —</option>
-        {staffList.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
-      </select>
+      {/* Staff picker — avatar cards */}
+      <div className="space-y-1.5">
+        <p className="text-xs font-medium text-muted-foreground px-0.5">الموظفة</p>
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          {/* "None" card */}
+          <button
+            onClick={() => setStaffId(null)}
+            className={cn(
+              "flex flex-col items-center gap-1 shrink-0 transition-all",
+              staffId === null ? "opacity-100" : "opacity-50 hover:opacity-80"
+            )}
+          >
+            <div className={cn(
+              "w-12 h-12 rounded-full border-2 flex items-center justify-center bg-muted/60 transition-all",
+              staffId === null ? "border-primary shadow-md shadow-primary/20 scale-110" : "border-border"
+            )}>
+              <User className="w-5 h-5 text-muted-foreground" />
+            </div>
+            <span className={cn(
+              "text-[9px] font-medium leading-tight text-center max-w-[52px] truncate",
+              staffId === null ? "text-primary" : "text-muted-foreground"
+            )}>أي</span>
+          </button>
+
+          {staffList.map((s: any) => {
+            const isSelected = staffId === s.id;
+            const initials = s.name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase();
+            return (
+              <button
+                key={s.id}
+                onClick={() => setStaffId(s.id)}
+                className={cn(
+                  "flex flex-col items-center gap-1 shrink-0 transition-all",
+                  isSelected ? "opacity-100" : "opacity-55 hover:opacity-80"
+                )}
+              >
+                <div className={cn(
+                  "w-12 h-12 rounded-full border-2 overflow-hidden transition-all",
+                  isSelected ? "border-primary shadow-md shadow-primary/25 scale-110" : "border-border"
+                )}>
+                  {s.photoUrl ? (
+                    <img src={s.photoUrl} alt={s.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div
+                      className="w-full h-full flex items-center justify-center text-white text-sm font-bold"
+                      style={{ backgroundColor: s.color || "#888" }}
+                    >
+                      {initials}
+                    </div>
+                  )}
+                </div>
+                <span className={cn(
+                  "text-[9px] font-medium leading-tight text-center max-w-[52px] truncate",
+                  isSelected ? "text-primary" : "text-muted-foreground"
+                )}>
+                  {s.name.split(" ")[0]}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Cart items */}
       <ScrollArea className="flex-1 min-h-0">
