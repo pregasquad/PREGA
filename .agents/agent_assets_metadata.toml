@@ -1,0 +1,62 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "BEaKLq7o8MmnrasLqrlf2"
+uri = "file://artifacts/pregasquad-manager/public/service-images/1.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "cONWJMdWKpR2PXcZx0LUF"
+uri = "file://artifacts/pregasquad-manager/public/service-images/2.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "xzATQSJUo7VUS8YtMzSLd"
+uri = "file://artifacts/pregasquad-manager/public/service-images/3.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "O06fgTvvtq_1N_3Kvx0H0"
+uri = "file://artifacts/pregasquad-manager/public/service-images/4.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "SPZMyUvgtr5_EHaphTpR1"
+uri = "file://artifacts/pregasquad-manager/public/service-images/5.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "VIhkvuZuW2VoGFOFZcQPr"
+uri = "file://artifacts/pregasquad-manager/public/service-images/6.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "7xgrbMSoKYkg8wcTAE-y9"
+uri = "file://artifacts/pregasquad-manager/public/service-images/7.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "Jk728b9PwkX-a2iMpMH59"
+uri = "file://artifacts/pregasquad-manager/public/service-images/8.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "ZGue4tItGhS13nbBWZBx2"
+uri = "file://artifacts/pregasquad-manager/public/service-images/9.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "8zipHkbdBPXZjTkJ-aU4Z"
+uri = "file://artifacts/pregasquad-manager/public/service-images/10.png"
+type = "image"
+title = "generated_image"
