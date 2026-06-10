@@ -889,19 +889,6 @@ export default function Planning() {
       sinceDate = `${adjusted.getFullYear()}-${String(adjusted.getMonth() + 1).padStart(2, "0")}-${String(adjusted.getDate()).padStart(2, "0")}`;
     }
 
-    // Match the exact same commission logic as Salaries.tsx getServiceCommission
-    const getCommission = (serviceName: string): number => {
-      const service = (salaryData.services || []).find((sv: any) => sv.name === serviceName);
-      if (!service) return 50;
-      // Check for a custom per-staff commission rate
-      const customComm = (salaryData.staffCommissions || []).find(
-        (c: any) => c.staffId === s.id && c.serviceId === service.id
-      );
-      if (customComm) return customComm.percentage;
-      // Fall back to the service's default commission percent
-      return service.commissionPercent ?? 50;
-    };
-
     const walletAppts = (salaryData.appointments || []).filter((apt: any) => {
       if (!apt.paid) return false;
       const match = Number(apt.staffId) === walletStaffId || (!apt.staffId && apt.staff === s.name);
@@ -912,33 +899,15 @@ export default function Planning() {
 
     let walletRevenue = 0;
     let walletCommission = 0;
-    walletAppts.forEach((apt: any) => {
-      const total = Number(apt.total) || 0;
-      walletRevenue += total;
-      // Multi-service: calculate per-service commission weighted by price, then scale to actual total
-      let parsedServices: { name: string; price: number }[] | null = null;
-      if (apt.servicesJson) {
-        try {
-          const raw = typeof apt.servicesJson === 'string' ? JSON.parse(apt.servicesJson) : apt.servicesJson;
-          if (Array.isArray(raw) && raw.length > 0) parsedServices = raw;
-        } catch { /* ignore */ }
-      }
-      if (parsedServices && parsedServices.length > 0) {
-        const sumPrices = parsedServices.reduce((a, sv) => a + Number(sv.price || 0), 0);
-        if (sumPrices > 0) {
-          const scaleFactor = total / sumPrices;
-          for (const sv of parsedServices) {
-            const effectivePrice = Number(sv.price || 0) * scaleFactor;
-            walletCommission += (effectivePrice * getCommission(sv.name)) / 100;
-          }
-        } else {
-          // All item prices zero — fall back to app.total with main service rate
-          walletCommission += (total * getCommission(apt.service || "Unknown")) / 100;
-        }
-      } else {
-        walletCommission += (total * getCommission(apt.service || "Unknown")) / 100;
-      }
-    });
+    for (const apt of walletAppts) {
+      walletRevenue += Number(apt.total) || 0;
+      walletCommission += calcAppointmentCommission(
+        apt,
+        salaryData.services || [],
+        salaryData.staff || [],
+        salaryData.staffCommissions || []
+      );
+    }
 
     const pendingDeductions: any[] = (salaryData.deductions || []).filter((d: any) =>
       !d.cleared && (Number(d.staffId) === walletStaffId || (!d.staffId && d.staffName === s.name))

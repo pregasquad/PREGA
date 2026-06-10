@@ -18,6 +18,7 @@ import crypto from "crypto";
 import fs from "fs";
 
 import path from "path";
+import { calcAppointmentCommission } from "../lib/commissionCalc";
 
 // ── In-memory broadcast job store ─────────────────────────────────────────────
 interface BroadcastClient { id: number; name: string; phone: string; }
@@ -73,41 +74,9 @@ async function buildAndSendDailySummary(dateStr: string, label?: string): Promis
       storage.getStaffCommissions().catch(() => [] as any[]),
     ]);
 
-    // ── Commission calculation (mirrors commissionCalc.ts) ────────────────────
+    // ── Commission calculation (canonical — delegates to shared commissionCalc) ─
     function calcCommission(apt: any): number {
-      const staffMember = (allStaff as any[]).find(
-        (s: any) => s.name === apt.staff || s.id === apt.staffId
-      );
-      let items: Array<{ name: string; price: number }> | null = null;
-      if (apt.servicesJson) {
-        try {
-          const parsed = typeof apt.servicesJson === "string" ? JSON.parse(apt.servicesJson) : apt.servicesJson;
-          if (Array.isArray(parsed) && parsed.length > 0) items = parsed;
-        } catch { items = null; }
-      }
-      function getRate(svcName: string | undefined): number {
-        const svcDef = svcName
-          ? (allServices as any[]).find((s: any) => s.name === svcName || s.name?.toLowerCase() === svcName?.toLowerCase())
-          : undefined;
-        const base = svcDef?.commissionPercent ?? 50;
-        if (svcDef && staffMember) {
-          const custom = (allStaffCommissions as any[]).find(
-            (c: any) => c.staffId === staffMember.id && c.serviceId === svcDef.id
-          );
-          if (custom != null) return custom.percentage;
-        }
-        return base;
-      }
-      if (items && items.length > 0) {
-        const sumPrices = items.reduce((s: number, i: any) => s + Number(i.price || 0), 0);
-        const appTotal  = Number(apt.total || 0);
-        if (sumPrices > 0) {
-          const scaleFactor = appTotal / sumPrices;
-          return items.reduce((s: number, i: any) => s + Number(i.price || 0) * scaleFactor * (getRate(i.name) / 100), 0);
-        }
-        // sumPrices === 0: all item prices zero, fall through to legacy path on apt.total
-      }
-      return Number(apt.total || 0) * (getRate(apt.service) / 100);
+      return calcAppointmentCommission(apt, allServices as any[], allStaff as any[], allStaffCommissions as any[]);
     }
 
     // Split appointments: paid = actual collected, unpaid = still pending
@@ -2864,46 +2833,12 @@ export async function registerRoutes(
       if (lastPayment) {
         const sincePayment = futureAppointments.filter(a => isStaffAppt(a) && !!a.paid);
         for (const appt of sincePayment) {
-          const wTotal = Number(appt.total || 0);
-          let wCommission = 0;
-          let wServiceItems: { name: string; price: number }[] | null = null;
-          if (appt.servicesJson) {
-            try {
-              const parsed = typeof appt.servicesJson === 'string' ? JSON.parse(appt.servicesJson) : appt.servicesJson;
-              if (Array.isArray(parsed) && parsed.length > 0) wServiceItems = parsed;
-            } catch { wServiceItems = null; }
-          }
-          if (wServiceItems && wServiceItems.length > 0) {
-            const sumPrices = wServiceItems.reduce((acc, i) => acc + Number(i.price || 0), 0);
-            if (sumPrices > 0) {
-              const scaleFactor = wTotal / sumPrices;
-              for (const item of wServiceItems) {
-                const effectivePrice = Number(item.price || 0) * scaleFactor;
-                // Case-insensitive fallback mirrors frontend findService() in commissionCalc.ts
-                const svc = serviceMap.get(item.name) ||
-                  [...serviceMap.values()].find((s: any) => s.name.toLowerCase() === (item.name || "").toLowerCase());
-                let rate = Number(svc?.commissionPercent ?? 50);
-                const cc = staffCommissions.find(c => svc && c.serviceId === svc.id);
-                if (cc) rate = cc.percentage;
-                wCommission += effectivePrice * (rate / 100);
-              }
-            } else {
-              // All item prices zero — fall back to app.total with main service rate
-              const service = serviceMap.get(appt.service || "") ||
-                [...serviceMap.values()].find((s: any) => s.name.toLowerCase() === (appt.service || "").toLowerCase());
-              let cr = Number(service?.commissionPercent ?? 50);
-              const cc = staffCommissions.find(c => service && c.serviceId === service.id);
-              if (cc) cr = cc.percentage;
-              wCommission = wTotal * (cr / 100);
-            }
-          } else {
-            const service = serviceMap.get(appt.service || "") ||
-              [...serviceMap.values()].find((s: any) => s.name.toLowerCase() === (appt.service || "").toLowerCase());
-            let cr = Number(service?.commissionPercent ?? 50);
-            const cc = staffCommissions.find(c => service && c.serviceId === service.id);
-            if (cc) cr = cc.percentage;
-            wCommission = wTotal * (cr / 100);
-          }
+          const wCommission = calcAppointmentCommission(
+            appt,
+            [...serviceMap.values()] as any[],
+            [staffMember],
+            staffCommissions as any[]
+          );
           walletBalance += wCommission;
         }
         walletBalance -= totalPendingDeductions;
