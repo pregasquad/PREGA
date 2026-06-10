@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
@@ -13,9 +13,21 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   ShoppingCart, Search, X, CreditCard, Banknote,
   Check, User, Loader2, Receipt, Scissors, Tag,
-  Sparkles, Trash2, Plus,
+  Sparkles, Trash2, Plus, Star,
 } from "lucide-react";
 import type { Client } from "@shared/schema";
+
+const USAGE_KEY = "pos_service_usage";
+
+function loadUsage(): Record<number, number> {
+  try { return JSON.parse(localStorage.getItem(USAGE_KEY) || "{}"); } catch { return {}; }
+}
+
+function incrementUsage(serviceId: number) {
+  const usage = loadUsage();
+  usage[serviceId] = (usage[serviceId] || 0) + 1;
+  localStorage.setItem(USAGE_KEY, JSON.stringify(usage));
+}
 
 interface CartItem {
   id: string;
@@ -46,9 +58,11 @@ export default function POS() {
   const pointsPerDirham = Number(biz?.loyaltyPointsPerDh ?? biz?.loyaltyPointsPerDirham ?? 1);
   const loyaltyMultiplier = Number(biz?.loyaltyPointsMultiplier ?? 1);
 
+  const [usageMap, setUsageMap] = useState<Record<number, number>>(() => loadUsage());
+
   const [cart, setCart] = useState<CartItem[]>([]);
   const [search, setSearch] = useState("");
-  const [selectedCat, setSelectedCat] = useState("all");
+  const [selectedCat, setSelectedCat] = useState("favorites");
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [clientSearch, setClientSearch] = useState("");
   const [showClients, setShowClients] = useState(false);
@@ -74,15 +88,42 @@ export default function POS() {
 
   const allCats = useMemo(() => [...new Set(services.map((s: any) => s.category as string))], [services]);
 
+  // Top 8 most-used service IDs (by usage count), only those with at least 1 use
+  const topServiceIds = useMemo(() => {
+    return Object.entries(usageMap)
+      .filter(([, count]) => count > 0)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 8)
+      .map(([id]) => Number(id));
+  }, [usageMap]);
+
+  const hasFavorites = topServiceIds.length > 0;
+
+  // Effective default: show "favorites" if any exist, else "all"
+  const effectiveCat = selectedCat === "favorites" && !hasFavorites ? "all" : selectedCat;
+
   const filteredServices = useMemo(() => {
-    let list = services;
-    if (selectedCat !== "all") list = list.filter((s: any) => s.category === selectedCat);
+    let list: any[] = services;
+
+    if (effectiveCat === "favorites") {
+      // Show only top-used services, sorted by usage count desc
+      list = topServiceIds
+        .map(id => services.find((s: any) => s.id === id))
+        .filter(Boolean);
+    } else {
+      if (effectiveCat !== "all") list = list.filter((s: any) => s.category === effectiveCat);
+      if (!search.trim()) {
+        // Sort by usage count descending so most-used float to top
+        list = [...list].sort((a: any, b: any) => (usageMap[b.id] || 0) - (usageMap[a.id] || 0));
+      }
+    }
+
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       list = list.filter((s: any) => s.name.toLowerCase().includes(q));
     }
     return list;
-  }, [services, selectedCat, search]);
+  }, [services, effectiveCat, search, topServiceIds, usageMap]);
 
   const filteredClients = useMemo(() => {
     if (!clientSearch.trim()) return clients.slice(0, 25);
@@ -116,6 +157,10 @@ export default function POS() {
   const addToCart = (svc: any) => {
     setCart(prev => [...prev, { id: uid(), serviceId: svc.id, name: svc.name, price: svc.price, duration: svc.duration }]);
     setActiveTab("cart");
+    if (svc.id) {
+      incrementUsage(svc.id);
+      setUsageMap(loadUsage());
+    }
   };
 
   const sellMutation = useMutation({
@@ -206,11 +251,23 @@ export default function POS() {
       </div>
 
       <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+        {hasFavorites && (
+          <button
+            onClick={() => setSelectedCat("favorites")}
+            className={cn(
+              "shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border transition-all",
+              effectiveCat === "favorites" ? "bg-amber-500 text-white border-amber-500" : "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-400"
+            )}
+          >
+            <Star className="w-3 h-3 fill-current" />
+            المفضلة
+          </button>
+        )}
         <button
           onClick={() => setSelectedCat("all")}
           className={cn(
             "shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all",
-            selectedCat === "all" ? "bg-primary text-white border-primary" : "bg-muted/50 border-border text-muted-foreground hover:bg-muted"
+            effectiveCat === "all" ? "bg-primary text-white border-primary" : "bg-muted/50 border-border text-muted-foreground hover:bg-muted"
           )}
         >
           الكل
@@ -221,7 +278,7 @@ export default function POS() {
             onClick={() => setSelectedCat(cat)}
             className={cn(
               "shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all",
-              selectedCat === cat ? "bg-primary text-white border-primary" : "bg-muted/50 border-border text-muted-foreground hover:bg-muted"
+              effectiveCat === cat ? "bg-primary text-white border-primary" : "bg-muted/50 border-border text-muted-foreground hover:bg-muted"
             )}
           >
             {cat}
@@ -237,12 +294,24 @@ export default function POS() {
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-            {filteredServices.map((svc: any) => (
+            {filteredServices.map((svc: any) => {
+              const useCount = usageMap[svc.id] || 0;
+              const isTopUsed = topServiceIds.includes(svc.id);
+              return (
               <button
                 key={svc.id}
                 onClick={() => addToCart(svc)}
-                className="group flex flex-col items-start gap-0 rounded-xl border bg-card hover:bg-primary/5 hover:border-primary/40 active:scale-95 transition-all text-left shadow-sm overflow-hidden"
+                className={cn(
+                  "group flex flex-col items-start gap-0 rounded-xl border bg-card hover:bg-primary/5 hover:border-primary/40 active:scale-95 transition-all text-left shadow-sm overflow-hidden relative",
+                  isTopUsed && "border-amber-200/80 dark:border-amber-700/40"
+                )}
               >
+                {isTopUsed && (
+                  <span className="absolute top-1.5 right-1.5 z-10 flex items-center gap-0.5 bg-amber-400/90 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">
+                    <Star className="w-2.5 h-2.5 fill-white" />
+                    {useCount}×
+                  </span>
+                )}
                 {svc.imageUrl ? (
                   <div className="w-full h-24 overflow-hidden bg-muted/40 shrink-0">
                     <img
@@ -252,7 +321,7 @@ export default function POS() {
                     />
                   </div>
                 ) : (
-                  <div className="w-full h-16 flex items-center justify-center bg-muted/20 shrink-0">
+                  <div className={cn("w-full h-16 flex items-center justify-center shrink-0", isTopUsed ? "bg-amber-50/50 dark:bg-amber-900/10" : "bg-muted/20")}>
                     {svc.emoji
                       ? <span className="text-3xl leading-none">{svc.emoji}</span>
                       : <Scissors className="w-7 h-7 text-muted-foreground/25" />
@@ -269,7 +338,8 @@ export default function POS() {
                   </div>
                 </div>
               </button>
-            ))}
+              );
+            })}
           </div>
         )}
       </ScrollArea>
