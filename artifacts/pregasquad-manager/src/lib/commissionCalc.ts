@@ -88,20 +88,24 @@ export function calcAppointmentCommission(
   if (serviceItems && serviceItems.length > 0) {
     // Multi-service: split app.total proportionally across services by their listed prices,
     // then apply each service's commission rate to its effective share.
-    // This correctly handles discounts (total < sum) and price updates (total > sum).
+    // Handles discounts (total < sum), price updates (total > sum), and tips.
     const sumPrices = serviceItems.reduce((s, i) => s + Number(i.price || 0), 0);
     const appTotal = Number(app.total || 0);
-    // Always scale by actual charged amount / listed prices so commission is on real revenue
-    const scaleFactor = sumPrices > 0 ? appTotal / sumPrices : 1;
 
-    let total = 0;
-    for (const item of serviceItems) {
-      const effectivePrice = Number(item.price || 0) * scaleFactor;
-      const svcDef = findService(services, item.name);
-      const rate = getRate(svcDef, staffMember, staffCommissions);
-      total += effectivePrice * (rate / 100);
+    if (sumPrices > 0) {
+      // Scale every item's price by the ratio of actual charged vs listed total
+      const scaleFactor = appTotal / sumPrices;
+      let total = 0;
+      for (const item of serviceItems) {
+        const effectivePrice = Number(item.price || 0) * scaleFactor;
+        const svcDef = findService(services, item.name);
+        const rate = getRate(svcDef, staffMember, staffCommissions);
+        total += effectivePrice * (rate / 100);
+      }
+      return total;
     }
-    return total;
+    // sumPrices === 0: all servicesJson item prices are zero.
+    // Fall through to the legacy single-service path so app.total is used instead.
   }
 
   // Legacy single-service fallback

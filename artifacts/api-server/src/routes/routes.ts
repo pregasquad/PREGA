@@ -101,8 +101,11 @@ async function buildAndSendDailySummary(dateStr: string, label?: string): Promis
       if (items && items.length > 0) {
         const sumPrices = items.reduce((s: number, i: any) => s + Number(i.price || 0), 0);
         const appTotal  = Number(apt.total || 0);
-        const ratio     = sumPrices > 0 && appTotal >= 0 && appTotal < sumPrices ? appTotal / sumPrices : 1;
-        return items.reduce((s: number, i: any) => s + Number(i.price || 0) * ratio * (getRate(i.name) / 100), 0);
+        if (sumPrices > 0) {
+          const scaleFactor = appTotal / sumPrices;
+          return items.reduce((s: number, i: any) => s + Number(i.price || 0) * scaleFactor * (getRate(i.name) / 100), 0);
+        }
+        // sumPrices === 0: all item prices zero, fall through to legacy path on apt.total
       }
       return Number(apt.total || 0) * (getRate(apt.service) / 100);
     }

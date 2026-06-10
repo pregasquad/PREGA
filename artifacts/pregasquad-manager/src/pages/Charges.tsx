@@ -505,16 +505,29 @@ export default function Charges() {
         if (serviceItems && serviceItems.length > 0) {
           const sumPrices = serviceItems.reduce((s: number, i: any) => s + Number(i.price || 0), 0);
           const appTotal = Number(app.total || 0);
-          const discountRatio = sumPrices > 0 && appTotal >= 0 && appTotal < sumPrices ? appTotal / sumPrices : 1;
-          for (const item of serviceItems) {
-            const effectivePrice = Number(item.price || 0) * discountRatio;
-            const svcDef = allServices.find((s: any) => s.name === item.name);
-            if (!svcDef || !resolvedStaff) continue;
-            const manualComm = allStaffCommissions.find(
-              (c: any) => c.staffId === resolvedStaff.id && c.serviceId === svcDef.id
-            );
-            if (manualComm) {
-              budget += effectivePrice * (Math.max(0, 100 - manualComm.percentage - 50) / 100);
+          if (sumPrices > 0) {
+            const scaleFactor = appTotal / sumPrices;
+            for (const item of serviceItems) {
+              const effectivePrice = Number(item.price || 0) * scaleFactor;
+              const svcDef = allServices.find((s: any) => s.name === item.name);
+              if (!svcDef || !resolvedStaff) continue;
+              const manualComm = allStaffCommissions.find(
+                (c: any) => c.staffId === resolvedStaff.id && c.serviceId === svcDef.id
+              );
+              if (manualComm) {
+                budget += effectivePrice * (Math.max(0, 100 - manualComm.percentage - 50) / 100);
+              }
+            }
+          } else {
+            // All item prices zero — fallback to app.total with main service rate
+            const svcDef = allServices.find((s: any) => s.name === (app.service || ""));
+            if (svcDef && resolvedStaff) {
+              const manualComm = allStaffCommissions.find(
+                (c: any) => c.staffId === resolvedStaff.id && c.serviceId === svcDef.id
+              );
+              if (manualComm) {
+                budget += appTotal * (Math.max(0, 100 - manualComm.percentage - 50) / 100);
+              }
             }
           }
         } else {

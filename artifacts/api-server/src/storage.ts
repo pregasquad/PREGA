@@ -972,15 +972,27 @@ export class DatabaseStorage implements IStorage {
 
       if (serviceItems && serviceItems.length > 0) {
         const sumPrices = serviceItems.reduce((acc, i) => acc + Number(i.price || 0), 0);
-        const discountRatio = sumPrices > 0 && amount >= 0 && amount < sumPrices ? amount / sumPrices : 1;
-        for (const item of serviceItems) {
-          const effectivePrice = Number(item.price || 0) * discountRatio;
-          // Case-insensitive fallback mirrors frontend findService() in commissionCalc.ts
-          const svc = serviceMap.get(item.name) ||
-            [...serviceMap.values()].find((s: any) => s.name.toLowerCase() === (item.name || "").toLowerCase());
-          let rate = Number(svc?.commissionPercent ?? 50);
-          if (svc && customCommissions.has(svc.id)) rate = customCommissions.get(svc.id)!;
-          commission += effectivePrice * (rate / 100);
+        if (sumPrices > 0) {
+          // Scale each item's price proportionally to actual charged amount (handles discounts and markups)
+          const scaleFactor = amount / sumPrices;
+          for (const item of serviceItems) {
+            const effectivePrice = Number(item.price || 0) * scaleFactor;
+            // Case-insensitive fallback mirrors frontend findService() in commissionCalc.ts
+            const svc = serviceMap.get(item.name) ||
+              [...serviceMap.values()].find((s: any) => s.name.toLowerCase() === (item.name || "").toLowerCase());
+            let rate = Number(svc?.commissionPercent ?? 50);
+            if (svc && customCommissions.has(svc.id)) rate = customCommissions.get(svc.id)!;
+            commission += effectivePrice * (rate / 100);
+          }
+        } else {
+          // All servicesJson item prices are zero — fall through to legacy single-service path
+          const service = serviceMap.get(appt.service) ||
+            [...serviceMap.values()].find((s: any) => s.name.toLowerCase() === (appt.service || "").toLowerCase());
+          let commissionRate = Number(service?.commissionPercent || 50);
+          if (service && customCommissions.has(service.id)) {
+            commissionRate = customCommissions.get(service.id)!;
+          }
+          commission = amount * commissionRate / 100;
         }
       } else {
         const service = serviceMap.get(appt.service) ||
