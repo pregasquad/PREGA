@@ -143,6 +143,10 @@ export async function autoPrint(data: ReceiptData): Promise<void> {
     setTimeout(() => remoteOpenDrawer(), 800);
     return;
   }
+  if (isMobileDevice()) {
+    console.log("[print] Mobile device with no printer connected — skipping auto-print");
+    return;
+  }
   console.log("[print-relay] No print station available, using browser print");
   browserPrint(data);
 }
@@ -334,6 +338,10 @@ export async function autoPrintExpense(data: ExpenseReceiptData): Promise<void> 
   if (stationAvailable) {
     console.log("[print-relay] Remote print station found, sending expense receipt");
     await remotePrintExpense(data);
+    return;
+  }
+  if (isMobileDevice()) {
+    console.log("[print] Mobile device with no printer connected — skipping auto-print expense");
     return;
   }
   console.log("[print-relay] No print station available, using browser print for expense");
