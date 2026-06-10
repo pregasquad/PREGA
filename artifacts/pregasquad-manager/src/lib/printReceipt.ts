@@ -1,5 +1,39 @@
 import { isQzConnected, silentPrint, silentPrintExpense, remotePrint, remotePrintExpense, remoteOpenDrawer, openCashDrawer, checkPrintStationAsync, ensureQzConnected } from "./qzPrint";
 
+function printViaIframe(html: string): void {
+  const existingFrame = document.getElementById("__receipt_print_frame__");
+  if (existingFrame) existingFrame.remove();
+
+  const iframe = document.createElement("iframe");
+  iframe.id = "__receipt_print_frame__";
+  iframe.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:0;height:0;border:0;visibility:hidden;";
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentDocument || iframe.contentWindow?.document;
+  if (!doc) return;
+
+  doc.open();
+  doc.write(html);
+  doc.close();
+
+  const doPrint = () => {
+    try {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+    } catch (e) {
+      console.error("[print] iframe print failed:", e);
+    }
+    setTimeout(() => iframe.remove(), 3000);
+  };
+
+  if (iframe.contentDocument?.readyState === "complete") {
+    doPrint();
+  } else {
+    iframe.onload = doPrint;
+    setTimeout(doPrint, 800);
+  }
+}
+
 export interface ReceiptData {
   businessName: string;
   currency: string;
@@ -199,24 +233,7 @@ function browserPrint(data: ReceiptData): void {
 </body>
 </html>`;
 
-  const printWindow = window.open("", "_blank", "width=320,height=600");
-  if (!printWindow) return;
-
-  printWindow.document.open();
-  printWindow.document.write(html);
-  printWindow.document.close();
-
-  printWindow.onload = () => {
-    printWindow.focus();
-    printWindow.print();
-  };
-
-  setTimeout(() => {
-    if (printWindow.document.readyState === "complete") {
-      printWindow.focus();
-      printWindow.print();
-    }
-  }, 600);
+  printViaIframe(html);
 }
 
 export interface ExpenseReceiptData {
@@ -367,22 +384,5 @@ function browserPrintExpense(data: ExpenseReceiptData): void {
 </body>
 </html>`;
 
-  const printWindow = window.open("", "_blank", "width=320,height=600");
-  if (!printWindow) return;
-
-  printWindow.document.open();
-  printWindow.document.write(html);
-  printWindow.document.close();
-
-  printWindow.onload = () => {
-    printWindow.focus();
-    printWindow.print();
-  };
-
-  setTimeout(() => {
-    if (printWindow.document.readyState === "complete") {
-      printWindow.focus();
-      printWindow.print();
-    }
-  }, 600);
+  printViaIframe(html);
 }

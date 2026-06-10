@@ -1884,14 +1884,12 @@ export default function Planning() {
             console.error("Failed to fetch loyalty points:", e);
           }
 
-          if (submitData.paid) {
-            autoPrint({
-              ...printData,
-              appointmentId: result?.id,
-              loyaltyPointsEarned: loyaltyPointsEarned > 0 ? loyaltyPointsEarned : undefined,
-              loyaltyPointsBalance: loyaltyPointsBalance > 0 ? loyaltyPointsBalance : undefined,
-            }).catch(err => console.error("[print-relay] autoPrint failed:", err));
-          }
+          autoPrint({
+            ...printData,
+            appointmentId: result?.id,
+            loyaltyPointsEarned: loyaltyPointsEarned > 0 ? loyaltyPointsEarned : undefined,
+            loyaltyPointsBalance: loyaltyPointsBalance > 0 ? loyaltyPointsBalance : undefined,
+          }).catch(err => console.error("[print-relay] autoPrint failed:", err));
           await performDeductions();
         },
         onError: () => {
@@ -3019,6 +3017,7 @@ export default function Planning() {
                 }
                 setDrawerState(opened ? "success" : "fail");
                 setTimeout(() => setDrawerState("idle"), 1800);
+                setLocation("/pos");
               }}
               data-testid="button-open-cash-drawer"
             >
