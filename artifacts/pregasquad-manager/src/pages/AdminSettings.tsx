@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -16,8 +16,15 @@ import {
   CreditCard, Building2, Clock, Save, Camera, Loader2, RefreshCw,
   MessageCircle, Send, Lock, LayoutGrid, Sparkles,
   Search, Check, X, Phone, AlertTriangle, CheckCircle2,
-  BookTemplate, CalendarOff, Plus
+  BookTemplate, CalendarOff, Plus, Printer, Wifi, WifiOff,
+  ChevronDown, TestTube2, Wallet
 } from "lucide-react";
+import {
+  connectQz, isQzConnected, findPrinters, selectPrinter, getSelectedPrinter,
+  openCashDrawer, checkPrintStationAsync, remoteOpenDrawer,
+  subscribePrintStatus, isPrintStationAvailable,
+} from "@/lib/qzPrint";
+import { autoPrint } from "@/lib/printReceipt";
 import { Textarea } from "@/components/ui/textarea";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
 import { SHORTCUT_OPTIONS, DEFAULT_SHORTCUTS } from "@/lib/shortcuts";
@@ -580,12 +587,13 @@ export default function AdminSettings() {
 
       <Tabs defaultValue="business" className="w-full">
         <div className="glass-card rounded-2xl p-1.5 mb-5">
-          <TabsList className="grid w-full grid-cols-4 bg-transparent h-auto p-0 gap-1">
+          <TabsList className="grid w-full grid-cols-5 bg-transparent h-auto p-0 gap-1">
             {[
               { value: "business", icon: Building2, label: t("admin.business") },
               { value: "users", icon: Users, label: t("admin.users") },
               { value: "broadcast", icon: MessageCircle, label: t("admin.broadcast") },
               { value: "export", icon: Download, label: t("admin.export") },
+              { value: "printer", icon: Printer, label: "Imprimante" },
             ].map(tab => (
               <TabsTrigger
                 key={tab.value}
@@ -1858,7 +1866,299 @@ export default function AdminSettings() {
             </div>
           </GlassSection>
         </TabsContent>
+
+        {/* ==================== PRINTER TAB ==================== */}
+        <TabsContent value="printer" className="space-y-5 mt-0">
+          <PrinterSettingsPanel />
+        </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function PrinterSettingsPanel() {
+  const { toast } = useToast();
+  const [printStatus, setPrintStatus] = useState({ qz: isQzConnected(), station: isPrintStationAvailable() });
+  const [printers, setPrinters] = useState<string[]>([]);
+  const [selectedPrinter, setSelectedPrinterState] = useState<string | null>(getSelectedPrinter());
+  const [connecting, setConnecting] = useState(false);
+  const [testingPrint, setTestingPrint] = useState(false);
+  const [testingDrawer, setTestingDrawer] = useState(false);
+  const [showPrinterList, setShowPrinterList] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const unsub = subscribePrintStatus(setPrintStatus);
+    return unsub;
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowPrinterList(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleConnect = async () => {
+    setConnecting(true);
+    try {
+      const ok = await connectQz();
+      if (ok) {
+        const list = await findPrinters();
+        setPrinters(list);
+        setSelectedPrinterState(getSelectedPrinter());
+        toast({ title: "✅ QZ Tray connecté", description: "Imprimante prête." });
+      } else {
+        toast({ title: "⚠️ Connexion échouée", description: "Assurez-vous que QZ Tray est lancé sur cet ordinateur.", variant: "destructive" });
+      }
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  const handleLoadPrinters = async () => {
+    if (!printStatus.qz) return;
+    const list = await findPrinters();
+    setPrinters(list);
+    setShowPrinterList(true);
+  };
+
+  const handleSelectPrinter = (name: string) => {
+    selectPrinter(name);
+    setSelectedPrinterState(name);
+    setShowPrinterList(false);
+    toast({ title: "🖨️ Imprimante sélectionnée", description: name });
+  };
+
+  const handleTestPrint = async () => {
+    setTestingPrint(true);
+    try {
+      await autoPrint({
+        businessName: "PREGA SQUAD",
+        currency: "DH",
+        clientName: "Test Client",
+        clientPhone: "0600000000",
+        services: "Test Service",
+        staffName: "Staff",
+        date: new Date().toLocaleDateString("fr-FR"),
+        time: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
+        duration: 30,
+        total: 150,
+        paid: true,
+      });
+      toast({ title: "✅ Reçu test envoyé", description: "Vérifiez votre imprimante." });
+    } catch {
+      toast({ title: "Erreur", description: "Impression échouée.", variant: "destructive" });
+    } finally {
+      setTestingPrint(false);
+    }
+  };
+
+  const handleTestDrawer = async () => {
+    setTestingDrawer(true);
+    try {
+      let ok = false;
+      if (printStatus.qz) {
+        ok = await openCashDrawer();
+      } else if (printStatus.station) {
+        ok = await remoteOpenDrawer();
+      }
+      toast({
+        title: ok ? "✅ Tiroir ouvert" : "⚠️ Tiroir non répondu",
+        description: ok ? "Commande envoyée avec succès." : "Vérifiez la connexion du tiroir-caisse.",
+        variant: ok ? "default" : "destructive",
+      });
+    } finally {
+      setTestingDrawer(false);
+    }
+  };
+
+  const isReady = printStatus.qz || printStatus.station;
+
+  return (
+    <div className="space-y-5">
+      {/* Status card */}
+      <GlassSection>
+        <GlassSectionHeader
+          icon={Printer}
+          title="Station d'impression"
+          description="Statut de la connexion avec QZ Tray et l'imprimante thermique"
+        />
+        <div className="p-5 md:p-6 space-y-4">
+          {/* QZ status row */}
+          <div className="flex items-center justify-between gap-4 glass-subtle rounded-2xl p-4">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${printStatus.qz ? "bg-emerald-500/15" : "bg-muted/40"}`}>
+                {printStatus.qz ? <Wifi className="w-5 h-5 text-emerald-500" /> : <WifiOff className="w-5 h-5 text-muted-foreground" />}
+              </div>
+              <div>
+                <p className="text-sm font-semibold">QZ Tray — cet ordinateur</p>
+                <p className="text-xs text-muted-foreground">
+                  {printStatus.qz
+                    ? `Connecté · Imprimante : ${selectedPrinter || "détection auto"}`
+                    : "Non connecté — lancez QZ Tray puis cliquez Connecter"}
+                </p>
+              </div>
+            </div>
+            <span className={`text-xs font-bold px-3 py-1 rounded-full ${printStatus.qz ? "bg-emerald-500/15 text-emerald-600" : "bg-muted/60 text-muted-foreground"}`}>
+              {printStatus.qz ? "ACTIF" : "INACTIF"}
+            </span>
+          </div>
+
+          {/* Remote station row */}
+          <div className="flex items-center justify-between gap-4 glass-subtle rounded-2xl p-4">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${printStatus.station ? "bg-sky-500/15" : "bg-muted/40"}`}>
+                <Printer className={`w-5 h-5 ${printStatus.station ? "text-sky-500" : "text-muted-foreground"}`} />
+              </div>
+              <div>
+                <p className="text-sm font-semibold">Station distante (depuis téléphone)</p>
+                <p className="text-xs text-muted-foreground">
+                  {printStatus.station
+                    ? "Un autre appareil est enregistré comme station d'impression"
+                    : "Aucune station distante détectée"}
+                </p>
+              </div>
+            </div>
+            <span className={`text-xs font-bold px-3 py-1 rounded-full ${printStatus.station ? "bg-sky-500/15 text-sky-600" : "bg-muted/60 text-muted-foreground"}`}>
+              {printStatus.station ? "DISPONIBLE" : "ABSENT"}
+            </span>
+          </div>
+
+          {/* Connect button */}
+          {!printStatus.qz && (
+            <Button
+              onClick={handleConnect}
+              disabled={connecting}
+              className="w-full liquid-gradient text-white rounded-xl h-11 font-semibold"
+            >
+              {connecting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Wifi className="w-4 h-4 mr-2" />}
+              {connecting ? "Connexion en cours…" : "Connecter QZ Tray"}
+            </Button>
+          )}
+        </div>
+      </GlassSection>
+
+      {/* Printer selection — only if QZ connected */}
+      {printStatus.qz && (
+        <GlassSection>
+          <GlassSectionHeader
+            icon={ChevronDown}
+            title="Imprimante sélectionnée"
+            description="Choisissez l'imprimante thermique à utiliser"
+          />
+          <div className="p-5 md:p-6">
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={handleLoadPrinters}
+                className="w-full glass-subtle rounded-2xl px-4 py-3 flex items-center justify-between text-sm font-medium hover:bg-muted/30 transition-colors"
+              >
+                <span className="flex items-center gap-2">
+                  <Printer className="w-4 h-4 text-primary" />
+                  {selectedPrinter || "Cliquez pour détecter les imprimantes…"}
+                </span>
+                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              </button>
+              {showPrinterList && printers.length > 0 && (
+                <div className="absolute z-50 left-0 right-0 mt-1 glass-card rounded-2xl shadow-xl border border-border overflow-hidden">
+                  {printers.map(p => (
+                    <button
+                      key={p}
+                      onClick={() => handleSelectPrinter(p)}
+                      className={`w-full text-left px-4 py-3 text-sm flex items-center gap-2 hover:bg-muted/40 transition-colors ${p === selectedPrinter ? "font-bold text-primary" : ""}`}
+                    >
+                      {p === selectedPrinter && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
+                      <span>{p}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {showPrinterList && printers.length === 0 && (
+                <div className="absolute z-50 left-0 right-0 mt-1 glass-card rounded-2xl shadow-xl border border-border p-4 text-sm text-muted-foreground text-center">
+                  Aucune imprimante détectée
+                </div>
+              )}
+            </div>
+          </div>
+        </GlassSection>
+      )}
+
+      {/* Test actions */}
+      <GlassSection>
+        <GlassSectionHeader
+          icon={TestTube2}
+          title="Tester l'impression"
+          description="Envoyez un reçu test ou ouvrez le tiroir-caisse pour vérifier la connexion"
+        />
+        <div className="p-5 md:p-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button
+            onClick={handleTestPrint}
+            disabled={testingPrint || !isReady}
+            className="glass-subtle rounded-2xl p-5 flex flex-col items-center gap-3 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none group"
+          >
+            <div className="w-12 h-12 rounded-xl liquid-gradient flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
+              {testingPrint ? <Loader2 className="w-5 h-5 text-white animate-spin" /> : <Printer className="w-5 h-5 text-white" />}
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-semibold">Imprimer reçu test</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Reçu fictif pour vérifier</p>
+            </div>
+          </button>
+
+          <button
+            onClick={handleTestDrawer}
+            disabled={testingDrawer || !isReady}
+            className="glass-subtle rounded-2xl p-5 flex flex-col items-center gap-3 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none group"
+          >
+            <div className="w-12 h-12 rounded-xl bg-emerald-500 flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
+              {testingDrawer ? <Loader2 className="w-5 h-5 text-white animate-spin" /> : <Wallet className="w-5 h-5 text-white" />}
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-semibold">Ouvrir tiroir-caisse</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Teste la commande d'ouverture</p>
+            </div>
+          </button>
+        </div>
+        {!isReady && (
+          <div className="px-5 pb-5">
+            <div className="glass-subtle rounded-2xl p-4 flex items-start gap-3">
+              <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+              <p className="text-xs text-muted-foreground">
+                Aucune imprimante connectée. Connectez QZ Tray sur cet ordinateur ou assurez-vous qu'un autre appareil est enregistré comme station.
+              </p>
+            </div>
+          </div>
+        )}
+      </GlassSection>
+
+      {/* Setup guide */}
+      <GlassSection>
+        <GlassSectionHeader
+          icon={CheckCircle2}
+          title="Guide de configuration"
+          description="Étapes pour connecter l'imprimante thermique et le tiroir-caisse"
+        />
+        <div className="p-5 md:p-6 space-y-3">
+          {[
+            { step: "1", text: "Téléchargez et installez QZ Tray sur votre ordinateur (qz.io)", done: false },
+            { step: "2", text: "Lancez QZ Tray — l'icône apparaît dans la barre système", done: false },
+            { step: "3", text: "Ouvrez le salon sur ce navigateur et cliquez « Connecter QZ Tray » ci-dessus", done: printStatus.qz },
+            { step: "4", text: "Acceptez la demande d'autorisation dans la fenêtre QZ Tray (« Toujours autoriser »)", done: printStatus.qz },
+            { step: "5", text: "Sélectionnez votre imprimante thermique dans la liste", done: !!selectedPrinter && printStatus.qz },
+            { step: "6", text: "Cliquez « Imprimer reçu test » pour valider", done: false },
+          ].map(({ step, text, done }) => (
+            <div key={step} className="flex items-start gap-3 glass-subtle rounded-2xl px-4 py-3">
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 ${done ? "bg-emerald-500 text-white" : "bg-muted/60 text-muted-foreground"}`}>
+                {done ? <Check className="w-3.5 h-3.5" /> : step}
+              </div>
+              <p className={`text-sm leading-relaxed ${done ? "line-through text-muted-foreground" : ""}`}>{text}</p>
+            </div>
+          ))}
+        </div>
+      </GlassSection>
     </div>
   );
 }
