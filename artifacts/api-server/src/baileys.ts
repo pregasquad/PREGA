@@ -840,15 +840,18 @@ export async function sendWhatsAppImage(
  * WhatsApp PTT voice notes MUST be real OGG/Opus — sending WAV mislabelled as
  * OGG causes "This audio is no longer available" on the recipient's end.
  */
-async function pcmToOggOpus(pcmBuffer: Buffer, sampleRate: number): Promise<Buffer> {
+async function pcmToOggOpus(pcmBuffer: Buffer, sampleRate: number, speed = 1.0): Promise<Buffer> {
   const ffmpegBin = (await import("ffmpeg-static")).default as string;
+  // atempo range is 0.5–2.0; clamp and round to 2 decimal places
+  const clampedSpeed = Math.round(Math.min(2.0, Math.max(0.5, speed)) * 100) / 100;
+  const audioFilter = clampedSpeed !== 1.0 ? `atempo=${clampedSpeed}` : "anull";
   return new Promise((resolve, reject) => {
     const ff = spawn(ffmpegBin, [
       "-f", "s16le",           // input: signed 16-bit little-endian PCM
       "-ar", String(sampleRate), // input sample rate
       "-ac", "1",              // mono
       "-i", "pipe:0",          // read from stdin
-      "-af", "atempo=1.1",     // speed up 1.1× (tempo, no pitch change)
+      "-af", audioFilter,      // speed adjustment (or no-op if 1.0×)
       "-c:a", "libopus",       // encode with Opus codec
       "-b:a", "32k",           // 32 kbps — plenty for voice
       "-vbr", "on",
@@ -875,7 +878,7 @@ async function pcmToOggOpus(pcmBuffer: Buffer, sampleRate: number): Promise<Buff
 }
 
 export async function sendWhatsAppVoiceNote(
-  to: string, pcmBase64: string, sampleRate: number
+  to: string, pcmBase64: string, sampleRate: number, speed = 1.0
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   if (!sock || status !== "open") return { success: false, error: "WhatsApp not connected" };
   try {
@@ -883,7 +886,7 @@ export async function sendWhatsAppVoiceNote(
     const pcmBuffer = Buffer.from(pcmBase64, "base64");
 
     // Encode PCM → real OGG/Opus (required by WhatsApp for voice notes)
-    const oggBuffer = await pcmToOggOpus(pcmBuffer, sampleRate);
+    const oggBuffer = await pcmToOggOpus(pcmBuffer, sampleRate, speed);
     log(`Voice note encoded: ${Math.round(oggBuffer.length / 1024)} KB OGG/Opus`);
 
     const result = await sock.sendMessage(jid, {

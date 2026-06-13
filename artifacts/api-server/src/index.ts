@@ -35,6 +35,7 @@ import {
   ensureBotBlockedColumn,
   ensureTtsVoiceColumn,
   ensureTtsEnabledColumn,
+  ensureTtsSpeedColumn,
   ensureMapsLinkColumn,
   ensureBotEnabledColumn,
   ensureBotFilterColumns,
@@ -104,6 +105,7 @@ const startServer = async () => {
       await ensureBotBlockedColumn();
       await ensureTtsVoiceColumn();
       await ensureTtsEnabledColumn();
+      await ensureTtsSpeedColumn();
       await ensureMapsLinkColumn();
       await ensureBotEnabledColumn();
       await ensureBotFilterColumns();

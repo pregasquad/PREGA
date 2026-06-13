@@ -168,6 +168,7 @@ export default function WhatsApp() {
   const [broadcastTab, setBroadcastTab] = useState<"compose" | "last">("compose");
   const [lastSearch, setLastSearch] = useState("");
   const [selectedVoice, setSelectedVoice] = useState("Aoede");
+  const [selectedSpeed, setSelectedSpeed] = useState<number>(1.0);
   const [selectedPersonalities, setSelectedPersonalities] = useState<string[]>(["warm"]);
   const [statusOpen, setStatusOpen] = useState(false);
   const [statusText, setStatusText] = useState("");
@@ -505,6 +506,7 @@ export default function WhatsApp() {
 
   useEffect(() => {
     if (bizSettings?.ttsVoice) setSelectedVoice(bizSettings.ttsVoice);
+    if ((bizSettings as any)?.ttsSpeed) setSelectedSpeed(Number((bizSettings as any).ttsSpeed));
     if (bizSettings?.linaPersonality) {
       try {
         const parsed = JSON.parse(bizSettings.linaPersonality);
@@ -526,6 +528,12 @@ export default function WhatsApp() {
       return [...prev, id];
     });
   };
+
+  const saveSpeedMutation = useMutation({
+    mutationFn: (speed: number) =>
+      apiRequest("PATCH", "/api/business-settings", { ttsSpeed: speed }).then((r) => r.json()),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/business-settings"] }),
+  });
 
   const saveVoiceMutation = useMutation({
     mutationFn: (voice: string) =>
@@ -2216,6 +2224,42 @@ export default function WhatsApp() {
               )}
               {saveVoiceMutation.isPending ? "جاري الحفظ…" : "حفظ الصوت"}
             </Button>
+
+            {/* ── Speed control ── */}
+            <div className="rounded-xl border border-border/40 px-4 py-3 glass-subtle space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold">سرعة الصوت</p>
+                  <p className="text-xs text-muted-foreground">
+                    السرعة الحالية: <span className="font-mono text-foreground">{selectedSpeed}×</span>
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => saveSpeedMutation.mutate(selectedSpeed)}
+                  disabled={saveSpeedMutation.isPending || selectedSpeed === Number((bizSettings as any)?.ttsSpeed ?? 1.0)}
+                  className="rounded-xl"
+                >
+                  {saveSpeedMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5 mr-1" />}
+                  حفظ
+                </Button>
+              </div>
+              <div className="flex gap-1.5 flex-wrap" dir="ltr">
+                {[0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.5, 1.7, 2.0].map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setSelectedSpeed(s)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-mono font-semibold transition-all border ${
+                      selectedSpeed === s
+                        ? "bg-emerald-500/20 border-emerald-500/60 text-emerald-400 ring-1 ring-emerald-500/40"
+                        : "glass-subtle border-border/40 text-muted-foreground hover:brightness-110"
+                    }`}
+                  >
+                    {s}×
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         )}
       </div>

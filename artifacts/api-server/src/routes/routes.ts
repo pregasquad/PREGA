@@ -6639,8 +6639,9 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
               const { sendWhatsAppVoiceNote } = await import("./baileys.js");
               const ttsResult = await textToSpeech(finalReply, bizSettings?.ttsVoice || "Aoede");
               if (ttsResult) {
+                const ttsSpeed = Number((bizSettings as any)?.ttsSpeed ?? 1.0) || 1.0;
                 const { success } = await sendWhatsAppVoiceNote(
-                  remoteJid, ttsResult.pcmBase64, ttsResult.sampleRate
+                  remoteJid, ttsResult.pcmBase64, ttsResult.sampleRate, ttsSpeed
                 );
                 if (success) {
                   repliedWithVoice = true;
