@@ -848,6 +848,7 @@ async function pcmToOggOpus(pcmBuffer: Buffer, sampleRate: number): Promise<Buff
       "-ar", String(sampleRate), // input sample rate
       "-ac", "1",              // mono
       "-i", "pipe:0",          // read from stdin
+      "-af", "atempo=1.1",     // speed up 1.1× (tempo, no pitch change)
       "-c:a", "libopus",       // encode with Opus codec
       "-b:a", "32k",           // 32 kbps — plenty for voice
       "-vbr", "on",
