@@ -102,7 +102,16 @@ export default function Salaries() {
     try {
       const raw = JSON.parse(localStorage.getItem(PAID_BACK_KEY) || "[]");
       return Array.isArray(raw)
-        ? raw.filter((e: any) => e && typeof e.id === "string" && typeof e.amount === "number")
+        ? raw.filter((e: any) =>
+            e &&
+            typeof e.id === "string" &&
+            typeof e.deductionId === "number" &&
+            typeof e.staffName === "string" && e.staffName.length > 0 &&
+            typeof e.type === "string" &&
+            typeof e.description === "string" &&
+            typeof e.amount === "number" && Number.isFinite(e.amount) &&
+            typeof e.timestamp === "string" && !isNaN(Date.parse(e.timestamp))
+          )
         : [];
     } catch { return []; }
   });

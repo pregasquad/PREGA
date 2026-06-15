@@ -4500,21 +4500,18 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
         });
       }
       
-      // Additional security: This endpoint is meant for initial setup only
-      const referer = req.get('referer') || '';
-      const origin = req.get('origin') || '';
-      const host = req.get('host') || '';
-      
-      // Verify request comes from same origin (not external)
-      const isLocalRequest = 
-        req.ip === '127.0.0.1' || 
-        req.ip === '::1' || 
-        req.ip?.includes('127.0.0.1') ||
-        (referer && referer.includes(host)) ||
-        (origin && origin.includes(host));
-      
-      if (!isLocalRequest && !isDatabaseOffline()) {
-        console.warn(`Blocked offline-setup request from IP: ${req.ip}, origin: ${origin}`);
+      // Security: only allow loopback or RFC-1918 private IPs — never trust spoofable headers
+      const rawIp = req.ip || req.socket.remoteAddress || "";
+      const cleanIp = rawIp.replace(/^::ffff:/, ""); // strip IPv4-mapped IPv6 prefix
+      const isLocalRequest =
+        cleanIp === "127.0.0.1" ||
+        cleanIp === "::1" ||
+        /^10\./.test(cleanIp) ||
+        /^172\.(1[6-9]|2\d|3[01])\./.test(cleanIp) ||
+        /^192\.168\./.test(cleanIp);
+
+      if (!isLocalRequest) {
+        console.warn(`Blocked offline-setup request from IP: ${cleanIp}`);
         return res.status(403).json({ success: false, message: "This endpoint is only accessible from the local network." });
       }
       
