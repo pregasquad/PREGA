@@ -95,6 +95,24 @@ export default function Salaries() {
   const [newCharge, setNewCharge] = useState({ type: "rent", name: "", amount: 0, date: format(workDayToday, "yyyy-MM-dd") });
   const [newDeduction, setNewDeduction] = useState<{ staffName: string; type: "advance" | "loan" | "penalty" | "other"; description: string; amount: number; date: string }>({ staffName: "", type: "advance", description: "", amount: 0, date: format(workDayToday, "yyyy-MM-dd") });
 
+  // ── Paid-back cash register (persisted in localStorage, cleared by Reset) ──
+  type PaidBackEntry = { id: string; deductionId: number; staffName: string; type: string; description: string; amount: number; timestamp: string };
+  const PAID_BACK_KEY = "salaries_paidback_history";
+  const [paidBackHistory, setPaidBackHistory] = useState<PaidBackEntry[]>(() => {
+    try { return JSON.parse(localStorage.getItem(PAID_BACK_KEY) || "[]"); } catch { return []; }
+  });
+  const [paidBackOpen, setPaidBackOpen] = useState(false);
+  const [paidBackOpenStaff, setPaidBackOpenStaff] = useState<Record<string, boolean>>({});
+  const addPaidBackEntry = (entry: PaidBackEntry) => {
+    const next = [...paidBackHistory, entry];
+    setPaidBackHistory(next);
+    localStorage.setItem(PAID_BACK_KEY, JSON.stringify(next));
+  };
+  const resetPaidBackHistory = () => {
+    setPaidBackHistory([]);
+    localStorage.removeItem(PAID_BACK_KEY);
+  };
+
   const getDateLocale = () => {
     switch (i18n.language) {
       case "ar": return ar;
@@ -293,7 +311,18 @@ export default function Salaries() {
       const res = await apiRequest("PATCH", `/api/staff-deductions/${id}/pay-back`, { amount });
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      if (payBackDeduction) {
+        addPaidBackEntry({
+          id: `${Date.now()}-${payBackDeduction.id}`,
+          deductionId: payBackDeduction.id,
+          staffName: payBackDeduction.staffName,
+          type: payBackDeduction.type,
+          description: payBackDeduction.description || "",
+          amount: variables.amount,
+          timestamp: new Date().toISOString(),
+        });
+      }
       refreshSalariesBackground();
       setPayBackDeduction(null);
       setPayBackInputAmount("");
@@ -683,9 +712,10 @@ export default function Salaries() {
       walletServices[serviceName].commission += commission;
     });
 
+    // Use full deduction amount (paidBack tracked in the separate Paid-Back card, not wallet)
     const pendingStaffDeductions = deductions
       .filter(d => !d.cleared && (Number(d.staffId) === s.id || (!d.staffId && d.staffName === s.name)))
-      .reduce((sum, d) => sum + getRemainingAmount(d), 0);
+      .reduce((sum, d) => sum + d.amount, 0);
 
     // Balance = commission earned since last payment − pending deductions
     const walletBalance = walletCommission - pendingStaffDeductions;
@@ -776,6 +806,84 @@ export default function Salaries() {
           </Button>
         </div>
       </div>
+
+      {/* ── Paid-Back Cash Register card ── */}
+      {paidBackHistory.length > 0 && (() => {
+        const totalPaidBack = paidBackHistory.reduce((s, e) => s + e.amount, 0);
+        const byStaff = paidBackHistory.reduce<Record<string, typeof paidBackHistory>>((acc, e) => {
+          if (!acc[e.staffName]) acc[e.staffName] = [];
+          acc[e.staffName].push(e);
+          return acc;
+        }, {});
+        return (
+          <Collapsible open={paidBackOpen} onOpenChange={setPaidBackOpen}>
+            <Card className="glass-card border-emerald-300/50 dark:border-emerald-700/50">
+              <CollapsibleTrigger asChild>
+                <CardHeader className="flex flex-row items-center justify-between gap-2 p-3 pb-2 cursor-pointer">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Undo2 className="h-4 w-4 text-emerald-500" />
+                    <span className="text-emerald-700 dark:text-emerald-400">استرداد الخصومات</span>
+                    <span className="text-sm font-normal text-emerald-600/70">({paidBackHistory.length})</span>
+                  </CardTitle>
+                  <div className="flex items-center gap-2">
+                    <span className="text-emerald-600 font-bold text-sm">{formatCurrency(totalPaidBack)} DH</span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-6 text-xs border-red-300/60 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      onClick={(e) => { e.stopPropagation(); resetPaidBackHistory(); }}
+                      data-testid="button-reset-paidback"
+                    >
+                      <RefreshCw className="h-3 w-3 me-1" />
+                      تصفير
+                    </Button>
+                    <ChevronDown className={`h-4 w-4 text-emerald-500 transition-transform ${paidBackOpen ? "rotate-180" : ""}`} />
+                  </div>
+                </CardHeader>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <CardContent className="px-3 pb-3 pt-0 space-y-2">
+                  <p className="text-xs text-emerald-600/70 dark:text-emerald-400/70 mb-2">المبالغ التي استردها الصالون من الموظفين — اضغط تصفير بعد تسجيل النقود</p>
+                  {Object.entries(byStaff).map(([staffName, entries]) => {
+                    const staffTotal = entries.reduce((s, e) => s + e.amount, 0);
+                    const isOpen = !!paidBackOpenStaff[staffName];
+                    return (
+                      <div key={staffName} className="rounded-lg border border-emerald-200/40 dark:border-emerald-800/30 overflow-hidden">
+                        <button
+                          className="w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-emerald-50/40 dark:hover:bg-emerald-900/20 transition-colors"
+                          onClick={() => setPaidBackOpenStaff(prev => ({ ...prev, [staffName]: !prev[staffName] }))}
+                        >
+                          <span className="font-semibold text-emerald-700 dark:text-emerald-400">{staffName}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-emerald-600 text-sm">{formatCurrency(staffTotal)} DH</span>
+                            <ChevronDown className={`h-3 w-3 text-emerald-500 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                          </div>
+                        </button>
+                        {isOpen && (
+                          <div className="px-3 pb-2 space-y-1 border-t border-emerald-200/30 dark:border-emerald-800/20 pt-1">
+                            {entries.map((e) => (
+                              <div key={e.id} className="flex items-center justify-between gap-2 py-1 text-xs">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className="liquid-glass-chip shrink-0">{getDeductionTypeLabel(e.type)}</span>
+                                  {e.description && <span className="text-muted-foreground truncate">{e.description}</span>}
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <span className="font-mono font-semibold text-emerald-600">{formatCurrency(e.amount)} DH</span>
+                                  <span className="text-muted-foreground">{format(new Date(e.timestamp), "d/M HH:mm")}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+        );
+      })()}
 
       {unclearedDeductions.length > 0 && (
         <Collapsible open={unclearedOpen} onOpenChange={setUnclearedOpen}>
