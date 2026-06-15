@@ -2793,8 +2793,9 @@ export async function registerRoutes(
           }
         } else {
           const serviceName = appt.service || "Unknown";
-          const service = serviceMap.get(serviceName);
-          let commissionRate = service?.commissionPercent ?? 50;
+          const service = serviceMap.get(serviceName) ||
+            [...serviceMap.values()].find((s: any) => s.name.toLowerCase() === serviceName.toLowerCase());
+          let commissionRate = Number(service?.commissionPercent ?? 50);
           if (service) {
             const customComm = staffCommissions.find(c => c.serviceId === service.id);
             if (customComm) commissionRate = customComm.percentage;
@@ -2823,10 +2824,10 @@ export async function registerRoutes(
         }
         return d.date >= effectiveStart && d.date <= effectiveEnd;
       });
-      const totalPeriodDeductions = periodDeductions.reduce((sum, d) => sum + Math.max(0, d.amount - (d.paidBack || 0)), 0);
+      const totalPeriodDeductions = periodDeductions.reduce((sum, d) => sum + d.amount, 0);
 
       const pendingDeductions = staffDeductions.filter(d => !d.cleared);
-      const totalPendingDeductions = pendingDeductions.reduce((sum, d) => sum + Math.max(0, d.amount - (d.paidBack || 0)), 0);
+      const totalPendingDeductions = pendingDeductions.reduce((sum, d) => sum + d.amount, 0);
 
       // Wallet = commission on all paid appointments from walletSinceDate onward (including future pre-booked)
       let walletBalance = 0;
@@ -2847,7 +2848,7 @@ export async function registerRoutes(
       }
 
       const netCommission = totalCommission - totalPeriodDeductions;
-      const periodPendingDeductions = periodDeductions.filter(d => !d.cleared).reduce((sum, d) => sum + Math.max(0, d.amount - (d.paidBack || 0)), 0);
+      const periodPendingDeductions = periodDeductions.filter(d => !d.cleared).reduce((sum, d) => sum + d.amount, 0);
 
       res.json({
         totalRevenue,
@@ -4513,7 +4514,8 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
         (origin && origin.includes(host));
       
       if (!isLocalRequest && !isDatabaseOffline()) {
-        console.warn(`Suspicious offline-setup request from IP: ${req.ip}, origin: ${origin}`);
+        console.warn(`Blocked offline-setup request from IP: ${req.ip}, origin: ${origin}`);
+        return res.status(403).json({ success: false, message: "This endpoint is only accessible from the local network." });
       }
       
       const input = insertAdminRoleSchema.parse(req.body);

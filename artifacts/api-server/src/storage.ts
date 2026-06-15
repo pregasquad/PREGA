@@ -956,7 +956,7 @@ export class DatabaseStorage implements IStorage {
     
     // Pre-build arrays for calcAppointmentCommission (converted from Maps once, not per-appointment)
     const servicesArr = [...serviceMap.values()] as any[];
-    const staffArr = [{ id: staffId, name: staffName }];
+    const staffArr = [{ id: staffId ?? 0, name: staffName }];
     const staffCommissionsArr = [...customCommissions.entries()].map(([serviceId, percentage]) => ({
       staffId,
       serviceId,

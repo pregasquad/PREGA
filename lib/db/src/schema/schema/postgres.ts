@@ -1,4 +1,4 @@
-import { pgTable, text, integer, boolean, timestamp, varchar, serial, doublePrecision, index, json, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, boolean, timestamp, varchar, serial, doublePrecision, real, index, json, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -372,7 +372,7 @@ export const businessSettings = pgTable("business_settings", {
   planningShortcuts: json("planning_shortcuts").$type<string[]>().notNull().default(["services", "clients", "salaries", "inventory"]),
   ttsVoice: varchar("tts_voice", { length: 50 }).notNull().default("Aoede"),
   ttsEnabled: boolean("tts_enabled").notNull().default(true),
-  ttsSpeed: doublePrecision("tts_speed").notNull().default(1.0),
+  ttsSpeed: real("tts_speed").notNull().default(1.0),
   linaPersonality: text("lina_personality").notNull().default('["warm"]'),
   botEnabled: boolean("bot_enabled").notNull().default(true),
   botFilterMode: varchar("bot_filter_mode", { length: 20 }).notNull().default("all"),

@@ -842,8 +842,9 @@ export async function sendWhatsAppImage(
  */
 async function pcmToOggOpus(pcmBuffer: Buffer, sampleRate: number, speed = 1.0): Promise<Buffer> {
   const ffmpegBin = (await import("ffmpeg-static")).default as string;
-  // atempo range is 0.5–2.0; clamp and round to 2 decimal places
-  const clampedSpeed = Math.round(Math.min(2.0, Math.max(0.5, speed)) * 100) / 100;
+  // atempo range is 0.5–2.0; guard NaN/Infinity then clamp and round to 2 decimal places
+  const safeSpeed = Number.isFinite(speed) ? speed : 1.0;
+  const clampedSpeed = Math.round(Math.min(2.0, Math.max(0.5, safeSpeed)) * 100) / 100;
   const audioFilter = clampedSpeed !== 1.0 ? `atempo=${clampedSpeed}` : "anull";
   return new Promise((resolve, reject) => {
     const ff = spawn(ffmpegBin, [

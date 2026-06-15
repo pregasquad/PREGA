@@ -99,14 +99,21 @@ export default function Salaries() {
   type PaidBackEntry = { id: string; deductionId: number; staffName: string; type: string; description: string; amount: number; timestamp: string };
   const PAID_BACK_KEY = "salaries_paidback_history";
   const [paidBackHistory, setPaidBackHistory] = useState<PaidBackEntry[]>(() => {
-    try { return JSON.parse(localStorage.getItem(PAID_BACK_KEY) || "[]"); } catch { return []; }
+    try {
+      const raw = JSON.parse(localStorage.getItem(PAID_BACK_KEY) || "[]");
+      return Array.isArray(raw)
+        ? raw.filter((e: any) => e && typeof e.id === "string" && typeof e.amount === "number")
+        : [];
+    } catch { return []; }
   });
   const [paidBackOpen, setPaidBackOpen] = useState(false);
   const [paidBackOpenStaff, setPaidBackOpenStaff] = useState<Record<string, boolean>>({});
   const addPaidBackEntry = (entry: PaidBackEntry) => {
-    const next = [...paidBackHistory, entry];
-    setPaidBackHistory(next);
-    localStorage.setItem(PAID_BACK_KEY, JSON.stringify(next));
+    setPaidBackHistory(prev => {
+      const next = [...prev, entry];
+      localStorage.setItem(PAID_BACK_KEY, JSON.stringify(next));
+      return next;
+    });
   };
   const resetPaidBackHistory = () => {
     setPaidBackHistory([]);
@@ -307,22 +314,20 @@ export default function Salaries() {
   });
 
   const payBackMutation = useMutation({
-    mutationFn: async ({ id, amount }: { id: number; amount: number }) => {
+    mutationFn: async ({ id, amount }: { id: number; amount: number; staffName: string; type: string; description: string }) => {
       const res = await apiRequest("PATCH", `/api/staff-deductions/${id}/pay-back`, { amount });
       return res.json();
     },
     onSuccess: (_data, variables) => {
-      if (payBackDeduction) {
-        addPaidBackEntry({
-          id: `${Date.now()}-${payBackDeduction.id}`,
-          deductionId: payBackDeduction.id,
-          staffName: payBackDeduction.staffName,
-          type: payBackDeduction.type,
-          description: payBackDeduction.description || "",
-          amount: variables.amount,
-          timestamp: new Date().toISOString(),
-        });
-      }
+      addPaidBackEntry({
+        id: `${Date.now()}-${variables.id}`,
+        deductionId: variables.id,
+        staffName: variables.staffName,
+        type: variables.type,
+        description: variables.description,
+        amount: variables.amount,
+        timestamp: new Date().toISOString(),
+      });
       refreshSalariesBackground();
       setPayBackDeduction(null);
       setPayBackInputAmount("");
@@ -572,7 +577,7 @@ export default function Salaries() {
   const paidBackDeductions = filteredDeductions.filter(d => d.cleared);
   const pendingDeductions = filteredDeductions.filter(d => !d.cleared);
   const totalPaidBack = paidBackDeductions.reduce((sum, d) => sum + d.amount, 0);
-  const totalPending = pendingDeductions.reduce((sum, d) => sum + getRemainingAmount(d), 0);
+  const totalPending = pendingDeductions.reduce((sum, d) => sum + d.amount, 0);
   const totalExpenses = filteredCharges.reduce((sum, c) => sum + c.amount, 0);
   const filteredOwnerWithdrawals = ownerWithdrawalsData.filter((w: any) => {
     try {
@@ -588,7 +593,7 @@ export default function Salaries() {
     const staffCommission = earning ? earning.totalCommission : 0;
     const staffDeductionAmount = pendingDeductions
       .filter(d => d.staffId === s.id || (!d.staffId && d.staffName === s.name))
-      .reduce((sum, d) => sum + getRemainingAmount(d), 0);
+      .reduce((sum, d) => sum + d.amount, 0);
     return total + Math.max(0, staffCommission - staffDeductionAmount);
   }, 0);
 
@@ -752,7 +757,7 @@ export default function Salaries() {
       const commission = earning ? earning.totalCommission : 0;
       const deductionAmt = pendingDeductions
         .filter(d => d.staffId === s.id || (!d.staffId && d.staffName === s.name))
-        .reduce((sum, d) => sum + getRemainingAmount(d), 0);
+        .reduce((sum, d) => sum + d.amount, 0);
       const net = commission - deductionAmt;
       if (commission === 0 && deductionAmt === 0) continue;
       rows.push(`"${s.name}","${earning?.totalRevenue ?? 0}","${commission}","${deductionAmt}","${net}"`);
@@ -1335,7 +1340,7 @@ export default function Salaries() {
                 const staffCommission = earning ? earning.totalCommission : 0;
                 const staffDeductionAmount = pendingDeductions
                   .filter(d => d.staffId === s.id || (!d.staffId && d.staffName === s.name))
-                  .reduce((sum, d) => sum + getRemainingAmount(d), 0);
+                  .reduce((sum, d) => sum + d.amount, 0);
                 const staffNet = staffCommission - staffDeductionAmount;
                 if (staffCommission === 0 && staffDeductionAmount === 0) return null;
                 return (
@@ -1376,7 +1381,7 @@ export default function Salaries() {
           // Use all pending deductions (not period-filtered) to match wallet balance calculation
           const staffAllDeductions = deductions
             .filter(d => !d.cleared && (Number(d.staffId) === s.id || (!d.staffId && d.staffName === s.name)));
-          const staffDeductionAmount = staffAllDeductions.reduce((sum, d) => sum + getRemainingAmount(d), 0);
+          const staffDeductionAmount = staffAllDeductions.reduce((sum, d) => sum + d.amount, 0);
 
           return (
             <Card key={s.id} className="glass-card" data-testid={`staff-card-${s.id}`}>
@@ -2146,7 +2151,7 @@ export default function Salaries() {
                   disabled={!payBackInputAmount || parseFloat(payBackInputAmount) <= 0 || parseFloat(payBackInputAmount) > remaining || payBackMutation.isPending}
                   onClick={() => {
                     if (payBackDeduction) {
-                      payBackMutation.mutate({ id: payBackDeduction.id, amount: parseFloat(payBackInputAmount) });
+                      payBackMutation.mutate({ id: payBackDeduction.id, amount: parseFloat(payBackInputAmount), staffName: payBackDeduction.staffName, type: payBackDeduction.type, description: payBackDeduction.description || "" });
                     }
                   }}
                   data-testid="button-confirm-payback"
