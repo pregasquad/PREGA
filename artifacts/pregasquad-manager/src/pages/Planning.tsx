@@ -411,11 +411,12 @@ export default function Planning() {
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
     };
-    socket.on("booking:created",      onBookingCreated);
-    socket.on("booking:updated",      onBookingChange);
-    socket.on("appointment:updated",  onBookingChange);
-    socket.on("appointment:paid",     onBookingChange);
-    socket.on("appointment:deleted",  onBookingChange);
+    socket.on("booking:created",       onBookingCreated);
+    socket.on("appointment:created",   onBookingChange);
+    socket.on("booking:updated",       onBookingChange);
+    socket.on("appointment:updated",   onBookingChange);
+    socket.on("appointment:paid",      onBookingChange);
+    socket.on("appointment:deleted",   onBookingChange);
 
     // Mobile: refresh every 2 minutes, Desktop: every 90 seconds as fallback
     const refreshInterval = isMobile ? 120_000 : 90_000;
@@ -446,11 +447,12 @@ export default function Planning() {
     document.addEventListener('visibilitychange', handleVisibilityRefresh);
     
     return () => {
-      socket.off("booking:created",      onBookingCreated);
-      socket.off("booking:updated",      onBookingChange);
-      socket.off("appointment:updated",  onBookingChange);
-      socket.off("appointment:paid",     onBookingChange);
-      socket.off("appointment:deleted",  onBookingChange);
+      socket.off("booking:created",       onBookingCreated);
+      socket.off("appointment:created",   onBookingChange);
+      socket.off("booking:updated",       onBookingChange);
+      socket.off("appointment:updated",   onBookingChange);
+      socket.off("appointment:paid",      onBookingChange);
+      socket.off("appointment:deleted",   onBookingChange);
       clearInterval(intervalId);
       clearInterval(salaryIntervalId);
       document.removeEventListener('visibilitychange', handleVisibilityRefresh);
@@ -893,7 +895,7 @@ export default function Planning() {
       if (!apt.paid) return false;
       const match = Number(apt.staffId) === walletStaffId || (!apt.staffId && apt.staff === s.name);
       if (!match) return false;
-      if (sinceDate) return apt.date >= sinceDate;
+      if (sinceDate) return apt.date > sinceDate;
       return true;
     });
 
