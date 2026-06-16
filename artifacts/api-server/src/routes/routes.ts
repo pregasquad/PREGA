@@ -2831,10 +2831,13 @@ export async function registerRoutes(
       const pendingDeductions = staffDeductions.filter(d => !d.cleared);
       const totalPendingDeductions = pendingDeductions.reduce((sum, d) => sum + d.amount, 0);
 
-      // Wallet = commission on all paid appointments from walletSinceDate onward (including future pre-booked)
+      // Wallet = commission on all paid appointments AFTER walletSinceDate (strict >).
+      // Using > not >= so that appointments on the payment day itself are NOT included in the new
+      // balance — they were already owed before the payment was recorded.
+      // This matches the frontend's `apt.date > sinceDate` logic in Salaries.tsx and Planning.tsx.
       let walletBalance = 0;
       if (lastPayment) {
-        const sincePayment = futureAppointments.filter(a => isStaffAppt(a) && !!a.paid);
+        const sincePayment = futureAppointments.filter(a => isStaffAppt(a) && !!a.paid && a.date > walletSinceDate);
         for (const appt of sincePayment) {
           const wCommission = calcAppointmentCommission(
             appt,

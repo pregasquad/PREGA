@@ -62,7 +62,7 @@ export function calcAppointmentCommission(
   staffCommissions: StaffCommission[]
 ): number {
   const staffMember = staffList.find(
-    s => s.name === app.staff || s.id === app.staffId
+    s => s.name === app.staff || (app.staffId != null && s.id === Number(app.staffId))
   );
 
   let serviceItems: ServiceItem[] | null = null;
