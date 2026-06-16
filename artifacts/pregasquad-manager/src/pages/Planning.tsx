@@ -895,7 +895,14 @@ export default function Planning() {
       if (!apt.paid) return false;
       const match = Number(apt.staffId) === walletStaffId || (!apt.staffId && apt.staff === s.name);
       if (!match) return false;
-      if (sinceDate) return apt.date > sinceDate;
+      if (sinceDate) {
+        if (apt.date > sinceDate) return true;
+        if (apt.date < sinceDate) return false;
+        // Same calendar day as payment — use createdAt timestamp to include only
+        // appointments created AFTER the payment (new work, not already paid out).
+        const aptCreated = apt.createdAt ? new Date(apt.createdAt).getTime() : null;
+        return aptCreated !== null && lastPaymentDate !== null && aptCreated > lastPaymentDate.getTime();
+      }
       return true;
     });
 

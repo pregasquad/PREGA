@@ -706,7 +706,14 @@ export default function Salaries() {
       if (!apt.paid) return false;
       const matchesStaff = Number(apt.staffId) === s.id || (!apt.staffId && apt.staff === s.name);
       if (!matchesStaff) return false;
-      if (sinceDate) return apt.date > sinceDate;
+      if (sinceDate) {
+        if (apt.date > sinceDate) return true;
+        if (apt.date < sinceDate) return false;
+        // Same calendar day as payment — use createdAt timestamp to include only
+        // appointments that were created AFTER the payment (new work, not already paid).
+        const aptCreated = apt.createdAt ? new Date(apt.createdAt).getTime() : null;
+        return aptCreated !== null && lastPaymentDate !== null && aptCreated > lastPaymentDate.getTime();
+      }
       return true;
     });
 
