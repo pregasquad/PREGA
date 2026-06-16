@@ -1869,6 +1869,8 @@ export async function registerRoutes(
         io.emit("booking:created", item);
       } else {
         io.emit("appointment:created", item);
+        // Also emit appointment:paid so salary/wallet listeners (Salaries, Planning) invalidate
+        io.emit("appointment:paid", item);
       }
       
       // Award loyalty points if appointment is created as paid

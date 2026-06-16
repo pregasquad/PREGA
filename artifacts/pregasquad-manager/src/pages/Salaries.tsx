@@ -157,10 +157,12 @@ export default function Salaries() {
       }, 1500);
     };
     socket.on("booking:created", invalidate);
+    socket.on("appointment:created", invalidate);
     socket.on("appointment:updated", invalidate);
     socket.on("appointment:paid", invalidate);
     return () => {
       socket.off("booking:created", invalidate);
+      socket.off("appointment:created", invalidate);
       socket.off("appointment:updated", invalidate);
       socket.off("appointment:paid", invalidate);
       if (debounceTimer) clearTimeout(debounceTimer);
@@ -704,7 +706,7 @@ export default function Salaries() {
       if (!apt.paid) return false;
       const matchesStaff = Number(apt.staffId) === s.id || (!apt.staffId && apt.staff === s.name);
       if (!matchesStaff) return false;
-      if (sinceDate) return apt.date > sinceDate;
+      if (sinceDate) return apt.date >= sinceDate;
       return true;
     });
 

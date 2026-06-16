@@ -772,17 +772,17 @@ export default function Planning() {
 
   // Salary data: only fetched when the wallet portal is open (heavy endpoint).
   // Net profit circle uses lightweight parallel queries instead (see below).
-  const salaryMonthFrom = format(startOfMonth(new Date()), "yyyy-MM-dd");
-  const salaryMonthTo   = format(endOfMonth(new Date()),   "yyyy-MM-dd");
+  // Fetch ALL appointments (no date restriction) so the wallet correctly includes
+  // appointments from before the current month (since the last payment date).
   const { data: salaryData, isFetching: salaryDataFetching } = useQuery<{
     staff: any[]; services: any[]; staffCommissions: any[];
     appointments: any[]; charges: any[]; deductions: any[];
     staffPayments: any[]; salonPayments: any[];
   }>({
-    queryKey: ["/api/salaries/compute", salaryMonthFrom, salaryMonthTo],
+    queryKey: ["/api/salaries/compute"],
     queryFn: async () => {
       const res = await fetch(
-        `/api/salaries/compute?from=${salaryMonthFrom}&to=${salaryMonthTo}`,
+        `/api/salaries/compute`,
         { credentials: "include" }
       );
       if (!res.ok) throw new Error("Failed");
@@ -893,7 +893,7 @@ export default function Planning() {
       if (!apt.paid) return false;
       const match = Number(apt.staffId) === walletStaffId || (!apt.staffId && apt.staff === s.name);
       if (!match) return false;
-      if (sinceDate) return apt.date > sinceDate;
+      if (sinceDate) return apt.date >= sinceDate;
       return true;
     });
 
