@@ -115,8 +115,8 @@ function buildSystemPrompt(ctx: SalonContext): string {
           .sort(([a], [b]) => a.localeCompare(b))
           .map(
             ([cat, svcs]) =>
-              `【${cat}】\n` +
-              [...svcs].sort((a, b) => a.price - b.price).map((s) => `  • ${(s as any).emoji ? (s as any).emoji + " " : ""}${s.name} : ${s.isStartingPrice ? `à partir de ${s.price}` : s.price} ${ctx.currency || "DH"}`).join("\n")
+              `[${cat}]\n` +
+              [...svcs].sort((a, b) => a.price - b.price).map((s) => `  ${(s as any).emoji ? (s as any).emoji + " " : ""}${s.name} = ${s.isStartingPrice ? `à partir de ${s.price}` : s.price} ${ctx.currency || "DH"}`).join("\n")
           )
           .join("\n\n")
       : "  (liste non disponible)";
@@ -285,7 +285,8 @@ ${ctx.botCorrections.map(c => `• ❌ قلتي: "${c.wrongInfo}" → ✅ الص
 ` : ""}${ctx.resolvedComplaints && ctx.resolvedComplaints.length > 0 ? `━━━ مشاكل تم حلها — معلومات مهمة ━━━
 ${ctx.resolvedComplaints.map(r => `• إذا سألت عميلة عن: "${r.complaint}" → الجواب: "${r.fix}"`).join("\n")}
 ` : ""}━━━ الأسعار والخدمات ━━━
-• لو سألات "شنو الخدمات" أو "علاش كتقدمو" أو "services" → لا تذكري كل القائمة! قولي فقط الفئات الرئيسية (وجه، شعر، مكياج، أظافر، إزالة الشعر) وسأليها: "شنو اللي كيهمك أكثر؟" باش تفصلي فيه
+• 🚨 قاعدة صارمة جداً — لا تخترعي أي خدمة أو سعر: المصدر الوحيد المسموح هو قائمة الخدمات أعلاه — لا تذكري أبداً اسم خدمة أو سعر غير موجود في القائمة — إذا العميلة طلبت خدمة مش في القائمة، قولي لها "هاد الخدمة ما عندناش، قولي شنو اللي كيهمك باش نشوفو أقرب شي"
+• 🚨 قاعدة السؤال العام عن الخدمات والأسعار — مهمة جداً: إذا طلبت العميلة "ch7al prix des services" أو "liste des services" أو "ch7al les services" أو "tarifs" أو "combien" بشكل عام أو "شنو الخدمات" أو "الخدمات ديالكم" أو "علاش كتقدمو" أو "services" أو "prix" بشكل عام → لا تذكري كل القائمة! قولي فقط الفئات الرئيسية (وجه، شعر، مكياج، أظافر، إزالة الشعر) وسأليها: "شنو اللي كيهمك أكثر؟" باش تفصلي فيه
 • مرادفات الخدمات اللي كتكتبها العميلات بأشكال مختلفة — جاوبي عليها مباشرة:
   - "ليميش" / "limicha" / "les mèches" / "mèches" / "meches" / "highlights" → Mèches (صبغة جزئية على خصلات)
   - "كولوراسيون" / "coloration" / "لوان" / "صبغة كاملة" → Coloration
@@ -429,7 +430,7 @@ async function callGemini(
   const body = JSON.stringify({
     systemInstruction: { parts: [{ text: systemPrompt }] },
     contents,
-    generationConfig: { maxOutputTokens: 450, temperature: 0.75 },
+    generationConfig: { maxOutputTokens: 300, temperature: 0.3 },
   });
 
   let response!: Response;
@@ -512,7 +513,7 @@ async function callGroq(
         model,
         messages,
         max_tokens: 300,
-        temperature: 0.75,
+        temperature: 0.3,
       }),
     });
   } catch (networkErr: any) {
@@ -1086,6 +1087,45 @@ ${conversationText}
 }
 
 /**
+ * Detect if a user message is a generic "all services / prices" query.
+ * Returns true when the client is asking for the full list rather than a specific service.
+ */
+function isGenericPriceQuery(msg: string): boolean {
+  const lower = msg.toLowerCase();
+  return /ch7al prix des services|liste des services|ch7al les services|tarifs des services|prix des services|combien co[uû]tent|les services vous|شنو الخدمات|الخدمات ديالكم|كل الخدمات|كل الاثمان|شنو الثمن ديال كل|لائحة الخدمات|ch7al khdamt|ch7al khidmat|ch7al prix dyal|ch7al prix d|klchi khidmat|liste prix|c7al services|7al services/.test(lower);
+}
+
+/**
+ * Post-process the bot reply before sending:
+ * 1. Strip any leading bullet/list markers from lines (•, -, *, 1., ✔, ✓)
+ * 2. If the reply is a bullet-heavy service dump on a generic price query → replace it
+ */
+function sanitizeReply(reply: string, userMessage: string): string {
+  // 1. Strip bullet / list markers from line starts
+  const stripped = reply
+    .split("\n")
+    .map((line) =>
+      line.replace(/^(\s*)(•|-|\*|✔|✓|\d+\.|[❶-❿])\s+/, "$1").trimEnd()
+    )
+    .join("\n")
+    .trim();
+
+  // 2. If generic price query AND reply lists many priced items → replace with short answer
+  if (isGenericPriceQuery(userMessage)) {
+    // Count lines that look like "Service = 200 DH" or "Service : 200 DH"
+    const pricedLines = stripped
+      .split("\n")
+      .filter((l) => /[=:]\s*\d{2,4}\s*(dh|درهم)/i.test(l));
+    if (pricedLines.length > 3) {
+      // Return a short category-only answer instead of the full dump
+      return "عندنا خدمات في الشعر، الوجه، المكياج، الأظافر، وإزالة الشعر 🌸\nشنو اللي كيهمك أكثر حبيبتي؟ نعطيك التفاصيل مباشرة 😊";
+    }
+  }
+
+  return stripped;
+}
+
+/**
  * Ask Gemini with multi-turn history, optional client memory, and optional image.
  * Falls back through all free-tier Groq models if all Gemini models are exhausted.
  * Truncated responses are never saved to history.
@@ -1123,6 +1163,7 @@ export async function askGemini(
         );
 
         if (reply) {
+          const cleanReply = sanitizeReply(reply, userMessage);
           console.log(`[Gemini] ${model} replied (turn ${Math.floor(history.length / 2) + 1})${imageBase64 ? " [with image]" : ""}`);
           const historyUserText = imageBase64
             ? `[صورة]${userMessage ? ` + "${userMessage}"` : ""}`
@@ -1130,9 +1171,9 @@ export async function askGemini(
           const newHistory: ConversationTurn[] = [
             ...history,
             { role: "user", text: historyUserText },
-            { role: "model", text: reply },
+            { role: "model", text: cleanReply },
           ];
-          return { reply, newHistory };
+          return { reply: cleanReply, newHistory };
         }
 
         // 404 — model doesn't exist, cache it so future calls skip it instantly
@@ -1182,6 +1223,7 @@ export async function askGemini(
         );
 
         if (reply) {
+          const cleanReply = sanitizeReply(reply, userMessage);
           console.log(`[Groq] ${model} replied (turn ${turn})`);
           const historyUserText = imageBase64
             ? `[صورة]${userMessage ? ` + "${userMessage}"` : ""}`
@@ -1189,9 +1231,9 @@ export async function askGemini(
           const newHistory: ConversationTurn[] = [
             ...history,
             { role: "user", text: historyUserText },
-            { role: "model", text: reply },
+            { role: "model", text: cleanReply },
           ];
-          return { reply, newHistory };
+          return { reply: cleanReply, newHistory };
         }
 
         if (isQuotaError) {
