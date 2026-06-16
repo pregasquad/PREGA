@@ -193,7 +193,7 @@ ${ctx.isNewConversation ? `⚡ هاد الرسالة هي أول تواصل في
 • بعد التحية مباشرة عرفي نفسك بجملة قصيرة لو ما قالتلك شيء شخصي
 • جاوبي على سؤالها أو موضوعها بشكل دافئ ومباشر
 • هاد الرسالة الأولى تكون 4 سطور كحد أقصى — لا تتجاوزيها أبداً
-• اختمي بجملة تشجعها أو تفتح المحادثة بشكل طبيعي` : `⚡ هاد مش أول رسالة — ردي مباشرة بدون ترحيب جديد:`}
+• اختمي بجملة تشجعها أو تفتح المحادثة بشكل طبيعي` : `🚨 هاد مش أول رسالة — ممنوع منعاً باتاً تبدئي بـ "مرحبا" أو "أهلاً" أو أي تحية — ابدئي مباشرة بالجواب على سؤالها بدون أي ترحيب — لا تقولي "مرحبا حبيبتي" ولا "أهلاً" ولا "bonjour" ولا "salut" ولا أي كلمة ترحيب في بداية ردك:`}
 
 ━━━ فهم العميلة — قاعدة الدقة ━━━
 ⚠️ قبل ما تكتبي أي رد، حددي بوضوح: ماذا تريد العميلة بالضبط؟ هل هي تسأل عن سعر؟ تبغي تحجز؟ تشتكي؟ تسأل عن توفر وقت؟ تستفسر عن خدمة؟
@@ -1099,10 +1099,11 @@ function isGenericPriceQuery(msg: string): boolean {
  * Post-process the bot reply before sending:
  * 1. Strip any leading bullet/list markers from lines (•, -, *, 1., ✔, ✓)
  * 2. If the reply is a bullet-heavy service dump on a generic price query → replace it
+ * 3. If it's NOT the first message, strip any greeting opener from the first line
  */
-function sanitizeReply(reply: string, userMessage: string): string {
+function sanitizeReply(reply: string, userMessage: string, isFirstMessage: boolean): string {
   // 1. Strip bullet / list markers from line starts
-  const stripped = reply
+  let stripped = reply
     .split("\n")
     .map((line) =>
       line.replace(/^(\s*)(•|-|\*|✔|✓|\d+\.|[❶-❿])\s+/, "$1").trimEnd()
@@ -1112,13 +1113,26 @@ function sanitizeReply(reply: string, userMessage: string): string {
 
   // 2. If generic price query AND reply lists many priced items → replace with short answer
   if (isGenericPriceQuery(userMessage)) {
-    // Count lines that look like "Service = 200 DH" or "Service : 200 DH"
     const pricedLines = stripped
       .split("\n")
       .filter((l) => /[=:]\s*\d{2,4}\s*(dh|درهم)/i.test(l));
     if (pricedLines.length > 3) {
-      // Return a short category-only answer instead of the full dump
       return "عندنا خدمات في الشعر، الوجه، المكياج، الأظافر، وإزالة الشعر 🌸\nشنو اللي كيهمك أكثر حبيبتي؟ نعطيك التفاصيل مباشرة 😊";
+    }
+  }
+
+  // 3. For follow-up messages: strip any greeting word/phrase from the very first line
+  if (!isFirstMessage) {
+    const lines = stripped.split("\n");
+    // Greeting patterns: Arabic, French, Moroccan Darija openers
+    const greetingRx = /^(مرحبا|مرحباً|أهلاً|أهلا|السلام عليكم|صباح الخير|مساء الخير|بوجور|bonjour|bonsoir|salut|coucou|hello|hi\b|hey\b|آه ما شيري|زوينا مرحبا|فنيوينا مرحبا|حبيباتي أهلاً|بوقوصة مرحبا|ما بيل أهلاً)[^!؟?]*[!؟🌸💖😊🌷💕💅😄]?\s*$/i;
+    if (lines.length > 0 && greetingRx.test(lines[0].trim())) {
+      // Remove the greeting-only first line and re-join
+      stripped = lines.slice(1).join("\n").trim();
+    } else {
+      // Also handle inline greeting at the start of first line: "مرحبا حبيبتي! السعر هو..."
+      const inlineGreetingRx = /^(مرحبا|مرحباً|أهلاً|أهلا|bonjour|bonsoir|salut|coucou|hello|hi\b|hey\b)[^\n،,!؟?]{0,25}[،,!؟🌸💖😊🌷💕💅😄]\s*/i;
+      stripped = stripped.replace(inlineGreetingRx, "").trim();
     }
   }
 
@@ -1163,7 +1177,7 @@ export async function askGemini(
         );
 
         if (reply) {
-          const cleanReply = sanitizeReply(reply, userMessage);
+          const cleanReply = sanitizeReply(reply, userMessage, history.length === 0);
           console.log(`[Gemini] ${model} replied (turn ${Math.floor(history.length / 2) + 1})${imageBase64 ? " [with image]" : ""}`);
           const historyUserText = imageBase64
             ? `[صورة]${userMessage ? ` + "${userMessage}"` : ""}`
@@ -1223,7 +1237,7 @@ export async function askGemini(
         );
 
         if (reply) {
-          const cleanReply = sanitizeReply(reply, userMessage);
+          const cleanReply = sanitizeReply(reply, userMessage, history.length === 0);
           console.log(`[Groq] ${model} replied (turn ${turn})`);
           const historyUserText = imageBase64
             ? `[صورة]${userMessage ? ` + "${userMessage}"` : ""}`
