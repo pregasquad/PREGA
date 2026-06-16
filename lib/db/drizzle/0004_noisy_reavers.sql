@@ -1,0 +1,1 @@
+ALTER TABLE "business_settings" ADD COLUMN "tts_speed" real DEFAULT 1 NOT NULL;
