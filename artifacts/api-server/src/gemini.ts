@@ -6,11 +6,11 @@ const GEMINI_BASE = REPLIT_GEMINI_BASE || "https://generativelanguage.googleapis
 const GROQ_BASE = "https://api.groq.com/openai/v1";
 
 const MODEL_CASCADE = [
-  "gemini-3.1-flash-lite",  // Free — fastest, cost-efficient
-  "gemini-3.5-flash",       // Free — most capable flash (GA May 2026)
-  "gemini-3-flash-preview", // Free — preview (stable gemini-3-flash is paid-only)
-  "gemini-2.5-flash",       // Free — stable fallback
-  "gemini-2.5-flash-lite",  // Free — highest free RPD fallback
+  "gemini-2.5-flash",         // Free — best quality, fast, confirmed real
+  "gemini-2.0-flash",         // Free — stable, confirmed real
+  "gemini-2.0-flash-lite",    // Free — lightweight fallback
+  "gemini-1.5-flash",         // Free — older stable fallback
+  "gemini-1.5-flash-8b",      // Free — cheapest last-resort
 ];
 
 // Models confirmed unavailable (404) — skipped instantly with no delay
@@ -559,11 +559,10 @@ export async function transcribeAudio(
 
   // ── 1. Gemini cascade — try from fastest to most capable ─────────────────
   const TRANSCRIPTION_MODELS = [
-    "gemini-3.1-flash-lite",  // Free — fastest, cost-efficient
-    "gemini-3.5-flash",       // Free — most capable (GA May 2026)
-    "gemini-3-flash-preview", // Free — preview (stable is paid-only)
-    "gemini-2.5-flash",       // Free — stable fallback
-    "gemini-2.5-flash-lite",  // Free — cheapest fallback
+    "gemini-2.5-flash",         // Free — best quality, confirmed real, handles audio
+    "gemini-2.0-flash",         // Free — stable fallback
+    "gemini-1.5-flash",         // Free — older stable fallback (good audio support)
+    "gemini-1.5-pro",           // Free — most capable fallback for tricky audio
   ];
 
   const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
@@ -623,7 +622,7 @@ export async function transcribeAudio(
   }
 
   // ── 2. Groq Whisper large-v3-turbo fallback ───────────────────────────────
-  const groqKey = process.env.XAI_API_KEY;
+  const groqKey = process.env.GROQ_API_KEY || process.env.XAI_API_KEY;
   if (groqKey) {
     try {
       const audioBuffer = Buffer.from(audioBase64, "base64");
@@ -689,8 +688,8 @@ export async function textToSpeech(
   if (!geminiKey) return null;
 
   const TTS_MODELS = [
-    "gemini-2.5-flash-preview-tts",   // best quality, primary
-    "gemini-3.1-flash-tts-preview",   // newer preview fallback
+    "gemini-2.5-flash-preview-tts",   // best quality, confirmed real
+    "gemini-2.0-flash-preview-tts",   // stable fallback
   ];
 
   // Use the configured voice, defaulting to Aoede (best Arabic/Darija quality)
