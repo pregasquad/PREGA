@@ -49,13 +49,12 @@ function rotateKey(exhaustedKey: string): string | null {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const MODEL_CASCADE = [
-  "gemini-3.5-flash",         // Free — newest, most intelligent (confirmed real Jun 2026)
-  "gemini-3.1-flash-lite",    // Free — most cost-efficient (confirmed real Jun 2026)
-  "gemini-2.5-flash",         // Free — 1M context, hybrid reasoning
-  "gemini-2.5-flash-lite",    // Free — lighter 2.5, lower quota pressure
-  "gemini-2.0-flash-lite",    // Free — still alive (2.0-flash was shut down Jun 1 2026)
-  "gemini-1.5-flash",         // Free — older stable fallback
-  "gemini-1.5-flash-8b",      // Free — cheapest last-resort
+  "gemini-2.5-flash",         // Best — 1M context, hybrid reasoning
+  "gemini-2.5-flash-lite",    // Lighter 2.5, lower quota pressure
+  "gemini-2.0-flash",         // Fast and capable
+  "gemini-2.0-flash-lite",    // Lightweight fallback
+  "gemini-flash-latest",      // Latest flash alias
+  "gemini-flash-lite-latest", // Latest lite alias
 ];
 
 // Models confirmed unavailable (404) — skipped instantly with no delay
