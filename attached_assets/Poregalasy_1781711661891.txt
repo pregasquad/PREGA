@@ -1,0 +1,173 @@
+Instance created. Preparing to start...
+Starting download for registry01.prod.koyeb.com/k-e7439398-3c51-4910-ae36-64250f99e91e/2e832d5a-5224-456c-9d97-81a2f4b02a1c:84e51a6a-9edd-4e5e-aa09-98547edfe0a6
+Download progress: 100% |[32m++++++++[0m| (27.3 MiB/s)
+Download complete for registry01.prod.koyeb.com/k-e7439398-3c51-4910-ae36-64250f99e91e/2e832d5a-5224-456c-9d97-81a2f4b02a1c:84e51a6a-9edd-4e5e-aa09-98547edfe0a6
+Instance is starting... Waiting for health checks to pass.
+Using MySQL/TiDB database
+Database connection ready
+Push subscriptions table ready
+Appointments audit columns ready
+Admin roles photo column ready
+Product expiry columns ready
+Service starting price column ready
+Service max price column ready
+Service emoji column ready
+Deduction cleared columns ready
+Deduction paid_back column ready
+Auto-lock column ready
+Charge attachment columns ready
+Planning shortcuts column ready
+Planning slot height column ready
+Appointment discount columns ready
+Staff ID backfill ready (MySQL/TiDB)
+Staff payments table ready
+Staff public tokens ready
+Tombola spins table ready
+Salon payments table ready
+Booking status column ready
+Baileys sessions table ready
+Bot client memory table ready
+Bot memory phone column ready
+Bot blocked column ready
+TTS voice column ready
+TTS enabled column ready
+TTS speed column ready
+maps_link column ready
+Bot enabled column ready
+Bot filter columns ready
+Bot silence after booking column ready
+Owner withdrawals table ready
+Owner withdrawals notes column ready
+Categories color column ready
+Salon complaints table ready
+Complaint type column ready
+Private room column ready
+Staff gender column ready
+Staff gender defaults applied
+Boss instructions column ready
+Wissal personality column ready
+Business settings row ready
+PayPal order ID column ready
+Holidays column ready
+Broadcast logs table ready
+Daily summary columns ready
+Reminder sent column ready
+Client tags column ready
+Foreign key constraints are only added for PostgreSQL
+Not on Replit - auth routes disabled
+Server listening on port 8080
+[Baileys] Saved session found in DB — reconnecting…
+[Baileys] Connecting… WA version: 2,3000,1035194821 (latest: true)
+[Baileys] Connection state → connecting
+Instance is healthy. All health checks are passing.
+[Baileys] Connection state → open
+[Baileys] Connected as +212669640496
+[Baileys] Connection state → close
+[Baileys] Connection closed. Code: 440. Message: "Stream Errored (conflict)"
+[Baileys] Session conflict (440) — attempt 1/4, retrying in 10s…
+[Baileys] Connecting… WA version: 2,3000,1035194821 (latest: true)
+[Baileys] Connection state → connecting
+[Baileys] Connection state → open
+[Baileys] Connected as +212669640496
+[Baileys] Connection state → close
+[Baileys] Connection closed. Code: 440. Message: "Stream Errored (conflict)"
+[Baileys] Session conflict (440) — attempt 1/4, retrying in 10s…
+[Baileys] Connecting… WA version: 2,3000,1035194821 (latest: true)
+[Baileys] Connection state → connecting
+[Baileys] Connection state → open
+[Baileys] Connected as +212669640496
+Client connected: j1npizIC2ZJekI7iAAAB
+[PayPal] Exchange rates refreshed from open.er-api.com
+Client connected: FCbmhvfYf1BZSFA8AAAD
+[Bot] @lid JID — phone not resolved yet (lidRaw=85715031466043), client will be created once phone is known
+[Bot] Buffered msg 1 for 85715031466043@lid — waiting 15s after last message
+[Bot] Flushing 1 buffered message(s) for 85715031466043@lid
+[Bot] Language detected from message: french (was: darija) for 85715031466043@lid
+[Gemini] gemini-3.5-flash error 400: {
+  "error": {
+    "code": 400,
+    "message": "Invalid JSON payload received. Unknown name \"thinkingConfig\": Cannot find field.",
+    "status": "INVALID_ARGUMENT",
+    "details": [
+      {
+        "@type": "type.googleapis.com/google.rpc.BadRequest",
+        "fieldViolations": [
+          {
+     
+[Gemini] gemini-3.5-flash failed — trying next model in ~2-3s
+Client disconnected: FCbmhvfYf1BZSFA8AAAD
+Client disconnected: j1npizIC2ZJekI7iAAAB
+[Gemini] gemini-3.1-flash-lite error 400: {
+  "error": {
+    "code": 400,
+    "message": "Invalid JSON payload received. Unknown name \"thinkingConfig\": Cannot find field.",
+    "status": "INVALID_ARGUMENT",
+    "details": [
+      {
+        "@type": "type.googleapis.com/google.rpc.BadRequest",
+        "fieldViolations": [
+          {
+     
+[Gemini] gemini-3.1-flash-lite failed — trying next model in ~2-3s
+[Gemini] gemini-2.5-flash error 400: {
+  "error": {
+    "code": 400,
+    "message": "Invalid JSON payload received. Unknown name \"thinkingConfig\": Cannot find field.",
+    "status": "INVALID_ARGUMENT",
+    "details": [
+      {
+        "@type": "type.googleapis.com/google.rpc.BadRequest",
+        "fieldViolations": [
+          {
+     
+[Gemini] gemini-2.5-flash failed — trying next model in ~2-3s
+[Gemini] gemini-2.5-flash-lite error 400: {
+  "error": {
+    "code": 400,
+    "message": "Invalid JSON payload received. Unknown name \"thinkingConfig\": Cannot find field.",
+    "status": "INVALID_ARGUMENT",
+    "details": [
+      {
+        "@type": "type.googleapis.com/google.rpc.BadRequest",
+        "fieldViolations": [
+          {
+     
+[Gemini] gemini-2.5-flash-lite failed — trying next model in ~2-3s
+[Gemini] gemini-2.0-flash-lite error 400: {
+  "error": {
+    "code": 400,
+    "message": "Invalid JSON payload received. Unknown name \"thinkingConfig\": Cannot find field.",
+    "status": "INVALID_ARGUMENT",
+    "details": [
+      {
+        "@type": "type.googleapis.com/google.rpc.BadRequest",
+        "fieldViolations": [
+          {
+     
+[Gemini] gemini-2.0-flash-lite failed — trying next model in ~2-3s
+[Gemini] gemini-1.5-flash error 400: {
+  "error": {
+    "code": 400,
+    "message": "Invalid JSON payload received. Unknown name \"thinkingConfig\": Cannot find field.",
+    "status": "INVALID_ARGUMENT",
+    "details": [
+      {
+        "@type": "type.googleapis.com/google.rpc.BadRequest",
+        "fieldViolations": [
+          {
+     
+[Gemini] gemini-1.5-flash failed — trying next model in ~2-3s
+[Gemini] gemini-1.5-flash-8b error 400: {
+  "error": {
+    "code": 400,
+    "message": "Invalid JSON payload received. Unknown name \"thinkingConfig\": Cannot find field.",
+    "status": "INVALID_ARGUMENT",
+    "details": [
+      {
+        "@type": "type.googleapis.com/google.rpc.BadRequest",
+        "fieldViolations": [
+          {
+     
+[Gemini] All models exhausted — fallback reply
+[AI] All Gemini models exhausted — fallback reply
+[Bot] ↩ returning client Mk (85715031466043@lid) — turn 15
