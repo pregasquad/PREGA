@@ -3,6 +3,51 @@ const REPLIT_GEMINI_BASE = process.env.AI_INTEGRATIONS_GEMINI_BASE_URL
   ? `${process.env.AI_INTEGRATIONS_GEMINI_BASE_URL}/v1beta/models`
   : null;
 const GEMINI_BASE = REPLIT_GEMINI_BASE || "https://generativelanguage.googleapis.com/v1beta/models";
+
+// ── Multi-key rotation ────────────────────────────────────────────────────────
+// Collects all configured keys: GEMINI_API_KEY_1/2/3, then GEMINI_API_KEY /
+// GOOGLE_API_KEY / AI_INTEGRATIONS_GEMINI_API_KEY as fallbacks.
+// Per-key cooldowns: when a key hits 429, it cools down for 60s independently
+// so the next key is tried immediately without waiting.
+const _buildKeyPool = (): string[] => {
+  const pool: string[] = [];
+  for (const k of ["GEMINI_API_KEY_1", "GEMINI_API_KEY_2", "GEMINI_API_KEY_3"]) {
+    const v = process.env[k];
+    if (v && !pool.includes(v)) pool.push(v);
+  }
+  for (const k of ["GEMINI_API_KEY", "GOOGLE_API_KEY", "AI_INTEGRATIONS_GEMINI_API_KEY"]) {
+    const v = process.env[k];
+    if (v && !pool.includes(v)) pool.push(v);
+  }
+  return pool;
+};
+const GEMINI_KEY_POOL: string[] = _buildKeyPool();
+const keyCooldowns: Record<string, number> = {};
+const KEY_COOLDOWN_MS = 60 * 1000;
+
+/**
+ * Returns the first available (not on cooldown) API key,
+ * rotating through the pool. Falls back to any key if all are cooling down.
+ */
+function getAvailableKey(): string | null {
+  if (GEMINI_KEY_POOL.length === 0) return null;
+  const now = Date.now();
+  const available = GEMINI_KEY_POOL.filter(k => !keyCooldowns[k] || now >= keyCooldowns[k]);
+  if (available.length > 0) return available[0];
+  // All keys on cooldown — return the one whose cooldown expires soonest
+  return GEMINI_KEY_POOL.slice().sort((a, b) => (keyCooldowns[a] ?? 0) - (keyCooldowns[b] ?? 0))[0];
+}
+
+/**
+ * Called when a key receives a 429. Puts it on cooldown and returns the next available key.
+ */
+function rotateKey(exhaustedKey: string): string | null {
+  keyCooldowns[exhaustedKey] = Date.now() + KEY_COOLDOWN_MS;
+  console.warn(`[Gemini] Key …${exhaustedKey.slice(-6)} quota hit — cooling down 60s. Pool size: ${GEMINI_KEY_POOL.length}`);
+  return getAvailableKey();
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 const MODEL_CASCADE = [
   "gemini-3.5-flash",         // Free — newest, most intelligent (confirmed real Jun 2026)
   "gemini-3.1-flash-lite",    // Free — most cost-efficient (confirmed real Jun 2026)
@@ -520,8 +565,8 @@ export async function transcribeAudio(
     "gemini-1.5-pro",           // Free — most capable for tricky/noisy audio
   ];
 
-  const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
-  if (geminiKey) {
+  let transcriptionKey = getAvailableKey();
+  if (transcriptionKey) {
     for (const model of TRANSCRIPTION_MODELS) {
       // Skip if this model is on text-generation cooldown (quota hit)
       if (modelCooldowns[model] && Date.now() < modelCooldowns[model]) {
@@ -530,7 +575,7 @@ export async function transcribeAudio(
         continue;
       }
       try {
-        const url = `${GEMINI_BASE}/${model}:generateContent?key=${geminiKey}`;
+        const url = `${GEMINI_BASE}/${model}:generateContent?key=${transcriptionKey}`;
         const body = JSON.stringify({
           contents: [{
             parts: [
@@ -558,6 +603,7 @@ export async function transcribeAudio(
           const status = res.status;
           if (status === 429) {
             modelCooldowns[model] = Date.now() + QUOTA_COOLDOWN_MS;
+            transcriptionKey = rotateKey(transcriptionKey!) ?? transcriptionKey!;
             console.warn(`[Transcription] ${model} quota (429) — cooldown, trying next`);
           } else if (status === 400) {
             // 400 usually means the model doesn't support this audio format/input
@@ -599,7 +645,7 @@ export async function textToSpeech(
   text: string,
   voice?: string
 ): Promise<{ pcmBase64: string; sampleRate: number } | null> {
-  const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
+  const geminiKey = getAvailableKey();
   if (!geminiKey) return null;
 
   const TTS_MODELS = [
@@ -636,7 +682,7 @@ export async function textToSpeech(
 
       if (res.ok) {
         const data = (await res.json()) as any;
-        const part = data?.candidates?.[0]?.content?.parts?.[0];
+        const part = data?.candidates?.[0]?.content?.parts?.[0] as any;
         const pcmBase64: string | undefined = part?.inlineData?.data;
         const mimeType: string = part?.inlineData?.mimeType ?? "audio/L16;rate=24000";
 
@@ -652,6 +698,7 @@ export async function textToSpeech(
         const status = res.status;
         if (status === 429) {
           modelCooldowns[model] = Date.now() + QUOTA_COOLDOWN_MS;
+          rotateKey(geminiKey);
           console.warn(`[TTS] ${model} quota (429) — cooldown, trying next`);
         } else {
           const errBody = await res.text();
@@ -695,7 +742,7 @@ export async function detectBossCorrection(
 ): Promise<BossCorrectionResult | null> {
   if (!wissalLastReply?.trim() || !bossReply?.trim()) return null;
 
-  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
+  const apiKey = getAvailableKey();
   if (!apiKey) return null;
 
   const prompt = `أنت نظام تحليل ذكي لصالون تجميل. مهمتك: تحديد ما إذا كان المدير/صاحبة الصالون يصحح/تصحح معلومة خاطئة قالتها المساعدة الآلية (وصال).
@@ -751,12 +798,13 @@ export async function detectBossCorrection(
   // Fix 4: small cascade (lite → 2.5-flash → 1.5-flash) so a single unavailable model
   // doesn't silently kill correction detection
   const CORRECTION_CASCADE = ["gemini-3.1-flash-lite", "gemini-2.5-flash-lite", "gemini-2.5-flash"];
-  if (apiKey) {
+  let correctionKey = apiKey;
+  if (correctionKey) {
     const now = Date.now();
     for (const model of CORRECTION_CASCADE) {
       if (modelCooldowns[model] && now < modelCooldowns[model]) continue;
       try {
-        const url = `${GEMINI_BASE}/${model}:generateContent?key=${apiKey}`;
+        const url = `${GEMINI_BASE}/${model}:generateContent?key=${correctionKey}`;
         const res = await fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -776,6 +824,7 @@ export async function detectBossCorrection(
           break; // Model responded but parse failed — no point trying heavier models
         } else if (res.status === 429) {
           modelCooldowns[model] = Date.now() + QUOTA_COOLDOWN_MS;
+          correctionKey = rotateKey(correctionKey) ?? correctionKey;
         } else if (res.status === 404) {
           break; // Model not found — skip remaining cascade
         }
@@ -806,7 +855,7 @@ export async function learnFromConversation(
   // Need at least one full exchange (user + model) to learn from
   if (history.length < 2) return null;
 
-  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
+  const apiKey = getAvailableKey();
   if (!apiKey) return null;
 
   // Fix 7: label [رد المدير]: turns as "المدير" instead of "وصال" so the learning
@@ -897,13 +946,14 @@ ${conversationText}
   };
 
   // Try Gemini with lightest model first
-  if (apiKey) {
+  let learningKey = apiKey;
+  if (learningKey) {
     const learningModels = ["gemini-3.1-flash-lite", "gemini-2.5-flash-lite", "gemini-2.5-flash"];
     for (const model of learningModels) {
       if (modelCooldowns[model] && Date.now() < modelCooldowns[model]) continue;
       try {
         const res = await fetch(
-          `${GEMINI_BASE}/${model}:generateContent?key=${apiKey}`,
+          `${GEMINI_BASE}/${model}:generateContent?key=${learningKey}`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -925,6 +975,7 @@ ${conversationText}
           console.warn(`[BotLearn] Gemini ${model} returned unparseable response`);
         } else if (res.status === 429) {
           modelCooldowns[model] = Date.now() + QUOTA_COOLDOWN_MS;
+          learningKey = rotateKey(learningKey) ?? learningKey;
           console.warn(`[BotLearn] Gemini ${model} quota exceeded — cooling down`);
         } else {
           console.warn(`[BotLearn] Gemini ${model} returned HTTP ${res.status}`);
@@ -1003,7 +1054,7 @@ export async function askGemini(
   imageBase64?: string,
   imageMimeType?: string
 ): Promise<{ reply: string | null; newHistory: ConversationTurn[] }> {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
+  let apiKey = getAvailableKey();
   const systemPrompt = buildSystemPrompt(ctx);
   const now = Date.now();
 
@@ -1051,6 +1102,7 @@ export async function askGemini(
 
         if (isQuotaError) {
           modelCooldowns[model] = Date.now() + QUOTA_COOLDOWN_MS;
+          apiKey = rotateKey(apiKey!) ?? apiKey!;
           console.error(`[Gemini] Quota exhausted on ${model} — cooldown ${QUOTA_COOLDOWN_MS / 1000}s, trying next model…`);
           continue;
         }
