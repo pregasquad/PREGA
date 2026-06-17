@@ -1006,6 +1006,33 @@ function isGenericPriceQuery(msg: string): boolean {
  * 2. If the reply is a bullet-heavy service dump on a generic price query → replace it
  * 3. If it's NOT the first message, strip any greeting opener from the first line
  */
+/**
+ * Fix WhatsApp bidi rendering for Arabic messages that contain French/Latin words.
+ * WhatsApp makes a message bubble LTR when a line starts with a Latin character.
+ * Inserting U+200F (Right-to-Left Mark) before Latin runs anchors them in RTL context,
+ * so service names like "Pédicure", "SPA", "Hydrafaciale" display correctly inside Arabic text.
+ */
+function fixBidiInArabicText(text: string): string {
+  if (!/[\u0600-\u06FF]/.test(text)) return text; // no Arabic → skip
+  const RLM = "\u200F";
+  return text
+    .split("\n")
+    .map((line) => {
+      if (!/[\u0600-\u06FF]/.test(line)) return line; // line has no Arabic → skip
+      // Anchor line as RTL when it starts with a Latin character
+      let out = /^[A-Za-zÀ-ÿ]/.test(line.trimStart())
+        ? RLM + line.trimStart()
+        : line;
+      // Insert RLM at every Arabic→Latin boundary so embedded Latin words stay in RTL flow
+      out = out.replace(
+        /([\u0600-\u06FF\s\u200F،,؟!\d])([A-Za-zÀ-ÿ])/g,
+        (_, pre, latin) => pre + RLM + latin
+      );
+      return out;
+    })
+    .join("\n");
+}
+
 function sanitizeReply(reply: string, userMessage: string, isFirstMessage: boolean): string {
   // 1. Strip bullet / list markers from line starts
   let stripped = reply
@@ -1040,6 +1067,9 @@ function sanitizeReply(reply: string, userMessage: string, isFirstMessage: boole
       stripped = stripped.replace(inlineGreetingRx, "").trim();
     }
   }
+
+  // 4. Fix bidi: insert RTL marks before Latin words in Arabic-dominant text
+  stripped = fixBidiInArabicText(stripped);
 
   return stripped;
 }
