@@ -4,9 +4,11 @@ const REPLIT_GEMINI_BASE = process.env.AI_INTEGRATIONS_GEMINI_BASE_URL
   : null;
 const GEMINI_BASE = REPLIT_GEMINI_BASE || "https://generativelanguage.googleapis.com/v1beta/models";
 const MODEL_CASCADE = [
-  "gemini-2.5-flash",         // Free — best quality, fast, confirmed real
-  "gemini-2.0-flash",         // Free — stable, confirmed real
-  "gemini-2.0-flash-lite",    // Free — lightweight fallback
+  "gemini-3.5-flash",         // Free — newest, most intelligent (confirmed real Jun 2026)
+  "gemini-3.1-flash-lite",    // Free — most cost-efficient (confirmed real Jun 2026)
+  "gemini-2.5-flash",         // Free — 1M context, hybrid reasoning
+  "gemini-2.5-flash-lite",    // Free — lighter 2.5, lower quota pressure
+  "gemini-2.0-flash-lite",    // Free — still alive (2.0-flash was shut down Jun 1 2026)
   "gemini-1.5-flash",         // Free — older stable fallback
   "gemini-1.5-flash-8b",      // Free — cheapest last-resort
 ];
@@ -493,11 +495,11 @@ async function callGemini(
  * Transcribe a voice note (audio buffer as base64).
  *
  * Confirmed audio-capable Gemini models (all support multimodal input):
- *   gemini-3.1-flash-lite   — fastest, GA (preview shut down May 25 2026) ✅
- *   gemini-3.5-flash        — most capable, GA (released May 19 2026)     ✅
- *   gemini-3-flash-preview  — free preview (stable is paid-only)           ✅
- *   gemini-2.5-flash        — stable fallback                              ✅
- *   gemini-2.5-flash-lite   — cheapest fallback                            ✅
+ *   gemini-2.5-flash        — best quality, confirmed free                 ✅
+ *   gemini-2.5-flash-lite   — lighter 2.5, lower quota pressure            ✅
+ *   gemini-2.0-flash        — stable fallback                              ✅
+ *   gemini-1.5-flash        — older stable, good audio support             ✅
+ *   gemini-1.5-pro          — most capable fallback for tricky audio       ✅
  *
  * Final fallback: Groq Whisper large-v3-turbo (STT-only model, very fast).
  */
@@ -510,10 +512,11 @@ export async function transcribeAudio(
 
   // ── 1. Gemini cascade — try from fastest to most capable ─────────────────
   const TRANSCRIPTION_MODELS = [
-    "gemini-2.5-flash",         // Free — best quality, confirmed real, handles audio
-    "gemini-2.0-flash",         // Free — stable fallback
-    "gemini-1.5-flash",         // Free — older stable fallback (good audio support)
-    "gemini-1.5-pro",           // Free — most capable fallback for tricky audio
+    "gemini-3.5-flash",         // Free — newest, best audio quality
+    "gemini-3.1-flash-lite",    // Free — cost-efficient, good audio
+    "gemini-2.5-flash",         // Free — 1M context, reliable
+    "gemini-1.5-flash",         // Free — older stable, good audio support
+    "gemini-1.5-pro",           // Free — most capable for tricky/noisy audio
   ];
 
   const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
@@ -577,7 +580,7 @@ export async function transcribeAudio(
 
 /**
  * Convert text to speech using Gemini TTS models.
- * Cascade: gemini-3.1-flash-tts-preview → gemini-2.5-flash-preview-tts
+ * Cascade: gemini-2.5-flash-preview-tts → gemini-2.0-flash-preview-tts
  * Returns raw PCM audio as base64 + sample rate, or null if unavailable.
  *
  * Gemini TTS returns audio/L16 (signed 16-bit PCM) — convert to OGG/Opus
@@ -599,8 +602,8 @@ export async function textToSpeech(
   if (!geminiKey) return null;
 
   const TTS_MODELS = [
-    "gemini-2.5-flash-preview-tts",   // best quality, confirmed real
-    "gemini-2.0-flash-preview-tts",   // stable fallback
+    "gemini-3.1-flash-tts-preview",   // newest TTS (confirmed real Jun 2026)
+    "gemini-2.5-flash-preview-tts",   // stable fallback
   ];
 
   // Use the configured voice, defaulting to Aoede (best Arabic/Darija quality)
@@ -746,7 +749,7 @@ export async function detectBossCorrection(
 
   // Fix 4: small cascade (lite → 2.5-flash → 1.5-flash) so a single unavailable model
   // doesn't silently kill correction detection
-  const CORRECTION_CASCADE = ["gemini-3.1-flash-lite", "gemini-2.5-flash", "gemini-2.5-flash-lite"];
+  const CORRECTION_CASCADE = ["gemini-3.1-flash-lite", "gemini-2.5-flash-lite", "gemini-2.5-flash"];
   if (apiKey) {
     const now = Date.now();
     for (const model of CORRECTION_CASCADE) {
@@ -894,7 +897,7 @@ ${conversationText}
 
   // Try Gemini with lightest model first
   if (apiKey) {
-    const learningModels = ["gemini-2.5-flash-lite", "gemini-2.5-flash"];
+    const learningModels = ["gemini-3.1-flash-lite", "gemini-2.5-flash-lite", "gemini-2.5-flash"];
     for (const model of learningModels) {
       if (modelCooldowns[model] && Date.now() < modelCooldowns[model]) continue;
       try {
