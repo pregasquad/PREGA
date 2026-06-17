@@ -49,12 +49,15 @@ function rotateKey(exhaustedKey: string): string | null {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const MODEL_CASCADE = [
-  "gemini-2.5-flash",         // Best — 1M context, hybrid reasoning
-  "gemini-2.5-flash-lite",    // Lighter 2.5, lower quota pressure
-  "gemini-2.0-flash",         // Fast and capable
-  "gemini-2.0-flash-lite",    // Lightweight fallback
-  "gemini-flash-latest",      // Latest flash alias
-  "gemini-flash-lite-latest", // Latest lite alias
+  "gemini-3.5-flash",              // Newest & smartest free flash (high demand → auto-skip)
+  "gemini-3.1-flash-lite",         // Fast & free — confirmed working
+  "gemini-3.1-flash-lite-preview", // Preview variant — confirmed working
+  "gemini-2.5-flash",              // Stable 1M-context free model
+  "gemini-2.5-flash-lite",         // Lighter 2.5 (high demand → auto-skip)
+  "gemini-flash-latest",           // Latest flash alias — free
+  "gemini-flash-lite-latest",      // Latest lite alias — free
+  "gemini-2.0-flash",              // Older fallback — free
+  "gemini-2.0-flash-lite",         // Lightest fallback — free
 ];
 
 // Models confirmed unavailable (404) — skipped instantly with no delay
