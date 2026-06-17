@@ -49,15 +49,19 @@ function rotateKey(exhaustedKey: string): string | null {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const MODEL_CASCADE = [
-  "gemini-3.5-flash",              // Newest & smartest free flash (high demand → auto-skip)
-  "gemini-3.1-flash-lite",         // Fast & free — confirmed working
+  // ── Stable GA models first (most reliable, confirmed working) ──────────────
+  "gemini-2.5-flash",              // Stable GA — 1M context, confirmed working
+  "gemini-3.1-flash-lite",         // Stable GA — fast & free, confirmed working
+  // ── Newer previews (best quality when available, skip if high demand) ──────
+  "gemini-3.5-flash",              // Newest flash — skipped automatically if busy
   "gemini-3.1-flash-lite-preview", // Preview variant — confirmed working
-  "gemini-2.5-flash",              // Stable 1M-context free model
-  "gemini-2.5-flash-lite",         // Lighter 2.5 (high demand → auto-skip)
-  "gemini-flash-latest",           // Latest flash alias — free
-  "gemini-flash-lite-latest",      // Latest lite alias — free
-  "gemini-2.0-flash",              // Older fallback — free
-  "gemini-2.0-flash-lite",         // Lightest fallback — free
+  "gemini-2.5-flash-lite",         // Lighter 2.5 — skip if high demand
+  // ── Stable aliases (always resolve to latest GA) ───────────────────────────
+  "gemini-flash-latest",           // Latest flash alias
+  "gemini-flash-lite-latest",      // Latest lite alias
+  // ── Older stable fallbacks (last resort for quota survivability) ───────────
+  "gemini-2.0-flash",              // Older GA — reliable fallback
+  "gemini-2.0-flash-lite",         // Lightest — last resort
 ];
 
 // Models confirmed unavailable (404) — skipped instantly with no delay
@@ -1008,27 +1012,48 @@ function isGenericPriceQuery(msg: string): boolean {
  */
 /**
  * Fix WhatsApp bidi rendering for Arabic messages that contain French/Latin words.
- * WhatsApp makes a message bubble LTR when a line starts with a Latin character.
- * Inserting U+200F (Right-to-Left Mark) before Latin runs anchors them in RTL context,
- * so service names like "Pédicure", "SPA", "Hydrafaciale" display correctly inside Arabic text.
+ * Applied ONLY at send time — never stored in conversation history — so RLMs don't
+ * accumulate across turns.
+ *
+ * Strategy per line that contains Arabic:
+ *   1. Protect URLs so we never inject RLM inside a link.
+ *   2. Prepend exactly one RLM to anchor the bubble RTL when the line leads with Latin.
+ *   3. Insert RLM at every Arabic-char → Latin-char boundary (after optional spaces)
+ *      so embedded service names like "SPA" / "Pédicure" stay inside the RTL flow.
  */
-function fixBidiInArabicText(text: string): string {
-  if (!/[\u0600-\u06FF]/.test(text)) return text; // no Arabic → skip
+export function fixBidiInArabicText(text: string): string {
+  if (!/[\u0600-\u06FF]/.test(text)) return text; // no Arabic anywhere → skip
   const RLM = "\u200F";
+
   return text
     .split("\n")
     .map((line) => {
       if (!/[\u0600-\u06FF]/.test(line)) return line; // line has no Arabic → skip
-      // Anchor line as RTL when it starts with a Latin character
-      let out = /^[A-Za-zÀ-ÿ]/.test(line.trimStart())
-        ? RLM + line.trimStart()
-        : line;
-      // Insert RLM at every Arabic→Latin boundary so embedded Latin words stay in RTL flow
-      out = out.replace(
-        /([\u0600-\u06FF\s\u200F،,؟!\d])([A-Za-zÀ-ÿ])/g,
-        (_, pre, latin) => pre + RLM + latin
+
+      // Step 1 — protect URLs: replace with numbered placeholders
+      const urls: string[] = [];
+      let safe = line.replace(/https?:\/\/\S+/g, (url) => {
+        urls.push(url);
+        return `\x00U${urls.length - 1}\x00`;
+      });
+
+      // Step 2 — anchor line as RTL when it starts with a Latin char (or quote/paren+Latin)
+      // Strip any existing leading RLMs first to avoid duplicates, then add exactly one.
+      if (/^[\u200F\s]*["'(]?[A-Za-zÀ-ÿ]/.test(safe)) {
+        safe = RLM + safe.replace(/^\u200F+/, "");
+      }
+
+      // Step 3 — insert RLM at Arabic→(space*)→Latin boundaries
+      // The char class before the boundary: Arabic letters + Arabic punctuation + digits
+      safe = safe.replace(
+        /([\u0600-\u06FF،,؟!\d])(\s*)([A-Za-zÀ-ÿ])/g,
+        (_, arab, space, latin) => arab + space + RLM + latin
       );
-      return out;
+
+      // Restore URLs
+      safe = safe.replace(/\x00U(\d+)\x00/g, (_, i) => urls[+i]);
+
+      return safe;
     })
     .join("\n");
 }
@@ -1067,9 +1092,6 @@ function sanitizeReply(reply: string, userMessage: string, isFirstMessage: boole
       stripped = stripped.replace(inlineGreetingRx, "").trim();
     }
   }
-
-  // 4. Fix bidi: insert RTL marks before Latin words in Arabic-dominant text
-  stripped = fixBidiInArabicText(stripped);
 
   return stripped;
 }
@@ -1120,9 +1142,10 @@ export async function askGemini(
           const newHistory: ConversationTurn[] = [
             ...history,
             { role: "user", text: historyUserText },
-            { role: "model", text: cleanReply },
+            { role: "model", text: cleanReply }, // store clean text — no RLMs in history
           ];
-          return { reply: cleanReply, newHistory };
+          // Apply bidi fix only at send time so invisible marks never accumulate in history
+          return { reply: fixBidiInArabicText(cleanReply), newHistory };
         }
 
         // 404 — model doesn't exist, cache it so future calls skip it instantly
