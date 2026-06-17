@@ -436,7 +436,8 @@ async function callGemini(
   const body = JSON.stringify({
     systemInstruction: { parts: [{ text: systemPrompt }] },
     contents,
-    generationConfig: { maxOutputTokens: 300, temperature: 0.3 },
+    generationConfig: { maxOutputTokens: 600, temperature: 0.3 },
+    thinkingConfig: { thinkingBudget: 0 },
   });
 
   let response!: Response;
