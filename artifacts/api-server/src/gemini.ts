@@ -645,8 +645,8 @@ export async function textToSpeech(
   text: string,
   voice?: string
 ): Promise<{ pcmBase64: string; sampleRate: number } | null> {
-  const geminiKey = getAvailableKey();
-  if (!geminiKey) return null;
+  let ttsKey = getAvailableKey();
+  if (!ttsKey) return null;
 
   const TTS_MODELS = [
     "gemini-3.1-flash-tts-preview",   // newest TTS (confirmed real Jun 2026)
@@ -664,7 +664,7 @@ export async function textToSpeech(
     }
     try {
       const res = await fetch(
-        `${GEMINI_BASE}/${model}:generateContent?key=${geminiKey}`,
+        `${GEMINI_BASE}/${model}:generateContent?key=${ttsKey}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -698,7 +698,7 @@ export async function textToSpeech(
         const status = res.status;
         if (status === 429) {
           modelCooldowns[model] = Date.now() + QUOTA_COOLDOWN_MS;
-          rotateKey(geminiKey);
+          ttsKey = rotateKey(ttsKey) ?? ttsKey;
           console.warn(`[TTS] ${model} quota (429) — cooldown, trying next`);
         } else {
           const errBody = await res.text();
@@ -826,7 +826,8 @@ export async function detectBossCorrection(
           modelCooldowns[model] = Date.now() + QUOTA_COOLDOWN_MS;
           correctionKey = rotateKey(correctionKey) ?? correctionKey;
         } else if (res.status === 404) {
-          break; // Model not found — skip remaining cascade
+          notFoundModels.add(model); // cache permanently — same model is unavailable for all keys
+          continue; // try next model in cascade
         }
       } catch (err: any) {
         console.warn(`[BossCorrection] ${model} error: ${err.message}`);
