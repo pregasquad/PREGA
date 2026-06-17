@@ -3,8 +3,6 @@ const REPLIT_GEMINI_BASE = process.env.AI_INTEGRATIONS_GEMINI_BASE_URL
   ? `${process.env.AI_INTEGRATIONS_GEMINI_BASE_URL}/v1beta/models`
   : null;
 const GEMINI_BASE = REPLIT_GEMINI_BASE || "https://generativelanguage.googleapis.com/v1beta/models";
-const GROQ_BASE = "https://api.groq.com/openai/v1";
-
 const MODEL_CASCADE = [
   "gemini-2.5-flash",         // Free — best quality, fast, confirmed real
   "gemini-2.0-flash",         // Free — stable, confirmed real
@@ -15,17 +13,6 @@ const MODEL_CASCADE = [
 
 // Models confirmed unavailable (404) — skipped instantly with no delay
 const notFoundModels = new Set<string>();
-
-// All reliable free-tier Groq text-generation models, ordered best-quality first
-const GROQ_CASCADE = [
-  "llama-3.3-70b-versatile",                    // best quality, proven Arabic/Darija
-  "meta-llama/llama-4-scout-17b-16e-instruct",  // latest Llama 4
-  "groq/compound",                               // Groq compound model (large)
-  "qwen/qwen3-32b",                              // strong multilingual (think tags stripped)
-  "groq/compound-mini",                          // Groq compound (smaller)
-  "allam-2-7b",                                  // Arabic-native (SDAIA)
-  "llama-3.1-8b-instant",                        // fastest last-resort
-];
 
 const QUOTA_COOLDOWN_MS = 60 * 1000;
 // Per-model cooldown so a quota hit on one model still lets others respond
@@ -502,60 +489,6 @@ async function callGemini(
   return { reply: text ? text.trim() : null, isQuotaError: false, isTruncated: false };
 }
 
-async function callGroq(
-  model: string,
-  userMessage: string,
-  systemPrompt: string,
-  apiKey: string,
-  history: ConversationTurn[]
-): Promise<{ reply: string | null; isQuotaError: boolean }> {
-  const messages: { role: string; content: string }[] = [
-    { role: "system", content: systemPrompt },
-    ...history.map((turn) => ({
-      role: turn.role === "model" ? "assistant" : "user",
-      content: turn.text,
-    })),
-    { role: "user", content: userMessage || "." },
-  ];
-
-  let response: Response;
-  try {
-    response = await fetch(`${GROQ_BASE}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages,
-        max_tokens: 300,
-        temperature: 0.3,
-      }),
-    });
-  } catch (networkErr: any) {
-    console.warn(`[Groq] ${model} network error: ${networkErr.message}`);
-    return { reply: null, isQuotaError: false };
-  }
-
-  if (!response.ok) {
-    const status = response.status;
-    if (status === 429) {
-      console.warn(`[Groq] ${model} quota exhausted (429)`);
-      return { reply: null, isQuotaError: true };
-    }
-    const errBody = await response.text();
-    console.error(`[Groq] ${model} error ${status}: ${errBody.slice(0, 300)}`);
-    return { reply: null, isQuotaError: false };
-  }
-
-  const data = (await response.json()) as any;
-  let text: string | undefined = data?.choices?.[0]?.message?.content;
-  // Strip <think>...</think> reasoning blocks (qwen3 and similar models)
-  if (text) text = text.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
-  return { reply: text || null, isQuotaError: false };
-}
-
 /**
  * Transcribe a voice note (audio buffer as base64).
  *
@@ -636,49 +569,9 @@ export async function transcribeAudio(
         console.warn(`[Transcription] ${model} threw: ${err.message} — trying next`);
       }
     }
-    console.warn("[Transcription] All Gemini models failed — trying Groq Whisper");
+    console.warn("[Transcription] All Gemini models failed — returning null");
   }
 
-  // ── 2. Groq Whisper large-v3-turbo fallback ───────────────────────────────
-  const groqKey = process.env.GROQ_API_KEY || process.env.XAI_API_KEY;
-  if (groqKey) {
-    try {
-      const audioBuffer = Buffer.from(audioBase64, "base64");
-      const extMap: Record<string, string> = {
-        "audio/ogg": "ogg", "audio/mpeg": "mp3", "audio/mp4": "mp4",
-        "audio/webm": "webm", "audio/wav": "wav", "audio/flac": "flac",
-        "audio/aac": "aac", "audio/aiff": "aiff",
-      };
-      const ext = extMap[cleanMime] ?? "ogg";
-
-      const formData = new FormData();
-      formData.append("file", new Blob([audioBuffer], { type: cleanMime }), `voice.${ext}`);
-      formData.append("model", "whisper-large-v3-turbo");
-      // No language hint — auto-detect handles Arabic / Darija / French better
-
-      const res = await fetch(`${GROQ_BASE}/audio/transcriptions`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${groqKey}` },
-        body: formData,
-      });
-
-      if (res.ok) {
-        const data = (await res.json()) as any;
-        const text: string | undefined = data?.text?.trim();
-        if (text) {
-          console.log(`[Transcription] Groq Whisper: "${text.slice(0, 80)}"`);
-          return text;
-        }
-      } else {
-        const errBody = await res.text();
-        console.warn(`[Transcription] Groq Whisper error ${res.status}: ${errBody.slice(0, 200)}`);
-      }
-    } catch (err: any) {
-      console.warn(`[Transcription] Groq Whisper threw: ${err.message}`);
-    }
-  }
-
-  console.warn("[Transcription] Both Gemini and Groq Whisper failed — returning null");
   return null;
 }
 
@@ -799,8 +692,7 @@ export async function detectBossCorrection(
   if (!wissalLastReply?.trim() || !bossReply?.trim()) return null;
 
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
-  const groqKey = process.env.XAI_API_KEY;
-  if (!apiKey && !groqKey) return null;
+  if (!apiKey) return null;
 
   const prompt = `أنت نظام تحليل ذكي لصالون تجميل. مهمتك: تحديد ما إذا كان المدير/صاحبة الصالون يصحح/تصحح معلومة خاطئة قالتها المساعدة الآلية (وصال).
 
@@ -889,34 +781,6 @@ export async function detectBossCorrection(
     }
   }
 
-  // Groq fallback
-  if (groqKey) {
-    try {
-      const res = await fetch(`${GROQ_BASE}/chat/completions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${groqKey}` },
-        body: JSON.stringify({
-          model: "llama-3.1-8b-instant",
-          messages: [{ role: "user", content: prompt }],
-          max_tokens: 200,
-          temperature: 0.1,
-        }),
-      });
-      if (res.ok) {
-        const data = (await res.json()) as any;
-        let text: string = data?.choices?.[0]?.message?.content?.trim() ?? "";
-        text = text.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
-        const parsed = tryParse(text);
-        if (parsed) {
-          console.log(`[BossCorrection] Groq detected correction=${parsed.isCorrection}`);
-          return parsed;
-        }
-      }
-    } catch (err: any) {
-      console.warn(`[BossCorrection] Groq error: ${err.message}`);
-    }
-  }
-
   return null;
 }
 
@@ -939,8 +803,7 @@ export async function learnFromConversation(
   if (history.length < 2) return null;
 
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
-  const groqKey = process.env.XAI_API_KEY;
-  if (!apiKey && !groqKey) return null;
+  if (!apiKey) return null;
 
   // Fix 7: label [رد المدير]: turns as "المدير" instead of "وصال" so the learning
   // AI doesn't attribute the boss's words to Wissal and create false bot-error corrections.
@@ -1065,38 +928,6 @@ ${conversationText}
       } catch (err: any) {
         console.warn(`[BotLearn] Gemini ${model} failed: ${err.message}`);
       }
-    }
-  }
-
-  // Groq fallback — fast small model
-  if (groqKey) {
-    try {
-      const res = await fetch(`${GROQ_BASE}/chat/completions`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${groqKey}`,
-        },
-        body: JSON.stringify({
-          model: "llama-3.1-8b-instant",
-          messages: [{ role: "user", content: prompt }],
-          max_tokens: 500,
-          temperature: 0.2,
-        }),
-      });
-      if (res.ok) {
-        const data = (await res.json()) as any;
-        let text: string =
-          data?.choices?.[0]?.message?.content?.trim() ?? "";
-        text = text.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
-        const parsed = tryParseJSON(text);
-        if (parsed) {
-          console.log("[BotLearn] Groq llama-3.1-8b extracted insights");
-          return parsed;
-        }
-      }
-    } catch (err: any) {
-      console.warn(`[BotLearn] Groq failed: ${err.message}`);
     }
   }
 
@@ -1230,64 +1061,12 @@ export async function askGemini(
         if (i < MODEL_CASCADE.length - 1) await retryDelay();
       }
     }
-    console.warn("[Gemini] All models exhausted — trying Groq fallback…");
+    console.warn("[Gemini] All models exhausted — fallback reply");
   } else {
-    console.warn("[Gemini] No API key — trying Groq fallback…");
+    console.warn("[Gemini] No API key configured");
   }
 
-  // Groq cascade fallback — all free-tier models in order of quality
-  const groqKey = process.env.XAI_API_KEY;
-  if (groqKey) {
-    const turn = Math.floor(history.length / 2) + 1;
-    for (let i = 0; i < GROQ_CASCADE.length; i++) {
-      const model = GROQ_CASCADE[i];
-
-      if (modelCooldowns[model] && Date.now() < modelCooldowns[model]) {
-        const secs = Math.ceil((modelCooldowns[model] - Date.now()) / 1000);
-        console.warn(`[Groq] ${model} in cooldown (${secs}s) — skipping`);
-        continue;
-      }
-
-      try {
-        const { reply, isQuotaError } = await callGroq(
-          model, userMessage, systemPrompt, groqKey, history
-        );
-
-        if (reply) {
-          const cleanReply = sanitizeReply(reply, userMessage, history.length === 0);
-          console.log(`[Groq] ${model} replied (turn ${turn})`);
-          const historyUserText = imageBase64
-            ? `[صورة]${userMessage ? ` + "${userMessage}"` : ""}`
-            : userMessage;
-          const newHistory: ConversationTurn[] = [
-            ...history,
-            { role: "user", text: historyUserText },
-            { role: "model", text: cleanReply },
-          ];
-          return { reply: cleanReply, newHistory };
-        }
-
-        if (isQuotaError) {
-          modelCooldowns[model] = Date.now() + QUOTA_COOLDOWN_MS;
-          console.error(`[Groq] Quota exhausted on ${model} — cooldown ${QUOTA_COOLDOWN_MS / 1000}s, trying next…`);
-          continue;
-        }
-
-        if (i < GROQ_CASCADE.length - 1) {
-          console.warn(`[Groq] ${model} failed — trying next model…`);
-          await retryDelay();
-        }
-      } catch (err: any) {
-        console.error(`[Groq] ${model} threw: ${err.message}`);
-        if (i < GROQ_CASCADE.length - 1) await retryDelay();
-      }
-    }
-    console.error("[Groq] All models exhausted");
-  } else {
-    console.warn("[Groq] No XAI_API_KEY set — skipping Groq fallback");
-  }
-
-  console.error("[AI] All models exhausted — fallback reply");
+  console.error("[AI] All Gemini models exhausted — fallback reply");
   return { reply: FALLBACK_REPLY, newHistory: history };
 }
 
