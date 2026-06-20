@@ -1091,13 +1091,19 @@ function sanitizeReply(reply: string, userMessage: string, isFirstMessage: boole
     const greetingRx = /^(مرحبا|مرحباً|أهلاً|أهلا|السلام عليكم|صباح الخير|مساء الخير|بوجور|bonjour|bonsoir|salut|coucou|hello|hi\b|hey\b|آه ما شيري|زوينا مرحبا|فنيوينا مرحبا|حبيباتي أهلاً|بوقوصة مرحبا|ما بيل أهلاً|معشوقتي)[^!؟?]*[!؟🌸💖😊🌷💕💅😄]?\s*$/i;
     if (lines.length > 0 && greetingRx.test(lines[0].trim())) {
       // Remove the greeting-only first line and re-join
-      stripped = lines.slice(1).join("\n").trim();
+      const candidate = lines.slice(1).join("\n").trim();
+      // Safety: never collapse to empty — if stripping removes everything, keep original
+      if (candidate.length > 0) stripped = candidate;
     } else {
       // Also handle inline greeting at the start of first line: "مرحبا حبيبتي! السعر هو..."
       const inlineGreetingRx = /^(مرحبا|مرحباً|أهلاً|أهلا|bonjour|bonsoir|salut|coucou|hello|hi\b|hey\b)[^\n،,!؟?]{0,25}[،,!؟🌸💖😊🌷💕💅😄]\s*/i;
-      stripped = stripped.replace(inlineGreetingRx, "").trim();
+      const candidate = stripped.replace(inlineGreetingRx, "").trim();
+      if (candidate.length > 0) stripped = candidate;
     }
   }
+
+  // Safety net: if all processing somehow emptied the reply, return the raw trimmed original
+  if (!stripped) return reply.trim();
 
   return stripped;
 }
