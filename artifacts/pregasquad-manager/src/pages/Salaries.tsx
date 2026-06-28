@@ -588,7 +588,7 @@ export default function Salaries() {
   const paidBackDeductions = filteredDeductions.filter(d => d.cleared);
   const pendingDeductions = filteredDeductions.filter(d => !d.cleared);
   const totalPaidBack = paidBackDeductions.reduce((sum, d) => sum + d.amount, 0);
-  const totalPending = pendingDeductions.reduce((sum, d) => sum + d.amount, 0);
+  const totalPending = pendingDeductions.reduce((sum, d) => sum + getRemainingAmount(d), 0);
   const totalExpenses = filteredCharges.reduce((sum, c) => sum + c.amount, 0);
   const filteredOwnerWithdrawals = ownerWithdrawalsData.filter((w: any) => {
     try {
@@ -604,7 +604,7 @@ export default function Salaries() {
     const staffCommission = earning ? earning.totalCommission : 0;
     const staffDeductionAmount = pendingDeductions
       .filter(d => d.staffId === s.id || (!d.staffId && d.staffName === s.name))
-      .reduce((sum, d) => sum + d.amount, 0);
+      .reduce((sum, d) => sum + getRemainingAmount(d), 0);
     return total + Math.max(0, staffCommission - staffDeductionAmount);
   }, 0);
 
