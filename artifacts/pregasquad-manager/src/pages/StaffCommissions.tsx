@@ -242,6 +242,12 @@ export default function StaffCommissions() {
                               />
                               <span className="text-muted-foreground">%</span>
                             </div>
+                            <div
+                              className={`text-sm font-semibold tabular-nums w-24 text-right transition-colors ${hasChange ? "text-primary" : "text-muted-foreground"}`}
+                              title={t("salaries.liveCommissionAmount", "Montant de commission en temps réel")}
+                            >
+                              {((service.price * currentValue) / 100).toFixed(2)} DH
+                            </div>
                             <Button
                               variant={isSaved ? "default" : hasChange ? "outline" : "ghost"}
                               size="sm"
