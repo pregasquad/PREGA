@@ -12,6 +12,7 @@ import { initGA } from "./lib/analytics";
 import { useAnalytics } from "./hooks/use-analytics";
 import { connectQz, initPrintSocket, isQzConnected } from "./lib/qzPrint";
 import { saveSalariesCache } from "./lib/offlineDb";
+import { prefetchCoreData } from "./lib/queryClient";
 
 // All pages lazy-loaded so a single page error never blanks the whole app
 const Planning = lazy(() => import("@/pages/Planning"));
@@ -280,6 +281,10 @@ function App() {
     const isAuth = sessionStorage.getItem("user_authenticated") === "true" ||
                    localStorage.getItem("user_authenticated") === "true";
     if (isAuth) {
+      // Seed all core data caches with one request so every page loads instantly
+      prefetchCoreData().catch(() => {});
+
+      // Prefetch salaries in parallel
       fetch("/api/salaries/compute", { credentials: "include" })
         .then(r => r.ok ? r.json() : null)
         .then(data => {

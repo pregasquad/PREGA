@@ -303,6 +303,23 @@ export const getQueryFn: <T>(options: {
     }
   };
 
+export async function prefetchCoreData(): Promise<void> {
+  try {
+    const res = await fetch("/api/prefetch", { credentials: "include" });
+    if (!res.ok) return;
+    const d = await res.json();
+    if (d.staff)            queryClient.setQueryData(["/api/staff"], d.staff);
+    if (d.services)         queryClient.setQueryData(["/api/services"], d.services);
+    if (d.categories)       queryClient.setQueryData(["/api/categories"], d.categories);
+    if (d.clients)          queryClient.setQueryData(["/api/clients"], d.clients);
+    if (d.products)         queryClient.setQueryData(["/api/products"], d.products);
+    if (d.businessSettings) queryClient.setQueryData(["/api/business-settings"], d.businessSettings);
+    if (d.staffCommissions) queryClient.setQueryData(["/api/staff-commissions"], d.staffCommissions);
+  } catch {
+    // silent — app still works, just won't be pre-seeded
+  }
+}
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -310,6 +327,7 @@ export const queryClient = new QueryClient({
       refetchInterval: false,
       refetchOnWindowFocus: false,
       staleTime: Infinity,
+      gcTime: 24 * 60 * 60 * 1000,
       retry: false,
     },
     mutations: {

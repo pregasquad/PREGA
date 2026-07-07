@@ -5,7 +5,7 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Lock, User, Settings, ArrowLeft, Phone, KeyRound, Sparkles, WifiOff, Wifi, CloudOff, RefreshCw } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, prefetchCoreData } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { setDatabaseOffline, isEffectivelyOffline } from "@/lib/databaseStatus";
@@ -230,6 +230,7 @@ export function FirstLogin({ children }: FirstLoginProps) {
         localStorage.setItem("current_user_role", userCreds.role || "");
         localStorage.setItem("current_user_permissions", perms);
         
+        prefetchCoreData().catch(() => {});
         setIsAuthenticated(true);
       } else {
         setError(t("auth.wrongPassword"));
@@ -265,6 +266,7 @@ export function FirstLogin({ children }: FirstLoginProps) {
         const pinHash = await hashPin(pin);
         saveOfflineCredential(selectedUser.name, pinHash, data.role || "", data.permissions || []);
         
+        prefetchCoreData().catch(() => {});
         setIsAuthenticated(true);
       } else {
         setError(t("auth.wrongPassword"));
@@ -297,6 +299,7 @@ export function FirstLogin({ children }: FirstLoginProps) {
           localStorage.setItem("current_user_role", userCreds.role || "");
           localStorage.setItem("current_user_permissions", perms);
           
+          prefetchCoreData().catch(() => {});
           setIsAuthenticated(true);
           setIsLoading(false);
           return;

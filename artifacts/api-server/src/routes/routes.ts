@@ -544,6 +544,24 @@ export async function registerRoutes(
   // Register Object Storage routes
   registerObjectStorageRoutes(app);
 
+  // === PREFETCH — returns all core data in one HTTP round-trip ===
+  app.get("/api/prefetch", isPinAuthenticated, async (_req, res) => {
+    try {
+      const [staff, services, categories, clients, products, businessSettings, staffCommissions] = await Promise.all([
+        storage.getStaff().catch(() => []),
+        storage.getServices().catch(() => []),
+        storage.getCategories().catch(() => []),
+        storage.getClients().catch(() => []),
+        storage.getProducts().catch(() => []),
+        storage.getBusinessSettings().catch(() => null),
+        storage.getStaffCommissions().catch(() => []),
+      ]);
+      res.json({ staff, services, categories, clients, products, businessSettings, staffCommissions });
+    } catch (err) {
+      res.status(500).json({ message: "Prefetch failed" });
+    }
+  });
+
   // === UPLOAD ROUTE ===
   app.post("/api/upload", isPinAuthenticated, multer({ 
     storage: multer.memoryStorage(),
