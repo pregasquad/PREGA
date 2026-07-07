@@ -303,23 +303,68 @@ export const getQueryFn: <T>(options: {
     }
   };
 
+// Maps streaming key → React Query cache key
+const STREAM_KEY_MAP: Record<string, string> = {
+  staff:             "/api/staff",
+  services:          "/api/services",
+  categories:        "/api/categories",
+  clients:           "/api/clients",
+  products:          "/api/products",
+  businessSettings:  "/api/business-settings",
+  staffCommissions:  "/api/staff-commissions",
+  charges:           "/api/charges",
+  staffDeductions:   "/api/staff-deductions",
+  staffPayments:     "/api/staff-payments",
+  salonPayments:     "/api/salon-payments",
+  ownerWithdrawals:  "/api/owner-withdrawals",
+  expenseCategories: "/api/expense-categories",
+  packages:          "/api/packages",
+  packagePurchases:  "/api/package-purchases",
+  giftCards:         "/api/gift-cards",
+  messageTemplates:  "/api/message-templates",
+  waitlist:          "/api/waitlist",
+  referrals:         "/api/referrals",
+  adminRoles:        "/api/admin-roles",
+  salariesCompute:   "/api/salaries/compute",
+  // appointments streamed separately — seeded by their own key below
+};
+
 export async function prefetchCoreData(): Promise<void> {
   try {
-    const res = await fetch("/api/prefetch", { credentials: "include" });
-    if (!res.ok) return;
-    const d = await res.json();
-    if (d.staff)             queryClient.setQueryData(["/api/staff"], d.staff);
-    if (d.services)          queryClient.setQueryData(["/api/services"], d.services);
-    if (d.categories)        queryClient.setQueryData(["/api/categories"], d.categories);
-    if (d.clients)           queryClient.setQueryData(["/api/clients"], d.clients);
-    if (d.products)          queryClient.setQueryData(["/api/products"], d.products);
-    if (d.businessSettings)  queryClient.setQueryData(["/api/business-settings"], d.businessSettings);
-    if (d.staffCommissions)  queryClient.setQueryData(["/api/staff-commissions"], d.staffCommissions);
-    if (d.charges)           queryClient.setQueryData(["/api/charges"], d.charges);
-    if (d.staffDeductions)   queryClient.setQueryData(["/api/staff-deductions"], d.staffDeductions);
-    if (d.staffPayments)     queryClient.setQueryData(["/api/staff-payments"], d.staffPayments);
-    if (d.salonPayments)     queryClient.setQueryData(["/api/salon-payments"], d.salonPayments);
-    if (d.ownerWithdrawals)  queryClient.setQueryData(["/api/owner-withdrawals"], d.ownerWithdrawals);
+    const res = await fetch("/api/prefetch-stream", { credentials: "include" });
+    if (!res.ok || !res.body) return;
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    const seedLine = (line: string) => {
+      if (!line.trim()) return;
+      try {
+        const { key, data } = JSON.parse(line) as { key: string; data: unknown };
+        // Core datasets
+        const qKey = STREAM_KEY_MAP[key];
+        if (qKey && data != null) {
+          queryClient.setQueryData([qKey], data);
+        }
+        // Appointments from the 3-month range — seed the "all" key so Planning / Reports pick it up
+        if (key === "appointments" && Array.isArray(data)) {
+          queryClient.setQueryData(["/api/appointments/all"], data);
+        }
+      } catch (_) {}
+    };
+
+    // Read NDJSON stream — seed each key the moment the line arrives
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop()!; // keep incomplete last line
+      for (const line of lines) seedLine(line);
+    }
+    // Flush any remaining bytes
+    if (buffer.trim()) seedLine(buffer);
   } catch {
     // silent — app still works, just won't be pre-seeded
   }

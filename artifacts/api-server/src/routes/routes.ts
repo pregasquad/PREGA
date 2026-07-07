@@ -544,7 +544,89 @@ export async function registerRoutes(
   // Register Object Storage routes
   registerObjectStorageRoutes(app);
 
-  // === PREFETCH — returns all core + calculation data in one HTTP round-trip ===
+  // === STREAMING PREFETCH — NDJSON, each dataset sent the instant its DB query resolves ===
+  // Client receives fast queries (categories, settings) within ~5ms while slow ones still run.
+  // Also streams a pre-computed salariesCompute block so the Salaries page loads instantly.
+  app.get("/api/prefetch-stream", isPinAuthenticated, (req, res) => {
+    res.setHeader("Content-Type", "application/x-ndjson");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("X-Accel-Buffering", "no"); // disable nginx/proxy buffering
+
+    const send = (key: string, data: unknown) => {
+      if (!res.writableEnded) {
+        try { res.write(JSON.stringify({ key, data }) + "\n"); } catch (_) {}
+      }
+    };
+
+    // Date range for appointments: 3 months back → end of current month
+    const now = new Date();
+    const fromDate = new Date(now.getFullYear(), now.getMonth() - 2, 1).toISOString().slice(0, 10);
+    const toDate   = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
+
+    // All raw data promises — shared so salaries compute can reuse resolved values
+    const staffP             = storage.getStaff().catch(() => [] as any[]);
+    const servicesP          = storage.getServices().catch(() => [] as any[]);
+    const categoriesP        = storage.getCategories().catch(() => [] as any[]);
+    const clientsP           = storage.getClients().catch(() => [] as any[]);
+    const productsP          = storage.getProducts().catch(() => [] as any[]);
+    const businessSettingsP  = storage.getBusinessSettings().catch(() => null as any);
+    const staffCommissionsP  = storage.getStaffCommissions().catch(() => [] as any[]);
+    const chargesP           = storage.getCharges().catch(() => [] as any[]);
+    const staffDeductionsP   = storage.getStaffDeductions().catch(() => [] as any[]);
+    const staffPaymentsP     = storage.getStaffPayments().catch(() => [] as any[]);
+    const salonPaymentsP     = storage.getSalonPayments().catch(() => [] as any[]);
+    const ownerWithdrawalsP  = storage.getOwnerWithdrawals().catch(() => [] as any[]);
+    const expenseCategoriesP = storage.getExpenseCategories().catch(() => [] as any[]);
+    const packagesP          = storage.getPackages().catch(() => [] as any[]);
+    const packagePurchasesP  = storage.getPackagePurchases().catch(() => [] as any[]);
+    const giftCardsP         = storage.getGiftCards().catch(() => [] as any[]);
+    const messageTemplatesP  = storage.getMessageTemplates().catch(() => [] as any[]);
+    const waitlistP          = storage.getWaitlist().catch(() => [] as any[]);
+    const referralsP         = storage.getReferrals().catch(() => [] as any[]);
+    const adminRolesP        = storage.getAdminRoles().catch(() => [] as any[]);
+    const appointmentsP      = storage.getAppointmentsByDateRange(fromDate, toDate).catch(() => [] as any[]);
+
+    // Stream each dataset the moment it resolves
+    const streamJobs = [
+      staffP.then(d            => send("staff",             d)),
+      servicesP.then(d         => send("services",          d)),
+      categoriesP.then(d       => send("categories",        d)),
+      clientsP.then(d          => send("clients",           d)),
+      productsP.then(d         => send("products",          d)),
+      businessSettingsP.then(d => send("businessSettings",  d)),
+      staffCommissionsP.then(d => send("staffCommissions",  d)),
+      chargesP.then(d          => send("charges",           d)),
+      staffDeductionsP.then(d  => send("staffDeductions",   d)),
+      staffPaymentsP.then(d    => send("staffPayments",     d)),
+      salonPaymentsP.then(d    => send("salonPayments",     d)),
+      ownerWithdrawalsP.then(d => send("ownerWithdrawals",  d)),
+      expenseCategoriesP.then(d=> send("expenseCategories", d)),
+      packagesP.then(d         => send("packages",          d)),
+      packagePurchasesP.then(d => send("packagePurchases",  d)),
+      giftCardsP.then(d        => send("giftCards",         d)),
+      messageTemplatesP.then(d => send("messageTemplates",  d)),
+      waitlistP.then(d         => send("waitlist",          d)),
+      referralsP.then(d        => send("referrals",         d)),
+      adminRolesP.then(d       => send("adminRoles",        d)),
+      appointmentsP.then(d     => send("appointments",      d)),
+    ];
+
+    // Once all salaries dependencies resolve, stream the combined salariesCompute object
+    // so the Salaries page gets instant data without a separate request
+    const salariesJob = Promise.all([
+      staffP, servicesP, staffCommissionsP, appointmentsP,
+      chargesP, staffDeductionsP, staffPaymentsP, salonPaymentsP,
+    ]).then(([staff, services, staffCommissions, appointments, charges, deductions, staffPayments, salonPayments]) => {
+      send("salariesCompute", { staff, services, staffCommissions, appointments, charges, deductions, staffPayments, salonPayments });
+    }).catch(() => {});
+
+    // Close the stream only after every job (including salaries) is done
+    Promise.allSettled([...streamJobs, salariesJob]).then(() => {
+      if (!res.writableEnded) res.end();
+    });
+  });
+
+  // === PREFETCH (legacy JSON — kept for compatibility) ===
   app.get("/api/prefetch", isPinAuthenticated, async (_req, res) => {
     try {
       const [
@@ -564,10 +646,7 @@ export async function registerRoutes(
         storage.getSalonPayments().catch(() => []),
         storage.getOwnerWithdrawals().catch(() => []),
       ]);
-      res.json({
-        staff, services, categories, clients, products, businessSettings, staffCommissions,
-        charges, staffDeductions, staffPayments, salonPayments, ownerWithdrawals,
-      });
+      res.json({ staff, services, categories, clients, products, businessSettings, staffCommissions, charges, staffDeductions, staffPayments, salonPayments, ownerWithdrawals });
     } catch (err) {
       res.status(500).json({ message: "Prefetch failed" });
     }
