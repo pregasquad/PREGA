@@ -558,10 +558,16 @@ export async function registerRoutes(
       }
     };
 
-    // Date range for appointments: 3 months back → end of current month
+    // Date range for appointments: 3 months back → end of current month.
+    // Use local date components to avoid UTC offset shifting the date (e.g. UTC+1 → day -1).
     const now = new Date();
-    const fromDate = new Date(now.getFullYear(), now.getMonth() - 2, 1).toISOString().slice(0, 10);
-    const toDate   = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const localDate = (y: number, m: number, d: number) =>
+      `${y}-${pad(m + 1)}-${pad(d)}`;
+    const fromDate = localDate(now.getFullYear(), now.getMonth() - 2, 1);
+    // Last day of current month: day 0 of next month
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const toDate  = localDate(lastDay.getFullYear(), lastDay.getMonth(), lastDay.getDate());
 
     // All raw data promises — shared so salaries compute can reuse resolved values
     const staffP             = storage.getStaff().catch(() => [] as any[]);
@@ -611,17 +617,12 @@ export async function registerRoutes(
       appointmentsP.then(d     => send("appointments",      d)),
     ];
 
-    // Once all salaries dependencies resolve, stream the combined salariesCompute object
-    // so the Salaries page gets instant data without a separate request
-    const salariesJob = Promise.all([
-      staffP, servicesP, staffCommissionsP, appointmentsP,
-      chargesP, staffDeductionsP, staffPaymentsP, salonPaymentsP,
-    ]).then(([staff, services, staffCommissions, appointments, charges, deductions, staffPayments, salonPayments]) => {
-      send("salariesCompute", { staff, services, staffCommissions, appointments, charges, deductions, staffPayments, salonPayments });
-    }).catch(() => {});
+    // salariesCompute is intentionally NOT streamed here — the 3-month appointment window
+    // would produce partial totals and corrupt the canonical /api/salaries/compute cache.
+    // Salaries.tsx fetches that endpoint fresh on mount with the full date range.
 
-    // Close the stream only after every job (including salaries) is done
-    Promise.allSettled([...streamJobs, salariesJob]).then(() => {
+    // Close the stream once every individual dataset job is done
+    Promise.allSettled(streamJobs).then(() => {
       if (!res.writableEnded) res.end();
     });
   });

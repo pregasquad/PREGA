@@ -51,8 +51,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const handleRefresh = useCallback(async () => {
     await Promise.all([
       prefetchCoreData(),
-      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] }),
+      // Invalidate all appointment key variants used across the app
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] }),
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments/all"] }),
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments/bot-confirmed"] }),
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments/bot-confirmed/count"] }),
+      // Recalculation data
+      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] }),
       queryClient.invalidateQueries({ queryKey: ["/api/owner-withdrawals"] }),
     ]);
   }, []);

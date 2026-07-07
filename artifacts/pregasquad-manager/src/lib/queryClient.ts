@@ -325,8 +325,9 @@ const STREAM_KEY_MAP: Record<string, string> = {
   waitlist:          "/api/waitlist",
   referrals:         "/api/referrals",
   adminRoles:        "/api/admin-roles",
-  salariesCompute:   "/api/salaries/compute",
-  // appointments streamed separately — seeded by their own key below
+  // salariesCompute intentionally excluded — the stream only covers 3 months of appointments,
+  // seeding /api/salaries/compute with partial data would show wrong totals.
+  // Salaries.tsx fetches it fresh on mount and shows the correct full range.
 };
 
 export async function prefetchCoreData(): Promise<void> {
@@ -347,9 +348,11 @@ export async function prefetchCoreData(): Promise<void> {
         if (qKey && data != null) {
           queryClient.setQueryData([qKey], data);
         }
-        // Appointments from the 3-month range — seed the "all" key so Planning / Reports pick it up
+        // Appointments — seed all three keys consumers use
         if (key === "appointments" && Array.isArray(data)) {
           queryClient.setQueryData(["/api/appointments/all"], data);
+          queryClient.setQueryData(["/api/appointments"], data);
+          queryClient.setQueryData(["/api/appointments", undefined], data);
         }
       } catch (_) {}
     };

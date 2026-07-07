@@ -67,14 +67,23 @@ export function usePullToRefresh(
       }
     };
 
+    // Reset state when gesture is cancelled by OS/browser (e.g. incoming call, swipe home)
+    const onTouchCancel = () => {
+      isActivePullRef.current = false;
+      currentPullRef.current = 0;
+      setPullY(0);
+    };
+
     el.addEventListener("touchstart", onTouchStart, { passive: true });
     el.addEventListener("touchmove", onTouchMove, { passive: true });
     el.addEventListener("touchend", onTouchEnd, { passive: true });
+    el.addEventListener("touchcancel", onTouchCancel, { passive: true });
 
     return () => {
       el.removeEventListener("touchstart", onTouchStart);
       el.removeEventListener("touchmove", onTouchMove);
       el.removeEventListener("touchend", onTouchEnd);
+      el.removeEventListener("touchcancel", onTouchCancel);
     };
   }, [containerRef, onRefresh]);
 
