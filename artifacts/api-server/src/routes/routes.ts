@@ -544,90 +544,7 @@ export async function registerRoutes(
   // Register Object Storage routes
   registerObjectStorageRoutes(app);
 
-  // === STREAMING PREFETCH — NDJSON, each dataset sent the instant its DB query resolves ===
-  // Client receives fast queries (categories, settings) within ~5ms while slow ones still run.
-  // Also streams a pre-computed salariesCompute block so the Salaries page loads instantly.
-  app.get("/api/prefetch-stream", isPinAuthenticated, (req, res) => {
-    res.setHeader("Content-Type", "application/x-ndjson");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("X-Accel-Buffering", "no"); // disable nginx/proxy buffering
-
-    const send = (key: string, data: unknown) => {
-      if (!res.writableEnded) {
-        try { res.write(JSON.stringify({ key, data }) + "\n"); } catch (_) {}
-      }
-    };
-
-    // Date range for appointments: 3 months back → end of current month.
-    // Use local date components to avoid UTC offset shifting the date (e.g. UTC+1 → day -1).
-    const now = new Date();
-    const pad = (n: number) => String(n).padStart(2, "0");
-    const localDate = (y: number, m: number, d: number) =>
-      `${y}-${pad(m + 1)}-${pad(d)}`;
-    const fromDate = localDate(now.getFullYear(), now.getMonth() - 2, 1);
-    // Last day of current month: day 0 of next month
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    const toDate  = localDate(lastDay.getFullYear(), lastDay.getMonth(), lastDay.getDate());
-
-    // All raw data promises — shared so salaries compute can reuse resolved values
-    const staffP             = storage.getStaff().catch(() => [] as any[]);
-    const servicesP          = storage.getServices().catch(() => [] as any[]);
-    const categoriesP        = storage.getCategories().catch(() => [] as any[]);
-    const clientsP           = storage.getClients().catch(() => [] as any[]);
-    const productsP          = storage.getProducts().catch(() => [] as any[]);
-    const businessSettingsP  = storage.getBusinessSettings().catch(() => null as any);
-    const staffCommissionsP  = storage.getStaffCommissions().catch(() => [] as any[]);
-    const chargesP           = storage.getCharges().catch(() => [] as any[]);
-    const staffDeductionsP   = storage.getStaffDeductions().catch(() => [] as any[]);
-    const staffPaymentsP     = storage.getStaffPayments().catch(() => [] as any[]);
-    const salonPaymentsP     = storage.getSalonPayments().catch(() => [] as any[]);
-    const ownerWithdrawalsP  = storage.getOwnerWithdrawals().catch(() => [] as any[]);
-    const expenseCategoriesP = storage.getExpenseCategories().catch(() => [] as any[]);
-    const packagesP          = storage.getPackages().catch(() => [] as any[]);
-    const packagePurchasesP  = storage.getPackagePurchases().catch(() => [] as any[]);
-    const giftCardsP         = storage.getGiftCards().catch(() => [] as any[]);
-    const messageTemplatesP  = storage.getMessageTemplates().catch(() => [] as any[]);
-    const waitlistP          = storage.getWaitlist().catch(() => [] as any[]);
-    const referralsP         = storage.getReferrals().catch(() => [] as any[]);
-    const adminRolesP        = storage.getAdminRoles().catch(() => [] as any[]);
-    const appointmentsP      = storage.getAppointmentsByDateRange(fromDate, toDate).catch(() => [] as any[]);
-
-    // Stream each dataset the moment it resolves
-    const streamJobs = [
-      staffP.then(d            => send("staff",             d)),
-      servicesP.then(d         => send("services",          d)),
-      categoriesP.then(d       => send("categories",        d)),
-      clientsP.then(d          => send("clients",           d)),
-      productsP.then(d         => send("products",          d)),
-      businessSettingsP.then(d => send("businessSettings",  d)),
-      staffCommissionsP.then(d => send("staffCommissions",  d)),
-      chargesP.then(d          => send("charges",           d)),
-      staffDeductionsP.then(d  => send("staffDeductions",   d)),
-      staffPaymentsP.then(d    => send("staffPayments",     d)),
-      salonPaymentsP.then(d    => send("salonPayments",     d)),
-      ownerWithdrawalsP.then(d => send("ownerWithdrawals",  d)),
-      expenseCategoriesP.then(d=> send("expenseCategories", d)),
-      packagesP.then(d         => send("packages",          d)),
-      packagePurchasesP.then(d => send("packagePurchases",  d)),
-      giftCardsP.then(d        => send("giftCards",         d)),
-      messageTemplatesP.then(d => send("messageTemplates",  d)),
-      waitlistP.then(d         => send("waitlist",          d)),
-      referralsP.then(d        => send("referrals",         d)),
-      adminRolesP.then(d       => send("adminRoles",        d)),
-      appointmentsP.then(d     => send("appointments",      d)),
-    ];
-
-    // salariesCompute is intentionally NOT streamed here — the 3-month appointment window
-    // would produce partial totals and corrupt the canonical /api/salaries/compute cache.
-    // Salaries.tsx fetches that endpoint fresh on mount with the full date range.
-
-    // Close the stream once every individual dataset job is done
-    Promise.allSettled(streamJobs).then(() => {
-      if (!res.writableEnded) res.end();
-    });
-  });
-
-  // === PREFETCH (legacy JSON — kept for compatibility) ===
+  // === PREFETCH — returns all core + calculation data in one HTTP round-trip ===
   app.get("/api/prefetch", isPinAuthenticated, async (_req, res) => {
     try {
       const [
@@ -647,7 +564,10 @@ export async function registerRoutes(
         storage.getSalonPayments().catch(() => []),
         storage.getOwnerWithdrawals().catch(() => []),
       ]);
-      res.json({ staff, services, categories, clients, products, businessSettings, staffCommissions, charges, staffDeductions, staffPayments, salonPayments, ownerWithdrawals });
+      res.json({
+        staff, services, categories, clients, products, businessSettings, staffCommissions,
+        charges, staffDeductions, staffPayments, salonPayments, ownerWithdrawals,
+      });
     } catch (err) {
       res.status(500).json({ message: "Prefetch failed" });
     }
@@ -904,10 +824,7 @@ export async function registerRoutes(
     price: z.number().min(0).max(100000).optional(), // Optional when using servicesJson
     total: z.number().min(0).max(100000).optional(), // Optional when using servicesJson
     date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    startTime: z.string().regex(/^\d{2}:\d{2}$/).refine(
-      t => { const [h, m] = t.split(":").map(Number); return h >= 0 && h <= 23 && m >= 0 && m <= 59; },
-      { message: "Invalid time — must be HH:MM with valid hour (0-23) and minute (0-59)" }
-    ),
+    startTime: z.string().regex(/^\d{2}:\d{2}$/),
     phone: z.string().max(20).optional(),
     servicesJson: z.array(serviceItemSchema).optional().nullable(), // Multi-service support
     paid: z.boolean().optional(), // PayPal online payment
@@ -918,124 +835,144 @@ export async function registerRoutes(
     { message: "Either servicesJson or service/duration/price/total fields are required" }
   );
 
-  // Pre-fetched context — build once per booking request to eliminate N+1 DB queries
-  interface StaffAvailabilityCtx {
-    allStaff: any[];
-    appointments: any[];
-    schedulesByStaff: Map<number, any[]>;
-    timeOffByStaff: Map<number, any[]>;
-    breaksByStaff: Map<number, any[]>;
-  }
-
-  /** Fetch all staff availability data for a date in a single parallel burst. */
-  async function buildAvailabilityCtx(date: string): Promise<StaffAvailabilityCtx> {
-    const allStaff = await storage.getStaff();
-    const schedulesByStaff = new Map<number, any[]>();
-    const timeOffByStaff  = new Map<number, any[]>();
-    const breaksByStaff   = new Map<number, any[]>();
-    let appointments: any[] = [];
-
-    const perStaffJobs = allStaff.flatMap(s => [
-      storage.getStaffSchedules(s.id).catch(() => [] as any[]).then(d => schedulesByStaff.set(s.id, d)),
-      storage.getStaffTimeOff(s.id).catch(() => [] as any[]).then(d => timeOffByStaff.set(s.id, d)),
-      storage.getStaffBreaks(s.id, date, date).catch(() => [] as any[]).then(d => breaksByStaff.set(s.id, d)),
-    ]);
-
-    await Promise.all([
-      storage.getAppointments(date).catch(() => [] as any[]).then(d => { appointments = d; }),
-      ...perStaffJobs,
-    ]);
-
-    return { allStaff, appointments, schedulesByStaff, timeOffByStaff, breaksByStaff };
-  }
-
-  // Helper: Find available staff for a SINGLE category and time slot.
-  // Pass ctx (from buildAvailabilityCtx) to avoid N+1 DB queries per staff member.
+  // Helper: Find available staff for a SINGLE category and time slot
   async function findAvailableStaffForCategory(
     category: string,
     date: string,
     startTime: string,
     duration: number,
-    excludeStaff: string[] = [],
-    useFallback: boolean = true,
-    ctx?: StaffAvailabilityCtx,
+    excludeStaff: string[] = [], // Staff already assigned to other appointments in this booking
+    useFallback: boolean = true // Whether to fall back to any available staff if no specialist found
   ): Promise<string> {
     try {
-      const allStaff    = ctx?.allStaff    ?? await storage.getStaff();
-      const appointments = ctx?.appointments ?? await storage.getAppointments(date);
-
-      // Filter staff by category specialization
+      const allStaff = await storage.getStaff();
+      const appointments = await storage.getAppointments(date);
+      
+      // Filter staff by category - staff must have this category in their specializations
       let eligibleStaff = allStaff.filter(s => {
-        if (excludeStaff.includes(s.name)) return false;
+        if (excludeStaff.includes(s.name)) return false; // Exclude already used staff
         if (!s.categories) return false;
         const staffCategories = s.categories.split(",").map((c: string) => c.trim().toLowerCase());
         return staffCategories.includes(category.toLowerCase());
       });
-
+      
+      // Only use fallback if enabled and no specialists found
       if (eligibleStaff.length === 0 && useFallback) {
-        eligibleStaff = allStaff.filter(s => !excludeStaff.includes(s.name));
+        eligibleStaff = allStaff.filter(s => {
+          if (excludeStaff.includes(s.name)) return false;
+          return true; // Consider all staff as potential fallback
+        });
       }
-      if (eligibleStaff.length === 0) return "À assigner";
-
+      
+      // If still no staff available, fall back to unassigned
+      if (eligibleStaff.length === 0) {
+        return "À assigner";
+      }
+      
+      // Parse the requested time
       const [reqHour, reqMin] = startTime.split(":").map(Number);
       const reqStartMinutes = reqHour * 60 + reqMin;
-      const reqEndMinutes   = reqStartMinutes + duration;
-      const dayOfWeek = new Date(date).getDay();
-
+      const reqEndMinutes = reqStartMinutes + duration;
+      
+      // Get day of week (0 = Sunday, 1 = Monday, etc.)
+      const dateObj = new Date(date);
+      const dayOfWeek = dateObj.getDay();
+      
+      // Check each eligible staff for availability
       for (const staffMember of eligibleStaff) {
         let isAvailable = true;
-
-        // --- Schedule check ---
+        
+        // Check staff schedule for this day
         try {
-          const schedules = ctx?.schedulesByStaff.get(staffMember.id)
-            ?? await storage.getStaffSchedules(staffMember.id);
-          const daySchedule = schedules.find((s: any) => s.dayOfWeek === dayOfWeek);
-          if (!daySchedule || !daySchedule.isActive) { isAvailable = false; continue; }
-          if (daySchedule.startTime && daySchedule.endTime) {
-            const [schStartH, schStartM] = daySchedule.startTime.split(":").map(Number);
-            const [schEndH,   schEndM]   = daySchedule.endTime.split(":").map(Number);
-            const schStart = schStartH * 60 + schStartM;
-            const schEnd   = schEndH   * 60 + schEndM;
-            if (reqStartMinutes < schStart || reqEndMinutes > schEnd) { isAvailable = false; continue; }
+          const schedules = await storage.getStaffSchedules(staffMember.id);
+          const daySchedule = schedules.find(s => s.dayOfWeek === dayOfWeek);
+          
+          if (daySchedule) {
+            if (!daySchedule.isActive) {
+              isAvailable = false;
+              continue;
+            }
+            // Check if appointment time is within working hours
+            if (daySchedule.startTime && daySchedule.endTime) {
+              const [schStartH, schStartM] = daySchedule.startTime.split(":").map(Number);
+              const [schEndH, schEndM] = daySchedule.endTime.split(":").map(Number);
+              const schStart = schStartH * 60 + schStartM;
+              const schEnd = schEndH * 60 + schEndM;
+              
+              if (reqStartMinutes < schStart || reqEndMinutes > schEnd) {
+                isAvailable = false;
+                continue;
+              }
+            }
           }
-        } catch { isAvailable = false; continue; }
-
-        // --- Time-off check ---
+          // No schedule for this day means staff is not available that day
+          if (!daySchedule) {
+            isAvailable = false;
+            continue;
+          }
+        } catch (e) {
+          // Error fetching schedule - skip this staff
+          isAvailable = false;
+          continue;
+        }
+        
+        // Check for time off on this date
         try {
-          const timeOffRequests = ctx?.timeOffByStaff.get(staffMember.id)
-            ?? await storage.getStaffTimeOff(staffMember.id);
-          if (timeOffRequests.some((t: any) =>
-            t.status === "approved" && t.startDate <= date && t.endDate >= date
-          )) { isAvailable = false; continue; }
-        } catch { /* no time off — continue */ }
-
-        // --- Break check ---
+          const timeOffRequests = await storage.getStaffTimeOff(staffMember.id);
+          const hasTimeOff = timeOffRequests.some(t => 
+            t.status === "approved" && 
+            t.startDate <= date && 
+            t.endDate >= date
+          );
+          if (hasTimeOff) {
+            isAvailable = false;
+            continue;
+          }
+        } catch (e) {
+          // No time off - continue
+        }
+        
+        // Check for breaks on this date
         try {
-          const breaks = ctx?.breaksByStaff.get(staffMember.id)
-            ?? await storage.getStaffBreaks(staffMember.id, date, date);
-          const hasBreakConflict = breaks.some((b: any) => {
+          const breaks = await storage.getStaffBreaks(staffMember.id, date, date);
+          const hasBreakConflict = breaks.some(b => {
             const [bStartH, bStartM] = b.startTime.split(":").map(Number);
-            const [bEndH,   bEndM]   = b.endTime.split(":").map(Number);
+            const [bEndH, bEndM] = b.endTime.split(":").map(Number);
             const bStart = bStartH * 60 + bStartM;
-            const bEnd   = bEndH   * 60 + bEndM;
+            const bEnd = bEndH * 60 + bEndM;
+            
             return !(reqEndMinutes <= bStart || reqStartMinutes >= bEnd);
           });
-          if (hasBreakConflict) { isAvailable = false; continue; }
-        } catch { /* no breaks — continue */ }
-
-        // --- Appointment conflict check ---
-        const staffAppointments = appointments.filter((a: any) => a.staff === staffMember.name);
-        const hasConflict = staffAppointments.some((appt: any) => {
+          if (hasBreakConflict) {
+            isAvailable = false;
+            continue;
+          }
+        } catch (e) {
+          // No breaks - continue
+        }
+        
+        // Check for appointment conflicts
+        const staffAppointments = appointments.filter(a => a.staff === staffMember.name);
+        const hasConflict = staffAppointments.some(appt => {
           const [apptH, apptM] = (appt.startTime || "00:00").split(":").map(Number);
           const apptStart = apptH * 60 + apptM;
-          const apptEnd   = apptStart + (appt.duration || 30);
+          const apptEnd = apptStart + (appt.duration || 30);
+          
           return !(reqEndMinutes <= apptStart || reqStartMinutes >= apptEnd);
         });
-        if (hasConflict) { isAvailable = false; continue; }
-
-        if (isAvailable) return staffMember.name;
+        
+        if (hasConflict) {
+          isAvailable = false;
+          continue;
+        }
+        
+        // Found an available staff member!
+        if (isAvailable) {
+          return staffMember.name;
+        }
       }
-
+      
+      // No available staff found
       return "À assigner";
     } catch (e) {
       console.error("Error finding available staff for category:", e);
@@ -1117,11 +1054,7 @@ export async function registerRoutes(
       }
       
       console.log("[PUBLIC BOOKING] Category groups:", categoryGroups.size);
-
-      // Build availability context once — all staff schedules/timeoffs/breaks fetched in parallel
-      // so findAvailableStaffForCategory never makes per-staff DB calls inside a loop.
-      const availabilityCtx = await buildAvailabilityCtx(input.date);
-
+      
       // If only one category, create a single appointment (original behavior)
       if (categoryGroups.size <= 1) {
         const [category] = categoryGroups.keys();
@@ -1138,10 +1071,7 @@ export async function registerRoutes(
           category || "Général",
           input.date,
           input.startTime,
-          effectiveDuration,
-          [],
-          true,
-          availabilityCtx,
+          effectiveDuration
         );
         
         const appointmentData: any = {
@@ -1221,28 +1151,37 @@ export async function registerRoutes(
           // 2. Specialist for this category (including used staff - same person can do multiple)
           // 3. Any available staff as fallback
           
-          // Use pre-built ctx when the date hasn't rolled over midnight (covers 99%+ of bookings)
-          const slotCtx = currentDate === input.date ? availabilityCtx : undefined;
-
           // Step 1: Try specialists only, excluding used staff
           let assignedStaff = await findAvailableStaffForCategory(
-            category, currentDate, currentStartTime, group.totalDuration,
-            usedStaff, false, slotCtx,
+            category,
+            currentDate,
+            currentStartTime,
+            group.totalDuration,
+            usedStaff,
+            false // No fallback - specialists only
           );
-
+          
           // Step 2: If no different specialist found, try same specialist (without exclusion)
           if (assignedStaff === "À assigner" && usedStaff.length > 0) {
             assignedStaff = await findAvailableStaffForCategory(
-              category, currentDate, currentStartTime, group.totalDuration,
-              [], false, slotCtx,
+              category,
+              currentDate,
+              currentStartTime,
+              group.totalDuration,
+              [], // No exclusion
+              false // No fallback - specialists only
             );
           }
-
+          
           // Step 3: If still no specialist, fall back to any available staff
           if (assignedStaff === "À assigner") {
             assignedStaff = await findAvailableStaffForCategory(
-              category, currentDate, currentStartTime, group.totalDuration,
-              usedStaff, true, slotCtx,
+              category,
+              currentDate,
+              currentStartTime,
+              group.totalDuration,
+              usedStaff,
+              true // Use fallback
             );
           }
           
@@ -1528,12 +1467,8 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Phone number must have at least 8 digits" });
       }
       
-      // Fetch only future appointments from DB (avoids full-table scan as data grows)
-      const pad = (n: number) => String(n).padStart(2, "0");
-      const todayLocal = new Date();
-      const todayStr = `${todayLocal.getFullYear()}-${pad(todayLocal.getMonth() + 1)}-${pad(todayLocal.getDate())}`;
-      const futureStr = `${todayLocal.getFullYear() + 2}-12-31`; // 2-year window is more than enough
-      const allAppointments = await storage.getAppointmentsByDateRange(todayStr, futureStr);
+      // Get all appointments with this phone number (future only)
+      const allAppointments = await storage.getAppointments();
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
@@ -1809,8 +1744,7 @@ export async function registerRoutes(
   app.get("/api/appointments/all", isPinAuthenticated, async (req, res) => {
     const rawLimit = parseInt(req.query.limit as string);
     const rawOffset = parseInt(req.query.offset as string);
-    // Default cap at 1000 rows; caller must paginate for larger exports (max 5000)
-    const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 5000) : 1000;
+    const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? rawLimit : undefined;
     const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
     const items = await storage.getAppointments(undefined, limit, offset);
     res.json(items);
@@ -4104,9 +4038,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
         phone, clientName, (apt as any).date, (apt as any).startTime, serviceName, salonName
       );
       if (result.success) {
-        await pool.query(`UPDATE appointments SET reminder_sent = TRUE WHERE id = $1`, [aptId]).catch((e: any) => {
-          console.error(`[REMINDER] Failed to mark reminder_sent for appointment ${aptId}:`, e?.message ?? e);
-        });
+        await pool.query(`UPDATE appointments SET reminder_sent = TRUE WHERE id = $1`, [aptId]).catch(() => {});
         res.json({ success: true });
       } else {
         res.status(500).json({ success: false, error: result.error });
@@ -4430,26 +4362,25 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
   });
 
   // === Admin Roles ===
-  // List admin roles - public (login screen only needs id/name/photoUrl for the avatar grid)
-  // role, permissions, pin hash are intentionally excluded from the public response.
+  // List admin roles - public (for login screen, PINs are masked)
   app.get("/api/admin-roles", async (_req, res) => {
     if (isDatabaseOffline()) {
       const offlineRoles = offlineStorage.getAdminRoles();
-      return res.json(offlineRoles.map(r => ({
-        id: r.id,
-        name: r.name,
-        photoUrl: r.photoUrl ?? null,
+      const safeRoles = offlineRoles.map(r => ({ 
+        id: r.id, 
+        name: r.name, 
+        role: r.role, 
         pin: r.pin ? "****" : null,
-      })));
+        photoUrl: r.photoUrl,
+        permissions: r.permissions,
+        isOffline: r.isOffline
+      }));
+      return res.json(safeRoles);
     }
     
     const roles = await storage.getAdminRoles();
-    res.json(roles.map(r => ({
-      id: r.id,
-      name: r.name,
-      photoUrl: r.photoUrl ?? null,
-      pin: r.pin ? "****" : null,
-    })));
+    const safeRoles = roles.map(r => ({ ...r, pin: r.pin ? "****" : null }));
+    res.json(safeRoles);
   });
 
   // Get specific admin role - protected
