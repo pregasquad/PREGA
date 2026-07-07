@@ -544,10 +544,13 @@ export async function registerRoutes(
   // Register Object Storage routes
   registerObjectStorageRoutes(app);
 
-  // === PREFETCH — returns all core data in one HTTP round-trip ===
+  // === PREFETCH — returns all core + calculation data in one HTTP round-trip ===
   app.get("/api/prefetch", isPinAuthenticated, async (_req, res) => {
     try {
-      const [staff, services, categories, clients, products, businessSettings, staffCommissions] = await Promise.all([
+      const [
+        staff, services, categories, clients, products, businessSettings, staffCommissions,
+        charges, staffDeductions, staffPayments, salonPayments, ownerWithdrawals,
+      ] = await Promise.all([
         storage.getStaff().catch(() => []),
         storage.getServices().catch(() => []),
         storage.getCategories().catch(() => []),
@@ -555,8 +558,16 @@ export async function registerRoutes(
         storage.getProducts().catch(() => []),
         storage.getBusinessSettings().catch(() => null),
         storage.getStaffCommissions().catch(() => []),
+        storage.getCharges().catch(() => []),
+        storage.getStaffDeductions().catch(() => []),
+        storage.getStaffPayments().catch(() => []),
+        storage.getSalonPayments().catch(() => []),
+        storage.getOwnerWithdrawals().catch(() => []),
       ]);
-      res.json({ staff, services, categories, clients, products, businessSettings, staffCommissions });
+      res.json({
+        staff, services, categories, clients, products, businessSettings, staffCommissions,
+        charges, staffDeductions, staffPayments, salonPayments, ownerWithdrawals,
+      });
     } catch (err) {
       res.status(500).json({ message: "Prefetch failed" });
     }

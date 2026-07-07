@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { Sidebar } from "./Sidebar";
 import { BottomNav } from "./BottomNav";
@@ -11,6 +11,8 @@ import { GlobalSearch } from "@/components/GlobalSearch";
 import { initOfflineDb } from "@/lib/offlineDb";
 import { startAutoSync, refreshAndCacheData } from "@/lib/syncService";
 import { useBusinessName } from "@/hooks/use-salon-data";
+import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
+import { queryClient, prefetchCoreData } from "@/lib/queryClient";
 
 function MobileBusinessName() {
   const businessName = useBusinessName();
@@ -33,7 +35,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const { i18n } = useTranslation();
   const isRtl = i18n.language === "ar";
   const [location] = useLocation();
-  
+  const mainRef = useRef<HTMLElement>(null);
+
   useEffect(() => {
     const initOffline = async () => {
       await initOfflineDb();
@@ -44,13 +47,27 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     };
     initOffline();
   }, []);
-  
+
+  const handleRefresh = useCallback(async () => {
+    await Promise.all([
+      prefetchCoreData(),
+      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] }),
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments"] }),
+      queryClient.invalidateQueries({ queryKey: ["/api/owner-withdrawals"] }),
+    ]);
+  }, []);
+
+  const { pullY, isRefreshing } = usePullToRefresh(mainRef, handleRefresh);
+
   const isPlanning = location === "/" || location === "/planning";
 
   const style = {
     "--sidebar-width": "16rem",
     "--sidebar-width-mobile": "18rem",
   };
+
+  const showIndicator = pullY > 4;
+  const progress = Math.min(pullY / 72, 1);
 
   return (
     <SidebarProvider style={style as React.CSSProperties}>
@@ -71,7 +88,45 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
           </header>
 
+          {/* Pull-to-refresh indicator — only visible on mobile while pulling */}
+          {showIndicator && (
+            <div
+              className="md:hidden absolute left-0 right-0 flex items-center justify-center z-30 pointer-events-none"
+              style={{
+                top: 48,
+                height: 48,
+                transform: `translateY(${pullY - 48}px)`,
+                transition: isRefreshing ? "transform 0.2s ease-out" : "none",
+              }}
+            >
+              <div className="bg-background border border-border rounded-full shadow-md w-9 h-9 flex items-center justify-center">
+                {isRefreshing ? (
+                  <svg
+                    className="w-5 h-5 text-pink-500 animate-spin"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a10 10 0 100 10z" />
+                  </svg>
+                ) : (
+                  <svg
+                    className="w-5 h-5 text-pink-500 transition-transform"
+                    style={{ transform: `rotate(${progress * 180}deg)` }}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2.5}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                )}
+              </div>
+            </div>
+          )}
+
           <main
+            ref={mainRef}
             className={
               isPlanning
                 ? "flex-1 min-h-0 overflow-hidden p-0"

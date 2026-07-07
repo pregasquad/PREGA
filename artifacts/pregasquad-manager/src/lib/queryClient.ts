@@ -308,13 +308,18 @@ export async function prefetchCoreData(): Promise<void> {
     const res = await fetch("/api/prefetch", { credentials: "include" });
     if (!res.ok) return;
     const d = await res.json();
-    if (d.staff)            queryClient.setQueryData(["/api/staff"], d.staff);
-    if (d.services)         queryClient.setQueryData(["/api/services"], d.services);
-    if (d.categories)       queryClient.setQueryData(["/api/categories"], d.categories);
-    if (d.clients)          queryClient.setQueryData(["/api/clients"], d.clients);
-    if (d.products)         queryClient.setQueryData(["/api/products"], d.products);
-    if (d.businessSettings) queryClient.setQueryData(["/api/business-settings"], d.businessSettings);
-    if (d.staffCommissions) queryClient.setQueryData(["/api/staff-commissions"], d.staffCommissions);
+    if (d.staff)             queryClient.setQueryData(["/api/staff"], d.staff);
+    if (d.services)          queryClient.setQueryData(["/api/services"], d.services);
+    if (d.categories)        queryClient.setQueryData(["/api/categories"], d.categories);
+    if (d.clients)           queryClient.setQueryData(["/api/clients"], d.clients);
+    if (d.products)          queryClient.setQueryData(["/api/products"], d.products);
+    if (d.businessSettings)  queryClient.setQueryData(["/api/business-settings"], d.businessSettings);
+    if (d.staffCommissions)  queryClient.setQueryData(["/api/staff-commissions"], d.staffCommissions);
+    if (d.charges)           queryClient.setQueryData(["/api/charges"], d.charges);
+    if (d.staffDeductions)   queryClient.setQueryData(["/api/staff-deductions"], d.staffDeductions);
+    if (d.staffPayments)     queryClient.setQueryData(["/api/staff-payments"], d.staffPayments);
+    if (d.salonPayments)     queryClient.setQueryData(["/api/salon-payments"], d.salonPayments);
+    if (d.ownerWithdrawals)  queryClient.setQueryData(["/api/owner-withdrawals"], d.ownerWithdrawals);
   } catch {
     // silent — app still works, just won't be pre-seeded
   }
