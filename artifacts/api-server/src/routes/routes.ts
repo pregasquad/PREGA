@@ -18,7 +18,7 @@ import crypto from "crypto";
 import fs from "fs";
 
 import path from "path";
-import { calcAppointmentCommission } from "../lib/commissionCalc";
+import { calcAppointmentCommission, buildCommissionIndex, calcAppointmentCommissionFast } from "../lib/commissionCalc";
 
 // ── In-memory broadcast job store ─────────────────────────────────────────────
 interface BroadcastClient { id: number; name: string; phone: string; }
@@ -74,9 +74,10 @@ async function buildAndSendDailySummary(dateStr: string, label?: string): Promis
       storage.getStaffCommissions().catch(() => [] as any[]),
     ]);
 
-    // ── Commission calculation (canonical — delegates to shared commissionCalc) ─
+    // ── Commission calculation (fast Map-based path) ──────────────────────────
+    const commIdx = buildCommissionIndex(allServices as any[], allStaff as any[], allStaffCommissions as any[]);
     function calcCommission(apt: any): number {
-      return calcAppointmentCommission(apt, allServices as any[], allStaff as any[], allStaffCommissions as any[]);
+      return calcAppointmentCommissionFast(apt, commIdx);
     }
 
     // Split appointments: paid = actual collected, unpaid = still pending
@@ -209,7 +210,7 @@ async function buildAndSendDailySummary(dateStr: string, label?: string): Promis
     // @ts-ignore
     const { sendWhatsAppMessage, formatJid } = await import("./baileys.js");
     const recipients = ownerPhone.split(",").map((p: string) => p.trim()).filter(Boolean);
-    for (const phone of recipients) {
+    await Promise.all(recipients.map(async (phone: string) => {
       try {
         const jid = formatJid(phone);
         await sendWhatsAppMessage(jid, msg);
@@ -217,7 +218,7 @@ async function buildAndSendDailySummary(dateStr: string, label?: string): Promis
       } catch (sendErr: any) {
         console.error(`[DailySummary] Failed to send to ${phone}:`, sendErr.message);
       }
-    }
+    }));
     return { sent: true };
   } catch (err: any) {
     console.error("[DailySummary] Error:", err.message);

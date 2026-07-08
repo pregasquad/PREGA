@@ -424,9 +424,8 @@ export function startAutoSync(intervalMs: number = 30000): void {
   if (!onlineListenerRegistered) {
     onlineListenerRegistered = true;
     window.addEventListener('online', async () => {
-      console.log('[Sync] Online - syncing pending changes');
-      await syncPendingChanges();
-      await refreshAndCacheData();
+      console.log('[Sync] Online - syncing pending changes and refreshing cache');
+      await Promise.all([syncPendingChanges(), refreshAndCacheData()]);
     });
   }
 }

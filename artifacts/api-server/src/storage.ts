@@ -1,5 +1,5 @@
 import { db, schema, dbDialect } from "./db";
-import { calcAppointmentCommission } from "./lib/commissionCalc";
+import { buildCommissionIndex, calcAppointmentCommissionFast } from "./lib/commissionCalc";
 import {
   type Appointment, type InsertAppointment,
   type Service, type InsertService,
@@ -954,7 +954,7 @@ export class DatabaseStorage implements IStorage {
       }
     }
     
-    // Pre-build arrays for calcAppointmentCommission (converted from Maps once, not per-appointment)
+    // Build fast index once — O(1) lookups per appointment
     const servicesArr = [...serviceMap.values()] as any[];
     const staffArr = [{ id: staffId ?? 0, name: staffName }];
     const staffCommissionsArr = [...customCommissions.entries()].map(([serviceId, percentage]) => ({
@@ -962,13 +962,14 @@ export class DatabaseStorage implements IStorage {
       serviceId,
       percentage,
     }));
+    const commIdx = buildCommissionIndex(servicesArr, staffArr, staffCommissionsArr);
 
     let totalRevenue = 0;
     let totalCommission = 0;
 
     for (const appt of paidAppts) {
       totalRevenue += Number(appt.total || 0);
-      totalCommission += calcAppointmentCommission(appt, servicesArr, staffArr, staffCommissionsArr);
+      totalCommission += calcAppointmentCommissionFast(appt, commIdx);
     }
     
     return {

@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from "react";
-import { calcAppointmentCommission } from "@/lib/commissionCalc";
+import { buildCommissionIndex, calcAppointmentCommissionFast } from "@/lib/commissionCalc";
 import { getWorkDayDate } from "@/lib/workday";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -170,10 +170,11 @@ export default function Reports() {
     const totalExpenses = filteredCharges.reduce((sum: number, ch: any) => sum + Number(ch.amount || 0), 0);
     const totalOwnerWithdrawals = filteredOwnerWithdrawals.reduce((sum: number, w: any) => sum + Number(w.amount || 0), 0);
 
-    // Commissions computed only on PAID appointments — must match paidRevenue base
+    // Build index once — O(1) lookups instead of O(N) .find() per appointment
+    const commIdx = buildCommissionIndex(services, staffList, staffCommissions);
     let totalCommissions = 0;
     filteredAppointments.filter((app: any) => app.paid).forEach((app: any) => {
-      totalCommissions += calcAppointmentCommission(app, services, staffList, staffCommissions);
+      totalCommissions += calcAppointmentCommissionFast(app, commIdx);
     });
 
     const salonPortion = paidRevenue - totalCommissions;
@@ -202,19 +203,25 @@ export default function Reports() {
 
   const dailyRevenueData = useMemo(() => {
     try {
-      const days = eachDayOfInterval({ start: dateRange.start, end: dateRange.end });
-      return days.map(day => {
+      // Pre-group by date string once — O(N+M) instead of O(N×M)
+      const revenueByDate = new Map<string, number>();
+      for (const app of filteredAppointments) {
+        try {
+          const d = format(parseISO(app.date), "yyyy-MM-dd");
+          revenueByDate.set(d, (revenueByDate.get(d) ?? 0) + Number(app.total || 0));
+        } catch { /* skip malformed dates */ }
+      }
+      const expensesByDate = new Map<string, number>();
+      for (const ch of filteredCharges as any[]) {
+        try {
+          const d = format(parseISO(ch.date), "yyyy-MM-dd");
+          expensesByDate.set(d, (expensesByDate.get(d) ?? 0) + Number(ch.amount || 0));
+        } catch { /* skip malformed dates */ }
+      }
+      return eachDayOfInterval({ start: dateRange.start, end: dateRange.end }).map(day => {
         const dateStr = format(day, "yyyy-MM-dd");
-        const dayRevenue = filteredAppointments
-          .filter(app => {
-            try { return format(parseISO(app.date), "yyyy-MM-dd") === dateStr; } catch { return app.date === dateStr; }
-          })
-          .reduce((sum, app) => sum + Number(app.total || 0), 0);
-        const dayExpenses = filteredCharges
-          .filter((ch: any) => {
-            try { return format(parseISO(ch.date), "yyyy-MM-dd") === dateStr; } catch { return ch.date === dateStr; }
-          })
-          .reduce((sum: number, ch: any) => sum + Number(ch.amount || 0), 0);
+        const dayRevenue = revenueByDate.get(dateStr) ?? 0;
+        const dayExpenses = expensesByDate.get(dateStr) ?? 0;
         return {
           date: format(day, "d MMM", { locale: dateLocale }),
           revenue: dayRevenue,
