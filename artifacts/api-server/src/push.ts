@@ -284,7 +284,7 @@ export async function checkAndSend24hReminders(): Promise<void> {
         const serviceName = apt.service || 'RDV';
         await sendAppointmentReminderWithOptions(phone, clientName, apt.date, apt.startTime, serviceName, salonName);
         // Mark reminder_sent in DB
-        await pool.query(`UPDATE appointments SET reminder_sent = TRUE WHERE id = $1`, [apt.id]).catch(() => {});
+        await pool().query(`UPDATE appointments SET reminder_sent = TRUE WHERE id = $1`, [apt.id]).catch((e: any) => console.error(`[24hReminder] Failed to mark reminder_sent for apt ${apt.id}:`, e?.message));
         console.log(`[24hReminder] Sent to ${clientName} for ${apt.date} at ${apt.startTime}`);
         await new Promise(r => setTimeout(r, 1500));
       } catch (err) {

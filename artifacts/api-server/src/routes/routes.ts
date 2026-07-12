@@ -4039,7 +4039,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
         phone, clientName, (apt as any).date, (apt as any).startTime, serviceName, salonName
       );
       if (result.success) {
-        await pool.query(`UPDATE appointments SET reminder_sent = TRUE WHERE id = $1`, [aptId]).catch(() => {});
+        await pool().query(`UPDATE appointments SET reminder_sent = TRUE WHERE id = $1`, [aptId]).catch((e: any) => console.error(`[Remind] Failed to mark reminder_sent for apt ${aptId}:`, e?.message));
         res.json({ success: true });
       } else {
         res.status(500).json({ success: false, error: result.error });
