@@ -38,6 +38,7 @@ const NotFound = lazy(() => import("@/pages/not-found"));
 const StaffPortal = lazy(() => import("@/pages/StaffPortal"));
 const Tombola = lazy(() => import("@/pages/Tombola"));
 const POS = lazy(() => import("@/pages/POS"));
+const Website = lazy(() => import("@/pages/Website"));
 
 function PageLoader() {
   return (
@@ -228,6 +229,12 @@ function Router() {
 
       <Route path="/pos">
         <PageRoute component={POS} permission="manage_appointments" />
+      </Route>
+
+      <Route path="/website">
+        <Suspense fallback={<PageLoader />}>
+          <Website />
+        </Suspense>
       </Route>
 
       <Route path="/tombola">

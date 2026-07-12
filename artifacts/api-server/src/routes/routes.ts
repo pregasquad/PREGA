@@ -1627,6 +1627,44 @@ export async function registerRoutes(
     }
   });
 
+  // Public: Full website data (services + settings) for the salon website page
+  app.get("/api/public/website", publicRateLimitMiddleware, async (_req, res) => {
+    try {
+      const [settings, services] = await Promise.all([
+        storage.getBusinessSettings().catch(() => null),
+        storage.getServices().catch(() => []),
+      ]);
+      res.json({
+        settings: {
+          businessName: (settings as any)?.businessName ?? "PREGA SQUAD",
+          phone: (settings as any)?.phone ?? "",
+          address: (settings as any)?.address ?? "",
+          email: (settings as any)?.email ?? "",
+          mapsLink: (settings as any)?.mapsLink ?? "",
+          openingTime: (settings as any)?.openingTime ?? "09:00",
+          closingTime: (settings as any)?.closingTime ?? "19:00",
+          workingDays: (settings as any)?.workingDays ?? [1,2,3,4,5,6],
+          currencySymbol: (settings as any)?.currencySymbol ?? "MAD",
+        },
+        services: (services as any[])
+          .filter(s => s.isActive !== false)
+          .map(s => ({
+            id: s.id,
+            name: s.name,
+            category: s.category ?? null,
+            duration: s.duration ?? 0,
+            price: s.price ?? 0,
+            minPrice: s.minPrice ?? null,
+            maxPrice: s.maxPrice ?? null,
+            description: s.description ?? null,
+            emoji: s.emoji ?? null,
+          })),
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: "Failed to fetch website data" });
+    }
+  });
+
   // Public endpoint to get AI-powered service recommendations based on client history
   app.get("/api/public/recommendations", publicRateLimitMiddleware, async (req, res) => {
     try {
