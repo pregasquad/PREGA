@@ -2630,3 +2630,150 @@ export async function ensurePaypalOrderIdColumn(): Promise<void> {
     console.error("Failed to ensure paypal_order_id column:", error);
   }
 }
+
+// ─── Website testimonials ────────────────────────────────────────────────────
+
+export interface WebsiteTestimonial {
+  id: number;
+  clientName: string;
+  clientPhotoUrl: string | null;
+  serviceName: string | null;
+  rating: number;
+  text: string;
+  isVisible: boolean;
+  createdAt: string;
+}
+
+export async function ensureWebsiteTestimonialsTable(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      try {
+        await connection.query(`
+          CREATE TABLE IF NOT EXISTS website_testimonials (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            client_name VARCHAR(100) NOT NULL,
+            client_photo_url TEXT,
+            service_name VARCHAR(255),
+            rating INT NOT NULL DEFAULT 5,
+            text TEXT NOT NULL,
+            is_visible BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+      } finally { connection.release(); }
+    } else {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS website_testimonials (
+          id SERIAL PRIMARY KEY,
+          client_name VARCHAR(100) NOT NULL,
+          client_photo_url TEXT,
+          service_name VARCHAR(255),
+          rating INTEGER NOT NULL DEFAULT 5,
+          text TEXT NOT NULL,
+          is_visible BOOLEAN NOT NULL DEFAULT TRUE,
+          created_at TIMESTAMP DEFAULT NOW()
+        )
+      `);
+    }
+    console.log("Website testimonials table ready");
+  } catch (error) {
+    console.error("Failed to ensure website_testimonials table:", error);
+  }
+}
+
+function mapTestimonialRow(row: any): WebsiteTestimonial {
+  return {
+    id: row.id,
+    clientName: row.client_name,
+    clientPhotoUrl: row.client_photo_url ?? null,
+    serviceName: row.service_name ?? null,
+    rating: row.rating ?? 5,
+    text: row.text,
+    isVisible: row.is_visible !== false && row.is_visible !== 0,
+    createdAt: row.created_at ? String(row.created_at) : new Date().toISOString(),
+  };
+}
+
+export async function getWebsiteTestimonials(visibleOnly = false): Promise<WebsiteTestimonial[]> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      try {
+        const condition = visibleOnly ? ' WHERE is_visible = TRUE' : '';
+        const [rows] = await connection.query(`SELECT * FROM website_testimonials${condition} ORDER BY created_at DESC`);
+        return (rows as any[]).map(mapTestimonialRow);
+      } finally { connection.release(); }
+    } else {
+      const condition = visibleOnly ? ' WHERE is_visible = TRUE' : '';
+      const result = await pool.query(`SELECT * FROM website_testimonials${condition} ORDER BY created_at DESC`);
+      return result.rows.map(mapTestimonialRow);
+    }
+  } catch { return []; }
+}
+
+export async function addWebsiteTestimonial(data: Omit<WebsiteTestimonial, 'id' | 'createdAt'>): Promise<WebsiteTestimonial> {
+  if (dbDialect === 'mysql') {
+    const connection = await pool.getConnection();
+    try {
+      const [result] = await connection.query(
+        `INSERT INTO website_testimonials (client_name, client_photo_url, service_name, rating, text, is_visible) VALUES (?, ?, ?, ?, ?, ?)`,
+        [data.clientName, data.clientPhotoUrl ?? null, data.serviceName ?? null, data.rating, data.text, data.isVisible ? 1 : 0]
+      );
+      const [rows] = await connection.query(`SELECT * FROM website_testimonials WHERE id = ?`, [(result as any).insertId]);
+      return mapTestimonialRow((rows as any[])[0]);
+    } finally { connection.release(); }
+  } else {
+    const result = await pool.query(
+      `INSERT INTO website_testimonials (client_name, client_photo_url, service_name, rating, text, is_visible) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+      [data.clientName, data.clientPhotoUrl ?? null, data.serviceName ?? null, data.rating, data.text, data.isVisible]
+    );
+    return mapTestimonialRow(result.rows[0]);
+  }
+}
+
+export async function updateWebsiteTestimonial(id: number, data: Partial<Omit<WebsiteTestimonial, 'id' | 'createdAt'>>): Promise<WebsiteTestimonial | null> {
+  if (dbDialect === 'mysql') {
+    const connection = await pool.getConnection();
+    try {
+      const sets: string[] = [];
+      const vals: any[] = [];
+      if (data.clientName !== undefined) { sets.push('client_name=?'); vals.push(data.clientName); }
+      if (data.clientPhotoUrl !== undefined) { sets.push('client_photo_url=?'); vals.push(data.clientPhotoUrl); }
+      if (data.serviceName !== undefined) { sets.push('service_name=?'); vals.push(data.serviceName); }
+      if (data.rating !== undefined) { sets.push('rating=?'); vals.push(data.rating); }
+      if (data.text !== undefined) { sets.push('text=?'); vals.push(data.text); }
+      if (data.isVisible !== undefined) { sets.push('is_visible=?'); vals.push(data.isVisible ? 1 : 0); }
+      if (!sets.length) return null;
+      vals.push(id);
+      await connection.query(`UPDATE website_testimonials SET ${sets.join(',')} WHERE id=?`, vals);
+      const [rows] = await connection.query(`SELECT * FROM website_testimonials WHERE id=?`, [id]);
+      return (rows as any[]).length ? mapTestimonialRow((rows as any[])[0]) : null;
+    } finally { connection.release(); }
+  } else {
+    const sets: string[] = [];
+    const vals: any[] = [];
+    let i = 1;
+    if (data.clientName !== undefined) { sets.push(`client_name=$${i++}`); vals.push(data.clientName); }
+    if (data.clientPhotoUrl !== undefined) { sets.push(`client_photo_url=$${i++}`); vals.push(data.clientPhotoUrl); }
+    if (data.serviceName !== undefined) { sets.push(`service_name=$${i++}`); vals.push(data.serviceName); }
+    if (data.rating !== undefined) { sets.push(`rating=$${i++}`); vals.push(data.rating); }
+    if (data.text !== undefined) { sets.push(`text=$${i++}`); vals.push(data.text); }
+    if (data.isVisible !== undefined) { sets.push(`is_visible=$${i++}`); vals.push(data.isVisible); }
+    if (!sets.length) return null;
+    vals.push(id);
+    const result = await pool.query(`UPDATE website_testimonials SET ${sets.join(',')} WHERE id=$${i} RETURNING *`, vals);
+    return result.rows.length ? mapTestimonialRow(result.rows[0]) : null;
+  }
+}
+
+export async function deleteWebsiteTestimonial(id: number): Promise<void> {
+  if (dbDialect === 'mysql') {
+    const connection = await pool.getConnection();
+    try {
+      await connection.query(`DELETE FROM website_testimonials WHERE id=?`, [id]);
+    } finally { connection.release(); }
+  } else {
+    await pool.query(`DELETE FROM website_testimonials WHERE id=$1`, [id]);
+  }
+}

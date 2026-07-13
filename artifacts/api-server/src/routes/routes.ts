@@ -7,7 +7,7 @@ import { getRecentLogs, getLastId } from "../log-buffer";
 import { z } from "zod";
 import { setupAuth, registerAuthRoutes, isPinAuthenticated, requirePermission, checkRateLimit, recordFailedAttempt, clearAttempts } from "../replit_integrations/auth";
 import { vapidPublicKey, sendPushNotification, checkAndNotifyExpiringProducts, checkAndNotifyLowStock as broadcastLowStockNotifications, sendClosingReminderNow } from "../push";
-import { db, schema, pool, dbDialect, isDatabaseOffline, checkDatabaseConnection, getBotMemory, saveBotMemory, type BotClientMemory, saveBroadcastLog, getLastBroadcastLog } from "../db";
+import { db, schema, pool, dbDialect, isDatabaseOffline, checkDatabaseConnection, getBotMemory, saveBotMemory, type BotClientMemory, saveBroadcastLog, getLastBroadcastLog, getWebsiteTestimonials, addWebsiteTestimonial, updateWebsiteTestimonial, deleteWebsiteTestimonial } from "../db";
 import { eq } from "drizzle-orm";
 import { insertAdminRoleSchema, ROLE_PERMISSIONS, insertOwnerWithdrawalSchema, insertSalonPaymentSchema, insertStaffPaymentSchema } from "@workspace/db";
 import bcrypt from "bcryptjs";
@@ -1658,11 +1658,133 @@ export async function registerRoutes(
             maxPrice: s.maxPrice ?? null,
             description: s.description ?? null,
             emoji: s.emoji ?? null,
+            imageUrl: s.imageUrl ?? null,
           })),
       });
     } catch (err: any) {
       res.status(500).json({ error: "Failed to fetch website data" });
     }
+  });
+
+  // ── Website testimonials (public read) ──────────────────────────────────────
+  app.get("/api/public/website-testimonials", publicRateLimitMiddleware, async (_req, res) => {
+    try {
+      const items = await getWebsiteTestimonials(true); // visible only
+      res.json(items);
+    } catch { res.json([]); }
+  });
+
+  // ── Website testimonials CRUD (owner only) ───────────────────────────────────
+  const testimonialSchema = z.object({
+    clientName: z.string().min(1).max(100),
+    clientPhotoUrl: z.string().nullable().optional(),
+    serviceName: z.string().max(255).nullable().optional(),
+    rating: z.number().int().min(1).max(5).default(5),
+    text: z.string().min(1),
+    isVisible: z.boolean().default(true),
+  });
+
+  app.get("/api/website-testimonials", isPinAuthenticated, async (_req, res) => {
+    try { res.json(await getWebsiteTestimonials(false)); } catch { res.json([]); }
+  });
+
+  app.post("/api/website-testimonials", isPinAuthenticated, async (req, res) => {
+    try {
+      const data = testimonialSchema.parse(req.body);
+      const item = await addWebsiteTestimonial({
+        clientName: data.clientName,
+        clientPhotoUrl: data.clientPhotoUrl ?? null,
+        serviceName: data.serviceName ?? null,
+        rating: data.rating,
+        text: data.text,
+        isVisible: data.isVisible,
+      });
+      res.json(item);
+    } catch (err: any) { res.status(400).json({ error: err.message }); }
+  });
+
+  app.put("/api/website-testimonials/:id", isPinAuthenticated, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const data = testimonialSchema.partial().parse(req.body);
+      const item = await updateWebsiteTestimonial(id, {
+        clientName: data.clientName,
+        clientPhotoUrl: data.clientPhotoUrl ?? undefined,
+        serviceName: data.serviceName ?? undefined,
+        rating: data.rating,
+        text: data.text,
+        isVisible: data.isVisible,
+      });
+      if (!item) return res.status(404).json({ error: "Not found" });
+      res.json(item);
+    } catch (err: any) { res.status(400).json({ error: err.message }); }
+  });
+
+  app.delete("/api/website-testimonials/:id", isPinAuthenticated, async (req, res) => {
+    try {
+      await deleteWebsiteTestimonial(Number(req.params.id));
+      res.json({ ok: true });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // ── Service website image upload ─────────────────────────────────────────────
+  app.post("/api/services/:id/website-image", isPinAuthenticated, multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024 },
+  }).single("image"), async (req, res) => {
+    if (!req.file) return res.status(400).json({ error: "No file" });
+    const serviceId = Number(req.params.id);
+    try {
+      const file = req.file;
+      let imageUrl = "";
+      if (supabase) {
+        try {
+          const ext = path.extname(file.originalname) || ".jpg";
+          const filePath = `services/service-${serviceId}${ext}`;
+          const { error } = await supabase.storage.from(supabaseBucket).upload(filePath, file.buffer, {
+            contentType: file.mimetype, upsert: true, cacheControl: "0",
+          });
+          if (error) throw error;
+          const { data: pub } = supabase.storage.from(supabaseBucket).getPublicUrl(filePath);
+          imageUrl = `${pub.publicUrl}?v=${Date.now()}`;
+        } catch {
+          imageUrl = `data:${file.mimetype};base64,${file.buffer.toString("base64")}`;
+        }
+      } else {
+        imageUrl = `data:${file.mimetype};base64,${file.buffer.toString("base64")}`;
+      }
+      await storage.updateService(serviceId, { imageUrl } as any);
+      res.json({ imageUrl });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // ── Testimonial photo upload (for website editor) ────────────────────────────
+  app.post("/api/website-testimonials/upload-photo", isPinAuthenticated, multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 },
+  }).single("photo"), async (req, res) => {
+    if (!req.file) return res.status(400).json({ error: "No file" });
+    try {
+      const file = req.file;
+      let photoUrl = "";
+      if (supabase) {
+        try {
+          const ext = path.extname(file.originalname) || ".jpg";
+          const filePath = `testimonials/testimonial-${Date.now()}${ext}`;
+          const { error } = await supabase.storage.from(supabaseBucket).upload(filePath, file.buffer, {
+            contentType: file.mimetype, upsert: true, cacheControl: "0",
+          });
+          if (error) throw error;
+          const { data: pub } = supabase.storage.from(supabaseBucket).getPublicUrl(filePath);
+          photoUrl = `${pub.publicUrl}?v=${Date.now()}`;
+        } catch {
+          photoUrl = `data:${file.mimetype};base64,${file.buffer.toString("base64")}`;
+        }
+      } else {
+        photoUrl = `data:${file.mimetype};base64,${file.buffer.toString("base64")}`;
+      }
+      res.json({ photoUrl });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
   // Public endpoint to get AI-powered service recommendations based on client history
