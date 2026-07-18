@@ -22,14 +22,13 @@ export function usePullToRefresh(
     const onTouchStart = (e: TouchEvent) => {
       if (isRefreshingRef.current) return;
       startYRef.current = e.touches[0].clientY;
-      // Only activate when the container is genuinely scrollable AND at the very top.
-      // overflow-hidden containers (e.g. the Planning board) always have scrollTop===0
-      // but are not scrollable — pulling in that state would fight card drag gestures.
-      const style = getComputedStyle(el);
-      const isScrollable =
-        el.scrollHeight > el.clientHeight &&
-        style.overflow !== "hidden" &&
-        style.overflowY !== "hidden";
+      // Only activate when the vertical overflow policy allows scrolling AND we're at the top.
+      // Do NOT require scrollHeight > clientHeight — short/empty pages should still be
+      // refreshable. What we must block is overflow:hidden/clip containers (e.g. the
+      // Planning board) which are never user-scrollable and always have scrollTop===0,
+      // so they would spuriously arm the pull gesture during card drags.
+      const overflowY = getComputedStyle(el).overflowY;
+      const isScrollable = overflowY !== "hidden" && overflowY !== "clip";
       isActivePullRef.current = isScrollable && el.scrollTop <= 0;
       currentPullRef.current = 0;
     };
