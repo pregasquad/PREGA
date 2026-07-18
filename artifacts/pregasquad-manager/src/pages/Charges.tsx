@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, startOfMonth, endOfMonth, parseISO, isWithinInterval, subMonths, addMonths } from "date-fns";
 import { fr, enUS, ar } from "date-fns/locale";
 import { useTranslation } from "react-i18next";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, prefetchCoreData } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -643,7 +643,10 @@ export default function Charges() {
             disabled={isRefreshing}
             onClick={async () => {
               setIsRefreshing(true);
-              await queryClient.invalidateQueries();
+              await Promise.all([
+                prefetchCoreData(),
+                queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] }),
+              ]);
               setIsRefreshing(false);
               toast({ title: t("common.refreshed"), description: t("common.dataUpdated") });
             }}

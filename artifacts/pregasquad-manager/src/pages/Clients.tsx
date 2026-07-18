@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { prefetchCoreData } from "@/lib/queryClient";
 import { useTranslation } from "react-i18next";
 import { getAppSocket } from "@/lib/appSocket";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -552,7 +553,7 @@ export default function Clients() {
             disabled={isRefreshing}
             onClick={async () => {
               setIsRefreshing(true);
-              await queryClient.invalidateQueries();
+              await prefetchCoreData();
               setIsRefreshing(false);
               toast({ title: t("common.refreshed"), description: t("common.dataUpdated") });
             }}

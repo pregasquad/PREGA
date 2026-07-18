@@ -7,7 +7,7 @@ import { MonthlyGoalBanner } from "@/components/MonthlyGoalBanner";
 import { format, startOfToday, subDays, parseISO } from "date-fns";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, prefetchCoreData } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -495,7 +495,11 @@ export default function Home() {
               disabled={isRefreshing}
               onClick={async () => {
                 setIsRefreshing(true);
-                await queryClient.invalidateQueries();
+                await Promise.all([
+                  prefetchCoreData(),
+                  queryClient.invalidateQueries({ queryKey: ["/api/appointments"] }),
+                  queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] }),
+                ]);
                 setIsRefreshing(false);
                 toast({ title: t("common.refreshed"), description: t("common.dataUpdated") });
               }}
