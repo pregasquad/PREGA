@@ -612,7 +612,17 @@ export default function Planning() {
   const [showSearchInput, setShowSearchInput] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const [draggedAppointment, setDraggedAppointment] = useState<any>(null);
-  const [dragOverSlot, setDragOverSlot] = useState<{staff: string, time: string} | null>(null);
+  // Drag-over slot highlight driven by direct DOM attribute — no React re-renders on every move
+  const dragOverElRef = useRef<HTMLElement | null>(null);
+  const highlightDragSlot = (el: HTMLElement) => {
+    if (dragOverElRef.current === el) return; // already highlighted
+    if (dragOverElRef.current) delete dragOverElRef.current.dataset.dragOver;
+    el.dataset.dragOver = '1';
+    dragOverElRef.current = el;
+  };
+  const clearDragHighlight = () => {
+    if (dragOverElRef.current) { delete dragOverElRef.current.dataset.dragOver; dragOverElRef.current = null; }
+  };
   const [resizingBooking, setResizingBooking] = useState<any>(null);
   // Hold-to-drag ghost (appearance only — position set directly on DOM)
   const [pDragGhost, setPDragGhost] = useState<{
@@ -2399,7 +2409,7 @@ export default function Planning() {
         }
         pDragRef.current.targetStaff = slotEl.dataset.slotStaff;
         pDragRef.current.targetTime  = targetTime;
-        setDragOverSlot({ staff: slotEl.dataset.slotStaff, time: targetTime });
+        highlightDragSlot(slotEl); // direct DOM — zero React re-renders
       }
 
       // Update ghost position directly on DOM — zero React re-renders
@@ -2418,7 +2428,7 @@ export default function Planning() {
         pDragRef.current = null;
         setPDragGhost(null);
         setDraggedAppointment(null);
-        setDragOverSlot(null);
+        clearDragHighlight();
       }
     };
 
@@ -2437,7 +2447,7 @@ export default function Planning() {
       pDragRef.current = null;
       setPDragGhost(null);
       setDraggedAppointment(null);
-      setDragOverSlot(null);
+      clearDragHighlight();
 
       // Sound: drop
       playDragDrop();
@@ -2610,7 +2620,7 @@ export default function Planning() {
           }
           pDragRef.current.targetStaff = slotEl.dataset.slotStaff;
           pDragRef.current.targetTime  = targetTime;
-          setDragOverSlot({ staff: slotEl.dataset.slotStaff, time: targetTime });
+          highlightDragSlot(slotEl); // direct DOM — zero React re-renders
         }
         if (dragRafRef.current) cancelAnimationFrame(dragRafRef.current);
         dragRafRef.current = requestAnimationFrame(() => { moveGhost(t.clientX, t.clientY); dragRafRef.current = null; });
@@ -2618,7 +2628,7 @@ export default function Planning() {
 
       const onCancel = () => {
         cancelled = true; cleanup();
-        if (dragActive) { pDragRef.current = null; setPDragGhost(null); setDraggedAppointment(null); setDragOverSlot(null); }
+        if (dragActive) { pDragRef.current = null; setPDragGhost(null); setDraggedAppointment(null); clearDragHighlight(); }
       };
 
       const onUp = async () => {
@@ -2626,7 +2636,7 @@ export default function Planning() {
         if (!wasDragging) return;
         dragJustCompleted.current = true;
         const drag = pDragRef.current;
-        pDragRef.current = null; setPDragGhost(null); setDraggedAppointment(null); setDragOverSlot(null);
+        pDragRef.current = null; setPDragGhost(null); setDraggedAppointment(null); clearDragHighlight();
         playDragDrop();
         if (drag && (drag.targetStaff !== drag.appointment.staff || drag.targetTime !== drag.appointment.startTime)) {
           await handleDropExecRef.current(drag.appointment, drag.targetStaff, drag.targetTime);
@@ -3452,7 +3462,7 @@ export default function Planning() {
                 const span = booking ? (isResizing ? resizeCurrentSpan : getBookingSpan(booking)) : 1;
                 const liveDuration = isResizing ? resizeCurrentSpan * 15 : booking?.duration;
 
-                const isDragOver = dragOverSlot?.staff === s.name && dragOverSlot?.time === hour;
+                // isDragOver now driven by [data-drag-over] DOM attribute — no React state needed
                 const isDragging = draggedAppointment?.id === booking?.id;
                 const isConflicting = booking ? conflictingIds.has(booking.id) : false;
 
@@ -3684,14 +3694,13 @@ export default function Planning() {
                   <div
                     key={`${s.id}-${hour}`}
                     className={cn(
-                      "transition-colors duration-150 cursor-pointer",
+                      "cursor-pointer",
                       staffIndex < staffList.length - 1 && (isRtl ? "border-l border-slate-200 dark:border-slate-600" : "border-r border-slate-200 dark:border-slate-600"),
                       isHourSlot    && "border-t-2 border-t-slate-300 dark:border-t-slate-500",
                       isHalfSlot    && "border-t border-t-slate-200 dark:border-t-slate-600",
                       !isHourSlot && !isHalfSlot && "border-t border-dashed border-t-slate-200/60 dark:border-t-slate-700/60",
                       "hover:bg-slate-50 dark:hover:bg-slate-700/50",
-                      isDragOver && "bg-primary/8 dark:bg-slate-700 ring-2 ring-primary/40 ring-inset",
-                      !isDragOver && (hourGroup % 2 === 0 ? "bg-white dark:bg-slate-900" : "bg-slate-50/60 dark:bg-slate-800/40")
+                      hourGroup % 2 === 0 ? "bg-white dark:bg-slate-900" : "bg-slate-50/60 dark:bg-slate-800/40"
                     )}
                     style={{ 
                       gridColumn: colNum,
