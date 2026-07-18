@@ -22,8 +22,15 @@ export function usePullToRefresh(
     const onTouchStart = (e: TouchEvent) => {
       if (isRefreshingRef.current) return;
       startYRef.current = e.touches[0].clientY;
-      // Only activate if already at the very top — never fights normal scroll
-      isActivePullRef.current = el.scrollTop <= 0;
+      // Only activate when the container is genuinely scrollable AND at the very top.
+      // overflow-hidden containers (e.g. the Planning board) always have scrollTop===0
+      // but are not scrollable — pulling in that state would fight card drag gestures.
+      const style = getComputedStyle(el);
+      const isScrollable =
+        el.scrollHeight > el.clientHeight &&
+        style.overflow !== "hidden" &&
+        style.overflowY !== "hidden";
+      isActivePullRef.current = isScrollable && el.scrollTop <= 0;
       currentPullRef.current = 0;
     };
 
