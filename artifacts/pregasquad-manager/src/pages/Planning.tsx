@@ -3442,6 +3442,8 @@ export default function Planning() {
                         gridColumn: colNum,
                         gridRow: `${rowNum} / span ${span}`
                       }}
+                      data-slot-staff={s.name}
+                      data-slot-time={hour}
                     >
                       <div 
                         className={cn(
