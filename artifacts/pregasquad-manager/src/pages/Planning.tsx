@@ -3468,8 +3468,11 @@ export default function Planning() {
                             : booking.paid ? 'none' : `1.5px solid ${s.color}bb`,
                           transition: 'opacity 0.15s, transform 0.15s, filter 0.15s, scale 0.15s',
                           touchAction: (canEdit && !isResizing && !!draggedAppointment) ? 'none' : 'auto',
+                          userSelect: 'none',
+                          WebkitUserSelect: 'none',
                         }}
                         data-booking-id={booking.id}
+                        onMouseDown={(e) => { if (canEdit && !isResizing) e.preventDefault(); }}
                         onPointerDown={(e) => { if (canEdit && !isResizing && e.pointerType !== 'touch') handleCardPointerDown(e, booking, s.color); }}
                         onClick={(e) => { if (!isResizing && !dragJustCompleted.current && !scrollJustCancelled.current) handleAppointmentClick(e, booking); dragJustCompleted.current = false; scrollJustCancelled.current = false; }}
                       >
