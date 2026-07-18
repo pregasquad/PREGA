@@ -623,6 +623,9 @@ export default function Planning() {
   const clearDragHighlight = () => {
     if (dragOverElRef.current) { delete dragOverElRef.current.dataset.dragOver; dragOverElRef.current = null; }
   };
+  // Unmount fail-safe: clear any stale DOM highlight if component unmounts mid-drag
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => () => { clearDragHighlight(); }, []);
   const [resizingBooking, setResizingBooking] = useState<any>(null);
   // Hold-to-drag ghost (appearance only — position set directly on DOM)
   const [pDragGhost, setPDragGhost] = useState<{
@@ -2263,6 +2266,8 @@ export default function Planning() {
     if ((e.target as HTMLElement).closest('[data-resize-handle]')) return;
     // Ignore non-primary mouse buttons
     if (e.pointerType === 'mouse' && e.button !== 0) return;
+    // Block if a drag is already active (pointer or touch) — prevents shared-ref corruption
+    if (pDragRef.current) return;
 
     const cardEl = e.currentTarget as HTMLElement;
     const pointerId = e.pointerId;
@@ -2409,7 +2414,12 @@ export default function Planning() {
         }
         pDragRef.current.targetStaff = slotEl.dataset.slotStaff;
         pDragRef.current.targetTime  = targetTime;
-        highlightDragSlot(slotEl); // direct DOM — zero React re-renders
+        // Highlight only empty slots — booking wrappers span multiple rows and
+        // would highlight a whole occupied block instead of the precise drop row.
+        if (slotEl.firstElementChild === null) highlightDragSlot(slotEl);
+        else clearDragHighlight();
+      } else {
+        clearDragHighlight(); // pointer left valid slot area
       }
 
       // Update ghost position directly on DOM — zero React re-renders
@@ -2504,6 +2514,8 @@ export default function Planning() {
     const onBoardTouchStart = (e: TouchEvent) => {
       if (e.touches.length !== 1) return;
       if (!canEditRef.current || resizingBookingRef.current) return;
+      // Block if a pointer drag is already active — prevents shared-ref corruption
+      if (pDragRef.current) return;
       const touch = e.touches[0];
       const cardEl = (touch.target as HTMLElement).closest('[data-booking-id]') as HTMLElement | null;
       if (!cardEl) return;
@@ -2620,7 +2632,11 @@ export default function Planning() {
           }
           pDragRef.current.targetStaff = slotEl.dataset.slotStaff;
           pDragRef.current.targetTime  = targetTime;
-          highlightDragSlot(slotEl); // direct DOM — zero React re-renders
+          // Highlight only empty slots — booking wrappers span multiple rows
+          if (slotEl.firstElementChild === null) highlightDragSlot(slotEl);
+          else clearDragHighlight();
+        } else {
+          clearDragHighlight(); // finger left valid slot area
         }
         if (dragRafRef.current) cancelAnimationFrame(dragRafRef.current);
         dragRafRef.current = requestAnimationFrame(() => { moveGhost(t.clientX, t.clientY); dragRafRef.current = null; });
