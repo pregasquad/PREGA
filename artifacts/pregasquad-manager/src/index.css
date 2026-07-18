@@ -157,6 +157,20 @@
     letter-spacing: -0.01em;
   }
 
+  body.no-text-select * {
+    user-select: none !important;
+    -webkit-user-select: none !important;
+  }
+
+  /* Always allow text selection inside inputs, textareas, selects, and contenteditable */
+  body.no-text-select input,
+  body.no-text-select textarea,
+  body.no-text-select select,
+  body.no-text-select [contenteditable] {
+    user-select: text !important;
+    -webkit-user-select: text !important;
+  }
+
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
     @apply font-semibold tracking-tight text-foreground;

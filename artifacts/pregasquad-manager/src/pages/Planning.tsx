@@ -2385,10 +2385,21 @@ export default function Planning() {
       // Hit-test to find slot under cursor (ghost is pointer-events:none)
       const el = document.elementFromPoint(me.clientX, me.clientY) as HTMLElement | null;
       const slotEl = el?.closest('[data-slot-staff]') as HTMLElement | null;
-      if (slotEl?.dataset.slotStaff && slotEl?.dataset.slotTime) {
+      if (slotEl?.dataset.slotStaff) {
+        // Compute the exact hovered time from Y position in the board grid —
+        // using the element's data-slot-time is wrong for multi-span occupied blocks
+        // which always carry the booking start time regardless of where you hover.
+        const board = boardRef.current;
+        let targetTime = slotEl.dataset.slotTime ?? pDragRef.current.targetTime;
+        if (board) {
+          const boardRect = board.getBoundingClientRect();
+          const yInGrid = me.clientY - boardRect.top + board.scrollTop;
+          const idx = Math.max(0, Math.floor(yInGrid / slotHeight));
+          targetTime = hours[Math.min(idx, hours.length - 1)] ?? targetTime;
+        }
         pDragRef.current.targetStaff = slotEl.dataset.slotStaff;
-        pDragRef.current.targetTime  = slotEl.dataset.slotTime;
-        setDragOverSlot({ staff: slotEl.dataset.slotStaff, time: slotEl.dataset.slotTime });
+        pDragRef.current.targetTime  = targetTime;
+        setDragOverSlot({ staff: slotEl.dataset.slotStaff, time: targetTime });
       }
 
       // Update ghost position directly on DOM — zero React re-renders
@@ -2466,6 +2477,10 @@ export default function Planning() {
   // canEditRef must be declared BEFORE the useEffect that reads it
   const canEditRef = useRef(canEdit);
   canEditRef.current = canEdit;
+  const slotHeightRef = useRef(slotHeight);
+  slotHeightRef.current = slotHeight;
+  const hoursRef = useRef(hours);
+  hoursRef.current = hours;
 
   // ── Native PASSIVE touchstart on board ─────────────────────────────────────
   // React's onPointerDown is non-passive: the browser must wait for it before
@@ -2584,10 +2599,18 @@ export default function Planning() {
         lastPX = t.clientX; lastPY = t.clientY;
         const el = document.elementFromPoint(t.clientX, t.clientY) as HTMLElement | null;
         const slotEl = el?.closest('[data-slot-staff]') as HTMLElement | null;
-        if (slotEl?.dataset.slotStaff && slotEl?.dataset.slotTime) {
+        if (slotEl?.dataset.slotStaff) {
+          const b = boardRef.current;
+          let targetTime = slotEl.dataset.slotTime ?? pDragRef.current.targetTime;
+          if (b) {
+            const bRect = b.getBoundingClientRect();
+            const yInGrid = t.clientY - bRect.top + b.scrollTop;
+            const idx = Math.max(0, Math.floor(yInGrid / slotHeightRef.current));
+            targetTime = hoursRef.current[Math.min(idx, hoursRef.current.length - 1)] ?? targetTime;
+          }
           pDragRef.current.targetStaff = slotEl.dataset.slotStaff;
-          pDragRef.current.targetTime  = slotEl.dataset.slotTime;
-          setDragOverSlot({ staff: slotEl.dataset.slotStaff, time: slotEl.dataset.slotTime });
+          pDragRef.current.targetTime  = targetTime;
+          setDragOverSlot({ staff: slotEl.dataset.slotStaff, time: targetTime });
         }
         if (dragRafRef.current) cancelAnimationFrame(dragRafRef.current);
         dragRafRef.current = requestAnimationFrame(() => { moveGhost(t.clientX, t.clientY); dragRafRef.current = null; });
@@ -3472,7 +3495,12 @@ export default function Planning() {
                           WebkitUserSelect: 'none',
                         }}
                         data-booking-id={booking.id}
-                        onMouseDown={(e) => { if (canEdit && !isResizing) e.preventDefault(); }}
+                        onMouseDown={(e) => {
+                          if (canEdit && !isResizing) {
+                            const t = e.target as HTMLElement;
+                            if (!t.closest('button,input,textarea,select,a,[contenteditable]')) e.preventDefault();
+                          }
+                        }}
                         onPointerDown={(e) => { if (canEdit && !isResizing && e.pointerType !== 'touch') handleCardPointerDown(e, booking, s.color); }}
                         onClick={(e) => { if (!isResizing && !dragJustCompleted.current && !scrollJustCancelled.current) handleAppointmentClick(e, booking); dragJustCompleted.current = false; scrollJustCancelled.current = false; }}
                       >

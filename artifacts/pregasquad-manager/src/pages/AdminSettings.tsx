@@ -17,7 +17,7 @@ import {
   MessageCircle, Send, Lock, LayoutGrid, Sparkles,
   Search, Check, X, Phone, AlertTriangle, CheckCircle2,
   BookTemplate, CalendarOff, Plus, Printer, Wifi, WifiOff,
-  ChevronDown, TestTube2, Wallet
+  ChevronDown, TestTube2, Wallet, MousePointer2
 } from "lucide-react";
 import {
   connectQz, isQzConnected, findPrinters, selectPrinter, getSelectedPrinter,
@@ -55,6 +55,7 @@ interface BusinessSettings {
   workingDays: number[];
   holidays: string[];
   autoLockEnabled: boolean;
+  allowTextSelection: boolean;
   planningShortcuts: string[];
   planningSlotHeight: number;
 }
@@ -179,6 +180,7 @@ export default function AdminSettings() {
     workingDays: [1, 2, 3, 4, 5, 6],
     holidays: [],
     autoLockEnabled: false,
+    allowTextSelection: false,
     planningShortcuts: DEFAULT_SHORTCUTS,
     planningSlotHeight: 44,
   });
@@ -1020,6 +1022,27 @@ export default function AdminSettings() {
                           <span className="opacity-60 text-[10px]">{value}px</span>
                         </button>
                       ))}
+                    </div>
+                  </div>
+
+                  <div className="glass-subtle rounded-2xl p-5">
+                    <h3 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                      <MousePointer2 className="w-4 h-4 text-primary" />
+                      تحديد النص
+                    </h3>
+                    <p className="text-xs text-muted-foreground mb-3">السماح بتحديد النص في كامل التطبيق (مفيد للنسخ). عند الإيقاف، لا يمكن تحديد أي نص.</p>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={businessForm.allowTextSelection}
+                        onClick={() => setBusinessForm(prev => ({ ...prev, allowTextSelection: !prev.allowTextSelection }))}
+                        className={`relative w-11 h-6 rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${businessForm.allowTextSelection ? 'liquid-gradient' : 'bg-muted'}`}
+                        data-testid="switch-allow-text-selection"
+                      >
+                        <span className={`block absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-200 ${businessForm.allowTextSelection ? 'translate-x-5' : ''}`} />
+                      </button>
+                      <span className="text-sm">{businessForm.allowTextSelection ? 'تحديد النص مفعّل' : 'تحديد النص معطّل'}</span>
                     </div>
                   </div>
 

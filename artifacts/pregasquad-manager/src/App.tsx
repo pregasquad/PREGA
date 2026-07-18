@@ -7,6 +7,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { AdminLock } from "@/components/layout/AdminLock";
 import { FirstLogin } from "@/components/layout/FirstLogin";
 import { Suspense, lazy, useEffect, Component, type ReactNode } from "react";
+import { useBusinessSettings } from "@/hooks/use-salon-data";
 import { SpinningLogo } from "@/components/ui/spinning-logo";
 import { initGA } from "./lib/analytics";
 import { useAnalytics } from "./hooks/use-analytics";
@@ -39,6 +40,20 @@ const StaffPortal = lazy(() => import("@/pages/StaffPortal"));
 const Tombola = lazy(() => import("@/pages/Tombola"));
 const POS = lazy(() => import("@/pages/POS"));
 const Website = lazy(() => import("@/pages/Website"));
+
+// Applies body-level user-select based on the allowTextSelection setting
+function GlobalStyleApplier() {
+  const { data: businessSettings } = useBusinessSettings();
+  useEffect(() => {
+    const allow = businessSettings?.allowTextSelection ?? false;
+    if (allow) {
+      document.body.classList.remove('no-text-select');
+    } else {
+      document.body.classList.add('no-text-select');
+    }
+  }, [businessSettings?.allowTextSelection]);
+  return null;
+}
 
 function PageLoader() {
   return (
@@ -310,6 +325,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+          <GlobalStyleApplier />
           <Toaster />
           <ErrorBoundary>
             <FirstLogin>

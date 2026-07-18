@@ -28,6 +28,7 @@ export function useBusinessSettings() {
     openingTime: string;
     closingTime: string;
     workingDays: number[];
+    allowTextSelection?: boolean;
   }>({
     queryKey: ["/api/business-settings"],
     queryFn: async () => {
