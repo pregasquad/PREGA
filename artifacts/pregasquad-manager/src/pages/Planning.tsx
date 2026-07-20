@@ -3048,23 +3048,28 @@ export default function Planning() {
                 setDrawerState("opening");
                 let opened = false;
                 try {
-                  await connectQz();
+                  // Fast path: QZ already connected
                   if (isQzConnected()) {
-                    await openCashDrawer();
-                    opened = true;
+                    opened = await openCashDrawer();
+                  } else {
+                    // Try to connect (reuses any in-progress attempt)
+                    const qzOk = await ensureQzConnected();
+                    if (qzOk && isQzConnected()) {
+                      opened = await openCashDrawer();
+                    }
                   }
                 } catch {}
+                // Fall back to remote print station drawer command
                 if (!opened) {
-                  const available = await checkPrintStationAsync();
-                  if (available) {
-                    await remoteOpenDrawer();
-                    opened = true;
-                  }
+                  try {
+                    const available = await checkPrintStationAsync();
+                    if (available) {
+                      opened = await remoteOpenDrawer();
+                    }
+                  } catch {}
                 }
                 setDrawerState(opened ? "success" : "fail");
-                setTimeout(() => {
-                  setDrawerState("idle");
-                }, 1800);
+                setTimeout(() => setDrawerState("idle"), 1800);
               }}
               data-testid="button-open-cash-drawer"
               title={printStatus.qz ? "🖨️ Imprimante connectée (QZ)" : printStatus.station ? "🖨️ Station d'impression active" : "⚠️ Aucune imprimante connectée"}
