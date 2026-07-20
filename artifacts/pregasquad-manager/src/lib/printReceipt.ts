@@ -143,9 +143,10 @@ export async function autoPrint(data: ReceiptData): Promise<void> {
     setTimeout(() => remoteOpenDrawer(), 800);
     return;
   }
-  // No QZ Tray, no remote station — skip silently on all devices.
-  // The browser print dialog is disruptive; user can manually trigger print if needed.
-  console.log("[print-relay] No printer configured — skipping auto-print");
+  // No QZ Tray, no remote station — fall back to browser print.
+  // The iframe is hidden off-screen so only the receipt content appears in the dialog.
+  console.log("[print-relay] No silent printer found — using browser print fallback");
+  browserPrint(data);
 }
 
 function escapeHtml(str: string): string {
@@ -337,8 +338,9 @@ export async function autoPrintExpense(data: ExpenseReceiptData): Promise<void> 
     await remotePrintExpense(data);
     return;
   }
-  // No QZ Tray, no remote station — skip silently on all devices.
-  console.log("[print-relay] No printer configured — skipping auto-print expense");
+  // No QZ Tray, no remote station — fall back to browser print.
+  console.log("[print-relay] No silent printer found — using browser print fallback for expense");
+  browserPrintExpense(data);
 }
 
 function browserPrintExpense(data: ExpenseReceiptData): void {

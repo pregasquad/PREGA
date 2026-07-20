@@ -98,6 +98,8 @@
     "confirmBooking": "تأكيد الrendez-vous",
     "updateBooking": "تحديث",
     "deleteConfirm": "هل أنت متأكد من حذف هذا الrendez-vous؟",
+    "drawerOpenFailed": "درج النقود",
+    "drawerOpenFailedDesc": "QZ Tray غير متصل. قم بتشغيل QZ Tray على هذا الجهاز لفتح الدرج تلقائيًا.",
     "paymentConfirmed": "تم التأكيد",
     "paymentConfirmedDesc": "تم تأكيد الدفع بنجاح",
     "paymentError": "فشل تأكيد الدفع",

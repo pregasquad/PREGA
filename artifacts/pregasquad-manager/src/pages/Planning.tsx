@@ -3069,6 +3069,13 @@ export default function Planning() {
                   } catch {}
                 }
                 setDrawerState(opened ? "success" : "fail");
+                if (!opened) {
+                  toast({
+                    title: t("planning.drawerOpenFailed") || "Tiroir-caisse",
+                    description: t("planning.drawerOpenFailedDesc") || "QZ Tray n'est pas connecté. Ouvrez QZ Tray sur cet ordinateur pour activer l'ouverture automatique.",
+                    variant: "destructive",
+                  });
+                }
                 setTimeout(() => setDrawerState("idle"), 1800);
               }}
               data-testid="button-open-cash-drawer"

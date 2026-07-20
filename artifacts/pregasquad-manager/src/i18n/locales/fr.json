@@ -98,6 +98,8 @@
     "confirmBooking": "Confirmer le RDV",
     "updateBooking": "Mettre à jour",
     "deleteConfirm": "Êtes-vous sûr de vouloir supprimer ce rendez-vous?",
+    "drawerOpenFailed": "Tiroir-caisse",
+    "drawerOpenFailedDesc": "QZ Tray n'est pas connecté. Lancez QZ Tray sur cet ordinateur pour ouvrir le tiroir automatiquement.",
     "paymentConfirmed": "Paiement Confirmé",
     "paymentConfirmedDesc": "Paiement confirmé avec succès",
     "paymentError": "Échec de la confirmation du paiement",

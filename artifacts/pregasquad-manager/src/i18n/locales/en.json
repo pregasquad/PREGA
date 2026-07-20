@@ -98,6 +98,8 @@
     "confirmBooking": "Confirm Booking",
     "updateBooking": "Update",
     "deleteConfirm": "Are you sure you want to delete this appointment?",
+    "drawerOpenFailed": "Cash Drawer",
+    "drawerOpenFailedDesc": "QZ Tray is not connected. Launch QZ Tray on this computer to open the drawer automatically.",
     "paymentConfirmed": "Payment Confirmed",
     "paymentConfirmedDesc": "Payment confirmed successfully",
     "paymentError": "Payment confirmation failed",
