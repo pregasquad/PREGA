@@ -740,12 +740,17 @@ export default function Salaries() {
       .filter(d => !d.cleared && (Number(d.staffId) === s.id || (!d.staffId && d.staffName === s.name)))
       .reduce((sum, d) => sum + d.amount, 0);
 
-    // Balance = commission earned since last payment − pending deductions
-    const walletBalance = walletCommission - pendingStaffDeductions;
+    // Fixed-salary staff: add baseSalary so the Pay button shows the correct monthly amount.
+    // Commission staff will typically have baseSalary = 0 so this is a no-op for them.
+    const baseSalary = Number(s.baseSalary) || 0;
+
+    // Balance = fixed salary + commission earned since last payment − pending deductions
+    const walletBalance = baseSalary + walletCommission - pendingStaffDeductions;
 
     return {
       lastPaymentDate, sinceDate, walletBalance,
       walletRevenue, walletCommission,
+      baseSalary,
       walletApptCount: walletAppointments.length,
       walletServices,
     };
@@ -1414,7 +1419,15 @@ export default function Salaries() {
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-base" data-testid={`text-staff-name-${s.id}`}>{s.name}</h3>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-semibold text-base" data-testid={`text-staff-name-${s.id}`}>{s.name}</h3>
+                        {wallet.baseSalary > 0 && (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 text-[10px] font-semibold shrink-0">
+                            <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                            {formatCurrency(wallet.baseSalary)} {t("common.currency")}
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
                         <span data-testid={`text-staff-appointments-${s.id}`}>{wallet.walletApptCount} {t("salaries.appointmentsCount").toLowerCase()}</span>
                         <span>-</span>

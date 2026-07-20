@@ -2268,6 +2268,8 @@ export default function Planning() {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     // Block if a drag is already active (pointer or touch) — prevents shared-ref corruption
     if (pDragRef.current) return;
+    // Don't start drag when the pointer lands on an interactive element (buttons, links…)
+    if ((e.target as HTMLElement).closest('button,input,textarea,select,a,[contenteditable]')) return;
 
     const cardEl = e.currentTarget as HTMLElement;
     const pointerId = e.pointerId;
@@ -2519,6 +2521,8 @@ export default function Planning() {
       const touch = e.touches[0];
       const cardEl = (touch.target as HTMLElement).closest('[data-booking-id]') as HTMLElement | null;
       if (!cardEl) return;
+      // Don't start drag when the touch lands on an interactive element (buttons, links…)
+      if ((touch.target as HTMLElement).closest('button,input,textarea,select,a,[contenteditable]')) return;
       const bookingId = parseInt(cardEl.dataset.bookingId ?? '0', 10);
       const booking = appointmentsRef.current.find((a: any) => a.id === bookingId);
       if (!booking) return;
