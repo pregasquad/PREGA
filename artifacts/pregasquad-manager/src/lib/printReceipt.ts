@@ -122,12 +122,14 @@ export interface ReceiptData {
 }
 
 export async function autoPrint(data: ReceiptData): Promise<void> {
+  // 1. QZ Tray already connected on this device — fully silent
   if (isQzConnected()) {
     await silentPrint(data);
     setTimeout(() => openCashDrawer(), 800);
     return;
   }
 
+  // 2. Try to connect QZ Tray (reuses any in-progress attempt)
   const qzOk = await ensureQzConnected();
   if (qzOk && isQzConnected()) {
     console.log("[print] QZ connected on retry, printing silently");
@@ -136,6 +138,7 @@ export async function autoPrint(data: ReceiptData): Promise<void> {
     return;
   }
 
+  // 3. Relay to a remote print station (e.g. tablet → desktop with QZ)
   const stationAvailable = await checkPrintStationAsync();
   if (stationAvailable) {
     console.log("[print-relay] Remote print station found, sending receipt");
@@ -143,10 +146,9 @@ export async function autoPrint(data: ReceiptData): Promise<void> {
     setTimeout(() => remoteOpenDrawer(), 800);
     return;
   }
-  // No QZ Tray, no remote station — fall back to browser print.
-  // The iframe is hidden off-screen so only the receipt content appears in the dialog.
-  console.log("[print-relay] No silent printer found — using browser print fallback");
-  browserPrint(data);
+
+  // 4. No printer available — skip silently (no popup, no dialog)
+  console.log("[print] No printer available — skipping receipt print silently");
 }
 
 function escapeHtml(str: string): string {
@@ -320,11 +322,13 @@ export interface ExpenseReceiptData {
 }
 
 export async function autoPrintExpense(data: ExpenseReceiptData): Promise<void> {
+  // 1. QZ Tray already connected on this device — fully silent
   if (isQzConnected()) {
     await silentPrintExpense(data);
     return;
   }
 
+  // 2. Try to connect QZ Tray
   const qzOk = await ensureQzConnected();
   if (qzOk && isQzConnected()) {
     console.log("[print] QZ connected on retry, printing expense silently");
@@ -332,15 +336,16 @@ export async function autoPrintExpense(data: ExpenseReceiptData): Promise<void> 
     return;
   }
 
+  // 3. Relay to remote print station
   const stationAvailable = await checkPrintStationAsync();
   if (stationAvailable) {
     console.log("[print-relay] Remote print station found, sending expense receipt");
     await remotePrintExpense(data);
     return;
   }
-  // No QZ Tray, no remote station — fall back to browser print.
-  console.log("[print-relay] No silent printer found — using browser print fallback for expense");
-  browserPrintExpense(data);
+
+  // 4. No printer — skip silently
+  console.log("[print] No printer available — skipping expense print silently");
 }
 
 function browserPrintExpense(data: ExpenseReceiptData): void {

@@ -382,11 +382,8 @@ export async function silentPrintExpense(data: ExpenseReceiptData): Promise<bool
   }
 }
 
-let drawerInFlight = false;
 export async function openCashDrawer(): Promise<boolean> {
   if (!isQzConnected()) return false;
-  if (drawerInFlight) return false;
-  drawerInFlight = true;
   try {
     const config = qz.configs.create(printerName!);
     const hexData = hexCmd(0x1B, 0x40) + hexCmd(0x1B, 0x70, 0x00, 0x19, 0xFA);
@@ -394,8 +391,6 @@ export async function openCashDrawer(): Promise<boolean> {
     return true;
   } catch {
     return false;
-  } finally {
-    setTimeout(() => { drawerInFlight = false; }, 2000);
   }
 }
 

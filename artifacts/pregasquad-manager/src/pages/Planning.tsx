@@ -128,7 +128,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { insertAppointmentSchema, insertStaffSchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { autoPrint } from "@/lib/printReceipt";
-import { connectQz, openCashDrawer, isQzConnected, checkPrintStationAsync, remoteOpenDrawer, subscribePrintStatus } from "@/lib/qzPrint";
+import { connectQz, openCashDrawer, isQzConnected, ensureQzConnected, checkPrintStationAsync, remoteOpenDrawer, subscribePrintStatus } from "@/lib/qzPrint";
 
 // Smoothly animates a number from its previous value to the new one (400 ms ease-out)
 function useAnimatedNumber(target: number | null, duration = 400): number | null {
@@ -3043,29 +3043,23 @@ export default function Planning() {
                 drawerState === "success" && "text-emerald-500 scale-110",
                 drawerState === "fail" && "text-red-400"
               )}
-              disabled={drawerState === "opening"}
               onClick={async () => {
                 setDrawerState("opening");
                 let opened = false;
                 try {
-                  // Fast path: QZ already connected
                   if (isQzConnected()) {
                     opened = await openCashDrawer();
                   } else {
-                    // Try to connect (reuses any in-progress attempt)
                     const qzOk = await ensureQzConnected();
                     if (qzOk && isQzConnected()) {
                       opened = await openCashDrawer();
                     }
                   }
                 } catch {}
-                // Fall back to remote print station drawer command
                 if (!opened) {
                   try {
                     const available = await checkPrintStationAsync();
-                    if (available) {
-                      opened = await remoteOpenDrawer();
-                    }
+                    if (available) opened = await remoteOpenDrawer();
                   } catch {}
                 }
                 setDrawerState(opened ? "success" : "fail");
@@ -3076,7 +3070,7 @@ export default function Planning() {
                     variant: "destructive",
                   });
                 }
-                setTimeout(() => setDrawerState("idle"), 1800);
+                setTimeout(() => setDrawerState("idle"), 1500);
               }}
               data-testid="button-open-cash-drawer"
               title={printStatus.qz ? "🖨️ Imprimante connectée (QZ)" : printStatus.station ? "🖨️ Station d'impression active" : "⚠️ Aucune imprimante connectée"}

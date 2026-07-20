@@ -1,0 +1,96 @@
+require("dotenv").config()
+
+const makeWASocket = require("@whiskeysockets/baileys").default
+const { useMultiFileAuthState } = require("@whiskeysockets/baileys")
+const P = require("pino")
+const axios = require("axios")
+
+// =======================
+// GEMINI FUNCTION
+// =======================
+async function askGemini(message) {
+  try {
+    const res = await axios.post(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
+      {
+        contents: [
+          {
+            parts: [
+              {
+                text: `
+You are a professional beauty salon assistant.
+
+Rules:
+- Be short, friendly
+- Use French or Darija
+- Help with prices, booking, services
+
+User:
+${message}
+                `
+              }
+            ]
+          }
+        ]
+      },
+      {
+        params: {
+          key: process.env.GEMINI_API_KEY
+        }
+      }
+    )
+
+    return res.data.candidates[0].content.parts[0].text
+
+  } catch (err) {
+    return "💖 Marhba! 3tina details 😊"
+  }
+}
+
+// =======================
+// WHATSAPP BOT
+// =======================
+async function startBot() {
+  const { state, saveCreds } = await useMultiFileAuthState("session")
+
+  const sock = makeWASocket({
+    auth: state,
+    logger: P({ level: "silent" })
+  })
+
+  sock.ev.on("creds.update", saveCreds)
+
+  console.log("🤖 Bot running...")
+
+  sock.ev.on("messages.upsert", async ({ messages }) => {
+    const msg = messages[0]
+    if (!msg.message) return
+
+    const text = msg.message.conversation || ""
+    const phone = msg.key.remoteJid
+
+    // =======================
+    // SYSTEM COMMANDS
+    // =======================
+    if (text === "1") {
+      return sock.sendMessage(phone, { text: "✅ Confirmé 💖" })
+    }
+
+    if (text === "2") {
+      return sock.sendMessage(phone, { text: "❌ Annulé" })
+    }
+
+    if (text === "3") {
+      return sock.sendMessage(phone, { text: "✏️ Sifti wa9t jdid" })
+    }
+
+    // =======================
+    // AI MODE (Gemini)
+    // =======================
+    const reply = await askGemini(text)
+
+    await sock.sendMessage(phone, { text: reply })
+  })
+}
+
+startBot()
