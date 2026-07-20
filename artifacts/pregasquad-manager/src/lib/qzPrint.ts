@@ -406,6 +406,8 @@ function ensurePrintSocket(): Socket {
     });
     printSocket.on("print:station-status", (available: boolean) => {
       printStationAvailable = available;
+      // Bust the check cache so the next autoPrint sees the live state immediately
+      _stationCheckCache = null;
       notifyPrintStatus();
     });
     printSocket.on("connect", () => {
@@ -504,26 +506,53 @@ export function notifyPrintStatus(): void {
   _statusListeners.forEach(cb => cb(status));
 }
 
+// Cache the last station-check result for 30 s to avoid a socket round-trip on every payment.
+let _stationCheckCache: { result: boolean; ts: number } | null = null;
+let _stationCheckInFlight: Promise<boolean> | null = null;
+const STATION_CACHE_TTL = 30_000;
+
 export async function checkPrintStationAsync(): Promise<boolean> {
-  const sock = ensurePrintSocket();
-  const socketReady = await waitForSocketConnected(sock, 3000);
-  if (!socketReady) {
-    console.log("[print-relay] Socket connection timeout");
-    return false;
+  // Return cached result if still fresh
+  if (_stationCheckCache && Date.now() - _stationCheckCache.ts < STATION_CACHE_TTL) {
+    return _stationCheckCache.result;
   }
-  return new Promise((resolve) => {
-    const timeout = setTimeout(() => {
-      console.log("[print-relay] Station check timeout");
-      resolve(false);
-    }, 2000);
-    sock.emit("print:check-station");
-    sock.once("print:station-status", (available: boolean) => {
-      clearTimeout(timeout);
-      printStationAvailable = available;
-      console.log("[print-relay] Station available:", available);
-      resolve(available);
-    });
-  });
+  // Deduplicate concurrent callers — only one socket round-trip at a time
+  if (_stationCheckInFlight) return _stationCheckInFlight;
+
+  _stationCheckInFlight = (async () => {
+    try {
+      const sock = ensurePrintSocket();
+      const socketReady = await waitForSocketConnected(sock, 3000);
+      if (!socketReady) {
+        console.log("[print-relay] Socket connection timeout");
+        return false;
+      }
+      const result = await new Promise<boolean>((resolve) => {
+        const timeout = setTimeout(() => {
+          console.log("[print-relay] Station check timeout");
+          resolve(false);
+        }, 2000);
+        sock.emit("print:check-station");
+        sock.once("print:station-status", (available: boolean) => {
+          clearTimeout(timeout);
+          printStationAvailable = available;
+          console.log("[print-relay] Station available:", available);
+          resolve(available);
+        });
+      });
+      _stationCheckCache = { result, ts: Date.now() };
+      return result;
+    } finally {
+      _stationCheckInFlight = null;
+    }
+  })();
+
+  return _stationCheckInFlight;
+}
+
+/** Call this when the station comes online/offline so the cache doesn't serve a stale result. */
+export function invalidateStationCache(): void {
+  _stationCheckCache = null;
 }
 
 export async function remotePrint(data: SilentPrintData): Promise<boolean> {
