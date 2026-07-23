@@ -71,3 +71,9 @@ id = "Xhn2DtJsF57VmFegG6jqO"
 uri = "file://screenshots/website1-current.jpg"
 type = "image"
 title = "Current Website page"
+
+[[outputs]]
+id = "m3LFkowpXBJKGdLpD2Gvq"
+uri = "file://screenshots/website-mobile-fixed.jpg"
+type = "image"
+title = "Corrected Website mobile page"

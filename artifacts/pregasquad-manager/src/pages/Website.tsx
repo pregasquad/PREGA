@@ -15,6 +15,32 @@ interface Staff {
   gender?: string;
 }
 
+function normalizeCategories(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((category): category is string => typeof category === "string" && category.trim().length > 0)
+      .map(category => category.trim());
+  }
+  if (typeof value === "string") {
+    return value.split(",").map(category => category.trim()).filter(Boolean);
+  }
+  return [];
+}
+
+function normalizeStaff(value: unknown): Staff[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((member): member is Record<string, unknown> => typeof member === "object" && member !== null)
+    .map(member => ({
+      id: typeof member.id === "number" ? member.id : Number(member.id),
+      name: typeof member.name === "string" ? member.name : "Artiste",
+      photoUrl: typeof member.photoUrl === "string" ? member.photoUrl : null,
+      categories: normalizeCategories(member.categories),
+      color: typeof member.color === "string" ? member.color : undefined,
+      gender: typeof member.gender === "string" ? member.gender : undefined,
+    }))
+    .filter(member => Number.isFinite(member.id));
+}
+
 interface Service {
   id: number;
   name: string;
@@ -698,8 +724,8 @@ export default function Website() {
   });
 
   const { data: staffList = [] } = useQuery<Staff[]>({
-    queryKey: ["/api/staff"],
-    queryFn: () => apiFetch("/api/staff").catch(() => []),
+    queryKey: ["/api/public/staff"],
+    queryFn: () => apiFetch("/api/public/staff").then(normalizeStaff).catch(() => []),
     staleTime: 5 * 60 * 1000,
   });
 
