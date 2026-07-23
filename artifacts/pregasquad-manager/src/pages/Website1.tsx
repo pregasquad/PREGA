@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, Crown, Mail, MapPin, Clock, Phone, Menu, X } from "lucide-react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { motion, AnimatePresence, type Variants } from "framer-motion";
+import { ChevronLeft, ChevronRight, Crown, MapPin, Clock, Phone, Menu, X } from "lucide-react";
 import { Instagram } from "lucide-react";
-import { SiTiktok, SiWhatsapp } from "react-icons/si";
+import { SiWhatsapp } from "react-icons/si";
 import logoImg from "@assets/IMG_4806_1784674657228.jpeg";
 import bossPhoto from "@assets/IMG_0503_1784675435922.jpeg";
 import bossCutout from "@assets/generated_images/boss-cutout.png";
@@ -25,7 +25,119 @@ interface StaffMember {
   photo: string;
   cutout: string;
   isBoss?: boolean;
-  collabLink?: string;
+}
+
+interface WebsiteSettings {
+  businessName?: string;
+  phone?: string;
+  address?: string;
+  email?: string;
+  mapsLink?: string;
+  openingTime?: string;
+  closingTime?: string;
+  workingDays?: number[];
+  currencySymbol?: string;
+  instagramUrl?: string;
+}
+
+interface WebsiteInfo {
+  settings: WebsiteSettings;
+  services: Array<{ id: number; name: string }>;
+  bookForStaff: (staffName: string) => void;
+  bookWithoutStaff: () => void;
+  bookCurrentStaff: () => void;
+  selectStaff: (staffName: string) => void;
+  selectedStaffName?: string;
+}
+
+const defaultWebsiteInfo: WebsiteInfo = {
+  settings: { businessName: "PREGA SQUAD", workingDays: [1, 2, 3, 4, 5, 6], openingTime: "09:00", closingTime: "19:00" },
+  services: [],
+  bookForStaff: () => {},
+  bookWithoutStaff: () => {},
+  bookCurrentStaff: () => {},
+  selectStaff: () => {},
+  selectedStaffName: "THE BOSS",
+};
+
+const WebsiteInfoContext = createContext<WebsiteInfo>(defaultWebsiteInfo);
+
+function formatWhatsAppPhone(phone = "") {
+  let normalized = phone.replace(/[^0-9]/g, "");
+  if (normalized.startsWith("00")) normalized = normalized.slice(2);
+  if (normalized.startsWith("0") && normalized.length === 10) normalized = `212${normalized.slice(1)}`;
+  if (normalized.length === 9) normalized = `212${normalized}`;
+  return normalized;
+}
+
+function buildWhatsAppUrl(phone: string | undefined, message: string) {
+  const normalizedPhone = formatWhatsAppPhone(phone);
+  if (!normalizedPhone) return "";
+  return `https://wa.me/${normalizedPhone}?text=${encodeURIComponent(message)}`;
+}
+
+function WebsiteInfoProvider({ children }: { children: ReactNode }) {
+  const [settings, setSettings] = useState<WebsiteSettings>(defaultWebsiteInfo.settings);
+  const [services, setServices] = useState<Array<{ id: number; name: string }>>([]);
+  const [selectedStaffName, setSelectedStaffName] = useState(defaultWebsiteInfo.selectedStaffName);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/public/website")
+      .then(response => {
+        if (!response.ok) throw new Error(`Website data request failed: ${response.status}`);
+        return response.json();
+      })
+      .then(data => {
+        if (cancelled) return;
+        setSettings({ ...defaultWebsiteInfo.settings, ...(data.settings ?? {}) });
+        setServices(Array.isArray(data.services) ? data.services : []);
+      })
+      .catch(error => console.error("Failed to load public website settings:", error));
+    return () => { cancelled = true; };
+  }, []);
+
+  const openBooking = (staffName?: string) => {
+    const salonName = settings.businessName || "PREGA SQUAD";
+    const message = staffName
+      ? `Bonjour ${salonName} 💕\n\nJe souhaite réserver un rendez-vous avec *${staffName}*.\nPouvez-vous me proposer les services disponibles ? Merci 🌸`
+      : `Bonjour ${salonName} 💕\n\nJe souhaite réserver un rendez-vous.\nPouvez-vous me proposer les services disponibles ? Merci 🌸`;
+    const url = buildWhatsAppUrl(settings.phone, message);
+    if (url) {
+      window.open(url, "_blank", "noopener,noreferrer");
+    } else {
+      document.getElementById("visit")?.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  return (
+    <WebsiteInfoContext.Provider value={{
+      settings,
+      services,
+      bookForStaff: name => openBooking(name),
+      bookWithoutStaff: () => openBooking(),
+      bookCurrentStaff: () => openBooking(selectedStaffName),
+      selectStaff: setSelectedStaffName,
+      selectedStaffName,
+    }}>
+      {children}
+    </WebsiteInfoContext.Provider>
+  );
+}
+
+function useWebsiteInfo() {
+  return useContext(WebsiteInfoContext);
+}
+
+const dayNames = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
+function formatWorkingDays(days?: number[]) {
+  if (!days?.length) return "";
+  if (days.length === 7) return "Tous les jours";
+  const sorted = [...days].sort((a, b) => a - b);
+  if (sorted.length >= 4 && sorted.every((day, index) => index === 0 || day === sorted[index - 1] + 1)) {
+    return `${dayNames[sorted[0]]} – ${dayNames[sorted[sorted.length - 1]]}`;
+  }
+  return sorted.map(day => dayNames[day]).join(", ");
 }
 
 const staff: StaffMember[] = [
@@ -37,7 +149,6 @@ const staff: StaffMember[] = [
     photo: bossPhoto,
     cutout: bossCutout,
     isBoss: true,
-    collabLink: "mailto:contact@pregasquad.com",
   },
   {
     id: 1,
@@ -67,6 +178,7 @@ const links = [
 function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const { bookCurrentStaff, settings } = useWebsiteInfo();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
@@ -87,13 +199,13 @@ function Navbar() {
       }`}>
         <div className="container mx-auto px-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <img src={logoImg} alt="Prega Squad Logo" className="w-10 h-10 rounded-full object-cover shadow-[0_0_15px_rgba(212,0,109,0.5)]" />
-            <span className="font-bebas text-3xl tracking-widest text-primary mt-1">PREGA SQUAD</span>
+            <img src={logoImg} alt={`${settings.businessName || "Prega Squad"} Logo`} className="w-10 h-10 rounded-full object-cover shadow-[0_0_15px_rgba(212,0,109,0.5)]" />
+            <span className="font-bebas text-3xl tracking-widest text-primary mt-1">{settings.businessName || "PREGA SQUAD"}</span>
           </div>
           <div className="hidden md:flex items-center gap-10 text-sm font-semibold tracking-[0.2em] uppercase text-gray-300">
             {links.map((link) => <a key={link.href} href={link.href} className="hover:text-primary transition-colors">{link.label}</a>)}
           </div>
-          <a href="#visit" className="hidden md:inline-block bg-primary hover:bg-primary/90 text-white px-8 py-3 rounded-full text-sm font-bold tracking-widest uppercase transition-transform hover:scale-105 active:scale-95 shadow-lg shadow-primary/30">Book</a>
+          <button onClick={bookCurrentStaff} className="hidden md:inline-block bg-primary hover:bg-primary/90 text-white px-8 py-3 rounded-full text-sm font-bold tracking-widest uppercase transition-transform hover:scale-105 active:scale-95 shadow-lg shadow-primary/30">Book</button>
           <button onClick={() => setOpen(value => !value)} className="md:hidden text-white p-2 rounded-lg hover:bg-white/10 transition-colors" aria-label="Toggle menu">
             {open ? <X size={24} /> : <Menu size={24} />}
           </button>
@@ -104,7 +216,7 @@ function Navbar() {
           <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2, ease: "easeOut" }}
             className="fixed inset-x-0 top-[68px] z-40 bg-black/97 backdrop-blur-xl border-b border-white/10 flex flex-col px-6 pt-6 pb-8 gap-6 md:hidden">
             {links.map(link => <a key={link.href} href={link.href} onClick={() => setOpen(false)} className="font-bebas text-4xl tracking-widest text-white hover:text-primary transition-colors">{link.label}</a>)}
-            <a href="#visit" onClick={() => setOpen(false)} className="mt-2 bg-primary text-white text-center py-4 rounded-full font-bold tracking-widest uppercase text-sm shadow-lg shadow-primary/30">Book Now</a>
+            <button onClick={() => { setOpen(false); bookCurrentStaff(); }} className="mt-2 bg-primary text-white text-center py-4 rounded-full font-bold tracking-widest uppercase text-sm shadow-lg shadow-primary/30">Book Now</button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -128,13 +240,18 @@ function AnimatedName({ name, id }: { name: string; id: number }) {
 
 function HeroSection() {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const { bookForStaff, selectStaff } = useWebsiteInfo();
   const current = staff[currentIndex];
   const leftIndex = (currentIndex - 1 + staff.length) % staff.length;
   const rightIndex = (currentIndex + 1) % staff.length;
-  const next = () => setCurrentIndex(index => (index + 1) % staff.length);
-  const prev = () => setCurrentIndex(index => (index - 1 + staff.length) % staff.length);
+  const selectIndex = (index: number) => {
+    setCurrentIndex(index);
+    selectStaff(staff[index].name);
+  };
+  const next = () => selectIndex((currentIndex + 1) % staff.length);
+  const prev = () => selectIndex((currentIndex - 1 + staff.length) % staff.length);
 
-  const figureVariants = {
+  const figureVariants: Variants = {
     enter: { opacity: 0, scale: 0.9, filter: "blur(6px)" },
     center: {
       opacity: 1, scale: 1, filter: "blur(0px)",
@@ -146,17 +263,17 @@ function HeroSection() {
     },
     exit: { opacity: 0, scale: 1.06, filter: "blur(3px)", transition: { duration: 0.32, ease: [0.4, 0, 1, 1] as const } },
   };
-  const ghostVariants = {
+  const ghostVariants: Variants = {
     enter: { opacity: 0 },
     center: { opacity: 1, transition: { duration: 0.5, ease: "easeOut" } },
     exit: { opacity: 0, transition: { duration: 0.25 } },
   };
-  const roleVariants = {
+  const roleVariants: Variants = {
     enter: { opacity: 0, y: 10 },
     center: { opacity: 1, y: 0, transition: { delay: 0.32, duration: 0.4, ease: "easeOut" } },
     exit: { opacity: 0, y: -6, transition: { duration: 0.18 } },
   };
-  const buttonVariants = {
+  const buttonVariants: Variants = {
     enter: { opacity: 0, y: 8 },
     center: { opacity: 1, y: 0, transition: { delay: 0.46, duration: 0.35, ease: "easeOut" } },
     exit: { opacity: 0, transition: { duration: 0.15 } },
@@ -204,11 +321,11 @@ function HeroSection() {
         <AnimatePresence mode="wait">
           <motion.div key={current.id} className="text-center mb-3">
             <motion.p variants={roleVariants} initial="enter" animate="center" exit="exit" className="font-bebas tracking-[0.2em]" style={{ fontSize: "clamp(13px, 3vw, 22px)", color: "#D4006D" }}>{current.role}</motion.p>
-            {current.isBoss && <motion.a variants={buttonVariants} initial="enter" animate="center" exit="exit" href={current.collabLink || "mailto:contact@pregasquad.com"} className="inline-flex items-center gap-2 mt-2 px-5 py-2 rounded-full text-xs font-bold tracking-widest uppercase bg-primary text-white shadow-lg shadow-primary/30"><Mail size={12} />CONTACT FOR COLLAB</motion.a>}
+            {current.isBoss && <motion.button variants={buttonVariants} initial="enter" animate="center" exit="exit" onClick={() => bookForStaff(current.name)} className="inline-flex items-center gap-2 mt-2 px-5 py-2 rounded-full text-xs font-bold tracking-widest uppercase bg-primary text-white shadow-lg shadow-primary/30"><SiWhatsapp size={12} />CONTACT FOR COLLAB</motion.button>}
           </motion.div>
         </AnimatePresence>
         <div className="flex flex-col items-center gap-3 mb-4">
-          {!current.isBoss && <a href="#visit" className="font-bebas italic" style={{ fontSize: "clamp(22px,5vw,56px)", color: "#D4006D" }}>BOOK NOW &gt;</a>}
+          <button onClick={() => bookForStaff(current.name)} className="font-bebas italic" style={{ fontSize: "clamp(22px,5vw,56px)", color: "#D4006D" }}>BOOK NOW &gt;</button>
           <div className="flex items-center justify-center gap-3">
             {[prev, next].map((callback, index) => <button key={index} onClick={callback} className="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center transition-all duration-200" style={{ border: "1.5px solid #1A0A0E30", color: "#1A0A0E" }}>{index === 0 ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}</button>)}
           </div>
@@ -216,7 +333,7 @@ function HeroSection() {
         <div className="flex items-center justify-center gap-3 flex-wrap">
           {staff.map((member, index) => {
             const active = index === currentIndex;
-            return <motion.button key={member.id} onClick={() => setCurrentIndex(index)} animate={{ width: active ? 54 : 42, height: active ? 54 : 42 }} transition={{ type: "spring", stiffness: 320, damping: 28 }} className="relative flex-shrink-0">
+            return <motion.button key={member.id} onClick={() => selectIndex(index)} animate={{ width: active ? 54 : 42, height: active ? 54 : 42 }} transition={{ type: "spring", stiffness: 320, damping: 28 }} className="relative flex-shrink-0">
               {member.isBoss && <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 z-10"><Crown size={10} color={active ? "#D4006D" : "#1A0A0E80"} fill={active ? "#D4006D" : "none"} /></div>}
               <motion.div animate={{ borderColor: active ? "#D4006D" : "#1A0A0E40", opacity: active ? 1 : 0.5, boxShadow: active ? "0 0 20px #D4006D70" : "none" }} transition={{ duration: 0.3 }} className="w-full h-full rounded-full overflow-hidden border-2">
                 <img src={member.photo} alt={member.name} className="w-full h-full object-cover object-top" />
@@ -240,17 +357,28 @@ const services = [
 ];
 
 function ServicesSection() {
+  const { services, bookCurrentStaff } = useWebsiteInfo();
+  const displayedServices: Array<[string, string]> = services.length > 0
+    ? services.map(service => [service.name, "Contact us on WhatsApp to ask about this service."])
+    : [
+      ["Hair Styling", "Cuts, blowouts, and signature styling for every occasion."],
+      ["Hair Color", "Balayage, highlights, full color transformations, and gloss toning."],
+      ["Makeup", "Bridal perfection, high-fashion editorial, and everyday soft glam."],
+      ["Nail Art", "Gel extensions, acrylics, intricate nail art, and luxury pedicures."],
+      ["Skincare & Facials", "Signature glow treatments and deep hydrating facials."],
+      ["Eyebrows & Lashes", "Precision shaping, lamination, tints, and volume extensions."],
+    ];
   return <section id="services" className="py-32 bg-[#0D0D0D] relative">
     <div className="container mx-auto px-6 md:px-12 max-w-7xl">
       <motion.div initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-100px" }} className="mb-20">
         <h2 className="font-bebas text-7xl md:text-9xl text-white mb-6">SERVICES</h2><div className="w-32 h-2 bg-primary" />
       </motion.div>
       <motion.div initial="hidden" whileInView="show" viewport={{ once: true, margin: "-100px" }} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
-        {services.map(([title, description]) => <motion.div key={title} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ type: "spring", stiffness: 100 }} className="group border-t-2 border-white/10 pt-8 hover:border-primary transition-colors duration-300">
+        {displayedServices.map(([title, description]) => <motion.div key={title} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ type: "spring", stiffness: 100 }} className="group border-t-2 border-white/10 pt-8 hover:border-primary transition-colors duration-300">
           <h3 className="font-bebas text-3xl text-white mb-4 tracking-wide group-hover:text-primary transition-colors">{title}</h3><p className="text-gray-400 font-light leading-relaxed text-lg">{description}</p>
         </motion.div>)}
       </motion.div>
-      <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="mt-24 text-center"><a href="#visit" className="inline-block font-bebas text-4xl text-white hover:text-primary transition-colors border-b border-primary pb-2">BOOK A SERVICE &gt;</a></motion.div>
+      <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="mt-24 text-center"><button onClick={bookCurrentStaff} className="inline-block font-bebas text-4xl text-white hover:text-primary transition-colors border-b border-primary pb-2">BOOK A SERVICE &gt;</button></motion.div>
     </div>
   </section>;
 }
@@ -258,6 +386,7 @@ function ServicesSection() {
 function SquadSection() {
   const boss = staff.find(member => member.isBoss);
   const artists = staff.filter(member => !member.isBoss);
+  const { bookForStaff } = useWebsiteInfo();
   return <section id="squad" className="py-32 bg-[#0A0A0A] relative border-t border-white/5">
     <div className="container mx-auto px-6 md:px-12 max-w-7xl">
       <motion.div initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-100px" }} className="mb-20 text-center">
@@ -266,7 +395,7 @@ function SquadSection() {
       {boss && <motion.div initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-80px" }} className="mb-16 flex flex-col md:flex-row items-center gap-8 md:gap-14 bg-white/[0.02] border border-primary/20 rounded-2xl p-8 md:p-12 relative overflow-hidden group">
         <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent pointer-events-none" />
         <div className="relative flex-shrink-0"><div className="w-44 h-44 md:w-56 md:h-56 rounded-full overflow-hidden border-4 border-primary shadow-[0_0_40px_rgba(212,0,109,0.4)]"><img src={boss.photo} alt={boss.name} loading="eager" className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105" /></div><div className="absolute -top-2 -right-2 bg-primary rounded-full w-10 h-10 flex items-center justify-center shadow-lg shadow-primary/50"><Crown size={18} className="text-white" fill="white" /></div></div>
-        <div className="text-center md:text-left relative z-10"><div className="flex items-center gap-3 justify-center md:justify-start mb-2"><span className="bg-primary/20 border border-primary/40 text-primary text-[10px] font-bold tracking-[0.3em] px-3 py-1 rounded-full uppercase">FOUNDER &amp; BOSS</span></div><h3 className="font-bebas text-6xl md:text-7xl text-white tracking-widest leading-none mb-2">{boss.name}</h3><p className="font-bebas text-2xl text-primary tracking-[0.2em] mb-4">{boss.role}</p><p className="text-gray-400 font-light text-lg max-w-md leading-relaxed mb-6">{boss.bio}</p><a href={boss.collabLink} className="inline-flex items-center gap-2 bg-primary hover:bg-white text-white hover:text-black px-8 py-3 rounded-full font-bold tracking-widest uppercase text-sm transition-all duration-200 shadow-lg shadow-primary/40"><Mail size={16} />CONTACT FOR COLLAB</a></div>
+        <div className="text-center md:text-left relative z-10"><div className="flex items-center gap-3 justify-center md:justify-start mb-2"><span className="bg-primary/20 border border-primary/40 text-primary text-[10px] font-bold tracking-[0.3em] px-3 py-1 rounded-full uppercase">FOUNDER &amp; BOSS</span></div><h3 className="font-bebas text-6xl md:text-7xl text-white tracking-widest leading-none mb-2">{boss.name}</h3><p className="font-bebas text-2xl text-primary tracking-[0.2em] mb-4">{boss.role}</p><p className="text-gray-400 font-light text-lg max-w-md leading-relaxed mb-6">{boss.bio}</p><button onClick={() => bookForStaff(boss.name)} className="inline-flex items-center gap-2 bg-primary hover:bg-white text-white hover:text-black px-8 py-3 rounded-full font-bold tracking-widest uppercase text-sm transition-all duration-200 shadow-lg shadow-primary/40"><SiWhatsapp size={16} />CONTACT FOR COLLAB</button></div>
       </motion.div>}
       <div className={`grid gap-8 md:gap-12 ${artists.length === 1 ? "grid-cols-1 max-w-sm mx-auto" : artists.length === 2 ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1 md:grid-cols-3"}`}>
         {artists.map((member, index) => <motion.div key={member.id} initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ delay: index * 0.15 }} className="group relative">
@@ -304,36 +433,44 @@ function GallerySection() {
 }
 
 function VisitSection() {
+  const { settings, bookCurrentStaff } = useWebsiteInfo();
+  const address = settings.address || "Address not configured";
+  const hours = `${formatWorkingDays(settings.workingDays)}: ${settings.openingTime || "09:00"} – ${settings.closingTime || "19:00"}`;
   return <section id="visit" className="py-32 bg-[#0A0A0A] relative border-t border-white/5"><div className="container mx-auto px-6 md:px-12 max-w-6xl">
     <motion.div initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-100px" }} className="mb-20 text-center"><h2 className="font-bebas text-7xl md:text-9xl text-white mb-6">VISIT US</h2><div className="w-32 h-2 bg-primary mx-auto" /></motion.div>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
       <motion.div initial={{ opacity: 0, x: -50 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="space-y-12">
-        <div className="flex items-start gap-6 group"><div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors duration-300 shrink-0"><MapPin size={28} /></div><div><h3 className="font-bebas text-4xl text-white tracking-widest mb-2">LOCATION</h3><p className="text-gray-400 text-lg font-light leading-relaxed">Beauty District, City Center<br />123 Glow Avenue, Suite 400</p></div></div>
-        <div className="flex items-start gap-6 group"><div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors duration-300 shrink-0"><Clock size={28} /></div><div><h3 className="font-bebas text-4xl text-white tracking-widest mb-2">HOURS</h3><p className="text-gray-400 text-lg font-light leading-relaxed">Mon - Sat: 9:00 AM - 9:00 PM<br />Sun: 10:00 AM - 7:00 PM</p></div></div>
-        <div className="flex items-start gap-6 group"><div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors duration-300 shrink-0"><Phone size={28} /></div><div><h3 className="font-bebas text-4xl text-white tracking-widest mb-2">CONTACT</h3><p className="text-gray-400 text-lg font-light leading-relaxed">+1 (555) 789-0123<br />hello@pregasquad.com</p></div></div>
+        <div className="flex items-start gap-6 group"><div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors duration-300 shrink-0"><MapPin size={28} /></div><div><h3 className="font-bebas text-4xl text-white tracking-widest mb-2">LOCATION</h3><p className="text-gray-400 text-lg font-light leading-relaxed">{address}</p>{settings.mapsLink && <a href={settings.mapsLink} target="_blank" rel="noreferrer" className="inline-block mt-2 text-primary text-sm hover:text-white transition-colors">OPEN MAP &gt;</a>}</div></div>
+        <div className="flex items-start gap-6 group"><div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors duration-300 shrink-0"><Clock size={28} /></div><div><h3 className="font-bebas text-4xl text-white tracking-widest mb-2">HOURS</h3><p className="text-gray-400 text-lg font-light leading-relaxed">{hours}</p></div></div>
+        <div className="flex items-start gap-6 group"><div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors duration-300 shrink-0"><Phone size={28} /></div><div><h3 className="font-bebas text-4xl text-white tracking-widest mb-2">CONTACT</h3><p className="text-gray-400 text-lg font-light leading-relaxed">{settings.phone || "WhatsApp number not configured"}{settings.email && <><br />{settings.email}</>}</p></div></div>
       </motion.div>
-      <motion.div initial={{ opacity: 0, x: 50 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="bg-[#111] p-8 md:p-12 rounded-sm border-l-4 border-primary"><h3 className="font-bebas text-5xl text-white mb-6">READY TO GLOW?</h3><p className="text-gray-400 text-lg font-light mb-10 leading-relaxed">Appointments fill up fast. Secure your spot with our artists today and experience the standard in beauty.</p><button className="w-full bg-primary hover:bg-white text-white hover:text-black py-5 text-xl font-bebas tracking-[0.2em] transition-all duration-300">BOOK YOUR APPOINTMENT &gt;</button></motion.div>
+      <motion.div initial={{ opacity: 0, x: 50 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="bg-[#111] p-8 md:p-12 rounded-sm border-l-4 border-primary"><h3 className="font-bebas text-5xl text-white mb-6">READY TO GLOW?</h3><p className="text-gray-400 text-lg font-light mb-10 leading-relaxed">Appointments fill up fast. Secure your spot with our artists today and experience the standard in beauty.</p><button onClick={bookCurrentStaff} className="w-full bg-primary hover:bg-white text-white hover:text-black py-5 text-xl font-bebas tracking-[0.2em] transition-all duration-300">BOOK YOUR APPOINTMENT &gt;</button></motion.div>
     </div>
   </div></section>;
 }
 
 function Footer() {
+  const { settings } = useWebsiteInfo();
+  const socialLinks = settings.instagramUrl ? [{ href: settings.instagramUrl, label: "Instagram", icon: <Instagram size={24} /> }] : [];
+  const businessName = settings.businessName || "PREGA SQUAD";
   return <footer className="bg-black py-16 border-t border-white/10"><div className="container mx-auto px-6 md:px-12 max-w-7xl">
     <div className="flex flex-col md:flex-row justify-between items-center gap-8 mb-16">
-      <div className="flex items-center gap-4"><img src={logoImg} alt="Prega Squad Logo" className="w-12 h-12 rounded-full object-cover grayscale opacity-80 hover:grayscale-0 hover:opacity-100 transition-all" /><div><div className="font-bebas text-3xl tracking-widest text-white">PREGA SQUAD</div><div className="text-primary text-xs font-bold tracking-[0.3em] uppercase mt-1">Glow and Beyond</div></div></div>
+      <div className="flex items-center gap-4"><img src={logoImg} alt={`${businessName} Logo`} className="w-12 h-12 rounded-full object-cover grayscale opacity-80 hover:grayscale-0 hover:opacity-100 transition-all" /><div><div className="font-bebas text-3xl tracking-widest text-white">{businessName}</div><div className="text-primary text-xs font-bold tracking-[0.3em] uppercase mt-1">Glow and Beyond</div></div></div>
       <div className="flex items-center gap-8 text-sm font-semibold tracking-[0.2em] uppercase text-gray-500"><a href="#services" className="hover:text-white transition-colors">Services</a><a href="#squad" className="hover:text-white transition-colors">Squad</a><a href="#gallery" className="hover:text-white transition-colors">Gallery</a></div>
-      <div className="flex gap-6"><a href="#" className="text-gray-500 hover:text-primary transition-colors"><Instagram size={24} /></a><a href="#" className="text-gray-500 hover:text-primary transition-colors"><SiTiktok size={22} /></a><a href="#" className="text-gray-500 hover:text-primary transition-colors"><SiWhatsapp size={22} /></a></div>
+      {socialLinks.length > 0 && <div className="flex gap-6">{socialLinks.map(link => <a key={link.href} href={link.href} target="_blank" rel="noreferrer" aria-label={link.label} className="text-gray-500 hover:text-primary transition-colors">{link.icon}</a>)}</div>}
     </div>
-    <div className="flex flex-col md:flex-row justify-between items-center pt-8 border-t border-white/5 text-gray-600 text-sm font-light"><p>&copy; {new Date().getFullYear()} Prega Squad. All rights reserved.</p><div className="flex items-center gap-2 mt-4 md:mt-0"><MapPin size={14} /><span>Beauty District, City Center</span></div></div>
+    <div className="flex flex-col md:flex-row justify-between items-center pt-8 border-t border-white/5 text-gray-600 text-sm font-light"><p>&copy; {new Date().getFullYear()} {businessName}. All rights reserved.</p>{settings.address && <div className="flex items-center gap-2 mt-4 md:mt-0"><MapPin size={14} /><span>{settings.address}</span></div>}</div>
   </div></footer>;
 }
 
 export default function Website1() {
   return (
-    <div className="website1-root bg-[#0A0A0A] min-h-screen text-white overflow-x-hidden font-sans" style={{ "--primary": "329 100% 42%", "--font-sans": "'Inter', sans-serif" } as React.CSSProperties}>
-      <Navbar />
-      <main><HeroSection /><ServicesSection /><SquadSection /><GallerySection /><VisitSection /></main>
-      <Footer />
-    </div>
+    <WebsiteInfoProvider>
+      <div className="website1-root bg-[#0A0A0A] min-h-screen text-white overflow-x-hidden font-sans" style={{ "--primary": "329 100% 42%", "--font-sans": "'Inter', sans-serif" } as React.CSSProperties}>
+        <Navbar />
+        <main><HeroSection /><ServicesSection /><SquadSection /><GallerySection /><VisitSection /></main>
+        <Footer />
+      </div>
+    </WebsiteInfoProvider>
   );
 }
