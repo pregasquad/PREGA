@@ -15,6 +15,7 @@ COPY tsconfig.base.json tsconfig.json ./
 COPY lib/ lib/
 COPY artifacts/api-server/ artifacts/api-server/
 COPY artifacts/pregasquad-manager/ artifacts/pregasquad-manager/
+COPY attached_assets/ attached_assets/
 
 ENV npm_config_user_agent="pnpm/10.26.1 node/v24.0.0 linux x64"
 
