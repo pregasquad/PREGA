@@ -65,3 +65,9 @@ id = "w0N39in7xKcS_zwALCKMd"
 uri = "file://screenshots/the-squad.jpg"
 type = "image"
 title = "The Squad section"
+
+[[outputs]]
+id = "Xhn2DtJsF57VmFegG6jqO"
+uri = "file://screenshots/website1-current.jpg"
+type = "image"
+title = "Current Website page"
