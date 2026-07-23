@@ -1,8 +1,20 @@
 import { useState, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChevronLeft, ChevronRight, MapPin, Clock, Camera, Plus, Pencil, Trash2, Eye, EyeOff, Instagram } from "lucide-react";
+import { SiWhatsapp, SiTiktok } from "react-icons/si";
 import { cn } from "@/lib/utils";
 
-// ── Types ────────────────────────────────────────────────────────────────────
+// ── Types ──────────────────────────────────────────────────────────────────────
+interface Staff {
+  id: number;
+  name: string;
+  photoUrl?: string | null;
+  categories?: string[];
+  color?: string;
+  gender?: string;
+}
+
 interface Service {
   id: number;
   name: string;
@@ -39,7 +51,16 @@ interface WebsiteTestimonial {
   createdAt: string;
 }
 
-// ── Auth helpers ─────────────────────────────────────────────────────────────
+interface TestimonialFormData {
+  clientName: string;
+  clientPhotoUrl: string;
+  serviceName: string;
+  rating: number;
+  text: string;
+  isVisible: boolean;
+}
+
+// ── Auth helper ────────────────────────────────────────────────────────────────
 function isOwnerLoggedIn(): boolean {
   if (typeof window === "undefined") return false;
   const auth = sessionStorage.getItem("user_authenticated") === "true"
@@ -47,7 +68,6 @@ function isOwnerLoggedIn(): boolean {
   if (!auth) return false;
   const role = sessionStorage.getItem("current_user_role")
     || localStorage.getItem("current_user_role") || "";
-  // owners and managers can edit; also check admin_settings permission
   if (role === "owner" || role === "manager") return true;
   try {
     const perms: string[] = JSON.parse(
@@ -58,14 +78,14 @@ function isOwnerLoggedIn(): boolean {
   } catch { return false; }
 }
 
-// ── Fetch helpers ────────────────────────────────────────────────────────────
+// ── Fetch helper ───────────────────────────────────────────────────────────────
 async function apiFetch(path: string, init?: RequestInit) {
   const res = await fetch(path, { credentials: "include", ...init });
   if (!res.ok) throw new Error(`${res.status}`);
   return res.json();
 }
 
-// ── WhatsApp URL ─────────────────────────────────────────────────────────────
+// ── WhatsApp URL ───────────────────────────────────────────────────────────────
 function buildWaUrl(phone = "", message = "") {
   let n = phone.replace(/[^0-9]/g, "");
   if (n.startsWith("00")) n = n.slice(2);
@@ -74,7 +94,7 @@ function buildWaUrl(phone = "", message = "") {
   return `https://wa.me/${n}?text=${encodeURIComponent(message)}`;
 }
 
-// ── Day helpers ───────────────────────────────────────────────────────────────
+// ── Day helpers ────────────────────────────────────────────────────────────────
 const DAY_FULL = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 const DAY_SHORT = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 function fmtDays(days?: number[]) {
@@ -86,80 +106,7 @@ function fmtDays(days?: number[]) {
   return s.map(d => DAY_SHORT[d]).join(", ");
 }
 
-// ── Icons ─────────────────────────────────────────────────────────────────────
-function WAIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className={cn("w-4 h-4", className)}>
-      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-    </svg>
-  );
-}
-function PhoneIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={cn("w-4 h-4", className)}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.948V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 7V5z" />
-    </svg>
-  );
-}
-function ClockIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={cn("w-4 h-4", className)}>
-      <circle cx={12} cy={12} r={10} /><polyline points="12 6 12 12 16 14" />
-    </svg>
-  );
-}
-function MapPinIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={cn("w-4 h-4", className)}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-    </svg>
-  );
-}
-function CameraIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={cn("w-5 h-5", className)}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-      <circle cx={12} cy={13} r={3} />
-    </svg>
-  );
-}
-function PlusIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={cn("w-4 h-4", className)}>
-      <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-    </svg>
-  );
-}
-function PencilIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={cn("w-4 h-4", className)}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-    </svg>
-  );
-}
-function TrashIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={cn("w-4 h-4", className)}>
-      <polyline points="3 6 5 6 21 6" /><path strokeLinecap="round" strokeLinejoin="round" d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" /><path strokeLinecap="round" strokeLinejoin="round" d="M10 11v6M14 11v6M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
-    </svg>
-  );
-}
-function EyeIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={cn("w-4 h-4", className)}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-    </svg>
-  );
-}
-function EyeOffIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={cn("w-4 h-4", className)}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-    </svg>
-  );
-}
+// ── Stars ──────────────────────────────────────────────────────────────────────
 function Stars({ count = 5 }: { count?: number }) {
   return (
     <div className="flex gap-0.5">
@@ -172,7 +119,28 @@ function Stars({ count = 5 }: { count?: number }) {
   );
 }
 
-// ── Scrolling ticker ──────────────────────────────────────────────────────────
+// ── Staff avatar ───────────────────────────────────────────────────────────────
+function StaffAvatar({ staff, size = "md", ring = false }: { staff: Staff; size?: "sm" | "md" | "lg" | "xl"; ring?: boolean }) {
+  const sizeClass = { sm: "w-10 h-10 text-base", md: "w-16 h-16 text-xl", lg: "w-24 h-24 text-3xl", xl: "w-36 h-36 text-5xl" }[size];
+  if (staff.photoUrl) {
+    return (
+      <img
+        src={staff.photoUrl}
+        alt={staff.name}
+        className={cn(sizeClass, "rounded-full object-cover", ring && "ring-4 ring-[#e91e8c] ring-offset-2")}
+      />
+    );
+  }
+  const initials = staff.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+  return (
+    <div className={cn(sizeClass, "rounded-full flex items-center justify-center font-bold text-white", ring && "ring-4 ring-[#e91e8c] ring-offset-2")}
+      style={{ background: staff.color || "linear-gradient(135deg,#e91e8c,#9c27b0)" }}>
+      {initials}
+    </div>
+  );
+}
+
+// ── Scrolling ticker ───────────────────────────────────────────────────────────
 function ServiceTicker({ names }: { names: string[] }) {
   if (!names.length) return null;
   const items = [...names, ...names, ...names];
@@ -189,7 +157,194 @@ function ServiceTicker({ names }: { names: string[] }) {
   );
 }
 
-// ── Category pill ─────────────────────────────────────────────────────────────
+// ── Per-letter animated name (from Website1) ───────────────────────────────────
+function AnimatedName({ name, id }: { name: string; id: number }) {
+  return (
+    <span className="flex flex-wrap justify-center gap-[0.5px]">
+      {name.split("").map((ch, i) => (
+        <motion.span
+          key={`${id}-${i}`}
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ delay: i * 0.035, duration: 0.35, ease: "easeOut" }}
+          className="inline-block"
+        >
+          {ch === " " ? "\u00A0" : ch}
+        </motion.span>
+      ))}
+    </span>
+  );
+}
+
+// ── Hero Staff Carousel (Website1 design) ──────────────────────────────────────
+function StaffHero({
+  staff, phone, salonName, onBookStaff,
+}: {
+  staff: Staff[];
+  phone: string;
+  salonName: string;
+  onBookStaff: (s: Staff) => void;
+}) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  if (!staff.length) return null;
+
+  const goTo = (idx: number) => setCurrentIndex(idx);
+  const next = () => setCurrentIndex(i => (i + 1) % staff.length);
+  const prev = () => setCurrentIndex(i => (i - 1 + staff.length) % staff.length);
+  const current = staff[currentIndex];
+
+  const figureVariants = {
+    enter: { opacity: 0, scale: 0.88, filter: "blur(8px)" },
+    center: {
+      opacity: 1, scale: 1, filter: "blur(0px)",
+      transition: {
+        opacity: { duration: 0.5, ease: [0.25, 0.1, 0.25, 1] as const },
+        scale: { type: "spring" as const, stiffness: 160, damping: 22 },
+        filter: { duration: 0.35, ease: "easeOut" },
+      },
+    },
+    exit: { opacity: 0, scale: 1.06, filter: "blur(4px)", transition: { duration: 0.28 } },
+  };
+
+  const textVariants = {
+    enter: { opacity: 0, y: 12 },
+    center: { opacity: 1, y: 0, transition: { delay: 0.28, duration: 0.38, ease: "easeOut" } },
+    exit: { opacity: 0, y: -6, transition: { duration: 0.18 } },
+  };
+
+  const roleVariants = {
+    enter: { opacity: 0, y: 8 },
+    center: { opacity: 1, y: 0, transition: { delay: 0.42, duration: 0.32, ease: "easeOut" } },
+    exit: { opacity: 0, transition: { duration: 0.15 } },
+  };
+
+  const leftIdx = (currentIndex - 1 + staff.length) % staff.length;
+  const rightIdx = (currentIndex + 1) % staff.length;
+
+  return (
+    <section className="relative overflow-hidden bg-[#FFB6C1] min-h-[480px] md:min-h-[560px] flex flex-col items-center justify-end pb-8">
+      {/* Watermark */}
+      <div className="absolute inset-0 flex items-center justify-center select-none pointer-events-none">
+        <span className="text-[clamp(5rem,18vw,14rem)] font-black text-[#D4006D]/10 tracking-tighter leading-none">
+          THE SQUAD
+        </span>
+      </div>
+
+      {/* Figure area */}
+      <div className="relative w-full flex items-end justify-center" style={{ height: "340px" }}>
+        {/* Ghost left */}
+        {staff.length > 1 && (
+          <motion.div
+            className="absolute left-[5%] md:left-[12%] bottom-0 w-24 h-36 md:w-32 md:h-48 opacity-30 blur-sm pointer-events-none"
+            key={`ghost-left-${leftIdx}`}
+            initial={{ opacity: 0 }} animate={{ opacity: 0.3 }} exit={{ opacity: 0 }}
+          >
+            <StaffAvatar staff={staff[leftIdx]} size="xl" />
+          </motion.div>
+        )}
+
+        {/* Ghost right */}
+        {staff.length > 1 && (
+          <motion.div
+            className="absolute right-[5%] md:right-[12%] bottom-0 w-24 h-36 md:w-32 md:h-48 opacity-30 blur-sm pointer-events-none"
+            key={`ghost-right-${rightIdx}`}
+            initial={{ opacity: 0 }} animate={{ opacity: 0.3 }} exit={{ opacity: 0 }}
+          >
+            <StaffAvatar staff={staff[rightIdx]} size="xl" />
+          </motion.div>
+        )}
+
+        {/* Main figure */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={current.id}
+            variants={figureVariants}
+            initial="enter" animate="center" exit="exit"
+            className="absolute bottom-0 flex flex-col items-center"
+          >
+            <div className="w-40 h-40 md:w-56 md:h-56 rounded-full overflow-hidden shadow-2xl border-4 border-white/60">
+              <StaffAvatar staff={current} size="xl" />
+            </div>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      {/* Bottom info bar */}
+      <div className="relative z-10 w-full max-w-lg mx-auto px-4 mt-6 text-center space-y-2">
+        {/* Name */}
+        <div className="text-3xl md:text-4xl font-black tracking-tight text-[#1A0A0E]">
+          <AnimatePresence mode="wait">
+            <motion.div key={current.id} initial="enter" animate="center" exit="exit" variants={textVariants}>
+              <AnimatedName name={current.name} id={current.id} />
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        {/* Role (categories) */}
+        <AnimatePresence mode="wait">
+          <motion.p
+            key={`role-${current.id}`}
+            variants={roleVariants} initial="enter" animate="center" exit="exit"
+            className="text-sm font-semibold text-[#1A0A0E]/60 uppercase tracking-widest"
+          >
+            {current.categories?.join(" · ") || "Artiste"}
+          </motion.p>
+        </AnimatePresence>
+
+        {/* Book this artist */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={`btn-${current.id}`}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0, transition: { delay: 0.52, duration: 0.3 } }}
+            exit={{ opacity: 0 }}
+            className="pt-2"
+          >
+            <button
+              onClick={() => onBookStaff(current)}
+              className="inline-flex items-center gap-2 bg-[#D4006D] hover:bg-[#b0005a] text-white font-bold px-6 py-2.5 rounded-full text-sm transition-all shadow-lg shadow-pink-300/40 hover:scale-[1.03]"
+            >
+              <SiWhatsapp className="w-4 h-4" />
+              Réserver avec {current.name.split(" ")[0]}
+            </button>
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Nav controls */}
+        {staff.length > 1 && (
+          <div className="flex items-center justify-center gap-4 pt-3">
+            <button onClick={prev} className="w-9 h-9 rounded-full border border-[#1A0A0E]/20 flex items-center justify-center hover:bg-[#D4006D] hover:text-white hover:border-[#D4006D] transition-all">
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+
+            {/* Dot selectors */}
+            <div className="flex items-center gap-2">
+              {staff.map((member, idx) => (
+                <motion.button
+                  key={member.id}
+                  onClick={() => goTo(idx)}
+                  animate={{ width: idx === currentIndex ? 28 : 8 }}
+                  transition={{ type: "spring", stiffness: 320, damping: 28 }}
+                  className={cn(
+                    "h-2 rounded-full transition-colors",
+                    idx === currentIndex ? "bg-[#D4006D]" : "bg-[#1A0A0E]/30"
+                  )}
+                />
+              ))}
+            </div>
+
+            <button onClick={next} className="w-9 h-9 rounded-full border border-[#1A0A0E]/20 flex items-center justify-center hover:bg-[#D4006D] hover:text-white hover:border-[#D4006D] transition-all">
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+// ── Category pill ──────────────────────────────────────────────────────────────
 function CategoryPill({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
     <button onClick={onClick} className={cn(
@@ -199,7 +354,7 @@ function CategoryPill({ label, active, onClick }: { label: string; active: boole
   );
 }
 
-// ── Service card ──────────────────────────────────────────────────────────────
+// ── Service card ───────────────────────────────────────────────────────────────
 function ServiceCard({
   service, phone, salonName, currency, editMode, onImageUpload,
 }: {
@@ -215,7 +370,6 @@ function ServiceCard({
 
   return (
     <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 border border-pink-100/50 flex flex-col overflow-hidden group">
-      {/* Image area */}
       <div className="relative w-full h-40 bg-gradient-to-br from-pink-50 to-rose-100 flex-shrink-0">
         {service.imageUrl ? (
           <img src={service.imageUrl} alt={service.name} className="w-full h-full object-cover" />
@@ -224,35 +378,21 @@ function ServiceCard({
             {service.emoji || "💅"}
           </div>
         )}
-        {/* Edit overlay */}
         {editMode && (
           <button
             onClick={() => fileRef.current?.click()}
             className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity text-white gap-1"
-            title="Changer l'image"
           >
-            <CameraIcon className="w-7 h-7" />
+            <Camera className="w-7 h-7" />
             <span className="text-xs font-semibold">Changer l&apos;image</span>
           </button>
         )}
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={e => {
-            const file = e.target.files?.[0];
-            if (file) onImageUpload(service.id, file);
-            e.target.value = "";
-          }}
-        />
-        {/* Price badge */}
+        <input ref={fileRef} type="file" accept="image/*" className="hidden"
+          onChange={e => { const f = e.target.files?.[0]; if (f) onImageUpload(service.id, f); e.target.value = ""; }} />
         <span className="absolute top-2 right-2 font-bold text-xs px-2.5 py-1 rounded-full bg-white text-[#e91e8c] shadow border border-pink-100">
           {displayPrice}
         </span>
       </div>
-
-      {/* Body */}
       <div className="p-4 flex flex-col gap-2 flex-1">
         <h3 className="font-bold text-[#1a0a12] text-sm leading-snug">
           {service.emoji && <span className="mr-1">{service.emoji}</span>}
@@ -264,16 +404,12 @@ function ServiceCard({
         <div className="flex items-center justify-between mt-1">
           {service.duration > 0 && (
             <span className="flex items-center gap-1 text-xs text-gray-400">
-              <ClockIcon />{service.duration} min
+              <Clock className="w-3 h-3" />{service.duration} min
             </span>
           )}
-          <a
-            href={waUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="ml-auto flex items-center gap-1.5 text-xs font-semibold text-white bg-[#e91e8c] hover:bg-[#c91578] px-3 py-1.5 rounded-full transition-colors"
-          >
-            <WAIcon />Réserver
+          <a href={waUrl} target="_blank" rel="noopener noreferrer"
+            className="ml-auto flex items-center gap-1.5 text-xs font-semibold text-white bg-[#e91e8c] hover:bg-[#c91578] px-3 py-1.5 rounded-full transition-colors">
+            <SiWhatsapp className="w-3 h-3" />Réserver
           </a>
         </div>
       </div>
@@ -281,16 +417,122 @@ function ServiceCard({
   );
 }
 
-// ── Testimonial form (add / edit) ─────────────────────────────────────────────
-interface TestimonialFormData {
-  clientName: string;
-  clientPhotoUrl: string;
-  serviceName: string;
-  rating: number;
-  text: string;
-  isVisible: boolean;
+// ── Squad section ──────────────────────────────────────────────────────────────
+function SquadSection({ staff, phone, salonName, onSelectStaff }: {
+  staff: Staff[];
+  phone: string;
+  salonName: string;
+  onSelectStaff: (s: Staff) => void;
+}) {
+  if (!staff.length) return null;
+
+  return (
+    <section id="squad" className="py-16 px-4 bg-[#1a0a12]">
+      <div className="max-w-6xl mx-auto">
+        <div className="text-center mb-12">
+          <p className="text-xs font-bold tracking-[0.25em] text-[#e8a87c] uppercase mb-2">LES ARTISTES</p>
+          <h2 className="text-3xl md:text-4xl font-extrabold text-white">
+            The <span className="text-[#e91e8c] italic">Squad</span>
+          </h2>
+          <p className="text-gray-400 text-sm mt-3">Sélectionnez une artiste pour réserver directement avec elle</p>
+        </div>
+
+        <div className={cn(
+          "grid gap-6",
+          staff.length === 1 ? "grid-cols-1 max-w-xs mx-auto" :
+          staff.length === 2 ? "grid-cols-1 sm:grid-cols-2 max-w-lg mx-auto" :
+          "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+        )}>
+          {staff.map((member, idx) => {
+            const bookMsg = `Bonjour ${salonName} 💕\n\nJe souhaite réserver un rendez-vous avec *${member.name}*.\nPouvez-vous me proposer les services disponibles ? Merci 🌸`;
+            const bookUrl = buildWaUrl(phone, bookMsg);
+            return (
+              <motion.div
+                key={member.id}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: idx * 0.1, duration: 0.45 }}
+                className="bg-white/5 border border-white/10 rounded-3xl p-6 flex flex-col items-center text-center gap-4 hover:border-[#e91e8c]/40 hover:bg-white/8 transition-all group cursor-pointer"
+                onClick={() => onSelectStaff(member)}
+              >
+                <div className="relative">
+                  <div className="w-24 h-24 rounded-full overflow-hidden ring-2 ring-white/10 group-hover:ring-[#e91e8c]/60 transition-all">
+                    <StaffAvatar staff={member} size="lg" />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <h3 className="text-white font-bold text-lg">{member.name}</h3>
+                  {member.categories?.length ? (
+                    <p className="text-[#e8a87c] text-xs font-semibold uppercase tracking-wider">
+                      {member.categories.join(" · ")}
+                    </p>
+                  ) : null}
+                </div>
+
+                <a
+                  href={bookUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={e => e.stopPropagation()}
+                  className="inline-flex items-center gap-2 bg-[#e91e8c] hover:bg-[#c91578] text-white font-bold px-5 py-2 rounded-full text-sm transition-all shadow-lg shadow-pink-900/30 hover:scale-[1.04]"
+                >
+                  <SiWhatsapp className="w-4 h-4" />
+                  Réserver avec {member.name.split(" ")[0]}
+                </a>
+              </motion.div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
 }
 
+// ── Gallery section ────────────────────────────────────────────────────────────
+function GallerySection({ services }: { services: Service[] }) {
+  const withImages = services.filter(s => s.imageUrl).slice(0, 6);
+  if (!withImages.length) return null;
+
+  return (
+    <section id="gallery" className="py-16 px-4">
+      <div className="max-w-6xl mx-auto">
+        <div className="text-center mb-10">
+          <p className="text-xs font-bold tracking-[0.25em] text-[#e91e8c] uppercase mb-2">GALERIE</p>
+          <h2 className="text-3xl font-extrabold text-[#1a0a12]">
+            Nos <span className="text-[#e91e8c] italic">Réalisations</span>
+          </h2>
+          <p className="text-gray-500 text-sm mt-2">Un espace conçu pour le luxe, le confort et de superbes transformations.</p>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {withImages.map((s, idx) => (
+            <motion.div
+              key={s.id}
+              initial={{ opacity: 0, scale: 0.95 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ delay: idx * 0.07, duration: 0.4 }}
+              className={cn(
+                "relative overflow-hidden rounded-2xl group",
+                idx === 0 ? "col-span-2 row-span-2 md:h-72" : "h-40"
+              )}
+            >
+              <img src={s.imageUrl!} alt={s.name}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <span className="absolute bottom-0 left-0 right-0 text-white text-xs font-semibold text-center py-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                {s.name}
+              </span>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── Testimonial modal ──────────────────────────────────────────────────────────
 function TestimonialModal({
   initial, onSave, onClose, uploading, onPhotoUpload,
 }: {
@@ -309,85 +551,47 @@ function TestimonialModal({
     isVisible: initial?.isVisible ?? true,
   });
   const fileRef = useRef<HTMLInputElement>(null);
-
   const set = (k: keyof TestimonialFormData) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm(f => ({ ...f, [k]: e.target.value }));
 
   return (
     <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
-      <div
-        className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4"
-        onClick={e => e.stopPropagation()}
-      >
+      <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4" onClick={e => e.stopPropagation()}>
         <h3 className="font-bold text-lg text-[#1a0a12]">
           {initial ? "Modifier l'avis" : "Ajouter un avis"}
         </h3>
-
-        {/* Photo */}
         <div className="flex items-center gap-3">
-          <div
-            className="w-14 h-14 rounded-full bg-pink-50 border-2 border-pink-200 overflow-hidden flex items-center justify-center cursor-pointer flex-shrink-0 relative"
-            onClick={() => fileRef.current?.click()}
-          >
+          <div className="w-14 h-14 rounded-full bg-pink-50 border-2 border-pink-200 overflow-hidden flex items-center justify-center cursor-pointer flex-shrink-0 relative"
+            onClick={() => fileRef.current?.click()}>
             {form.clientPhotoUrl ? (
               <img src={form.clientPhotoUrl} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <CameraIcon className="text-pink-300 w-6 h-6" />
-            )}
-            {uploading && (
-              <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              </div>
-            )}
+            ) : <Camera className="text-pink-300 w-6 h-6" />}
+            {uploading && <div className="absolute inset-0 bg-black/40 flex items-center justify-center"><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /></div>}
           </div>
           <div className="flex-1">
             <p className="text-sm font-medium text-gray-700">Photo cliente</p>
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              className="text-xs text-[#e91e8c] hover:underline"
-            >
+            <button type="button" onClick={() => fileRef.current?.click()} className="text-xs text-[#e91e8c] hover:underline">
               {form.clientPhotoUrl ? "Changer la photo" : "Ajouter une photo"}
             </button>
             <input ref={fileRef} type="file" accept="image/*" className="hidden"
               onChange={e => { const f = e.target.files?.[0]; if (f) onPhotoUpload(f); e.target.value = ""; }} />
           </div>
         </div>
-
-        {/* URL fallback */}
         <div>
           <label className="text-xs font-semibold text-gray-500 block mb-1">URL photo (optionnel)</label>
-          <input
-            className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-pink-400"
-            value={form.clientPhotoUrl}
-            onChange={e => setForm(f => ({ ...f, clientPhotoUrl: e.target.value }))}
-            placeholder="https://..."
-          />
+          <input className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-pink-400"
+            value={form.clientPhotoUrl} onChange={e => setForm(f => ({ ...f, clientPhotoUrl: e.target.value }))} placeholder="https://..." />
         </div>
-
-        {/* Name */}
         <div>
           <label className="text-xs font-semibold text-gray-500 block mb-1">Nom de la cliente *</label>
-          <input
-            className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-pink-400"
-            value={form.clientName}
-            onChange={set("clientName")}
-            placeholder="Fatima Z."
-          />
+          <input className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-pink-400"
+            value={form.clientName} onChange={set("clientName")} placeholder="Fatima Z." />
         </div>
-
-        {/* Service */}
         <div>
           <label className="text-xs font-semibold text-gray-500 block mb-1">Service (optionnel)</label>
-          <input
-            className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-pink-400"
-            value={form.serviceName}
-            onChange={set("serviceName")}
-            placeholder="Pose gel complète"
-          />
+          <input className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-pink-400"
+            value={form.serviceName} onChange={set("serviceName")} placeholder="Pose gel complète" />
         </div>
-
-        {/* Stars */}
         <div>
           <label className="text-xs font-semibold text-gray-500 block mb-1">Note</label>
           <div className="flex gap-1">
@@ -400,47 +604,23 @@ function TestimonialModal({
             ))}
           </div>
         </div>
-
-        {/* Text */}
         <div>
           <label className="text-xs font-semibold text-gray-500 block mb-1">Témoignage *</label>
-          <textarea
-            className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-pink-400 resize-none"
-            rows={3}
-            value={form.text}
-            onChange={set("text") as any}
-            placeholder="Super service, résultat impeccable !"
-          />
+          <textarea className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-pink-400 resize-none"
+            rows={3} value={form.text} onChange={set("text") as any} placeholder="Super service, résultat impeccable !" />
         </div>
-
-        {/* Visibility */}
         <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={form.isVisible}
-            onChange={e => setForm(f => ({ ...f, isVisible: e.target.checked }))}
-            className="accent-pink-500 w-4 h-4"
-          />
+          <input type="checkbox" checked={form.isVisible}
+            onChange={e => setForm(f => ({ ...f, isVisible: e.target.checked }))} className="accent-pink-500 w-4 h-4" />
           <span className="text-sm text-gray-600">Visible sur la page</span>
         </label>
-
-        {/* Actions */}
         <div className="flex gap-2 pt-1">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
-          >
+          <button type="button" onClick={onClose}
+            className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
             Annuler
           </button>
-          <button
-            type="button"
-            onClick={() => {
-              if (!form.clientName.trim() || !form.text.trim()) return;
-              onSave(form);
-            }}
-            className="flex-1 py-2.5 rounded-xl bg-[#e91e8c] text-white text-sm font-semibold hover:bg-[#c91578] transition-colors"
-          >
+          <button type="button" onClick={() => { if (!form.clientName.trim() || !form.text.trim()) return; onSave(form); }}
+            className="flex-1 py-2.5 rounded-xl bg-[#e91e8c] text-white text-sm font-semibold hover:bg-[#c91578] transition-colors">
             Enregistrer
           </button>
         </div>
@@ -449,7 +629,7 @@ function TestimonialModal({
   );
 }
 
-// ── Testimonial display card ──────────────────────────────────────────────────
+// ── Testimonial card ───────────────────────────────────────────────────────────
 function TestimonialCard({
   t, editMode, onEdit, onDelete, onToggleVisibility,
 }: {
@@ -457,23 +637,17 @@ function TestimonialCard({
   onEdit: () => void; onDelete: () => void; onToggleVisibility: () => void;
 }) {
   return (
-    <div className={cn(
-      "bg-white rounded-2xl p-5 shadow-sm border border-pink-100/50 space-y-3 transition-opacity",
-      !t.isVisible && "opacity-50"
-    )}>
+    <div className={cn("bg-white rounded-2xl p-5 shadow-sm border border-pink-100/50 space-y-3 transition-opacity", !t.isVisible && "opacity-50")}>
       {editMode && (
         <div className="flex items-center justify-end gap-1 -mt-1 -mb-1">
-          <button onClick={onToggleVisibility} title={t.isVisible ? "Masquer" : "Afficher"}
-            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
-            {t.isVisible ? <EyeIcon /> : <EyeOffIcon />}
+          <button onClick={onToggleVisibility} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+            {t.isVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
           </button>
-          <button onClick={onEdit} title="Modifier"
-            className="p-1.5 rounded-lg hover:bg-pink-50 text-gray-400 hover:text-[#e91e8c] transition-colors">
-            <PencilIcon />
+          <button onClick={onEdit} className="p-1.5 rounded-lg hover:bg-pink-50 text-gray-400 hover:text-[#e91e8c] transition-colors">
+            <Pencil className="w-4 h-4" />
           </button>
-          <button onClick={onDelete} title="Supprimer"
-            className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors">
-            <TrashIcon />
+          <button onClick={onDelete} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors">
+            <Trash2 className="w-4 h-4" />
           </button>
         </div>
       )}
@@ -481,8 +655,7 @@ function TestimonialCard({
       <p className="text-gray-600 text-sm leading-relaxed italic">&ldquo;{t.text}&rdquo;</p>
       <div className="flex items-center gap-2.5 pt-2 border-t border-gray-50">
         {t.clientPhotoUrl ? (
-          <img src={t.clientPhotoUrl} alt={t.clientName}
-            className="w-9 h-9 rounded-full object-cover border border-pink-100" />
+          <img src={t.clientPhotoUrl} alt={t.clientName} className="w-9 h-9 rounded-full object-cover border border-pink-100" />
         ) : (
           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-pink-400 to-rose-500 flex items-center justify-center text-white text-sm font-bold">
             {t.clientName.charAt(0).toUpperCase()}
@@ -497,7 +670,7 @@ function TestimonialCard({
   );
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
+// ── Main Page ──────────────────────────────────────────────────────────────────
 export default function Website() {
   const [activeCategory, setActiveCategory] = useState("all");
   const [editMode, setEditMode] = useState(false);
@@ -508,14 +681,28 @@ export default function Website() {
   const canEdit = isOwnerLoggedIn();
   const qc = useQueryClient();
 
-  // ── Data fetching ──────────────────────────────────────────────────────────
+  // Refs for in-page nav
+  const heroRef = useRef<HTMLDivElement>(null);
+  const servicesRef = useRef<HTMLDivElement>(null);
+  const squadRef = useRef<HTMLDivElement>(null);
+  const galleryRef = useRef<HTMLDivElement>(null);
+  const contactRef = useRef<HTMLDivElement>(null);
+  const scrollTo = (ref: React.RefObject<HTMLDivElement>) =>
+    ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+
+  // ── Data fetching ────────────────────────────────────────────────────────────
   const { data: websiteData } = useQuery<{ settings: BusinessSettings; services: Service[] }>({
     queryKey: ["/api/public/website"],
     queryFn: () => fetch("/api/public/website").then(r => r.json()),
     staleTime: 60 * 1000,
   });
 
-  // Fetch all testimonials (including hidden) when in edit mode, public only otherwise
+  const { data: staffList = [] } = useQuery<Staff[]>({
+    queryKey: ["/api/staff"],
+    queryFn: () => apiFetch("/api/staff").catch(() => []),
+    staleTime: 5 * 60 * 1000,
+  });
+
   const { data: testimonials = [] } = useQuery<WebsiteTestimonial[]>({
     queryKey: editMode ? ["/api/website-testimonials"] : ["/api/public/website-testimonials"],
     queryFn: () => apiFetch(editMode ? "/api/website-testimonials" : "/api/public/website-testimonials").catch(() => []),
@@ -530,33 +717,42 @@ export default function Website() {
   const categories = Array.from(new Set(services.map(s => s.category || "Autres")));
   const filteredServices = activeCategory === "all" ? services : services.filter(s => (s.category || "Autres") === activeCategory);
   const tickerNames = services.map(s => s.name);
-  const waBookUrl = buildWaUrl(phone, `Bonjour ${salonName} 💕\nJe souhaite réserver un rendez-vous, merci !`);
 
-  // ── Mutations ──────────────────────────────────────────────────────────────
+  // Default book URL (no staff selected)
+  const defaultBookUrl = buildWaUrl(phone, `Bonjour ${salonName} 💕\nJe souhaite réserver un rendez-vous, merci !`);
+
+  // ── Staff-specific booking ────────────────────────────────────────────────────
+  const handleBookStaff = useCallback((staff: Staff) => {
+    const msg = `Bonjour ${salonName} 💕\n\nJe souhaite réserver un rendez-vous avec *${staff.name}*.\nPouvez-vous me proposer les services disponibles ? Merci 🌸`;
+    const url = buildWaUrl(phone, msg);
+    window.open(url, "_blank", "noopener,noreferrer");
+  }, [phone, salonName]);
+
+  const handleSelectStaff = useCallback((staff: Staff) => {
+    handleBookStaff(staff);
+  }, [handleBookStaff]);
+
+  // ── Mutations ────────────────────────────────────────────────────────────────
   const addTestimonialMut = useMutation({
     mutationFn: (data: TestimonialFormData) =>
       apiFetch("/api/website-testimonials", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["/api/website-testimonials"] }); qc.invalidateQueries({ queryKey: ["/api/public/website-testimonials"] }); setTestimonialModal(null); },
   });
-
   const updateTestimonialMut = useMutation({
     mutationFn: ({ id, ...data }: TestimonialFormData & { id: number }) =>
       apiFetch(`/api/website-testimonials/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["/api/website-testimonials"] }); qc.invalidateQueries({ queryKey: ["/api/public/website-testimonials"] }); setTestimonialModal(null); },
   });
-
   const deleteTestimonialMut = useMutation({
     mutationFn: (id: number) => apiFetch(`/api/website-testimonials/${id}`, { method: "DELETE" }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["/api/website-testimonials"] }); qc.invalidateQueries({ queryKey: ["/api/public/website-testimonials"] }); },
   });
-
   const toggleVisibilityMut = useMutation({
     mutationFn: ({ id, isVisible }: { id: number; isVisible: boolean }) =>
       apiFetch(`/api/website-testimonials/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isVisible }) }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["/api/website-testimonials"] }); },
   });
 
-  // ── Handlers ───────────────────────────────────────────────────────────────
   const handleServiceImageUpload = useCallback(async (serviceId: number, file: File) => {
     const fd = new FormData();
     fd.append("image", file);
@@ -586,40 +782,30 @@ export default function Website() {
     setPendingPhotoUrl("");
   }, [testimonialModal, pendingPhotoUrl, addTestimonialMut, updateTestimonialMut]);
 
-  // ── Refs for in-page nav ───────────────────────────────────────────────────
-  const servicesRef = useRef<HTMLDivElement>(null);
-  const aboutRef = useRef<HTMLDivElement>(null);
-  const contactRef = useRef<HTMLDivElement>(null);
-  const scrollTo = (ref: React.RefObject<HTMLDivElement>) =>
-    ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-
   const visibleTestimonials = editMode ? testimonials : testimonials.filter(t => t.isVisible);
 
   return (
-    <div className="relative bg-gradient-to-br from-pink-50 via-white to-rose-50 min-h-full overflow-y-auto" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="relative bg-white min-h-full overflow-y-auto" style={{ fontFamily: "'Inter', sans-serif" }}>
       <style>{`@keyframes ticker { 0%{transform:translateX(0)} 100%{transform:translateX(-33.333%)} }`}</style>
 
-      {/* ── Edit mode banner ───────────────────────────────────────────────── */}
+      {/* ── Edit mode banner ──────────────────────────────────────────────────── */}
       {canEdit && (
         <div className={cn(
           "sticky top-0 z-50 flex items-center justify-between gap-3 px-4 py-2.5 text-sm font-semibold transition-colors",
           editMode ? "bg-[#1a0a12] text-white" : "bg-white/90 backdrop-blur-sm border-b border-pink-100 text-gray-600"
         )}>
           <div className="flex items-center gap-2">
-            <PencilIcon className={editMode ? "text-pink-400" : "text-gray-400"} />
+            <Pencil className={cn("w-4 h-4", editMode ? "text-pink-400" : "text-gray-400")} />
             {editMode ? (
-              <span>Mode édition <span className="font-normal text-pink-300 ml-1">— survolez les éléments pour les modifier</span></span>
+              <span>Mode édition <span className="font-normal text-pink-300 ml-1">— survolez les cartes pour modifier</span></span>
             ) : (
-              <span className="text-gray-500">Vous êtes connecté(e) en tant que propriétaire</span>
+              <span className="text-gray-500">Mode aperçu du site</span>
             )}
           </div>
           <button
             onClick={() => setEditMode(e => !e)}
-            className={cn(
-              "px-4 py-1.5 rounded-full text-xs font-bold transition-all",
-              editMode
-                ? "bg-pink-500 hover:bg-pink-400 text-white"
-                : "bg-[#1a0a12] hover:bg-[#2d1520] text-white"
+            className={cn("px-4 py-1.5 rounded-full text-xs font-bold transition-all",
+              editMode ? "bg-pink-500 hover:bg-pink-400 text-white" : "bg-[#1a0a12] hover:bg-[#2d1520] text-white"
             )}
           >
             {editMode ? "✓ Quitter l'édition" : "✏️ Modifier le site"}
@@ -627,15 +813,8 @@ export default function Website() {
         </div>
       )}
 
-      {/* ── Floating WhatsApp button ───────────────────────────────────────── */}
-      <a href={waBookUrl} target="_blank" rel="noopener noreferrer"
-        className="fixed bottom-24 right-4 z-40 w-12 h-12 rounded-full bg-[#25d366] flex items-center justify-center shadow-lg hover:scale-110 transition-transform md:bottom-6"
-        title="Réserver sur WhatsApp">
-        <WAIcon className="w-6 h-6 text-white" />
-      </a>
-
-      {/* ── In-page sticky nav ─────────────────────────────────────────────── */}
-      <nav className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-pink-100/50 shadow-sm" style={{ top: canEdit ? "40px" : "0" }}>
+      {/* ── Sticky nav ────────────────────────────────────────────────────────── */}
+      <nav className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-pink-100/50 shadow-sm" style={{ top: canEdit ? "44px" : "0" }}>
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2 shrink-0">
             <img src="/logo.png" alt={salonName} className="w-8 h-8 rounded-full object-contain" />
@@ -643,83 +822,60 @@ export default function Website() {
           </div>
           <div className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-600">
             <button onClick={() => scrollTo(servicesRef)} className="hover:text-[#e91e8c] transition-colors">Services</button>
-            <button onClick={() => scrollTo(aboutRef)} className="hover:text-[#e91e8c] transition-colors">Le salon</button>
+            <button onClick={() => scrollTo(squadRef)} className="hover:text-[#e91e8c] transition-colors">The Squad</button>
+            <button onClick={() => scrollTo(galleryRef)} className="hover:text-[#e91e8c] transition-colors">Galerie</button>
             <button onClick={() => scrollTo(contactRef)} className="hover:text-[#e91e8c] transition-colors">Contact</button>
           </div>
-          <a href={waBookUrl} target="_blank" rel="noopener noreferrer"
+          <a href={defaultBookUrl} target="_blank" rel="noopener noreferrer"
             className="flex items-center gap-1.5 bg-[#e91e8c] hover:bg-[#c91578] text-white text-xs font-bold px-4 py-2 rounded-full transition-colors">
-            <WAIcon />Réserver
+            <SiWhatsapp className="w-3.5 h-3.5" />Réserver
           </a>
         </div>
       </nav>
 
-      {/* ── Hero ──────────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden">
-        <div className="max-w-6xl mx-auto px-4 py-16 md:py-24 grid md:grid-cols-2 gap-12 items-center">
-          <div className="space-y-6">
-            <div className="inline-flex items-center gap-2 bg-white/80 border border-pink-100 rounded-full px-4 py-1.5 text-xs font-semibold text-[#e91e8c] tracking-wider uppercase shadow-sm">
-              <span>✦</span>BEAUTY SALON | HAIR &amp; NAILS | AGADIR
-            </div>
-            <h1 className="text-4xl md:text-5xl font-extrabold leading-tight text-[#1a0a12]">
-              Your beauty,<br /><span className="text-[#e91e8c] italic">our passion.</span>
-            </h1>
-            <p className="text-gray-500 text-base leading-relaxed max-w-md">
-              Ongles, coiffure, maquillage et soins du visage à Agadir. Une équipe passionnée, des produits professionnels et un résultat qui vous ressemble.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <a href={waBookUrl} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-2 bg-[#e91e8c] hover:bg-[#c91578] text-white font-bold px-6 py-3 rounded-full transition-all shadow-lg shadow-pink-200 hover:scale-[1.02] text-sm">
-                <WAIcon className="w-5 h-5" />Réserver un rendez-vous
-              </a>
-              {phone && (
-                <a href={`tel:${phone}`}
-                  className="flex items-center gap-2 bg-white hover:bg-pink-50 text-[#1a0a12] font-bold px-6 py-3 rounded-full border border-pink-100 transition-all text-sm">
-                  <PhoneIcon className="w-4 h-4" />Appeler
+      {/* ── Animated Staff Hero (Website1 design) ─────────────────────────────── */}
+      <div ref={heroRef}>
+        {staffList.length > 0 ? (
+          <StaffHero
+            staff={staffList}
+            phone={phone}
+            salonName={salonName}
+            onBookStaff={handleBookStaff}
+          />
+        ) : (
+          /* Fallback hero when no staff yet */
+          <section className="relative overflow-hidden">
+            <div className="max-w-6xl mx-auto px-4 py-16 md:py-24 grid md:grid-cols-2 gap-12 items-center">
+              <div className="space-y-6">
+                <div className="inline-flex items-center gap-2 bg-white/80 border border-pink-100 rounded-full px-4 py-1.5 text-xs font-semibold text-[#e91e8c] tracking-wider uppercase shadow-sm">
+                  <span>✦</span>BEAUTY SALON | HAIR &amp; NAILS | AGADIR
+                </div>
+                <h1 className="text-4xl md:text-5xl font-extrabold leading-tight text-[#1a0a12]">
+                  Your beauty,<br /><span className="text-[#e91e8c] italic">our passion.</span>
+                </h1>
+                <p className="text-gray-500 text-base leading-relaxed max-w-md">
+                  Ongles, coiffure, maquillage et soins du visage à Agadir. Une équipe passionnée et un résultat qui vous ressemble.
+                </p>
+                <a href={defaultBookUrl} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 bg-[#e91e8c] hover:bg-[#c91578] text-white font-bold px-6 py-3 rounded-full transition-all shadow-lg shadow-pink-200 hover:scale-[1.02] text-sm">
+                  <SiWhatsapp className="w-5 h-5" />Réserver un rendez-vous
                 </a>
-              )}
+              </div>
+              <div className="relative flex items-center justify-center">
+                <div className="w-64 h-72 rounded-[2.5rem] overflow-hidden shadow-2xl bg-gradient-to-br from-pink-100 to-rose-200 flex items-center justify-center text-6xl">
+                  💅
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-4 text-sm text-gray-500">
-              <div className="flex items-center gap-2">
-                <Stars count={5} />
-                <span className="font-semibold text-gray-700">5 étoiles</span>
-              </div>
-              <span className="text-gray-300">|</span>
-              <span className="flex items-center gap-1.5"><MapPinIcon className="text-[#e91e8c]" />Au cœur d&apos;Agadir</span>
-            </div>
-          </div>
+          </section>
+        )}
+      </div>
 
-          {/* Hero visual */}
-          <div className="relative flex items-center justify-center">
-            <div className="relative w-72 h-80 md:w-80 md:h-96">
-              <div className="absolute inset-0 rounded-[2.5rem] overflow-hidden"
-                style={{ boxShadow: "0 30px 80px rgba(219,39,119,0.35)" }}>
-                <img src="/salon-hero.jpeg" alt="PREGA SQUAD salon" className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-                <span className="absolute bottom-4 left-0 right-0 flex justify-center">
-                  <span className="bg-white text-[#e91e8c] text-xs font-bold px-4 py-1.5 rounded-full shadow-lg">✦ It&apos;s a lifestyle</span>
-                </span>
-              </div>
-              {/* Floating cards */}
-              <div className="absolute -top-6 -left-8 z-10 bg-white/90 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-xl border border-pink-100/50">
-                <p className="font-bold text-[#1a0a12] text-sm">{services.length}+ services</p>
-                <p className="text-xs text-gray-400 mt-0.5">disponibles</p>
-              </div>
-              <div className="absolute -bottom-4 -right-6 z-10 bg-white/90 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-xl border border-pink-100/50">
-                <p className="font-bold text-[#1a0a12] text-sm">{settings?.openingTime || "09:00"} – {settings?.closingTime || "19:00"}</p>
-                <p className="text-xs text-gray-400 mt-0.5">Ouvert aujourd&apos;hui</p>
-              </div>
-              <div className="absolute -top-2 -right-4 w-16 h-16 rounded-2xl z-10 shadow-lg"
-                style={{ background: "linear-gradient(135deg,#f6d365 0%,#c8a951 100%)" }} />
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* ── Ticker ────────────────────────────────────────────────────────────── */}
+      <ServiceTicker names={tickerNames.length > 0 ? tickerNames : ["Maquillage", "Coiffure", "Ongles", "Soins du visage", "Extensions de cils", "Nail art", "Manucure"]} />
 
-      {/* ── Ticker ────────────────────────────────────────────────────────── */}
-      <ServiceTicker names={tickerNames.length > 0 ? tickerNames : ["Maquillage", "Coiffure", "Ongles", "Soins du visage", "Extensions de cils", "Nail art", "Manucure", "Balayage"]} />
-
-      {/* ── Services ──────────────────────────────────────────────────────── */}
-      <section ref={servicesRef} className="py-16 px-4">
+      {/* ── Services ──────────────────────────────────────────────────────────── */}
+      <section ref={servicesRef} id="services" className="py-16 px-4 bg-gradient-to-br from-pink-50/50 via-white to-rose-50/30">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-10 space-y-2">
             <p className="text-xs font-bold tracking-[0.2em] text-[#e91e8c] uppercase">NOS PRESTATIONS</p>
@@ -732,7 +888,6 @@ export default function Website() {
               </p>
             )}
           </div>
-
           {categories.length > 1 && (
             <div className="flex flex-wrap justify-center gap-2 mb-8">
               <CategoryPill label="Tout" active={activeCategory === "all"} onClick={() => setActiveCategory("all")} />
@@ -741,19 +896,11 @@ export default function Website() {
               ))}
             </div>
           )}
-
           {filteredServices.length > 0 ? (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredServices.map(s => (
-                <ServiceCard
-                  key={s.id}
-                  service={s}
-                  phone={phone}
-                  salonName={salonName}
-                  currency={currency}
-                  editMode={editMode}
-                  onImageUpload={handleServiceImageUpload}
-                />
+                <ServiceCard key={s.id} service={s} phone={phone} salonName={salonName} currency={currency}
+                  editMode={editMode} onImageUpload={handleServiceImageUpload} />
               ))}
             </div>
           ) : (
@@ -765,23 +912,28 @@ export default function Website() {
         </div>
       </section>
 
-      {/* ── About ─────────────────────────────────────────────────────────── */}
-      <section ref={aboutRef} className="py-16 px-4 bg-[#1a0a12]">
+      {/* ── The Squad ─────────────────────────────────────────────────────────── */}
+      <div ref={squadRef}>
+        <SquadSection staff={staffList} phone={phone} salonName={salonName} onSelectStaff={handleSelectStaff} />
+      </div>
+
+      {/* ── About salon ───────────────────────────────────────────────────────── */}
+      <section className="py-16 px-4 bg-gradient-to-br from-pink-50 to-rose-50">
         <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12 items-center">
           <div className="space-y-5">
-            <p className="text-xs font-bold tracking-[0.2em] text-[#e8a87c] uppercase">LE SALON</p>
-            <h2 className="text-3xl font-extrabold text-white">
+            <p className="text-xs font-bold tracking-[0.2em] text-[#e91e8c] uppercase">LE SALON</p>
+            <h2 className="text-3xl font-extrabold text-[#1a0a12]">
               Un espace dédié à<br /><span className="text-[#e91e8c]">votre beauté</span>
             </h2>
-            <p className="text-gray-400 leading-relaxed text-sm">
+            <p className="text-gray-500 leading-relaxed text-sm">
               {salonName} est votre refuge beauté à Agadir. Nous proposons des prestations haut de gamme dans une ambiance chaleureuse et élégante.
             </p>
             <div className="grid grid-cols-2 gap-4 pt-2">
-              <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
+              <div className="bg-white rounded-2xl p-4 border border-pink-100 shadow-sm">
                 <div className="text-2xl font-extrabold text-[#e91e8c]">{services.length}+</div>
                 <div className="text-xs text-gray-400 mt-1">Prestations disponibles</div>
               </div>
-              <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
+              <div className="bg-white rounded-2xl p-4 border border-pink-100 shadow-sm">
                 <div className="text-2xl font-extrabold text-[#e91e8c]">5★</div>
                 <div className="text-xs text-gray-400 mt-1">Note client Google</div>
               </div>
@@ -793,10 +945,10 @@ export default function Website() {
               { icon: "✨", title: "Expertise & passion", desc: "Notre équipe se forme continuellement aux dernières tendances beauté." },
               { icon: "🤍", title: "Votre satisfaction", desc: "Votre confort et votre satisfaction sont notre priorité absolue." },
             ].map(item => (
-              <div key={item.title} className="flex gap-4 bg-white/5 rounded-2xl p-4 border border-white/10 hover:border-pink-500/30 transition-colors">
+              <div key={item.title} className="flex gap-4 bg-white rounded-2xl p-4 border border-pink-100/50 shadow-sm hover:border-pink-300/50 transition-colors">
                 <span className="text-2xl shrink-0">{item.icon}</span>
                 <div>
-                  <p className="font-bold text-white text-sm">{item.title}</p>
+                  <p className="font-bold text-[#1a0a12] text-sm">{item.title}</p>
                   <p className="text-xs text-gray-400 mt-1 leading-relaxed">{item.desc}</p>
                 </div>
               </div>
@@ -805,8 +957,13 @@ export default function Website() {
         </div>
       </section>
 
-      {/* ── Testimonials ──────────────────────────────────────────────────── */}
-      <section className="py-16 px-4">
+      {/* ── Gallery ───────────────────────────────────────────────────────────── */}
+      <div ref={galleryRef}>
+        <GallerySection services={services} />
+      </div>
+
+      {/* ── Testimonials ──────────────────────────────────────────────────────── */}
+      <section className="py-16 px-4 bg-gradient-to-br from-pink-50/50 to-white">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-10 space-y-2">
             <p className="text-xs font-bold tracking-[0.2em] text-[#e91e8c] uppercase">AVIS CLIENTS</p>
@@ -814,36 +971,27 @@ export default function Website() {
               Ce que disent nos <span className="text-[#e91e8c] italic">clientes</span>
             </h2>
           </div>
-
           {visibleTestimonials.length > 0 ? (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {visibleTestimonials.map(t => (
-                <TestimonialCard
-                  key={t.id}
-                  t={t}
-                  editMode={editMode}
+                <TestimonialCard key={t.id} t={t} editMode={editMode}
                   onEdit={() => { setPendingPhotoUrl(""); setTestimonialModal(t); }}
                   onDelete={() => { if (confirm("Supprimer cet avis ?")) deleteTestimonialMut.mutate(t.id); }}
-                  onToggleVisibility={() => toggleVisibilityMut.mutate({ id: t.id, isVisible: !t.isVisible })}
-                />
+                  onToggleVisibility={() => toggleVisibilityMut.mutate({ id: t.id, isVisible: !t.isVisible })} />
               ))}
               {editMode && (
-                <button
-                  onClick={() => { setPendingPhotoUrl(""); setTestimonialModal("add"); }}
-                  className="rounded-2xl border-2 border-dashed border-pink-200 hover:border-[#e91e8c] bg-pink-50/50 hover:bg-pink-50 transition-all flex flex-col items-center justify-center gap-2 text-[#e91e8c] min-h-[180px] p-5"
-                >
-                  <PlusIcon className="w-8 h-8" />
+                <button onClick={() => { setPendingPhotoUrl(""); setTestimonialModal("add"); }}
+                  className="rounded-2xl border-2 border-dashed border-pink-200 hover:border-[#e91e8c] bg-pink-50/50 hover:bg-pink-50 transition-all flex flex-col items-center justify-center gap-2 text-[#e91e8c] min-h-[180px] p-5">
+                  <Plus className="w-8 h-8" />
                   <span className="text-sm font-semibold">Ajouter un avis</span>
                 </button>
               )}
             </div>
           ) : editMode ? (
             <div className="flex justify-center">
-              <button
-                onClick={() => { setPendingPhotoUrl(""); setTestimonialModal("add"); }}
-                className="rounded-2xl border-2 border-dashed border-pink-200 hover:border-[#e91e8c] bg-pink-50/50 hover:bg-pink-50 transition-all flex flex-col items-center justify-center gap-2 text-[#e91e8c] w-72 min-h-[180px] p-5"
-              >
-                <PlusIcon className="w-8 h-8" />
+              <button onClick={() => { setPendingPhotoUrl(""); setTestimonialModal("add"); }}
+                className="rounded-2xl border-2 border-dashed border-pink-200 hover:border-[#e91e8c] bg-pink-50/50 hover:bg-pink-50 transition-all flex flex-col items-center justify-center gap-2 text-[#e91e8c] w-72 min-h-[180px] p-5">
+                <Plus className="w-8 h-8" />
                 <span className="text-sm font-semibold">Ajouter le premier avis</span>
               </button>
             </div>
@@ -851,53 +999,68 @@ export default function Website() {
         </div>
       </section>
 
-      {/* ── Contact ───────────────────────────────────────────────────────── */}
-      <section ref={contactRef} className="py-16 px-4 bg-gradient-to-br from-pink-50 to-rose-100">
+      {/* ── Contact & Hours ───────────────────────────────────────────────────── */}
+      <section ref={contactRef} id="visit" className="py-16 px-4 bg-[#1a0a12]">
         <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12 items-center">
           <div className="space-y-5">
-            <p className="text-xs font-bold tracking-[0.2em] text-[#e91e8c] uppercase">CONTACT &amp; HORAIRES</p>
-            <h2 className="text-3xl font-extrabold text-[#1a0a12]">Prête à vous sublimer ?</h2>
-            <p className="text-gray-500 text-sm leading-relaxed">Réservez directement via WhatsApp ou appelez-nous.</p>
+            <p className="text-xs font-bold tracking-[0.2em] text-[#e8a87c] uppercase">CONTACT &amp; HORAIRES</p>
+            <h2 className="text-3xl font-extrabold text-white">Prête à vous sublimer ?</h2>
+            <p className="text-gray-400 text-sm leading-relaxed">Réservez directement via WhatsApp ou venez nous rendre visite.</p>
             <div className="space-y-3">
               {phone && (
-                <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center shadow-sm"><WAIcon className="text-[#25d366]" /></div>
+                <div className="flex items-center gap-3 text-sm text-gray-300">
+                  <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center"><SiWhatsapp className="w-4 h-4 text-[#25d366]" /></div>
                   <span>{phone}</span>
                 </div>
               )}
               {settings?.address && (
-                <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center shadow-sm"><MapPinIcon className="text-[#e91e8c]" /></div>
+                <div className="flex items-center gap-3 text-sm text-gray-300">
+                  <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center"><MapPin className="w-4 h-4 text-[#e91e8c]" /></div>
                   <span>{settings.address}</span>
                 </div>
               )}
-              <div className="flex items-center gap-3 text-sm text-gray-600">
-                <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center shadow-sm"><ClockIcon className="text-[#e91e8c]" /></div>
+              <div className="flex items-center gap-3 text-sm text-gray-300">
+                <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center"><Clock className="w-4 h-4 text-[#e91e8c]" /></div>
                 <span>{fmtDays(settings?.workingDays)} · {settings?.openingTime || "09:00"} – {settings?.closingTime || "19:00"}</span>
               </div>
-              {settings?.email && (
-                <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center shadow-sm">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-[#e91e8c]">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                  <span>{settings.email}</span>
-                </div>
-              )}
             </div>
           </div>
 
           <div className="rounded-3xl p-8 text-center space-y-5 shadow-2xl"
             style={{ background: "linear-gradient(145deg,#f472b6 0%,#ec4899 40%,#db2777 100%)" }}>
             <div className="w-16 h-16 mx-auto rounded-full bg-white/20 flex items-center justify-center">
-              <WAIcon className="w-8 h-8 text-white" />
+              <SiWhatsapp className="w-8 h-8 text-white" />
             </div>
             <h3 className="text-xl font-extrabold text-white">Réserver maintenant</h3>
-            <p className="text-pink-100 text-sm leading-relaxed">Envoyez un message WhatsApp et réservez en quelques secondes.</p>
-            <a href={waBookUrl} target="_blank" rel="noopener noreferrer"
+            <p className="text-pink-100 text-sm leading-relaxed">
+              Envoyez un message WhatsApp et réservez en quelques secondes.
+            </p>
+
+            {/* Staff quick-select */}
+            {staffList.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-pink-200 text-xs font-semibold uppercase tracking-wider">Choisir une artiste</p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {staffList.map(member => {
+                    const msg = `Bonjour ${salonName} 💕\n\nJe souhaite réserver un rendez-vous avec *${member.name}*.\nPouvez-vous me proposer les services disponibles ? Merci 🌸`;
+                    const url = buildWaUrl(phone, msg);
+                    return (
+                      <a key={member.id} href={url} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white text-xs font-bold px-3 py-1.5 rounded-full transition-all border border-white/20 hover:border-white/40">
+                        <div className="w-5 h-5 rounded-full overflow-hidden shrink-0">
+                          <StaffAvatar staff={member} size="sm" />
+                        </div>
+                        {member.name.split(" ")[0]}
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <a href={defaultBookUrl} target="_blank" rel="noopener noreferrer"
               className="inline-flex items-center gap-2 bg-white text-[#e91e8c] font-bold px-8 py-3 rounded-full hover:scale-[1.03] transition-transform shadow-lg text-sm">
-              <WAIcon className="text-[#25d366]" />Envoyer un message
+              <SiWhatsapp className="text-[#25d366] w-4 h-4" />Envoyer un message
             </a>
             {settings?.mapsLink && (
               <div className="pt-1">
@@ -911,17 +1074,42 @@ export default function Website() {
         </div>
       </section>
 
-      {/* ── Footer ────────────────────────────────────────────────────────── */}
-      <footer className="bg-[#1a0a12] py-8 px-4 text-center space-y-3">
-        <div className="flex items-center justify-center gap-2">
-          <img src="/logo.png" alt={salonName} className="w-8 h-8 rounded-full object-contain" />
-          <span className="text-pink-400 font-bold">{salonName}</span>
+      {/* ── Footer ────────────────────────────────────────────────────────────── */}
+      <footer className="bg-[#0f0608] py-10 px-4">
+        <div className="max-w-6xl mx-auto flex flex-col items-center gap-5 text-center">
+          <div className="flex items-center gap-2">
+            <img src="/logo.png" alt={salonName} className="w-10 h-10 rounded-full object-contain" />
+            <span className="text-pink-400 font-bold text-lg">{salonName}</span>
+          </div>
+          <p className="text-gray-500 text-xs">Beauty Salon · Agadir, Maroc</p>
+          <div className="flex items-center gap-4">
+            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer"
+              className="w-9 h-9 rounded-full bg-white/5 hover:bg-[#e91e8c]/20 border border-white/10 hover:border-[#e91e8c]/40 flex items-center justify-center transition-all">
+              <Instagram className="w-4 h-4 text-gray-400 hover:text-[#e91e8c]" />
+            </a>
+            <a href="https://tiktok.com" target="_blank" rel="noopener noreferrer"
+              className="w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center transition-all">
+              <SiTiktok className="w-4 h-4 text-gray-400" />
+            </a>
+            {phone && (
+              <a href={defaultBookUrl} target="_blank" rel="noopener noreferrer"
+                className="w-9 h-9 rounded-full bg-[#25d366]/10 hover:bg-[#25d366]/20 border border-[#25d366]/20 flex items-center justify-center transition-all">
+                <SiWhatsapp className="w-4 h-4 text-[#25d366]" />
+              </a>
+            )}
+          </div>
+          <p className="text-gray-600 text-xs">© {new Date().getFullYear()} {salonName} · Tous droits réservés</p>
         </div>
-        <p className="text-gray-500 text-xs">Beauty Salon · Agadir, Maroc</p>
-        <p className="text-gray-600 text-xs">© {new Date().getFullYear()} {salonName} · Tous droits réservés</p>
       </footer>
 
-      {/* ── Testimonial modal ─────────────────────────────────────────────── */}
+      {/* ── Floating WhatsApp button ───────────────────────────────────────────── */}
+      <a href={defaultBookUrl} target="_blank" rel="noopener noreferrer"
+        className="fixed bottom-24 right-4 z-40 w-12 h-12 rounded-full bg-[#25d366] flex items-center justify-center shadow-lg hover:scale-110 transition-transform md:bottom-6"
+        title="Réserver sur WhatsApp">
+        <SiWhatsapp className="w-6 h-6 text-white" />
+      </a>
+
+      {/* ── Testimonial modal ──────────────────────────────────────────────────── */}
       {testimonialModal && (
         <TestimonialModal
           initial={testimonialModal !== "add" ? {
@@ -935,18 +1123,9 @@ export default function Website() {
           onSave={handleSaveTestimonial}
           onClose={() => { setTestimonialModal(null); setPendingPhotoUrl(""); }}
           uploading={photoUploading}
-          onPhotoUpload={file => {
-            handleTestimonialPhotoUpload(file).then(() => {
-              // photo url set in state via setPendingPhotoUrl
-            });
-          }}
+          onPhotoUpload={file => { handleTestimonialPhotoUpload(file); }}
         />
       )}
-      {/* Reflect uploaded photo URL back into modal */}
-      {pendingPhotoUrl && testimonialModal && typeof testimonialModal === "object" && (() => {
-        // side-effect: keep pending photo in sync — handled by onSave
-        return null;
-      })()}
     </div>
   );
 }

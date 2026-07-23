@@ -13,7 +13,7 @@ import {
   Package,
   BarChart3, 
   UserCircle,
-  ExternalLink,
+  Globe,
   Wallet,
   LogOut,
   ShieldCheck,
@@ -68,7 +68,7 @@ const NAV_ITEMS = [
   { labelKey: "nav.whatsapp", href: "/whatsapp", icon: MessageCircle, permission: "admin_settings" },
   { labelKey: "nav.logs", href: "/logs", icon: Terminal, permission: "admin_settings" },
   { labelKey: "nav.tombola", href: "/tombola", icon: Sparkles, permission: null },
-  { labelKey: "nav.website", href: "/website", icon: ExternalLink, permission: "admin_settings" },
+  { labelKey: "nav.website", href: "/website", icon: Globe, permission: "admin_settings" },
   { labelKey: "nav.adminSettings", href: "/admin-settings", icon: Settings, permission: "admin_settings" },
   { labelKey: "nav.booking", href: "/booking", icon: ExternalLink, external: true, permission: null },
 ];
