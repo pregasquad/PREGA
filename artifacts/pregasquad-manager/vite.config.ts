@@ -22,6 +22,7 @@ export default defineConfig({
       includeAssets: ['icon-192.png', 'icon-512.png'],
       injectManifest: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
       },
       manifest: {
         name: 'PREGA SQUAD Manager',

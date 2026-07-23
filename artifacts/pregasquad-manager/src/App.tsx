@@ -39,7 +39,7 @@ const NotFound = lazy(() => import("@/pages/not-found"));
 const StaffPortal = lazy(() => import("@/pages/StaffPortal"));
 const Tombola = lazy(() => import("@/pages/Tombola"));
 const POS = lazy(() => import("@/pages/POS"));
-const Website = lazy(() => import("@/pages/Website"));
+const Website = lazy(() => import("@/pages/Website1"));
 
 // Applies body-level user-select based on the allowTextSelection setting
 function GlobalStyleApplier() {

@@ -4,3 +4,4 @@
 - [Permission security fix](permission-security-fix.md) — empty permissions array must deny access, not grant full access
 - [Database bootstrap with existing tables](database-bootstrap-existing-tables.md) — apply committed migrations idempotently when auxiliary tables already exist; noninteractive Drizzle push can prompt and fail
 - [Splash screen debugging](splash-screen-debugging.md) — a persistent static loader can mask an early React runtime exception; inspect browser exceptions before investigating route data
+- [Website1 page sync](website1-page-sync.md) — keep the public `/website` experience aligned with the pinned Website1 repository design and local assets
