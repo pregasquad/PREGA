@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { ChevronLeft, ChevronRight, Crown, MapPin, Clock, Phone, Menu, X } from "lucide-react";
 import { Instagram } from "lucide-react";
@@ -42,7 +42,7 @@ interface WebsiteSettings {
 
 interface WebsiteInfo {
   settings: WebsiteSettings;
-  services: Array<{ id: number; name: string }>;
+  services: Array<{ id: number; name: string; category?: string | null; emoji?: string | null; price?: number; duration?: number; isStartingPrice?: boolean }>;
   bookForStaff: (staffName: string) => void;
   bookWithoutStaff: () => void;
   bookCurrentStaff: () => void;
@@ -78,7 +78,7 @@ function buildWhatsAppUrl(phone: string | undefined, message: string) {
 
 function WebsiteInfoProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<WebsiteSettings>(defaultWebsiteInfo.settings);
-  const [services, setServices] = useState<Array<{ id: number; name: string }>>([]);
+  const [services, setServices] = useState<Array<{ id: number; name: string; category?: string | null; emoji?: string | null; price?: number; duration?: number; isStartingPrice?: boolean }>>([]);
   const [selectedStaffName, setSelectedStaffName] = useState(defaultWebsiteInfo.selectedStaffName);
 
   useEffect(() => {
@@ -347,40 +347,104 @@ function HeroSection() {
   );
 }
 
-const services = [
-  ["Hair Styling", "Cuts, blowouts, and signature styling for every occasion."],
-  ["Hair Color", "Balayage, highlights, full color transformations, and gloss toning."],
-  ["Makeup", "Bridal perfection, high-fashion editorial, and everyday soft glam."],
-  ["Nail Art", "Gel extensions, acrylics, intricate nail art, and luxury pedicures."],
-  ["Skincare & Facials", "Signature glow treatments and deep hydrating facials."],
-  ["Eyebrows & Lashes", "Precision shaping, lamination, tints, and volume extensions."],
+const FALLBACK_SERVICES = [
+  { id: -1, name: "Coupe & Brushing", category: "Cheveux", emoji: "✂️" },
+  { id: -2, name: "Balayage & Couleur", category: "Cheveux", emoji: "🎨" },
+  { id: -3, name: "Lissage & Kératine", category: "Cheveux", emoji: "✨" },
+  { id: -4, name: "Maquillage Mariée", category: "Maquillage", emoji: "💄" },
+  { id: -5, name: "Maquillage Soirée", category: "Maquillage", emoji: "💋" },
+  { id: -6, name: "Pose Gel & Acrylique", category: "Ongles", emoji: "💅" },
+  { id: -7, name: "Nail Art", category: "Ongles", emoji: "🌸" },
+  { id: -8, name: "Soin Visage", category: "Soins", emoji: "🧖" },
+  { id: -9, name: "Épilation", category: "Soins", emoji: "🌿" },
+  { id: -10, name: "Sourcils & Cils", category: "Soins", emoji: "👁️" },
 ];
 
 function ServicesSection() {
-  const { services, bookCurrentStaff } = useWebsiteInfo();
-  const displayedServices: Array<[string, string]> = services.length > 0
-    ? services.map(service => [service.name, "Contact us on WhatsApp to ask about this service."])
-    : [
-      ["Hair Styling", "Cuts, blowouts, and signature styling for every occasion."],
-      ["Hair Color", "Balayage, highlights, full color transformations, and gloss toning."],
-      ["Makeup", "Bridal perfection, high-fashion editorial, and everyday soft glam."],
-      ["Nail Art", "Gel extensions, acrylics, intricate nail art, and luxury pedicures."],
-      ["Skincare & Facials", "Signature glow treatments and deep hydrating facials."],
-      ["Eyebrows & Lashes", "Precision shaping, lamination, tints, and volume extensions."],
-    ];
-  return <section id="services" className="py-32 bg-[#0D0D0D] relative">
-    <div className="container mx-auto px-6 md:px-12 max-w-7xl">
-      <motion.div initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-100px" }} className="mb-20">
-        <h2 className="font-bebas text-7xl md:text-9xl text-white mb-6">SERVICES</h2><div className="w-32 h-2 bg-primary" />
-      </motion.div>
-      <motion.div initial="hidden" whileInView="show" viewport={{ once: true, margin: "-100px" }} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
-        {displayedServices.map(([title, description]) => <motion.div key={title} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ type: "spring", stiffness: 100 }} className="group border-t-2 border-white/10 pt-8 hover:border-primary transition-colors duration-300">
-          <h3 className="font-bebas text-3xl text-white mb-4 tracking-wide group-hover:text-primary transition-colors">{title}</h3><p className="text-gray-400 font-light leading-relaxed text-lg">{description}</p>
-        </motion.div>)}
-      </motion.div>
-      <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="mt-24 text-center"><button onClick={bookCurrentStaff} className="inline-block font-bebas text-4xl text-white hover:text-primary transition-colors border-b border-primary pb-2">BOOK A SERVICE &gt;</button></motion.div>
-    </div>
-  </section>;
+  const { services: apiServices, bookCurrentStaff } = useWebsiteInfo();
+  const services = apiServices.length > 0 ? apiServices : FALLBACK_SERVICES;
+
+  const categories = useMemo(() => {
+    const cats: string[] = [];
+    for (const s of services) {
+      const cat = s.category ?? "Autres";
+      if (!cats.includes(cat)) cats.push(cat);
+    }
+    return cats;
+  }, [services]);
+
+  const [activeCategory, setActiveCategory] = useState<string>("");
+
+  // Reset to first category when categories change
+  const effectiveActive = categories.includes(activeCategory) ? activeCategory : (categories[0] ?? "");
+
+  const filtered = useMemo(
+    () => services.filter(s => (s.category ?? "Autres") === effectiveActive),
+    [services, effectiveActive],
+  );
+
+  return (
+    <section id="services" className="py-32 bg-[#0D0D0D] relative">
+      <div className="container mx-auto px-6 md:px-12 max-w-7xl">
+        {/* Heading */}
+        <motion.div initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-100px" }} className="mb-16">
+          <h2 className="font-bebas text-7xl md:text-9xl text-white mb-6">SERVICES</h2>
+          <div className="w-32 h-2 bg-primary" />
+        </motion.div>
+
+        {/* Category tabs */}
+        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="flex flex-wrap gap-3 mb-14">
+          {categories.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setActiveCategory(cat)}
+              className={`font-bebas text-xl tracking-widest px-6 py-2 border-b-2 transition-all duration-200 ${
+                cat === effectiveActive
+                  ? "text-primary border-primary"
+                  : "text-gray-400 border-transparent hover:text-white hover:border-white/30"
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </motion.div>
+
+        {/* Services grid for active category */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={effectiveActive}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25 }}
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12"
+          >
+            {filtered.map(service => (
+              <div key={service.id} className="group border-t-2 border-white/10 pt-8 hover:border-primary transition-colors duration-300">
+                <div className="flex items-center gap-3 mb-3">
+                  {service.emoji && <span className="text-2xl">{service.emoji}</span>}
+                  <h3 className="font-bebas text-3xl text-white tracking-wide group-hover:text-primary transition-colors">{service.name}</h3>
+                </div>
+                {(service.price != null && service.price > 0) && (
+                  <p className="text-primary font-bebas text-xl tracking-wide">
+                    {service.isStartingPrice ? "À partir de " : ""}{service.price} MAD
+                    {service.duration ? <span className="text-gray-500 text-base ml-2">· {service.duration} min</span> : null}
+                  </p>
+                )}
+              </div>
+            ))}
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Book CTA */}
+        <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="mt-20 text-center">
+          <button onClick={bookCurrentStaff} className="inline-block font-bebas text-4xl text-white hover:text-primary transition-colors border-b border-primary pb-2">
+            BOOK A SERVICE &gt;
+          </button>
+        </motion.div>
+      </div>
+    </section>
+  );
 }
 
 function SquadSection() {
