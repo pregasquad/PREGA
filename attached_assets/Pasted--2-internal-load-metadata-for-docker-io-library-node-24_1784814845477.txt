@@ -1,0 +1,200 @@
+#2 [internal] load metadata for docker.io/library/node:24-slim
+#2 DONE 2.1s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 2B done
+#3 DONE 0.0s
+
+#4 [internal] load build context
+#4 DONE 0.0s
+
+#5 [base  1/12] FROM docker.io/library/node:24-slim@sha256:6f7b03f7c2c8e2e784dcf9295400527b9b1270fd37b7e9a7285cf83b6951452d
+#5 resolve docker.io/library/node:24-slim@sha256:6f7b03f7c2c8e2e784dcf9295400527b9b1270fd37b7e9a7285cf83b6951452d done
+#5 DONE 0.0s
+
+#6 [auth] k-e7439398-3c51-4910-ae36-64250f99e91e/2e832d5a-5224-456c-9d97-81a2f4b02a1c-cache:pull token for registry01.prod.koyeb.com
+#6 DONE 0.0s
+
+#7 importing cache manifest from registry01.prod.koyeb.com/k-e7439398-3c51-4910-ae36-64250f99e91e/2e832d5a-5224-456c-9d97-81a2f4b02a1c-cache:latest
+#7 inferred cache manifest type: application/vnd.oci.image.manifest.v1+json done
+#7 DONE 0.5s
+
+#4 [internal] load build context
+#4 transferring context: 41.32MB 0.2s done
+#4 DONE 0.3s
+
+#8 [base  3/12] RUN corepack enable && corepack prepare pnpm@10.26.1 --activate
+#8 CACHED
+
+#9 [base  4/12] WORKDIR /app
+#9 CACHED
+
+#10 [base  2/12] RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
+#10 CACHED
+
+#11 [base  5/12] COPY pnpm-workspace.yaml pnpm-lock.yaml package.json .npmrc ./
+#11 CACHED
+
+#12 [base  6/12] COPY tsconfig.base.json tsconfig.json ./
+#12 CACHED
+
+#13 [base  7/12] COPY lib/ lib/
+#13 CACHED
+
+#14 [base  8/12] COPY artifacts/api-server/ artifacts/api-server/
+#14 sha256:39c0c5ed7615337ac68d6d52859431703e411c647c5b5fa8969094ec71aa203d 0B / 192.79kB 0.2s
+#14 sha256:39c0c5ed7615337ac68d6d52859431703e411c647c5b5fa8969094ec71aa203d 192.79kB / 192.79kB 0.3s done
+#14 sha256:919db97264de374bce2ca8152bc9cd962536862ee82a56c69a0bef305ba30164 22.65kB / 22.65kB 0.2s done
+#14 sha256:b1470c958dc8278c0e4c9d26fb450667102ef77d32505bd78c2d383141c43c12 587B / 587B 0.2s done
+#14 sha256:d5eaeeefac0f1ea5d80b8ada33ad391b0cf7bd60b6236bb6c13c8d44e0e0ce75 119.41kB / 119.41kB 0.2s done
+#14 sha256:f4f01afee8cb753323b492ca43dd7e8bd4dfad3684721cc36c91442fea935d79 0B / 110.50MB 0.2s
+#14 sha256:2c93ce1ffbe6cc331c7b09aa62cac1a16da851e22a4df2d620a891df3221a916 0B / 86B 0.2s
+#14 sha256:f4f01afee8cb753323b492ca43dd7e8bd4dfad3684721cc36c91442fea935d79 15.73MB / 110.50MB 0.3s
+#14 sha256:2c93ce1ffbe6cc331c7b09aa62cac1a16da851e22a4df2d620a891df3221a916 86B / 86B 0.2s done
+#14 sha256:b02f2f29876ed9033a75091d06bf4447559aa79f9499049975b67a317c1c40f0 2.10MB / 3.90MB 0.3s
+#14 sha256:3f4664f9b20d6f144b2674c2c40de02509aabd87eae0a2d31a62de37444d13e8 448B / 448B 0.2s done
+#14 sha256:f4f01afee8cb753323b492ca43dd7e8bd4dfad3684721cc36c91442fea935d79 52.43MB / 110.50MB 0.5s
+#14 sha256:b02f2f29876ed9033a75091d06bf4447559aa79f9499049975b67a317c1c40f0 3.90MB / 3.90MB 0.5s
+#14 sha256:54833aef324f76daf7ab0a1284a1020bcc5c9e239bd94febe18ca5cbd70ee6ba 0B / 1.53MB 0.2s
+#14 sha256:35e38e1826d7cdf22ea45a4223741e4cc126db5a2a07cf2072b229270180f920 0B / 50.33MB 0.2s
+#14 sha256:f4f01afee8cb753323b492ca43dd7e8bd4dfad3684721cc36c91442fea935d79 88.08MB / 110.50MB 0.6s
+#14 sha256:b02f2f29876ed9033a75091d06bf4447559aa79f9499049975b67a317c1c40f0 3.90MB / 3.90MB 0.5s done
+#14 sha256:54833aef324f76daf7ab0a1284a1020bcc5c9e239bd94febe18ca5cbd70ee6ba 1.53MB / 1.53MB 0.4s done
+#14 sha256:35e38e1826d7cdf22ea45a4223741e4cc126db5a2a07cf2072b229270180f920 21.28MB / 50.33MB 0.3s
+#14 sha256:f4f01afee8cb753323b492ca43dd7e8bd4dfad3684721cc36c91442fea935d79 110.50MB / 110.50MB 0.8s
+#14 sha256:35e38e1826d7cdf22ea45a4223741e4cc126db5a2a07cf2072b229270180f920 50.33MB / 50.33MB 0.5s
+#14 sha256:28fe0626b69463609400820a97ca150366fdd1ad92b75ab850072a2cca168bb0 0B / 3.38kB 0.2s
+#14 sha256:597c6c618d36213af657a6a8444a5d87801f9a219682b206ad21ccb8f3e57bbd 0B / 28.23MB 0.2s
+#14 sha256:28fe0626b69463609400820a97ca150366fdd1ad92b75ab850072a2cca168bb0 3.38kB / 3.38kB 0.3s
+#14 sha256:597c6c618d36213af657a6a8444a5d87801f9a219682b206ad21ccb8f3e57bbd 28.04MB / 28.23MB 0.3s
+#14 sha256:f4f01afee8cb753323b492ca43dd7e8bd4dfad3684721cc36c91442fea935d79 110.50MB / 110.50MB 1.4s done
+#14 sha256:35e38e1826d7cdf22ea45a4223741e4cc126db5a2a07cf2072b229270180f920 50.33MB / 50.33MB 1.2s done
+#14 sha256:28fe0626b69463609400820a97ca150366fdd1ad92b75ab850072a2cca168bb0 3.38kB / 3.38kB 0.8s done
+#14 sha256:597c6c618d36213af657a6a8444a5d87801f9a219682b206ad21ccb8f3e57bbd 28.23MB / 28.23MB 0.8s done
+#14 extracting sha256:597c6c618d36213af657a6a8444a5d87801f9a219682b206ad21ccb8f3e57bbd
+#14 extracting sha256:597c6c618d36213af657a6a8444a5d87801f9a219682b206ad21ccb8f3e57bbd 0.5s done
+#14 DONE 2.1s
+
+#14 [base  8/12] COPY artifacts/api-server/ artifacts/api-server/
+#14 extracting sha256:28fe0626b69463609400820a97ca150366fdd1ad92b75ab850072a2cca168bb0 done
+#14 extracting sha256:35e38e1826d7cdf22ea45a4223741e4cc126db5a2a07cf2072b229270180f920
+#14 extracting sha256:35e38e1826d7cdf22ea45a4223741e4cc126db5a2a07cf2072b229270180f920 0.7s done
+#14 DONE 2.8s
+
+#14 [base  8/12] COPY artifacts/api-server/ artifacts/api-server/
+#14 extracting sha256:54833aef324f76daf7ab0a1284a1020bcc5c9e239bd94febe18ca5cbd70ee6ba 0.0s done
+#14 extracting sha256:3f4664f9b20d6f144b2674c2c40de02509aabd87eae0a2d31a62de37444d13e8 done
+#14 extracting sha256:f4f01afee8cb753323b492ca43dd7e8bd4dfad3684721cc36c91442fea935d79
+#14 extracting sha256:f4f01afee8cb753323b492ca43dd7e8bd4dfad3684721cc36c91442fea935d79 1.0s done
+#14 DONE 3.8s
+
+#14 [base  8/12] COPY artifacts/api-server/ artifacts/api-server/
+#14 extracting sha256:b02f2f29876ed9033a75091d06bf4447559aa79f9499049975b67a317c1c40f0 0.1s done
+#14 DONE 4.0s
+
+#14 [base  8/12] COPY artifacts/api-server/ artifacts/api-server/
+#14 extracting sha256:2c93ce1ffbe6cc331c7b09aa62cac1a16da851e22a4df2d620a891df3221a916 done
+#14 extracting sha256:d5eaeeefac0f1ea5d80b8ada33ad391b0cf7bd60b6236bb6c13c8d44e0e0ce75 0.0s done
+#14 extracting sha256:b1470c958dc8278c0e4c9d26fb450667102ef77d32505bd78c2d383141c43c12 done
+#14 extracting sha256:919db97264de374bce2ca8152bc9cd962536862ee82a56c69a0bef305ba30164 0.0s done
+#14 extracting sha256:39c0c5ed7615337ac68d6d52859431703e411c647c5b5fa8969094ec71aa203d 0.0s done
+#14 DONE 4.0s
+
+#15 [base  9/12] COPY artifacts/pregasquad-manager/ artifacts/pregasquad-manager/
+#15 DONE 2.7s
+
+#16 [base 10/12] RUN --mount=type=cache,id=pnpm-api,target=/pnpm/store     pnpm install --frozen-lockfile       --filter @workspace/api-server...       --filter @workspace/pregasquad-manager...
+#16 0.483 Scope: 5 of 7 workspace projects
+#16 0.544 Lockfile is up to date, resolution step is skipped
+#16 0.575 Progress: resolved 1, reused 0, downloaded 0, added 0
+#16 0.689 .                                        |    +1036 ++++++++++++++++++++++++++++
+#16 0.917 
+#16 0.917    ╭───────────────────────────────────────────────╮
+#16 0.917    │                                               │
+#16 0.917    │     Update available! 10.26.1 → 11.16.0.      │
+#16 0.917    │     Changelog: https://pnpm.io/v/11.16.0      │
+#16 0.917    │   To update, run: corepack use pnpm@11.16.0   │
+#16 0.917    │                                               │
+#16 0.917    ╰───────────────────────────────────────────────╯
+#16 0.917 
+#16 1.576 Progress: resolved 1036, reused 0, downloaded 296, added 293
+#16 2.577 Progress: resolved 1036, reused 0, downloaded 608, added 606
+#16 3.577 Progress: resolved 1036, reused 0, downloaded 635, added 613
+#16 4.578 Progress: resolved 1036, reused 0, downloaded 978, added 909
+#16 5.380 Progress: resolved 1036, reused 0, downloaded 1036, added 1036, done
+#16 5.665 .../node_modules/ffmpeg-static install$ node install.js
+#16 5.666 .../node_modules/protobufjs postinstall$ node scripts/postinstall
+#16 5.691 .../node_modules/better-sqlite3 install$ prebuild-install || node-gyp rebuild --release
+#16 5.703 .../esbuild@0.27.3/node_modules/esbuild postinstall$ node install.js
+#16 5.724 .../node_modules/protobufjs postinstall: Done
+#16 5.754 .../esbuild@0.27.3/node_modules/esbuild postinstall: Done
+#16 5.782 .../node_modules/better-sqlite3 install: (node:42) [DEP0176] DeprecationWarning: fs.R_OK is deprecated, use fs.constants.R_OK instead
+#16 5.782 .../node_modules/better-sqlite3 install: (Use `node --trace-deprecation ...` to show where the warning was created)
+#16 5.872 .../node_modules/better-sqlite3 install: Done
+#16 7.458 .../node_modules/ffmpeg-static install: Done
+#16 7.688 .../node_modules/@google/genai preinstall$ echo 'preinstall: no-op'
+#16 7.698 .../node_modules/@google/genai preinstall: preinstall: no-op
+#16 7.699 .../node_modules/@google/genai preinstall: Done
+#16 7.701 .../node_modules/@whiskeysockets/baileys preinstall$ node ./engine-requirements.js
+#16 7.737 .../node_modules/@whiskeysockets/baileys preinstall: Done
+#16 11.52 . preinstall$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+#16 11.54 . preinstall: Done
+#16 11.67 Done in 11.5s using pnpm v10.26.1
+#16 DONE 13.5s
+
+#17 [base 11/12] RUN pnpm --filter @workspace/pregasquad-manager run build
+#17 0.545 
+#17 0.545 > @workspace/pregasquad-manager@0.0.0 build /app/artifacts/pregasquad-manager
+#17 0.545 > vite build --config vite.config.ts
+#17 0.545 
+#17 0.894 vite v7.3.3 building client environment for production...
+#17 0.947 transforming...
+#17 4.526 src/components/ui/tooltip.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+#17 4.550 src/components/ui/select.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+#17 4.581 src/components/ui/form.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+#17 4.583 src/components/ui/dialog.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+#17 4.594 src/components/ui/collapsible.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+#17 4.596 src/components/ui/avatar.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+#17 4.636 src/components/ui/progress.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+#17 4.871 ✓ 2927 modules transformed.
+#17 4.875 ✗ Build failed in 3.96s
+#17 4.875 error during build:
+#17 4.875 [vite-plugin-pwa:build] [plugin vite-plugin-pwa:build] There was an error during the build:
+#17 4.875   Could not load /app/attached_assets/IMG_4806_1784674657228.jpeg (imported by src/pages/Website1.tsx): ENOENT: no such file or directory, open '/app/attached_assets/IMG_4806_1784674657228.jpeg'
+#17 4.875 Additionally, handling the error in the 'buildEnd' hook caused the following error:
+#17 4.875   Could not load /app/attached_assets/IMG_4806_1784674657228.jpeg (imported by src/pages/Website1.tsx): ENOENT: no such file or directory, open '/app/attached_assets/IMG_4806_1784674657228.jpeg'
+#17 4.875     at getRollupError (file:///app/node_modules/.pnpm/rollup@4.60.3/node_modules/rollup/dist/es/shared/parseAst.js:406:41)
+#17 4.875     at file:///app/node_modules/.pnpm/rollup@4.60.3/node_modules/rollup/dist/es/shared/node-entry.js:23883:39
+#17 4.875     at async catchUnfinishedHookActions (file:///app/node_modules/.pnpm/rollup@4.60.3/node_modules/rollup/dist/es/shared/node-entry.js:23341:16)
+#17 4.875     at async rollupInternal (file:///app/node_modules/.pnpm/rollup@4.60.3/node_modules/rollup/dist/es/shared/node-entry.js:23866:5)
+#17 4.875     at async buildEnvironment (file:///app/node_modules/.pnpm/vite@7.3.3_@types+node@25.6.2_jiti@2.7.0_lightningcss@1.32.0_terser@5.48.0_tsx@4.21.0_yaml@2.8.4/node_modules/vite/dist/node/chunks/config.js:33561:12)
+#17 4.875     at async Object.build (file:///app/node_modules/.pnpm/vite@7.3.3_@types+node@25.6.2_jiti@2.7.0_lightningcss@1.32.0_terser@5.48.0_tsx@4.21.0_yaml@2.8.4/node_modules/vite/dist/node/chunks/config.js:33920:19)
+#17 4.875     at async Object.buildApp (file:///app/node_modules/.pnpm/vite@7.3.3_@types+node@25.6.2_jiti@2.7.0_lightningcss@1.32.0_terser@5.48.0_tsx@4.21.0_yaml@2.8.4/node_modules/vite/dist/node/chunks/config.js:33917:153)
+#17 4.875     at async CAC.<anonymous> (file:///app/node_modules/.pnpm/vite@7.3.3_@types+node@25.6.2_jiti@2.7.0_lightningcss@1.32.0_terser@5.48.0_tsx@4.21.0_yaml@2.8.4/node_modules/vite/dist/node/cli.js:629:3)
+#17 4.950 /app/artifacts/pregasquad-manager:
+#17 4.950  ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @workspace/pregasquad-manager@0.0.0 build: `vite build --config vite.config.ts`
+#17 4.950 Exit status 1
+Build failed ❌
+#17 ERROR: process "/bin/sh -c pnpm --filter @workspace/pregasquad-manager run build" did not complete successfully: exit code: 1
+------
+ > [base 11/12] RUN pnpm --filter @workspace/pregasquad-manager run build:
+4.875     at file:///app/node_modules/.pnpm/rollup@4.60.3/node_modules/rollup/dist/es/shared/node-entry.js:23883:39
+4.875     at async catchUnfinishedHookActions (file:///app/node_modules/.pnpm/rollup@4.60.3/node_modules/rollup/dist/es/shared/node-entry.js:23341:16)
+4.875     at async rollupInternal (file:///app/node_modules/.pnpm/rollup@4.60.3/node_modules/rollup/dist/es/shared/node-entry.js:23866:5)
+4.875     at async buildEnvironment (file:///app/node_modules/.pnpm/vite@7.3.3_@types+node@25.6.2_jiti@2.7.0_lightningcss@1.32.0_terser@5.48.0_tsx@4.21.0_yaml@2.8.4/node_modules/vite/dist/node/chunks/config.js:33561:12)
+4.875     at async Object.build (file:///app/node_modules/.pnpm/vite@7.3.3_@types+node@25.6.2_jiti@2.7.0_lightningcss@1.32.0_terser@5.48.0_tsx@4.21.0_yaml@2.8.4/node_modules/vite/dist/node/chunks/config.js:33920:19)
+4.875     at async Object.buildApp (file:///app/node_modules/.pnpm/vite@7.3.3_@types+node@25.6.2_jiti@2.7.0_lightningcss@1.32.0_terser@5.48.0_tsx@4.21.0_yaml@2.8.4/node_modules/vite/dist/node/chunks/config.js:33917:153)
+4.875     at async CAC.<anonymous> (file:///app/node_modules/.pnpm/vite@7.3.3_@types+node@25.6.2_jiti@2.7.0_lightningcss@1.32.0_terser@5.48.0_tsx@4.21.0_yaml@2.8.4/node_modules/vite/dist/node/cli.js:629:3)
+4.950 /app/artifacts/pregasquad-manager:
+4.950  ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @workspace/pregasquad-manager@0.0.0 build: `vite build --config vite.config.ts`
+4.950 Exit status 1
+------
+Dockerfile.api:28
+--------------------
+  26 |     
+  27 |     # Build the React frontend first
+  28 | >>> RUN pnpm --filter @workspace/pregasquad-manager run build
+  29 |     
+  30 |     # Build the API server (esbuild bundle)
+--------------------
+error: failed to solve: process "/bin/sh -c pnpm --filter @workspace/pregasquad-manager run build" did not complete successfully: exit code: 1
