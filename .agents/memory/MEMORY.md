@@ -2,3 +2,4 @@
 - [DB migration pattern](db-migration-pattern.md) — db.ts migrations run at startup but only take effect after api-server rebuild; apply SQL directly for urgent fixes
 - [Server file layout](server-file-layout.md) — real server is artifacts/api-server/src/, NOT server/. Frontend at artifacts/pregasquad-manager/src/
 - [Permission security fix](permission-security-fix.md) — empty permissions array must deny access, not grant full access
+- [Database bootstrap with existing tables](database-bootstrap-existing-tables.md) — apply committed migrations idempotently when auxiliary tables already exist; noninteractive Drizzle push can prompt and fail
