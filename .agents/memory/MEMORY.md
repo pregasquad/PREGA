@@ -3,3 +3,4 @@
 - [Server file layout](server-file-layout.md) — real server is artifacts/api-server/src/, NOT server/. Frontend at artifacts/pregasquad-manager/src/
 - [Permission security fix](permission-security-fix.md) — empty permissions array must deny access, not grant full access
 - [Database bootstrap with existing tables](database-bootstrap-existing-tables.md) — apply committed migrations idempotently when auxiliary tables already exist; noninteractive Drizzle push can prompt and fail
+- [Splash screen debugging](splash-screen-debugging.md) — a persistent static loader can mask an early React runtime exception; inspect browser exceptions before investigating route data
