@@ -101,7 +101,16 @@ async function _doConnectQz(): Promise<boolean> {
     if (qz.websocket.isActive()) {
       connected = true;
     } else {
-      await qz.websocket.connect();
+      // Connect with explicit options — try all standard QZ Tray ports, keep the
+      // connection alive, and allow multiple retries so remote / Wi-Fi clients work
+      // reliably without distance restrictions.
+      await qz.websocket.connect({
+        host: ["localhost", "localhost.qz.io"],
+        port: { primary: 8181, fallback: 8182, failover: [8183, 8184] },
+        keepAlive: 60,
+        retries: 3,
+        delay: 0.5,
+      });
       connected = true;
     }
 

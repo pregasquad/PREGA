@@ -1598,7 +1598,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/qz/sign", isPinAuthenticated, express.text({ type: "*/*" }), (req, res) => {
+  app.post("/api/qz/sign", express.text({ type: "*/*" }), (req, res) => {
     try {
       const toSign = typeof req.body === "string" ? req.body : String(req.body);
       const privateKey = fs.readFileSync(qzKeyPath, "utf-8");
