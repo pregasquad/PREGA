@@ -49,14 +49,16 @@ function rotateKey(exhaustedKey: string): string | null {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const MODEL_CASCADE = [
-  // ── Stable GA models first (most reliable, confirmed working) ──────────────
-  "gemini-2.5-flash",              // Stable GA — 1M context, confirmed working
-  "gemini-3.1-flash-lite",         // Stable GA — fast & free, confirmed working
-  // ── Newer previews (best quality when available, skip if high demand) ──────
-  "gemini-3.5-flash",              // Newest flash — skipped automatically if busy
+  // ── Newest GA models (July 2026) — best quality + efficiency ───────────────
+  "gemini-3.6-flash",              // Newest GA (Jul 21 2026) — fastest, best for agentic tasks
+  "gemini-3.5-flash-lite",         // New GA (Jul 21 2026) — lightest 3.x, cost-efficient
+  // ── Stable GA models (most reliable, confirmed working) ───────────────────
+  "gemini-3.5-flash",              // GA — high quality flash
+  "gemini-3.1-flash-lite",         // GA — fast & free, confirmed working
+  "gemini-2.5-flash",              // GA — 1M context, confirmed working
+  // ── Older previews / aliases ───────────────────────────────────────────────
   "gemini-3.1-flash-lite-preview", // Preview variant — confirmed working
   "gemini-2.5-flash-lite",         // Lighter 2.5 — skip if high demand
-  // ── Stable aliases (always resolve to latest GA) ───────────────────────────
   "gemini-flash-latest",           // Latest flash alias
   "gemini-flash-lite-latest",      // Latest lite alias
   // ── Older stable fallbacks (last resort for quota survivability) ───────────
@@ -569,11 +571,13 @@ export async function transcribeAudio(
 
   // ── 1. Gemini cascade — try from fastest to most capable ─────────────────
   const TRANSCRIPTION_MODELS = [
-    "gemini-3.5-flash",         // Free — newest, best audio quality
+    "gemini-3.6-flash",         // Free — newest GA (Jul 2026), best for agentic/multimodal
+    "gemini-3.5-flash-lite",    // Free — new lightweight GA (Jul 2026)
+    "gemini-3.5-flash",         // Free — high quality flash
     "gemini-3.1-flash-lite",    // Free — cost-efficient, good audio
     "gemini-2.5-flash",         // Free — 1M context, reliable
     "gemini-1.5-flash",         // Free — older stable, good audio support
-    "gemini-1.5-pro",           // Free — most capable for tricky/noisy audio
+    "gemini-1.5-pro",           // Free — most capable fallback for tricky/noisy audio
   ];
 
   let transcriptionKey = getAvailableKey();
@@ -808,7 +812,7 @@ export async function detectBossCorrection(
 
   // Fix 4: small cascade (lite → 2.5-flash → 1.5-flash) so a single unavailable model
   // doesn't silently kill correction detection
-  const CORRECTION_CASCADE = ["gemini-3.1-flash-lite", "gemini-2.5-flash-lite", "gemini-2.5-flash"];
+  const CORRECTION_CASCADE = ["gemini-3.5-flash-lite", "gemini-3.6-flash", "gemini-3.1-flash-lite", "gemini-2.5-flash-lite", "gemini-2.5-flash"];
   let correctionKey = apiKey;
   if (correctionKey) {
     const now = Date.now();
@@ -960,7 +964,7 @@ ${conversationText}
   // Try Gemini with lightest model first
   let learningKey = apiKey;
   if (learningKey) {
-    const learningModels = ["gemini-3.1-flash-lite", "gemini-2.5-flash-lite", "gemini-2.5-flash"];
+    const learningModels = ["gemini-3.5-flash-lite", "gemini-3.6-flash", "gemini-3.1-flash-lite", "gemini-2.5-flash-lite", "gemini-2.5-flash"];
     for (const model of learningModels) {
       if (modelCooldowns[model] && Date.now() < modelCooldowns[model]) continue;
       try {

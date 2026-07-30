@@ -23,7 +23,6 @@
     "onlyBuiltDependencies": [
       "@google/genai",
       "@whiskeysockets/baileys",
-      "better-sqlite3",
       "esbuild",
       "ffmpeg-static",
       "protobufjs"
