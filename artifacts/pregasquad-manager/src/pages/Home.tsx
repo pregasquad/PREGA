@@ -480,8 +480,8 @@ export default function Home() {
   }, [staff, appointments]);
 
   return (
-    <div className="min-h-screen pb-24" dir={isRtl ? "rtl" : "ltr"}>
-      <div className="max-w-lg mx-auto px-4 py-5 space-y-6 animate-fade-in">
+    <div className="min-h-screen pb-20 md:pb-4" dir={isRtl ? "rtl" : "ltr"}>
+      <div className="max-w-lg md:max-w-4xl mx-auto px-4 py-5 space-y-6 animate-fade-in">
 
         <div className="flex items-center justify-between gap-3">
           <div>
@@ -525,7 +525,7 @@ export default function Home() {
         <DayOpeningBriefing appointments={appointments} todayDate={todayDate} businessName={bSettings?.businessName} currency={bSettings?.currencySymbol} />
         <TodayScheduleReminder appointments={appointments} currency={bSettings?.currencySymbol} />
 
-        <div className="grid grid-cols-2 gap-3" data-testid="section-summary-cards">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3" data-testid="section-summary-cards">
           <div className="glass-card rounded-2xl p-4 flex flex-col justify-between min-h-[100px]" data-testid="card-revenue">
             <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{t("home.todayRevenue")}</span>
             <div className="mt-2">
@@ -558,6 +558,7 @@ export default function Home() {
           </div>
         </div>
 
+        <div className="md:grid md:grid-cols-2 md:gap-4 md:items-start">
         <div data-testid="section-financial">
           <h2 className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">{t("home.financialOverview")}</h2>
           <Card className="overflow-visible">
@@ -729,6 +730,7 @@ export default function Home() {
             </div>
           )}
         </div>
+        </div>{/* end md:grid-cols-2 financial+team wrapper */}
 
         <div data-testid="section-closing-checklist">
           <h2 className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">{t("home.smartClosingDay")}</h2>

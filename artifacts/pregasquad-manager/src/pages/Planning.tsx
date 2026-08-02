@@ -3004,7 +3004,7 @@ export default function Planning() {
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="ghost" className="h-8 px-2 md:h-9 md:px-3 text-xs md:text-sm font-medium rounded-full touch-manipulation flex flex-col items-center gap-0 leading-none" data-testid="button-date-picker">
-                  <span className="text-[9px] md:hidden text-muted-foreground font-normal -mb-0.5">
+                  <span className="text-[9px] text-muted-foreground font-normal -mb-0.5">
                     {format(date, "EEE")}
                   </span>
                   <span>{format(date, "dd/MM")}</span>

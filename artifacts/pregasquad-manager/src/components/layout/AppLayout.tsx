@@ -134,8 +134,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             }
           >
             <div
-              className={isPlanning ? "h-full flex flex-col" : "min-h-full flex flex-col"}
-              style={!isPlanning ? { paddingBottom: "calc(5rem + env(safe-area-inset-bottom))" } : undefined}
+              className={isPlanning ? "h-full flex flex-col" : "min-h-full flex flex-col pb-20 md:pb-4"}
             >
               {children}
             </div>
