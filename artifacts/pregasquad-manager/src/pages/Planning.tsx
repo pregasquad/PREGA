@@ -733,6 +733,7 @@ export default function Planning() {
     amount: string;
   }>({ type: "advance", description: "", amount: "" });
   const [walletOpenDeductions, setWalletOpenDeductions] = useState(false);
+  const [walletOpenHistory, setWalletOpenHistory] = useState(false);
 
   const { toast } = useToast();
   const { data: salonSettings } = useBusinessSettings();
@@ -4476,7 +4477,7 @@ export default function Planning() {
       </Dialog>
       
       {/* ── Staff Wallet Portal Dialog ── */}
-      <Dialog open={!!walletStaffId} onOpenChange={(open) => { if (!open) { setWalletStaffId(null); setWalletShowAdd(false); } }}>
+      <Dialog open={!!walletStaffId} onOpenChange={(open) => { if (!open) { setWalletStaffId(null); setWalletShowAdd(false); setWalletOpenHistory(false); setWalletOpenDeductions(false); } }}>
         <DialogContent className="max-w-sm w-[95vw] rounded-2xl p-0 overflow-hidden bg-background border border-border shadow-2xl flex flex-col max-h-[85dvh]" dir={isRtl ? "rtl" : "ltr"}>
           {(() => {
             const ws = walletStaffId ? staffList.find(s => s.id === walletStaffId) : null;
@@ -4565,34 +4566,42 @@ export default function Planning() {
                       </button>
                     )}
 
-                    {/* Recent Payments — with undo buttons */}
+                    {/* Recent Payments — collapsible */}
                     {canManage && walletPortalData.recentPayments.length > 0 && (
                       <div className="rounded-xl overflow-hidden border border-emerald-200/50 dark:border-emerald-800/30">
-                        <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50/80 dark:bg-emerald-950/20">
+                        <button
+                          type="button"
+                          onClick={() => setWalletOpenHistory(v => !v)}
+                          className="w-full flex items-center gap-2 px-3 py-2 bg-emerald-50/80 dark:bg-emerald-950/20 hover:bg-emerald-100/60 dark:hover:bg-emerald-900/30 transition-colors"
+                        >
                           <Wallet className="h-3 w-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
                           <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex-1 text-start">
                             {t("salaries.paymentHistory")}
+                            <span className="ms-1 text-emerald-500/70">({walletPortalData.recentPayments.length})</span>
                           </span>
-                        </div>
-                        <div className="px-3 py-1 bg-emerald-50/30 dark:bg-emerald-950/10 divide-y divide-emerald-100/50 dark:divide-emerald-900/20">
-                          {walletPortalData.recentPayments.map((p: any) => (
-                            <div key={p.id} className="flex items-center justify-between gap-1 py-1.5">
-                              <div className="min-w-0 flex-1">
-                                <p className="text-xs font-bold tabular-nums text-emerald-600 dark:text-emerald-400">+ {fmt(p.amount)}</p>
-                                <p className="text-[10px] text-muted-foreground">{format(parseISO(p.paidAt), "d/M/yy · HH:mm")}</p>
+                          <ChevronDown className={`h-3 w-3 text-emerald-500 transition-transform duration-200 ${walletOpenHistory ? "rotate-180" : ""}`} />
+                        </button>
+                        {walletOpenHistory && (
+                          <div className="px-3 py-1 bg-emerald-50/30 dark:bg-emerald-950/10 divide-y divide-emerald-100/50 dark:divide-emerald-900/20">
+                            {walletPortalData.recentPayments.map((p: any) => (
+                              <div key={p.id} className="flex items-center justify-between gap-1 py-1.5">
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs font-bold tabular-nums text-emerald-600 dark:text-emerald-400">+ {fmt(p.amount)}</p>
+                                  <p className="text-[10px] text-muted-foreground">{format(parseISO(p.paidAt), "d/M/yy · HH:mm")}</p>
+                                </div>
+                                <button
+                                  onClick={() => revertStaffPaymentMutation.mutate(p.id)}
+                                  disabled={revertStaffPaymentMutation.isPending}
+                                  className="group flex items-center justify-center h-6 w-6 rounded-full hover:bg-red-100 dark:hover:bg-red-900/30 text-muted-foreground hover:text-red-500 transition-colors disabled:opacity-50"
+                                  title={t("planning.revertPayment") || "إلغاء الدفع"}
+                                  data-testid={`button-revert-staff-payment-${p.id}`}
+                                >
+                                  <Undo2 className="h-3.5 w-3.5" />
+                                </button>
                               </div>
-                              <button
-                                onClick={() => revertStaffPaymentMutation.mutate(p.id)}
-                                disabled={revertStaffPaymentMutation.isPending}
-                                className="group flex items-center justify-center h-6 w-6 rounded-full hover:bg-red-100 dark:hover:bg-red-900/30 text-muted-foreground hover:text-red-500 transition-colors disabled:opacity-50"
-                                title={t("planning.revertPayment") || "إلغاء الدفع"}
-                                data-testid={`button-revert-staff-payment-${p.id}`}
-                              >
-                                <Undo2 className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
 
