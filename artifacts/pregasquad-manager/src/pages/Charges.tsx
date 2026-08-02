@@ -63,7 +63,8 @@ export default function Charges() {
     }
   }, [salonSettings?.openingTime, salonSettings?.closingTime]);
 
-  // Real-time invalidation: when an appointment is paid/updated, net-profit changes immediately.
+  // Real-time invalidation — matches Planning page sync pattern exactly.
+  // Socket delivers instant updates; polling + visibilitychange are safety nets.
   useEffect(() => {
     const socket = getAppSocket();
     const invalidate = () => {
@@ -71,15 +72,41 @@ export default function Charges() {
       queryClient.invalidateQueries({ queryKey: ["/api/owner-withdrawals"] });
       queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
     };
-    socket.on("booking:created",     invalidate);
-    socket.on("appointment:updated", invalidate);
-    socket.on("appointment:paid",    invalidate);
-    socket.on("booking:updated",     invalidate);
+    socket.on("booking:created",       invalidate);
+    socket.on("appointment:created",   invalidate);
+    socket.on("booking:updated",       invalidate);
+    socket.on("appointment:updated",   invalidate);
+    socket.on("appointment:paid",      invalidate);
+    socket.on("appointment:deleted",   invalidate);
+
+    // Polling fallback — same cadence as Planning page
+    const intervalId     = setInterval(invalidate, 90_000);
+    const salaryInterval = setInterval(() => {
+      queryClient.invalidateQueries({ queryKey: ["/api/owner-withdrawals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+    }, 180_000);
+
+    // Refresh when user returns to the PWA tab — throttled to once per 5 s
+    let lastRefresh = 0;
+    const handleVisibility = () => {
+      const now = Date.now();
+      if (document.visibilityState === "visible" && now - lastRefresh > 5000) {
+        lastRefresh = now;
+        invalidate();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
     return () => {
-      socket.off("booking:created",     invalidate);
-      socket.off("appointment:updated", invalidate);
-      socket.off("appointment:paid",    invalidate);
-      socket.off("booking:updated",     invalidate);
+      socket.off("booking:created",       invalidate);
+      socket.off("appointment:created",   invalidate);
+      socket.off("booking:updated",       invalidate);
+      socket.off("appointment:updated",   invalidate);
+      socket.off("appointment:paid",      invalidate);
+      socket.off("appointment:deleted",   invalidate);
+      clearInterval(intervalId);
+      clearInterval(salaryInterval);
+      document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, [queryClient]);
 
