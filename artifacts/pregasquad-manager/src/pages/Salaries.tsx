@@ -11,8 +11,9 @@ import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DollarSign, Users, CalendarIcon, TrendingUp, Building2, RefreshCw, Plus, Trash2, Receipt, UserMinus, ChevronDown, ChevronUp, CheckCircle, Pencil, Wallet, Briefcase, BarChart3, ArrowDownLeft, Store, Undo2, FileDown } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { useTranslation } from "react-i18next";
 import { getAppSocket } from "@/lib/appSocket";
 import { getWorkDayDate } from "@/lib/workday";
@@ -160,11 +161,38 @@ export default function Salaries() {
     socket.on("appointment:created", invalidate);
     socket.on("appointment:updated", invalidate);
     socket.on("appointment:paid", invalidate);
+
+    // deduction:cleared — prompt owner to credit the amount back to the staff wallet
+    const onDeductionCleared = (data: { deductionId: number; staffId: number; staffName: string; amount: number }) => {
+      invalidate();
+      toast({
+        title: `✅ خصم ${data.staffName} تسوّى تلقائياً`,
+        description: `${data.amount} DH — هل تضيف المبلغ لرصيده؟`,
+        duration: 15000,
+        action: (
+          <ToastAction
+            altText="إضافة للرصيد"
+            onClick={() =>
+              createPaymentMutationRef.current?.mutate({
+                staffId: data.staffId,
+                staffName: data.staffName,
+                amount: data.amount,
+              })
+            }
+          >
+            إضافة للرصيد
+          </ToastAction>
+        ),
+      });
+    };
+    socket.on("deduction:cleared", onDeductionCleared);
+
     return () => {
       socket.off("booking:created", invalidate);
       socket.off("appointment:created", invalidate);
       socket.off("appointment:updated", invalidate);
       socket.off("appointment:paid", invalidate);
+      socket.off("deduction:cleared", onDeductionCleared);
       if (debounceTimer) clearTimeout(debounceTimer);
     };
   }, [queryClient]);
@@ -393,6 +421,10 @@ export default function Salaries() {
       toast({ title: t("common.error"), variant: "destructive" });
     },
   });
+
+  // Stable ref so the deduction:cleared socket handler always sees the latest mutation
+  const createPaymentMutationRef = useRef(createPaymentMutation);
+  useEffect(() => { createPaymentMutationRef.current = createPaymentMutation; });
 
   const deletePaymentMutation = useMutation({
     mutationFn: async (id: number) => {

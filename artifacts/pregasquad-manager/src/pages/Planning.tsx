@@ -127,6 +127,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { insertAppointmentSchema, insertStaffSchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { autoPrint } from "@/lib/printReceipt";
 import { connectQz, openCashDrawer, isQzConnected, ensureQzConnected, checkPrintStationAsync, remoteOpenDrawer, subscribePrintStatus } from "@/lib/qzPrint";
 
@@ -446,6 +447,31 @@ export default function Planning() {
     
     document.addEventListener('visibilitychange', handleVisibilityRefresh);
     
+    // deduction:cleared — prompt owner to credit the amount back to the staff wallet
+    const onDeductionCleared = (data: { deductionId: number; staffId: number; staffName: string; amount: number }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+      toast({
+        title: `✅ خصم ${data.staffName} تسوّى تلقائياً`,
+        description: `${data.amount} DH — هل تضيف المبلغ لرصيده؟`,
+        duration: 15000,
+        action: (
+          <ToastAction
+            altText="إضافة للرصيد"
+            onClick={() =>
+              markStaffPaidMutationRef.current.mutate({
+                staffId: data.staffId,
+                staffName: data.staffName,
+                amount: data.amount,
+              })
+            }
+          >
+            إضافة للرصيد
+          </ToastAction>
+        ),
+      });
+    };
+    socket.on("deduction:cleared", onDeductionCleared);
+
     return () => {
       socket.off("booking:created",       onBookingCreated);
       socket.off("appointment:created",   onBookingChange);
@@ -453,6 +479,7 @@ export default function Planning() {
       socket.off("appointment:updated",   onBookingChange);
       socket.off("appointment:paid",      onBookingChange);
       socket.off("appointment:deleted",   onBookingChange);
+      socket.off("deduction:cleared",     onDeductionCleared);
       clearInterval(intervalId);
       clearInterval(salaryIntervalId);
       document.removeEventListener('visibilitychange', handleVisibilityRefresh);
@@ -884,6 +911,10 @@ export default function Planning() {
       queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
     },
   });
+
+  // Stable ref so the socket handler always calls the latest mutation version
+  const markStaffPaidMutationRef = useRef(markStaffPaidMutation);
+  useEffect(() => { markStaffPaidMutationRef.current = markStaffPaidMutation; });
 
   // Compute wallet data for the selected staff member
   const walletPortalData = useMemo(() => {

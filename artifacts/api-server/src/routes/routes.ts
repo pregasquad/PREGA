@@ -3291,6 +3291,14 @@ export async function registerRoutes(
       if (fullyPaid) {
         await storage.updateStaffDeduction(id, { paidBack: deduction.amount } as any);
         await storage.clearStaffDeduction(id);
+        // Notify all connected clients so they can prompt the owner to credit the balance
+        io.emit("deduction:cleared", {
+          deductionId: id,
+          staffId: deduction.staffId,
+          staffName: deduction.staffName,
+          amount: deduction.amount,
+          type: deduction.type || "advance",
+        });
       } else {
         await storage.updateStaffDeduction(id, { paidBack: newPaidBack } as any);
       }
