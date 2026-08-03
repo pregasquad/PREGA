@@ -405,7 +405,7 @@ async function connectSocket(pairingPhone?: string): Promise<void> {
             if (!mem) {
               await saveBotMemory({
                 jid: lidJid, phone,
-                clientName: null, language: "fr",
+                clientName: null, language: "unknown",
                 preferredServices: [], personalityNotes: null,
                 convHistory: [], visitCount: 0, botBlocked: false, lastSeen: null,
               });

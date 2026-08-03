@@ -5686,7 +5686,11 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
     const darijaLatin = /\b(bghit|bghiti|wach|wash|wach|dial|dyal|taman|ndir|diri|kifach|mnin|fain|kayn|kaynchi|makainch|hna|hna|zloul|ana|nta|nti|hiya|huwa|3ref|3reft|gha|mashi|bzzaf|bzaf|bchhal|chhal|makayn|ola|wla|nhar|liyam|smiyti|ismi|safi|wakha|mzyan|mzien|chno|fach|katsbro|dfar|zaid|ghali|zwina|zwine|daba|rah|lik|liha|lihom|biha|bih|had|dak|kolchi|kulchi|koulchi|mchin|imchin|bzf|machi|makach|kayen|bhal|b7al|3la|kima|kif|raki|raki|rani|rani|nrdi|nchof|ndir|nkol|bladi|bled|drari|bnat|rajel|mra|weld|bnt|khti|khoya|lalla|sidi|7it|9al|9alet|9alek|7aja|7wali|5dem|5dma|3yit|3iya|3awdni|3awed)\b/i;
     if (darijaLatin.test(text)) return "darija";
 
-    if (latinChars > 3) return "french";
+    // Require at least 9 Latin characters to declare French — this prevents short
+    // interjections ("ok", "merci", "dispo", "safi") or product/service names
+    // written in Latin script from flipping a conversation that was already in Arabic.
+    // A genuine French sentence (e.g. "je voudrais un rendez-vous") easily clears this bar.
+    if (latinChars > 8) return "french";
     return "unknown";
   }
 
@@ -6074,7 +6078,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
             if (phoneArgIsReal && !memEntry?.phone) {
               await _saveBotMem(memEntry
                 ? { ...memEntry, phone }
-                : { jid: remoteJid, phone, clientName: pushName || null, language: "fr", preferredServices: [], personalityNotes: null, convHistory: [], visitCount: 0, botBlocked: false, lastSeen: null }
+                : { jid: remoteJid, phone, clientName: pushName || null, language: "unknown", preferredServices: [], personalityNotes: null, convHistory: [], visitCount: 0, botBlocked: false, lastSeen: null }
               ).catch(() => {});
             }
 
