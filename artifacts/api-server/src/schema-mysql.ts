@@ -356,6 +356,7 @@ export const businessSettings = mysqlTable("business_settings", {
   dailySummaryTime: varchar("daily_summary_time", { length: 10 }).notNull().default("20:00"),
   planningSlotHeight: int("planning_slot_height").notNull().default(44),
   allowTextSelection: boolean("allow_text_selection").notNull().default(false),
+  discountCards: text("discount_cards"),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 

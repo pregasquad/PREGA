@@ -383,6 +383,7 @@ export const businessSettings = pgTable("business_settings", {
   dailySummaryEnabled: boolean("daily_summary_enabled").notNull().default(false),
   dailySummaryTime: varchar("daily_summary_time", { length: 10 }).notNull().default("20:00"),
   planningSlotHeight: integer("planning_slot_height").notNull().default(44),
+  discountCards: text("discount_cards"),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 

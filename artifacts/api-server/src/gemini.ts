@@ -100,6 +100,14 @@ export interface PlanningDay {
   }[];
 }
 
+export interface DiscountCard {
+  id: string;
+  title: string;
+  discountPercent: number;
+  services: string[]; // service names, or ["__all__"] for all services
+  active: boolean;
+}
+
 export interface SalonContext {
   name: string;
   address?: string;
@@ -120,6 +128,7 @@ export interface SalonContext {
   planningSnapshot?: PlanningDay[]; // next 20 days of booked slots
   currentTime?: string; // "HH:MM" — the actual current server time
   holidays?: string[]; // "YYYY-MM-DD" dates when salon is closed
+  discountCards?: DiscountCard[]; // active promotional discount cards
 }
 
 export interface ConversationTurn {
@@ -142,7 +151,8 @@ function buildSystemPrompt(ctx: SalonContext): string {
   const complaintsKey = (ctx.resolvedComplaints || []).map(c => c.complaint).join("|");
   const planningKey = (ctx.planningSnapshot || []).map(d => `${d.date}:${d.bookedSlots.length}`).join(",");
   const holidayKey = (ctx.holidays || []).join(",");
-  const key = `${ctx.name}|${ctx.currency}|${ctx.services.length}|${staffKey}|${memKey}|${ctx.isNewConversation ? "new" : "returning"}|${bossKey}|${correctionsKey}|${complaintsKey}|${(ctx.personality ?? ["warm"]).join(",")}|${planningKey}|${holidayKey}`;
+  const discountKey = (ctx.discountCards || []).filter(c => c.active).map(c => `${c.title}:${c.discountPercent}:${c.services.join(",")}`).join("|");
+  const key = `${ctx.name}|${ctx.currency}|${ctx.services.length}|${staffKey}|${memKey}|${ctx.isNewConversation ? "new" : "returning"}|${bossKey}|${correctionsKey}|${complaintsKey}|${(ctx.personality ?? ["warm"]).join(",")}|${planningKey}|${holidayKey}|${discountKey}`;
 
   if (key === cachedPromptKey) return cachedPrompt;
 
@@ -221,7 +231,18 @@ ${ctx.holidays.map(h => `  • ${h}`).join("\n")}
 ${memorySection}
 ━━━ قائمة الخدمات والأسعار ━━━
 ${serviceBlock}
-
+${ctx.discountCards && ctx.discountCards.filter(c => c.active).length > 0 ? `
+━━━ عروض التخفيض الحالية — مهم جداً ━━━
+🎉 هاد العروض التالية متاحة دابا — ذكريها بشكل طبيعي عند الاستفسار عن الأسعار أو الخدمات المشمولة:
+${ctx.discountCards.filter(c => c.active).map((card, i) => {
+  const servicesList = card.services.includes("__all__")
+    ? "جميع الخدمات"
+    : card.services.join("، ");
+  return `${i + 1}. 🏷️ ${card.title} — خصم ${card.discountPercent}% على: ${servicesList}`;
+}).join("\n")}
+• إذا سألت العميلة عن سعر خدمة مشمولة في عرض → اذكري السعر الأصلي ثم قولي ليها "مع العرض الحالي غيتدفعي فقط ${ctx.currency || "DH"} ..."
+• ذكري العروض بشكل طبيعي ومرح — مش بأسلوب إعلاني رسمي
+` : ""}
 ━━━ اللغة — مهم جداً ━━━
 • العميلة كتبات بالعربية أو الدارجة بالحروف العربية → ردي بالدارجة المغربية بالحروف العربية
 • العميلة كتبات بالفرنسية → ردي بالفرنسية بنفس الأسلوب الدافئ

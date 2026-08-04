@@ -2429,6 +2429,38 @@ export async function ensureHolidaysColumn(): Promise<void> {
   }
 }
 
+export async function ensureDiscountCardsColumn(): Promise<void> {
+  try {
+    if (dbDialect === 'mysql') {
+      const connection = await pool.getConnection();
+      try {
+        const [rows] = await connection.query(`
+          SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'business_settings' AND COLUMN_NAME = 'discount_cards'
+        `);
+        if ((rows as any[]).length === 0) {
+          await connection.query(`ALTER TABLE business_settings ADD COLUMN discount_cards TEXT NULL`);
+          console.log("Added discount_cards column to business_settings");
+        }
+      } finally {
+        connection.release();
+      }
+    } else {
+      await pool.query(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'business_settings' AND column_name = 'discount_cards') THEN
+            ALTER TABLE business_settings ADD COLUMN discount_cards TEXT NULL;
+          END IF;
+        END $$;
+      `);
+    }
+    console.log("Discount cards column ready");
+  } catch (error) {
+    console.error("Failed to ensure discount_cards column:", error);
+  }
+}
+
 // ── Broadcast logs table ──────────────────────────────────────────────────────
 export async function ensureBroadcastLogsTable(): Promise<void> {
   try {

@@ -60,6 +60,7 @@ import {
   ensureReminderSentColumn,
   ensureClientTagsColumn,
   ensureWebsiteTestimonialsTable,
+  ensureDiscountCardsColumn,
 } from "./db";
 import { checkAndSendClosingReminder, checkAndSendAppointmentReminders, checkAndSendRebookingReminders, checkAndSend24hReminders, checkAndSendMorningStatus } from "./push";
 
@@ -131,6 +132,7 @@ const startServer = async () => {
       await ensureReminderSentColumn();
       await ensureClientTagsColumn();
       await ensureWebsiteTestimonialsTable();
+      await ensureDiscountCardsColumn();
       await ensureForeignKeyConstraints();
     }
   } else {

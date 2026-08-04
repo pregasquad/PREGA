@@ -4969,8 +4969,8 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
           planningShortcuts: ["services", "clients", "salaries", "inventory"]
         });
       }
-      // Parse bossInstructions from JSON string to array before sending
-      const { bossInstructions, ...rest } = settings as any;
+      // Parse JSON string fields before sending
+      const { bossInstructions, discountCards, ...rest } = settings as any;
       // MySQL stores booleans as TINYINT(1) — coerce 0/1 to proper JS booleans
       const BOOL_FIELDS = ["ttsEnabled","botEnabled","botSilenceAfterBooking","dailySummaryEnabled","autoLockEnabled","botVoiceReplyEnabled"];
       const coerced: Record<string, any> = { ...rest };
@@ -4982,6 +4982,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
       res.json({
         ...coerced,
         bossInstructions: bossInstructions ? (() => { try { return JSON.parse(bossInstructions); } catch { return []; } })() : [],
+        discountCards: discountCards ? (() => { try { return JSON.parse(discountCards); } catch { return []; } })() : [],
       });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -5011,7 +5012,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
   app.patch("/api/business-settings", isPinAuthenticated, requirePermission("manage_business_settings"), async (req, res) => {
     try {
       // Strip read-only fields and fix types that differ between GET (parsed) and DB (raw)
-      const { id, updatedAt, bossInstructions, holidays, workingDays, planningShortcuts, ...rest } = req.body;
+      const { id, updatedAt, bossInstructions, holidays, workingDays, planningShortcuts, discountCards, ...rest } = req.body;
       const sanitized: Record<string, any> = { ...rest };
       // bossInstructions: GET returns parsed array → store back as JSON string
       if (bossInstructions !== undefined) {
@@ -5019,17 +5020,43 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
           ? JSON.stringify(bossInstructions)
           : bossInstructions;
       }
+      // discountCards: validate shape then store as JSON string
+      if (discountCards !== undefined) {
+        if (!Array.isArray(discountCards)) {
+          return res.status(400).json({ message: "discountCards must be an array" });
+        }
+        if (discountCards.length > 3) {
+          return res.status(400).json({ message: "Maximum 3 discount cards allowed" });
+        }
+        for (const card of discountCards) {
+          if (typeof card.id !== "string" || !card.id) {
+            return res.status(400).json({ message: "Each discount card must have a valid id" });
+          }
+          if (typeof card.title !== "string") {
+            return res.status(400).json({ message: "Discount card title must be a string" });
+          }
+          const pct = Number(card.discountPercent);
+          if (isNaN(pct) || pct < 1 || pct > 99) {
+            return res.status(400).json({ message: "Discount percent must be between 1 and 99" });
+          }
+          if (!Array.isArray(card.services) || card.services.length === 0) {
+            return res.status(400).json({ message: "Discount card services must be a non-empty array" });
+          }
+        }
+        sanitized.discountCards = JSON.stringify(discountCards);
+      }
       // JSON array columns — pass through as-is (Drizzle handles serialization)
       if (holidays !== undefined) sanitized.holidays = Array.isArray(holidays) ? holidays : [];
       if (workingDays !== undefined) sanitized.workingDays = Array.isArray(workingDays) ? workingDays : [];
       if (planningShortcuts !== undefined) sanitized.planningShortcuts = Array.isArray(planningShortcuts) ? planningShortcuts : [];
 
       const settings = await storage.updateBusinessSettings(sanitized);
-      // Return bossInstructions parsed so the frontend keeps its array shape
-      const { bossInstructions: bi, ...settingsRest } = settings as any;
+      // Return JSON string fields parsed so the frontend keeps its array shape
+      const { bossInstructions: bi, discountCards: dc, ...settingsRest } = settings as any;
       res.json({
         ...settingsRest,
         bossInstructions: bi ? (() => { try { return JSON.parse(bi); } catch { return []; } })() : [],
+        discountCards: dc ? (() => { try { return JSON.parse(dc); } catch { return []; } })() : [],
       });
     } catch (err: any) {
       res.status(400).json({ message: err.message });
@@ -6652,6 +6679,16 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
                 if (Array.isArray(raw)) return raw as string[];
                 const parsed = JSON.parse(raw);
                 return Array.isArray(parsed) ? parsed : [];
+              } catch { return []; }
+            })(),
+            discountCards: (() => {
+              try {
+                const raw = (bizSettings as any)?.discountCards;
+                if (!raw) return [];
+                const cards = typeof raw === "string" ? JSON.parse(raw) : raw;
+                if (!Array.isArray(cards)) return [];
+                // Only pass active cards to the bot
+                return cards.filter((c: any) => c.active);
               } catch { return []; }
             })(),
           };

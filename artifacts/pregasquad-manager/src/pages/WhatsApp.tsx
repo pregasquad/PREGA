@@ -51,6 +51,9 @@ import {
   CheckCheck,
   UserCheck,
   BarChart2,
+  Percent,
+  Tag,
+  ChevronRight,
 } from "lucide-react";
 
 interface WAStatus {
@@ -203,6 +206,19 @@ export default function WhatsApp() {
   const [bossInput, setBossInput] = useState("");
   const bossChatEndRef = useRef<HTMLDivElement>(null);
   const bossInputRef = useRef<HTMLTextAreaElement>(null);
+
+  // ── Discount Cards state ──────────────────────────────────────────────────
+  interface DiscountCard {
+    id: string;
+    title: string;
+    discountPercent: number;
+    services: string[];
+    active: boolean;
+  }
+  const [discountCardsOpen, setDiscountCardsOpen] = useState(false);
+  const [discountCards, setDiscountCards] = useState<DiscountCard[]>([]);
+  const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
+  const [dirtyCardIds, setDirtyCardIds] = useState<Set<string>>(new Set());
 
   const { data: waData, refetch } = useQuery<WAStatus>({
     queryKey: ["/api/whatsapp/qr"],
@@ -504,6 +520,11 @@ export default function WhatsApp() {
     queryFn: () => apiRequest("GET", "/api/business-settings").then((r) => r.json()),
   });
 
+  const { data: allServices = [] } = useQuery<any[]>({
+    queryKey: ["/api/services"],
+    queryFn: () => apiRequest("GET", "/api/services").then((r) => r.json()),
+  });
+
   useEffect(() => {
     if (bizSettings?.ttsVoice) setSelectedVoice(bizSettings.ttsVoice);
     if ((bizSettings as any)?.ttsSpeed) setSelectedSpeed(Number((bizSettings as any).ttsSpeed));
@@ -517,7 +538,13 @@ export default function WhatsApp() {
     if (bizSettings?.botFilterNumbers) {
       try { setFilterNumbers(JSON.parse(bizSettings.botFilterNumbers)); } catch { setFilterNumbers([]); }
     }
-  }, [bizSettings?.ttsVoice, bizSettings?.linaPersonality, bizSettings?.botFilterMode, bizSettings?.botFilterNumbers]);
+    if (bizSettings?.discountCards !== undefined) {
+      try {
+        const parsed = Array.isArray(bizSettings.discountCards) ? bizSettings.discountCards : [];
+        setDiscountCards(parsed);
+      } catch { setDiscountCards([]); }
+    }
+  }, [bizSettings?.ttsVoice, bizSettings?.linaPersonality, bizSettings?.botFilterMode, bizSettings?.botFilterNumbers, bizSettings?.discountCards]);
 
   const togglePersonality = (id: string) => {
     setSelectedPersonalities((prev) => {
@@ -641,6 +668,59 @@ export default function WhatsApp() {
     onError: (err: any) =>
       toast({ title: "خطأ في الإرسال", description: err.message, variant: "destructive" }),
   });
+
+  // ── Discount Cards mutations ──────────────────────────────────────────────
+  const saveDiscountCardsMutation = useMutation({
+    mutationFn: (cards: DiscountCard[]) =>
+      apiRequest("PATCH", "/api/business-settings", { discountCards: cards }).then((r) => r.json()),
+    onSuccess: (_data, cards) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/business-settings"] });
+      // Clear dirty state for all saved cards
+      setDirtyCardIds(new Set());
+      toast({ title: "تم الحفظ ✓", description: "تم تحديث بطاقات التخفيض" });
+    },
+    onError: (err: any) =>
+      toast({ title: "خطأ", description: err.message, variant: "destructive" }),
+  });
+
+  const addDiscountCard = () => {
+    if (discountCards.length >= 3) return;
+    const newCard: DiscountCard = {
+      id: Math.random().toString(36).slice(2),
+      title: "",
+      discountPercent: 10,
+      services: ["__all__"],
+      active: true,
+    };
+    const updated = [...discountCards, newCard];
+    setDiscountCards(updated);
+    setExpandedCardId(newCard.id);
+  };
+
+  const removeDiscountCard = (id: string) => {
+    const updated = discountCards.filter((c) => c.id !== id);
+    setDiscountCards(updated);
+    if (expandedCardId === id) setExpandedCardId(null);
+    saveDiscountCardsMutation.mutate(updated);
+  };
+
+  const updateDiscountCard = (id: string, patch: Partial<DiscountCard>) => {
+    setDiscountCards((prev) => prev.map((c) => c.id === id ? { ...c, ...patch } : c));
+    setDirtyCardIds((prev) => new Set(prev).add(id));
+  };
+
+  const toggleCardService = (cardId: string, serviceName: string) => {
+    const card = discountCards.find((c) => c.id === cardId);
+    if (!card) return;
+    let next: string[];
+    if (serviceName === "__all__") {
+      next = card.services.includes("__all__") ? [] : ["__all__"];
+    } else {
+      const without = card.services.filter((s) => s !== "__all__" && s !== serviceName);
+      next = card.services.includes(serviceName) ? without : [...without, serviceName];
+    }
+    updateDiscountCard(cardId, { services: next });
+  };
 
   // ── Conversation log query & mutations ────────────────────────────────────
   interface ConvEntry {
@@ -1194,6 +1274,187 @@ export default function WhatsApp() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── DISCOUNT CARDS ── */}
+      <div className="glass-card rounded-2xl p-4 border border-border/30">
+        <button
+          type="button"
+          onClick={() => setDiscountCardsOpen((v) => !v)}
+          className="w-full flex items-center justify-between gap-3"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-rose-500/15 border border-rose-500/25 flex items-center justify-center shrink-0 shadow-md">
+              <Tag className="w-5 h-5 text-rose-400" />
+            </div>
+            <div className="text-left min-w-0">
+              <p className="font-semibold text-sm">بطاقات التخفيض</p>
+              <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                {discountCards.filter((c) => c.active).length > 0
+                  ? `${discountCards.filter((c) => c.active).length} عرض نشط — وصال كتخبر بيهم العملاء 🎉`
+                  : "أضيفي عروض خصم — وصال غيعلم بها العملاء أوتوماتيك"}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {discountCards.filter((c) => c.active).length > 0 && (
+              <span className="text-xs bg-rose-500/15 text-rose-400 border border-rose-500/25 rounded-full px-2 py-0.5">
+                {discountCards.filter((c) => c.active).length} نشط
+              </span>
+            )}
+            {discountCardsOpen ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+          </div>
+        </button>
+
+        {discountCardsOpen && (
+          <div className="mt-4 space-y-3 border-t border-border/20 pt-3">
+            {discountCards.length === 0 && (
+              <p className="text-xs text-muted-foreground text-center py-2">
+                لا توجد بطاقات تخفيض — اضغطي على "إضافة بطاقة"
+              </p>
+            )}
+
+            {discountCards.map((card, idx) => (
+              <div key={card.id} className={`rounded-xl border p-3 space-y-2 transition-colors ${card.active ? "border-rose-500/30 bg-rose-500/5" : "border-border/30 bg-muted/5 opacity-70"}`}>
+                {/* Card header */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground font-medium w-5">{idx + 1}.</span>
+                  <button
+                    type="button"
+                    onClick={() => setExpandedCardId(expandedCardId === card.id ? null : card.id)}
+                    className="flex-1 flex items-center gap-2 min-w-0 text-left"
+                  >
+                    <span className="text-sm font-medium truncate flex-1">
+                      {card.title || <span className="text-muted-foreground italic">بدون عنوان</span>}
+                    </span>
+                    <span className="text-xs bg-rose-500/15 text-rose-400 rounded-full px-1.5 py-0.5 shrink-0">
+                      -{card.discountPercent}%
+                    </span>
+                    <ChevronRight className={`w-3.5 h-3.5 text-muted-foreground transition-transform shrink-0 ${expandedCardId === card.id ? "rotate-90" : ""}`} />
+                  </button>
+                  {/* Active toggle */}
+                  <Switch
+                    checked={card.active}
+                    onCheckedChange={(v) => {
+                      const updated = discountCards.map((c) => c.id === card.id ? { ...c, active: v } : c);
+                      setDiscountCards(updated);
+                      saveDiscountCardsMutation.mutate(updated);
+                    }}
+                  />
+                  {/* Delete */}
+                  <button
+                    type="button"
+                    onClick={() => removeDiscountCard(card.id)}
+                    className="text-muted-foreground hover:text-red-400 transition-colors shrink-0"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                {/* Expanded edit form */}
+                {expandedCardId === card.id && (
+                  <div className="space-y-2 pt-2 border-t border-border/20">
+                    {/* Title */}
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1 block">عنوان العرض</label>
+                      <Input
+                        placeholder="مثال: عرض الصيف 🌞"
+                        value={card.title}
+                        onChange={(e) => updateDiscountCard(card.id, { title: e.target.value })}
+                        className="h-8 text-sm rounded-lg"
+                      />
+                    </div>
+                    {/* Discount % */}
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1 block">نسبة التخفيض</label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min={1}
+                          max={99}
+                          value={card.discountPercent}
+                          onChange={(e) => updateDiscountCard(card.id, { discountPercent: Math.min(99, Math.max(1, Number(e.target.value))) })}
+                          className="h-8 text-sm rounded-lg w-24"
+                          dir="ltr"
+                        />
+                        <Percent className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">خصم على الخدمات المختارة</span>
+                      </div>
+                    </div>
+                    {/* Services */}
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1 block">الخدمات المشمولة</label>
+                      <div className="space-y-1 max-h-44 overflow-y-auto rounded-lg border border-border/30 p-2">
+                        {/* Select all */}
+                        <label className="flex items-center gap-2 cursor-pointer py-1 px-1 rounded hover:bg-muted/30">
+                          <input
+                            type="checkbox"
+                            checked={card.services.includes("__all__")}
+                            onChange={() => toggleCardService(card.id, "__all__")}
+                            className="rounded accent-rose-500"
+                          />
+                          <span className="text-xs font-semibold">جميع الخدمات</span>
+                        </label>
+                        {!card.services.includes("__all__") && allServices.map((svc: any) => (
+                          <label key={svc.id} className="flex items-center gap-2 cursor-pointer py-0.5 px-1 rounded hover:bg-muted/30">
+                            <input
+                              type="checkbox"
+                              checked={card.services.includes(svc.name)}
+                              onChange={() => toggleCardService(card.id, svc.name)}
+                              className="rounded accent-rose-500"
+                            />
+                            <span className="text-xs">{svc.name}</span>
+                            <span className="text-xs text-muted-foreground ml-auto">{svc.price} {bizSettings?.currencySymbol || "DH"}</span>
+                          </label>
+                        ))}
+                        {!card.services.includes("__all__") && allServices.length === 0 && (
+                          <p className="text-xs text-muted-foreground text-center py-2">لا توجد خدمات مضافة</p>
+                        )}
+                      </div>
+                    </div>
+                    {/* Save card */}
+                    <Button
+                      size="sm"
+                      disabled={saveDiscountCardsMutation.isPending || !card.title.trim()}
+                      onClick={() => saveDiscountCardsMutation.mutate(discountCards)}
+                      className={`w-full rounded-lg border transition-colors ${
+                        dirtyCardIds.has(card.id)
+                          ? "bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border-amber-500/30"
+                          : "bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border-rose-500/30"
+                      }`}
+                      variant="ghost"
+                    >
+                      {saveDiscountCardsMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : dirtyCardIds.has(card.id) ? (
+                        <><Save className="w-4 h-4 mr-1" />حفظ التغييرات ●</>
+                      ) : (
+                        <><Save className="w-4 h-4 mr-1" />محفوظ ✓</>
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {/* Add card button */}
+            {discountCards.length < 3 && (
+              <Button
+                size="sm"
+                onClick={addDiscountCard}
+                className="w-full rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 border-dashed"
+                variant="ghost"
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                إضافة بطاقة تخفيض {discountCards.length > 0 ? `(${discountCards.length}/3)` : ""}
+              </Button>
+            )}
+
+            {discountCards.length >= 3 && (
+              <p className="text-xs text-muted-foreground text-center py-1">وصلتِ للحد الأقصى — 3 بطاقات</p>
+            )}
           </div>
         )}
       </div>
