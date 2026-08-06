@@ -367,10 +367,34 @@ export default function Salaries() {
         amount: variables.amount,
         timestamp: new Date().toISOString(),
       });
+
+      // Immediately patch the cache so the deduction disappears / updates without
+      // waiting for the background refetch (fixes the "auto-clear not visible" race).
+      const prev = queryClient.getQueryData<NonNullable<typeof salaryData>>(["/api/salaries/compute"]);
+      if (prev) {
+        queryClient.setQueryData(["/api/salaries/compute"], {
+          ...prev,
+          deductions: prev.deductions.map((d) =>
+            d.id === variables.id
+              ? {
+                  ...d,
+                  paidBack: _data?.paidBack ?? variables.amount,
+                  cleared: !!_data?.cleared,
+                  clearedAt: _data?.cleared ? new Date().toISOString() : d.clearedAt,
+                }
+              : d
+          ),
+        });
+      }
+
       refreshSalariesBackground();
       setPayBackDeduction(null);
       setPayBackInputAmount("");
-      toast({ title: t("salaries.payBackRecorded") });
+      toast({
+        title: _data?.cleared
+          ? `✅ ${t("salaries.payBackRecorded")} — ${t("salaries.cleared") || "تسوّى تلقائياً"}`
+          : t("salaries.payBackRecorded"),
+      });
     },
     onError: () => {
       toast({ title: t("common.error"), variant: "destructive" });
