@@ -161,6 +161,8 @@ export default function Salaries() {
     socket.on("appointment:created", invalidate);
     socket.on("appointment:updated", invalidate);
     socket.on("appointment:paid", invalidate);
+    socket.on("appointment:deleted", invalidate);
+    socket.on("booking:cancelled", invalidate);
 
     // deduction:cleared — prompt owner to credit the amount back to the staff wallet
     const onDeductionCleared = (data: { deductionId: number; staffId: number; staffName: string; amount: number }) => {
@@ -192,6 +194,8 @@ export default function Salaries() {
       socket.off("appointment:created", invalidate);
       socket.off("appointment:updated", invalidate);
       socket.off("appointment:paid", invalidate);
+      socket.off("appointment:deleted", invalidate);
+      socket.off("booking:cancelled", invalidate);
       socket.off("deduction:cleared", onDeductionCleared);
       if (debounceTimer) clearTimeout(debounceTimer);
     };
