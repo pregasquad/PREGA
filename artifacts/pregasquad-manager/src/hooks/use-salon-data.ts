@@ -241,10 +241,15 @@ export function useCreateAppointment() {
       // Skip server invalidation when offline — the optimistic update already shows
       // the new appointment; invalidating would trigger a failed refetch.
       if (!navigator.onLine) return;
+      // Mark appointment queries stale but do NOT trigger an immediate background refetch
+      // (refetchType: 'none'). onSuccess already placed the real server data in the cache,
+      // so an immediate refetch only causes a visible flash. The stale flag means the next
+      // navigation or focus will still pick up fresh data.
       if (variables?.date) {
-        queryClient.invalidateQueries({ queryKey: [api.appointments.list.path, variables.date] });
+        queryClient.invalidateQueries({ queryKey: [api.appointments.list.path, variables.date], refetchType: 'none' });
       }
-      queryClient.invalidateQueries({ queryKey: [api.appointments.list.path, undefined] });
+      queryClient.invalidateQueries({ queryKey: [api.appointments.list.path, undefined], refetchType: 'none' });
+      // Salaries need to recalculate — allow a background refresh here.
       queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
       refreshSalariesBackground(300);
     },
