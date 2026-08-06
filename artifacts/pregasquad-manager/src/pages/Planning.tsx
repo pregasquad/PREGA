@@ -393,31 +393,57 @@ export default function Planning() {
   useEffect(() => {
     const socket = getAppSocket();
 
-    // Any booking event → refresh appointments + net profit circle immediately.
-    const onBookingChange = () => {
+    // Patch salaries cache in-place so wallet updates in one render frame.
+    const patchSalaries = (updater: (prev: any) => any) => {
+      const prev = queryClient.getQueryData<any>(["/api/salaries/compute"]);
+      if (prev) queryClient.setQueryData(["/api/salaries/compute"], updater(prev));
+    };
+
+    // Background sync — confirms DB state without blocking the instant UI update.
+    const sync = () => {
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
     };
-    // For booking:created specifically, skip the invalidation if WE have an active
-    // appointment-create mutation — our mutation's own onSettled handles the cache
-    // update. This prevents the socket echo (server emits before HTTP response) from
-    // racing with the optimistic update and making the new appointment flash/disappear.
-    // We scope to the "appointment-create" mutationKey so unrelated mutations
-    // (charges, deductions, etc.) never suppress remote booking:created events.
-    const onBookingCreated = () => {
+
+    const onCreated = (appt: any) => {
+      // Skip echo from our own create mutation to avoid double-add flash.
       const activeSelfCreate = queryClient.isMutating({
         predicate: (m) => Array.isArray(m.options.mutationKey) && m.options.mutationKey[0] === "appointment-create",
       });
       if (activeSelfCreate > 0) return;
-      queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+      patchSalaries((prev) => ({
+        ...prev,
+        appointments: prev.appointments.some((a: any) => a.id === appt.id)
+          ? prev.appointments
+          : [...prev.appointments, appt],
+      }));
+      sync();
     };
-    socket.on("booking:created",       onBookingCreated);
-    socket.on("appointment:created",   onBookingChange);
-    socket.on("booking:updated",       onBookingChange);
-    socket.on("appointment:updated",   onBookingChange);
-    socket.on("appointment:paid",      onBookingChange);
-    socket.on("appointment:deleted",   onBookingChange);
+
+    const onUpdated = (data: any) => {
+      patchSalaries((prev) => ({
+        ...prev,
+        appointments: prev.appointments.map((a: any) =>
+          a.id === data.id ? { ...a, ...data } : a
+        ),
+      }));
+      sync();
+    };
+
+    const onDeleted = (data: { id: number }) => {
+      patchSalaries((prev) => ({
+        ...prev,
+        appointments: prev.appointments.filter((a: any) => a.id !== data.id),
+      }));
+      sync();
+    };
+
+    socket.on("booking:created",       onCreated);
+    socket.on("appointment:created",   onCreated);
+    socket.on("booking:updated",       onUpdated);
+    socket.on("appointment:updated",   onUpdated);
+    socket.on("appointment:paid",      onUpdated);
+    socket.on("appointment:deleted",   onDeleted);
 
     // Mobile: refresh every 2 minutes, Desktop: every 90 seconds as fallback
     const refreshInterval = isMobile ? 120_000 : 90_000;
@@ -473,12 +499,12 @@ export default function Planning() {
     socket.on("deduction:cleared", onDeductionCleared);
 
     return () => {
-      socket.off("booking:created",       onBookingCreated);
-      socket.off("appointment:created",   onBookingChange);
-      socket.off("booking:updated",       onBookingChange);
-      socket.off("appointment:updated",   onBookingChange);
-      socket.off("appointment:paid",      onBookingChange);
-      socket.off("appointment:deleted",   onBookingChange);
+      socket.off("booking:created",       onCreated);
+      socket.off("appointment:created",   onCreated);
+      socket.off("booking:updated",       onUpdated);
+      socket.off("appointment:updated",   onUpdated);
+      socket.off("appointment:paid",      onUpdated);
+      socket.off("appointment:deleted",   onDeleted);
       socket.off("deduction:cleared",     onDeductionCleared);
       clearInterval(intervalId);
       clearInterval(salaryIntervalId);

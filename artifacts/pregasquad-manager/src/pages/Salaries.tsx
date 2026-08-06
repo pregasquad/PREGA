@@ -149,24 +149,58 @@ export default function Salaries() {
 
   useEffect(() => {
     const socket = getAppSocket();
-    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-    const invalidate = () => {
-      if (debounceTimer) clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
-        setLastUpdate(new Date());
-      }, 1500);
+
+    // Patch the salaries cache key in-place so the wallet rerenders in one frame.
+    type SalaryCache = NonNullable<typeof salaryData>;
+    const patch = (updater: (prev: SalaryCache) => SalaryCache) => {
+      const prev = queryClient.getQueryData<SalaryCache>(["/api/salaries/compute"]);
+      if (prev) queryClient.setQueryData(["/api/salaries/compute"], updater(prev));
     };
-    socket.on("booking:created", invalidate);
-    socket.on("appointment:created", invalidate);
-    socket.on("appointment:updated", invalidate);
-    socket.on("appointment:paid", invalidate);
-    socket.on("appointment:deleted", invalidate);
-    socket.on("booking:cancelled", invalidate);
+
+    // Background sync — confirms DB state without blocking the UI update.
+    const sync = () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
+      setLastUpdate(new Date());
+    };
+
+    const onCreated = (appt: any) => {
+      patch((prev) => ({
+        ...prev,
+        appointments: prev.appointments.some((a) => a.id === appt.id)
+          ? prev.appointments               // already present (e.g. own mutation echo)
+          : [...prev.appointments, appt],
+      }));
+      sync();
+    };
+
+    const onUpdated = (data: any) => {
+      patch((prev) => ({
+        ...prev,
+        appointments: prev.appointments.map((a) =>
+          a.id === data.id ? { ...a, ...data } : a
+        ),
+      }));
+      sync();
+    };
+
+    const onDeleted = (data: { id: number }) => {
+      patch((prev) => ({
+        ...prev,
+        appointments: prev.appointments.filter((a) => a.id !== data.id),
+      }));
+      sync();
+    };
+
+    socket.on("booking:created",      onCreated);
+    socket.on("appointment:created",  onCreated);
+    socket.on("appointment:updated",  onUpdated);
+    socket.on("appointment:paid",     onUpdated);
+    socket.on("appointment:deleted",  onDeleted);
+    socket.on("booking:cancelled",    onDeleted);
 
     // deduction:cleared — prompt owner to credit the amount back to the staff wallet
     const onDeductionCleared = (data: { deductionId: number; staffId: number; staffName: string; amount: number }) => {
-      invalidate();
+      sync();
       toast({
         title: `✅ خصم ${data.staffName} تسوّى تلقائياً`,
         description: `${data.amount} DH — هل تضيف المبلغ لرصيده؟`,
@@ -190,14 +224,13 @@ export default function Salaries() {
     socket.on("deduction:cleared", onDeductionCleared);
 
     return () => {
-      socket.off("booking:created", invalidate);
-      socket.off("appointment:created", invalidate);
-      socket.off("appointment:updated", invalidate);
-      socket.off("appointment:paid", invalidate);
-      socket.off("appointment:deleted", invalidate);
-      socket.off("booking:cancelled", invalidate);
-      socket.off("deduction:cleared", onDeductionCleared);
-      if (debounceTimer) clearTimeout(debounceTimer);
+      socket.off("booking:created",      onCreated);
+      socket.off("appointment:created",  onCreated);
+      socket.off("appointment:updated",  onUpdated);
+      socket.off("appointment:paid",     onUpdated);
+      socket.off("appointment:deleted",  onDeleted);
+      socket.off("booking:cancelled",    onDeleted);
+      socket.off("deduction:cleared",    onDeductionCleared);
     };
   }, [queryClient]);
 
