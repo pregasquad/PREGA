@@ -10,6 +10,8 @@ import coiffeurPhoto from "@assets/ED5544FA-32F2-46D8-82FF-39C2C3300048_17848089
 import coiffeurCutout from "@assets/generated_images/coiffeur-cutout.png";
 import estheticianPhoto from "@assets/9748981A-4260-47D3-A30A-AFADDAC680C8_1784809089053.png";
 import estheticianCutout from "@assets/generated_images/esthetician-cutout.png";
+import managerPhoto from "@assets/IMG_0785_1786042581377.png";
+import managerCutout from "@assets/manager-cutout.png";
 import salonImg from "@assets/65C064CA-118F-41EE-825F-B5D6EC37DCEA_1784674657228.jpeg";
 import gallery1 from "@assets/generated_images/gallery-1.jpg";
 import gallery2 from "@assets/generated_images/gallery-2.jpg";
@@ -165,6 +167,14 @@ const staff: StaffMember[] = [
     bio: "Skin care specialist delivering glowing, radiant results with expert precision.",
     photo: estheticianPhoto,
     cutout: estheticianCutout,
+  },
+  {
+    id: 3,
+    name: "MANAGER",
+    role: "MANAGER",
+    bio: "Overseeing daily operations and ensuring every client experience exceeds expectations.",
+    photo: managerPhoto,
+    cutout: managerCutout,
   },
 ];
 
