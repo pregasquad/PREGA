@@ -3,7 +3,6 @@ import { api, buildUrl } from "@shared/routes";
 import { type InsertAppointment, type InsertService, type InsertCategory, type InsertClient, type InsertStaff, type InsertStaffSchedule, type InsertStaffBreak, type InsertStaffTimeOff } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { getFromOfflineStore, saveToOfflineStore, addItemToOfflineStore, addToSyncQueue, updateItemInOfflineStore, deleteItemFromOfflineStore } from "@/lib/offlineDb";
-import { refreshSalariesBackground } from "@/lib/salariesRefresher";
 
 type OfflineStoreName = 'appointments' | 'services' | 'categories' | 'staff' | 'clients' | 'charges' | 'products' | 'staffDeductions' | 'staffCommissions' | 'businessSettings';
 
@@ -213,14 +212,34 @@ export function useCreateAppointment() {
           old ? old.map((apt: any) => apt.id === context.tempId ? data : apt) : [data]
         );
         // Only update the all-appointments cache if it was already populated.
-        // If it wasn't loaded yet, don't replace it with [data] — onSettled's
-        // invalidation will trigger the full refetch instead.
         queryClient.setQueryData(context.allQueryKey, (old: any) => {
           if (!old) return old;
           return old.map((apt: any) => apt.id === context.tempId ? data : apt);
         });
       }
+      // Patch salary cache immediately — replace optimistic temp entry (if present)
+      // or append the real appointment. This makes commission totals update instantly
+      // without waiting for a /api/salaries/compute refetch.
       const isOffline = (data as any)?._offline;
+      if (!isOffline) {
+        queryClient.setQueriesData(
+          { queryKey: ["/api/salaries/compute"] },
+          (old: any) => {
+            if (!old?.appointments) return old;
+            const tempId = context?.tempId;
+            const hasTemp = tempId != null && old.appointments.some((a: any) => a.id === tempId);
+            const alreadyReal = old.appointments.some((a: any) => a.id === data.id);
+            if (hasTemp) {
+              // Replace optimistic entry with real data
+              return { ...old, appointments: old.appointments.map((a: any) => a.id === tempId ? data : a) };
+            } else if (!alreadyReal) {
+              // Append if not present yet
+              return { ...old, appointments: [...old.appointments, data] };
+            }
+            return old;
+          }
+        );
+      }
       toast({ 
         title: isOffline ? "Saved Offline" : "Success", 
         description: isOffline ? "Appointment saved locally. Will sync when online." : "Appointment booked successfully" 
@@ -249,9 +268,8 @@ export function useCreateAppointment() {
         queryClient.invalidateQueries({ queryKey: [api.appointments.list.path, variables.date], refetchType: 'none' });
       }
       queryClient.invalidateQueries({ queryKey: [api.appointments.list.path, undefined], refetchType: 'none' });
-      // Salaries need to recalculate — allow a background refresh here.
-      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
-      refreshSalariesBackground(300);
+      // Salary cache was already patched in onSuccess — just mark stale, no immediate refetch.
+      queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"], refetchType: 'none' });
     },
   });
 }
@@ -314,6 +332,14 @@ export function useUpdateAppointment() {
           { queryKey: [api.appointments.list.path] },
           (old: any) => old ? old.map((apt: any) => apt.id === data.id ? data : apt) : old
         );
+        // Patch salary cache immediately with updated appointment data
+        queryClient.setQueriesData(
+          { queryKey: ["/api/salaries/compute"] },
+          (old: any) => {
+            if (!old?.appointments) return old;
+            return { ...old, appointments: old.appointments.map((a: any) => a.id === data.id ? data : a) };
+          }
+        );
       }
       toast({ 
         title: isOffline ? "Saved Offline" : "Success", 
@@ -330,9 +356,9 @@ export function useUpdateAppointment() {
     },
     onSettled: () => {
       if (navigator.onLine) {
-        queryClient.invalidateQueries({ queryKey: [api.appointments.list.path] });
-        queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
-        refreshSalariesBackground(300);
+        // Mark stale only — onSuccess already patched the cache with correct data
+        queryClient.invalidateQueries({ queryKey: [api.appointments.list.path], refetchType: 'none' });
+        queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"], refetchType: 'none' });
       }
     },
   });
@@ -378,13 +404,23 @@ export function useDeleteAppointment() {
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: [api.appointments.list.path] });
       const previousAppointments = queryClient.getQueriesData({ queryKey: [api.appointments.list.path] });
+      const previousSalaryEntries = queryClient.getQueriesData({ queryKey: ["/api/salaries/compute"] });
       
+      // Remove from appointment list caches immediately
       queryClient.setQueriesData(
         { queryKey: [api.appointments.list.path] },
         (old: any) => old ? old.filter((apt: any) => apt.id !== id) : old
       );
+      // Remove from salary cache immediately — commission totals update at once
+      queryClient.setQueriesData(
+        { queryKey: ["/api/salaries/compute"] },
+        (old: any) => {
+          if (!old?.appointments) return old;
+          return { ...old, appointments: old.appointments.filter((a: any) => a.id !== id) };
+        }
+      );
       
-      return { previousAppointments };
+      return { previousAppointments, previousSalaryEntries };
     },
     onSuccess: (result) => {
       const isOffline = (result as any)?._offline;
@@ -399,13 +435,19 @@ export function useDeleteAppointment() {
           queryClient.setQueryData(queryKey, data);
         });
       }
+      // Restore salary cache on error
+      if (context?.previousSalaryEntries) {
+        context.previousSalaryEntries.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
       toast({ title: "Error", description: err.message, variant: "destructive" });
     },
     onSettled: () => {
       if (navigator.onLine) {
-        queryClient.invalidateQueries({ queryKey: [api.appointments.list.path] });
-        queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
-        refreshSalariesBackground(300);
+        // Mark stale only — onMutate already removed the appointment from both caches
+        queryClient.invalidateQueries({ queryKey: [api.appointments.list.path], refetchType: 'none' });
+        queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"], refetchType: 'none' });
       }
     },
   });
