@@ -31,6 +31,7 @@ const bookingSchema = z.object({
 });
 
 interface SelectedService {
+  id?: number;
   name: string;
   price: number;
   duration: number;
@@ -212,7 +213,7 @@ export default function Booking() {
           delete (window as any).__prefillService;
           const match = (servicesData as Service[]).find(s => s.name === prefillName);
           if (match) {
-            setSelectedServices([{ name: match.name, price: match.price, duration: match.duration }]);
+            setSelectedServices([{ id: match.id, name: match.name, price: match.price, duration: match.duration }]);
             setSelectedCategory(match.category);
           }
         }
@@ -426,7 +427,7 @@ export default function Booking() {
   const handleAddService = (serviceName: string) => {
     const service = filteredServices.find(s => s.name === serviceName);
     if (service && !selectedServices.some(s => s.name === serviceName)) {
-      const newSelectedServices = [...selectedServices, { name: service.name, price: service.price, duration: service.duration }];
+      const newSelectedServices = [...selectedServices, { id: service.id, name: service.name, price: service.price, duration: service.duration }];
       setSelectedServices(newSelectedServices);
       const totalDuration = newSelectedServices.reduce((sum, s) => sum + s.duration, 0);
       const totalPrice = newSelectedServices.reduce((sum, s) => sum + s.price, 0);
@@ -453,7 +454,7 @@ export default function Booking() {
     const packageServices = pkg.services
       .map(serviceId => services.find(s => s.id === serviceId))
       .filter((s): s is Service => s !== undefined)
-      .map(s => ({ name: s.name, price: s.price, duration: s.duration }));
+      .map(s => ({ id: s.id, name: s.name, price: s.price, duration: s.duration }));
     
     if (packageServices.length === 0) return;
     

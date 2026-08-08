@@ -1662,7 +1662,7 @@ export default function Planning() {
     const servicesToSave = selectedServices.map(s => {
       const inputValue = priceInputs[s.id];
       const price = inputValue !== undefined ? (parseFloat(inputValue) || s.price) : s.price;
-      return { name: s.name, price, duration: s.duration };
+      return { id: s.id, name: s.name, price, duration: s.duration };
     });
     
     // Read total price from state (user can override the calculated total)

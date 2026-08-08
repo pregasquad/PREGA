@@ -5,6 +5,7 @@
  */
 
 interface ServiceItem {
+  id?: number; // service catalog id — preferred for matching (survives renames)
   name: string;
   price: number;
   duration?: number;
@@ -27,7 +28,12 @@ interface StaffCommission {
   percentage: number;
 }
 
-function findService(services: ServiceDef[], name: string | undefined): ServiceDef | undefined {
+function findService(services: ServiceDef[], name: string | undefined, id?: number): ServiceDef | undefined {
+  // Prefer id match (survives renames / duplicate names), then exact name, then case-insensitive
+  if (id != null) {
+    const byId = services.find(s => s.id === Number(id));
+    if (byId) return byId;
+  }
   if (!name) return undefined;
   return (
     services.find(s => s.name === name) ||
@@ -89,7 +95,7 @@ export function calcAppointmentCommission(
       let total = 0;
       for (const item of serviceItems) {
         const effectivePrice = Number(item.price || 0) * scaleFactor;
-        const svcDef = findService(services, item.name);
+        const svcDef = findService(services, item.name, (item as any).id);
         const rate = getRate(svcDef, staffMember, staffCommissions);
         total += effectivePrice * (rate / 100);
       }
@@ -107,6 +113,7 @@ export function calcAppointmentCommission(
 // ── Fast path: pre-built index for bulk commission calculations ───────────────
 
 export interface CommissionIndex {
+  serviceById: Map<number, ServiceDef>;
   serviceByName: Map<string, ServiceDef>;
   serviceByNameLower: Map<string, ServiceDef>;
   staffById: Map<number, StaffDef>;
@@ -123,9 +130,11 @@ export function buildCommissionIndex(
   staffList: StaffDef[],
   staffCommissions: StaffCommission[]
 ): CommissionIndex {
+  const serviceById = new Map<number, ServiceDef>();
   const serviceByName = new Map<string, ServiceDef>();
   const serviceByNameLower = new Map<string, ServiceDef>();
   for (const s of services) {
+    serviceById.set(s.id, s);
     serviceByName.set(s.name, s);
     serviceByNameLower.set(s.name.toLowerCase(), s);
   }
@@ -134,7 +143,7 @@ export function buildCommissionIndex(
   const commissionKey = new Map(
     staffCommissions.map(c => [`${c.staffId}:${c.serviceId}`, c.percentage])
   );
-  return { serviceByName, serviceByNameLower, staffById, staffByName, commissionKey };
+  return { serviceById, serviceByName, serviceByNameLower, staffById, staffByName, commissionKey };
 }
 
 /**
@@ -146,7 +155,11 @@ export function calcAppointmentCommissionFast(app: any, idx: CommissionIndex): n
     (app.staffId != null ? idx.staffById.get(Number(app.staffId)) : undefined) ??
     idx.staffByName.get(app.staff);
 
-  const findSvc = (name: string | undefined): ServiceDef | undefined => {
+  const findSvc = (name: string | undefined, id?: number): ServiceDef | undefined => {
+    if (id != null) {
+      const byId = idx.serviceById.get(Number(id));
+      if (byId) return byId;
+    }
     if (!name) return undefined;
     return idx.serviceByName.get(name) ?? idx.serviceByNameLower.get(name.toLowerCase());
   };
@@ -179,7 +192,7 @@ export function calcAppointmentCommissionFast(app: any, idx: CommissionIndex): n
       let total = 0;
       for (const item of serviceItems) {
         const effectivePrice = Number(item.price || 0) * scaleFactor;
-        total += effectivePrice * (getRateFast(findSvc(item.name)) / 100);
+        total += effectivePrice * (getRateFast(findSvc(item.name, (item as any).id)) / 100);
       }
       return total;
     }

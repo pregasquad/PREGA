@@ -810,6 +810,7 @@ export async function registerRoutes(
 
   // Schema for service item in multi-service bookings
   const serviceItemSchema = z.object({
+    id: z.number().optional(), // service catalog id — preferred for commission matching
     name: z.string().min(1).max(100),
     price: z.number().min(0).max(100000),
     duration: z.number().min(5).max(480),
@@ -997,7 +998,7 @@ export async function registerRoutes(
   // Type for grouped services by category
   interface CategoryGroup {
     category: string;
-    services: Array<{ name: string; price: number; duration: number }>;
+    services: Array<{ id?: number; name: string; price: number; duration: number }>;
     totalDuration: number;
     totalPrice: number;
   }
@@ -1034,6 +1035,8 @@ export async function registerRoutes(
           
           const group = categoryGroups.get(category)!;
           group.services.push({
+            // SECURITY: never trust the client-supplied id — resolve from the catalog by name
+            id: matchedService?.id,
             name: svc.name,
             price: svc.price,
             duration: svc.duration
@@ -1048,7 +1051,7 @@ export async function registerRoutes(
         
         categoryGroups.set(category, {
           category,
-          services: [{ name: input.service, price: input.price, duration: input.duration }],
+          services: [{ id: matchedService?.id, name: input.service, price: input.price, duration: input.duration }],
           totalDuration: input.duration,
           totalPrice: input.price
         });
@@ -2955,8 +2958,9 @@ export async function registerRoutes(
             const scaleFactor = apptTotal / sumPrices;
             for (const item of serviceItems) {
               const effectivePrice = Number(item.price || 0) * scaleFactor;
-              // Case-insensitive fallback mirrors frontend findService() in commissionCalc.ts
-              const svc = serviceMap.get(item.name) ||
+              // Prefer id match, then exact/case-insensitive name — mirrors commissionCalc.ts
+              const svc = ((item as any).id != null && [...serviceMap.values()].find((s: any) => s.id === Number((item as any).id))) ||
+                serviceMap.get(item.name) ||
                 [...serviceMap.values()].find((s: any) => s.name.toLowerCase() === (item.name || "").toLowerCase());
               let rate = Number(svc?.commissionPercent ?? 50);
               const cc = staffCommissions.find(c => svc && c.serviceId === svc.id);
