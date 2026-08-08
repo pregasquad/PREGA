@@ -2067,25 +2067,29 @@ export async function registerRoutes(
         io.emit("appointment:paid", item);
       }
       
-      // Award loyalty points if appointment is created as paid
+      // Award loyalty points if appointment is created as paid.
+      // Runs in the BACKGROUND — the response returns right after the insert;
+      // the loyalty socket event still fires when the award completes.
       if (item.paid && item.total && item.total > 0 && (item.clientId || item.client)) {
-        const client = item.clientId ? await storage.getClient(item.clientId) : await storage.getClientByName(item.client!);
-        if (client && client.loyaltyEnrolled) {
-          const settings = await storage.getBusinessSettings();
-          const pointsPerDh = settings?.loyaltyPointsPerDh ?? 1;
-          const pointsToAdd = Math.floor(item.total * pointsPerDh);
-          if (pointsToAdd > 0) {
-            const updatedClient = await storage.updateClientLoyalty(client.id, pointsToAdd, item.total);
-            console.log(`Awarded ${pointsToAdd} loyalty points to ${client.name} for new appointment #${item.id}`);
-            // Emit real-time update for loyalty points
-            io.emit("client:loyaltyUpdated", { 
-              clientId: client.id, 
-              clientName: client.name,
-              pointsAdded: pointsToAdd, 
-              newTotal: updatedClient.loyaltyPoints 
-            });
+        (async () => {
+          const client = item.clientId ? await storage.getClient(item.clientId) : await storage.getClientByName(item.client!);
+          if (client && client.loyaltyEnrolled) {
+            const settings = await storage.getBusinessSettings();
+            const pointsPerDh = settings?.loyaltyPointsPerDh ?? 1;
+            const pointsToAdd = Math.floor(item.total * pointsPerDh);
+            if (pointsToAdd > 0) {
+              const updatedClient = await storage.updateClientLoyalty(client.id, pointsToAdd, item.total);
+              console.log(`Awarded ${pointsToAdd} loyalty points to ${client.name} for new appointment #${item.id}`);
+              // Emit real-time update for loyalty points
+              io.emit("client:loyaltyUpdated", { 
+                clientId: client.id, 
+                clientName: client.name,
+                pointsAdded: pointsToAdd, 
+                newTotal: updatedClient.loyaltyPoints 
+              });
+            }
           }
-        }
+        })().catch((e) => console.error("Background loyalty award failed:", e));
       }
       
       // Send push notification for new appointment

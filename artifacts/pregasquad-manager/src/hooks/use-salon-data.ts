@@ -157,8 +157,8 @@ export function useCreateAppointment() {
           throw new Error("Failed to create appointment");
         }
         const result = api.appointments.create.responses[201].parse(await res.json());
-        // Cache the new appointment
-        await addItemToOfflineStore('appointments', result).catch(() => {});
+        // Cache the new appointment (fire-and-forget — don't hold up the UI on IndexedDB)
+        addItemToOfflineStore('appointments', result).catch(() => {});
         return result;
       } catch (error: any) {
         // Network error - save offline
