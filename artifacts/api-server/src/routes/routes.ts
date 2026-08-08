@@ -1263,8 +1263,11 @@ export async function registerRoutes(
         ).catch(console.error);
       }
       
-      // Send WhatsApp confirmation for the overall booking (if phone provided)
+      // Send WhatsApp confirmation for the overall booking (if phone provided).
+      // Runs in the BACKGROUND — the client gets the booking response immediately;
+      // the confirmation message and bot-silencing happen a moment later.
       if (input.phone && createdAppointments.length > 0) {
+        (async () => {
         try {
           // @ts-ignore
           // @ts-ignore
@@ -1331,6 +1334,7 @@ export async function registerRoutes(
         } catch (err) {
           console.log("WhatsApp notification failed:", err);
         }
+        })().catch((err) => console.log("Background WhatsApp confirmation failed:", err));
       }
       
       // Fetch client loyalty points for receipt
