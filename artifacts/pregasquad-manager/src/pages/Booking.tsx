@@ -24,9 +24,9 @@ const bookingSchema = z.object({
   client: z.string().min(1),
   service: z.string().optional(),
   staff: z.string().optional(),
-  duration: z.coerce.number(),
-  price: z.coerce.number(),
-  total: z.coerce.number(),
+  duration: z.coerce.number<number>(),
+  price: z.coerce.number<number>(),
+  total: z.coerce.number<number>(),
   phone: z.string().optional(),
 });
 

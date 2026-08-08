@@ -357,7 +357,15 @@ function HeroSection() {
   );
 }
 
-const FALLBACK_SERVICES = [
+const FALLBACK_SERVICES: Array<{
+  id: number;
+  name: string;
+  category: string;
+  emoji: string;
+  price?: number;
+  duration?: number;
+  isStartingPrice?: boolean;
+}> = [
   { id: -1, name: "Coupe & Brushing", category: "Cheveux", emoji: "✂️" },
   { id: -2, name: "Balayage & Couleur", category: "Cheveux", emoji: "🎨" },
   { id: -3, name: "Lissage & Kératine", category: "Cheveux", emoji: "✨" },

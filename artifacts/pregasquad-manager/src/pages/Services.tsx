@@ -24,11 +24,11 @@ const linkedProductItemSchema = z.object({ productId: z.number().int(), quantity
 type LinkedProductItem = { productId: number; quantity: number };
 
 const serviceFormSchema = insertServiceSchema.extend({
-  price: z.coerce.number(),
-  duration: z.coerce.number(),
-  linkedProductId: z.coerce.number().optional().nullable(),
+  price: z.coerce.number<number>(),
+  duration: z.coerce.number<number>(),
+  linkedProductId: z.coerce.number<number>().optional().nullable(),
   linkedProductIds: z.array(linkedProductItemSchema).default([]),
-  commissionPercent: z.coerce.number().min(0).max(100).default(50),
+  commissionPercent: z.coerce.number<number>().min(0).max(100).default(50),
   emoji: z.string().max(10).optional().nullable(),
   imageUrl: z.string().optional().nullable(),
 });

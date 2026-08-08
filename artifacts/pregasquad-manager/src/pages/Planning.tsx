@@ -105,7 +105,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { refreshSalariesBackground } from "@/lib/salariesRefresher";
 import { getAppSocket } from "@/lib/appSocket";
 import { onSyncStatusChange } from "@/lib/syncService";
-import { getSyncQueueCount } from "@/lib/offlineDb";
+import { getSyncQueueCount, getFromOfflineStore } from "@/lib/offlineDb";
 import { useSearch, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -279,9 +279,9 @@ function generateTimeSlots(openingTime: string, closingTime: string): string[] {
 }
 
 const formSchema = insertAppointmentSchema.extend({
-  price: z.coerce.number().min(0),
-  duration: z.coerce.number().min(1),
-  total: z.coerce.number().min(0),
+  price: z.coerce.number<number>().min(0),
+  duration: z.coerce.number<number>().min(1),
+  total: z.coerce.number<number>().min(0),
   privateRoom: z.boolean().optional(),
   staff: z.string().optional().nullable(),
 });
@@ -394,14 +394,17 @@ export default function Planning() {
     const socket = getAppSocket();
 
     // Patch salaries cache in-place so wallet updates in one render frame.
+    // Uses setQueriesData (prefix match) so range-scoped wallet queries are patched too.
     const patchSalaries = (updater: (prev: any) => any) => {
-      const prev = queryClient.getQueryData<any>(["/api/salaries/compute"]);
-      if (prev) queryClient.setQueryData(["/api/salaries/compute"], updater(prev));
+      queryClient.setQueriesData({ queryKey: ["/api/salaries/compute"] }, (prev: any) =>
+        prev ? updater(prev) : prev
+      );
     };
 
     // Background sync — confirms DB state without blocking the instant UI update.
     const sync = () => {
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments/range"] });
       queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
     };
 
@@ -450,6 +453,7 @@ export default function Planning() {
     
     const intervalId = setInterval(() => {
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments/range"] });
       queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
       // salary/compute is expensive — background-refetch at a slower rate (3 min)
     }, refreshInterval);
@@ -466,6 +470,7 @@ export default function Planning() {
       if (document.visibilityState === 'visible' && now - lastRefresh > 5000) {
         lastRefresh = now;
         queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/appointments/range"] });
         queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
         queryClient.invalidateQueries({ queryKey: ["/api/owner-withdrawals"] });
       }
@@ -795,6 +800,7 @@ export default function Planning() {
 
   useEffect(() => {
     queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/appointments/range"] });
     queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
     queryClient.invalidateQueries({ queryKey: ["/api/services"] });
     queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
@@ -806,7 +812,10 @@ export default function Planning() {
   }, []);
   
   const { data: appointments = [], isLoading: loadingApps } = useAppointments(formattedDate);
-  const { data: allAppointments = [], isFetching: fetchingAllApts } = useAppointments();
+  // Full history is only needed for the search box — fetch it lazily when the user searches.
+  // (Net profit uses the small month-range query below instead.)
+  const searchActive = appointmentSearch.trim().length > 0;
+  const { data: allAppointments = [] } = useAppointments(undefined, { enabled: searchActive });
   const { data: staffList = [], isLoading: loadingStaff, error: staffError } = useStaff();
   const { data: services = [], isLoading: loadingServices, error: servicesError } = useServices();
   const { data: clients = [] } = useQuery<Array<{id: number, name: string, phone: string | null, loyaltyPoints: number, usePoints: boolean, loyaltyEnrolled: boolean, totalSpent: number, giftCardBalance: number, useGiftCardBalance: boolean}>>({
@@ -839,28 +848,84 @@ export default function Planning() {
     queryKey: ["/api/admin-roles"],
   });
 
-  // Salary data: only fetched when the wallet portal is open (heavy endpoint).
-  // Net profit circle uses lightweight parallel queries instead (see below).
-  // Fetch ALL appointments (no date restriction) so the wallet correctly includes
-  // appointments from before the current month (since the last payment date).
-  const { data: salaryData, isFetching: salaryDataFetching } = useQuery<{
-    staff: any[]; services: any[]; staffCommissions: any[];
-    appointments: any[]; charges: any[]; deductions: any[];
-    staffPayments: any[]; salonPayments: any[];
-  }>({
-    queryKey: ["/api/salaries/compute"],
+  // Wallet data — two fast steps instead of one heavy full-history fetch:
+  // 1. Tiny query: the selected staff member's payment history (to find the last payment date).
+  // 2. Range-scoped /api/salaries/compute from just before that date — the server skips all
+  //    older appointments in SQL, so the payload stays small even with years of history.
+  const { data: walletStaffPayments } = useQuery<any[]>({
+    queryKey: ["/api/staff-payments/staff", walletStaffId],
     queryFn: async () => {
-      const res = await fetch(
-        `/api/salaries/compute`,
-        { credentials: "include" }
-      );
+      const res = await fetch(`/api/staff-payments/staff/${walletStaffId}`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed");
       return res.json();
     },
     enabled: !!walletStaffId,
     staleTime: 30 * 1000,
     refetchOnMount: "always",
+  });
+
+  // From-date for the wallet compute query: one day before the last payment (buffer for the
+  // opening-time day adjustment done in walletPortalData). Null = never paid → full history.
+  const walletFromDate = useMemo(() => {
+    if (!walletStaffPayments || walletStaffPayments.length === 0) return null;
+    const last = [...walletStaffPayments].sort(
+      (a: any, b: any) => new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime()
+    )[0];
+    if (!last?.paidAt) return null;
+    const d = subDays(new Date(last.paidAt), 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }, [walletStaffPayments]);
+
+  const { data: salaryData, isFetching: salaryDataFetching } = useQuery<{
+    staff: any[]; services: any[]; staffCommissions: any[];
+    appointments: any[]; charges: any[]; deductions: any[];
+    staffPayments: any[]; salonPayments: any[];
+  }>({
+    queryKey: ["/api/salaries/compute", "wallet", walletFromDate],
+    queryFn: async () => {
+      const url = walletFromDate
+        ? `/api/salaries/compute?from=${walletFromDate}&to=9999-12-31`
+        : `/api/salaries/compute`;
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    enabled: !!walletStaffId && walletStaffPayments !== undefined,
+    staleTime: 30 * 1000,
+    refetchOnMount: "always",
     placeholderData: (prev: any) => prev,
+  });
+
+  // Current-month appointments for the net profit circle — server filters in SQL,
+  // so the payload stays tiny regardless of appointment history size.
+  // Recomputed on every render (cheap string formatting) so the query key rolls over
+  // naturally at the month boundary without needing a remount.
+  const nowForRange = new Date();
+  const monthRangeStart = format(startOfMonth(nowForRange), "yyyy-MM-dd");
+  const monthRangeEnd = format(endOfMonth(nowForRange), "yyyy-MM-dd");
+  const { data: monthAppointments = [], isFetching: fetchingMonthApts } = useQuery<any[]>({
+    queryKey: ["/api/appointments/range", monthRangeStart, monthRangeEnd],
+    queryFn: async () => {
+      // Online first; fall back to the offline appointment store (filtered to the month)
+      // so the profit circle stays correct when the PWA is offline.
+      if (navigator.onLine) {
+        try {
+          const res = await fetch(
+            `/api/appointments/range?startDate=${monthRangeStart}&endDate=${monthRangeEnd}`,
+            { credentials: "include" }
+          );
+          if (res.ok) return res.json();
+        } catch {
+          // fall through to offline store
+        }
+      }
+      const offline = await getFromOfflineStore<any>('appointments');
+      return offline.filter((a: any) => a.date >= monthRangeStart && a.date <= monthRangeEnd);
+    },
+    enabled: canViewNetProfit,
+    staleTime: 30 * 1000,
+    refetchOnMount: "always",
+    placeholderData: (prev: any) => prev ?? [],
   });
 
   // Fast parallel queries for the net profit circle — loaded immediately on page open
@@ -890,7 +955,7 @@ export default function Planning() {
   });
 
   // True while any of the four fast queries that power the profit circle are refetching
-  const isProfitSyncing = canViewNetProfit && (fetchingAllApts || fetchingCharges || fetchingCommissions || fetchingWithdrawals);
+  const isProfitSyncing = canViewNetProfit && (fetchingMonthApts || fetchingCharges || fetchingCommissions || fetchingWithdrawals);
 
   const createDeductionMutation = useMutation({
     mutationFn: async (data: { staffName: string; type: string; description: string; amount: number; date: string }) => {
@@ -911,6 +976,8 @@ export default function Planning() {
       return res.json();
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff-payments/staff"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/staff-payments"], exact: true });
       queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
       toast({ title: t("salaries.markAsPaid") });
     },
@@ -924,6 +991,8 @@ export default function Planning() {
       await apiRequest("DELETE", `/api/staff-payments/${id}`);
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff-payments/staff"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/staff-payments"], exact: true });
       queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
       toast({ title: t("planning.paymentReverted") || "تم إلغاء الدفع" });
     },
@@ -1222,11 +1291,8 @@ export default function Planning() {
     const monthStart = startOfMonth(now);
     const monthEnd = endOfMonth(now);
 
-    const monthApts = (allAppointments as any[]).filter((a: any) => {
-      if (!a.paid || !a.date) return false;
-      try { return isWithinInterval(parseISO(a.date), { start: monthStart, end: monthEnd }); }
-      catch { return false; }
-    });
+    // monthAppointments is already server-filtered to the current month — only the paid filter remains.
+    const monthApts = (monthAppointments as any[]).filter((a: any) => a.paid && a.date);
 
     let totalRevenue = 0;
     let totalCommissions = 0;
@@ -1251,7 +1317,7 @@ export default function Planning() {
       .reduce((s: number, w: any) => s + Number(w.amount || 0), 0);
 
     return monthRevenue - totalWithdrawals - totalCharges;
-  }, [canViewNetProfit, allAppointments, services, staffList, allStaffCommissions, monthCharges, ownerWithdrawals]);
+  }, [canViewNetProfit, monthAppointments, services, staffList, allStaffCommissions, monthCharges, ownerWithdrawals]);
 
   // Sync horizontal scroll between header and board
   // Re-attaches when loading finishes so refs are connected to actual DOM
@@ -4086,7 +4152,7 @@ export default function Planning() {
                     render={({ field }) => (
                       <FormItem className="space-y-0">
                         <span className="rose-luxury-section-label">{t("planning.staff")}</span>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value ?? undefined}>
                           <FormControl>
                             <SelectTrigger className="h-9 rounded-lg text-[11px] rose-luxury-field border-0">
                               <SelectValue placeholder={t("planning.staff")} />

@@ -19,6 +19,7 @@ import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addWeeks, sub
 import { useToast } from "@/hooks/use-toast";
 import { ar, enUS, fr } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
+import { getFromOfflineStore } from "@/lib/offlineDb";
 
 const COLORS = ['#6366f1', '#22c55e', '#f59e0b', '#ef4444', '#06b6d4', '#8b5cf6', '#ec4899', '#14b8a6'];
 
@@ -112,16 +113,40 @@ export default function Reports() {
   const { data: appointments = [] } = useQuery<any[]>({
     queryKey: ["/api/appointments/range", rangeStartStr, rangeEndStr],
     queryFn: async () => {
-      const res = await fetch(`/api/appointments/range?startDate=${rangeStartStr}&endDate=${rangeEndStr}`, { credentials: "include" });
-      if (!res.ok) throw new Error(`${res.status}`);
-      return res.json();
+      // Online first; fall back to the offline appointment store so reports
+      // keep working when the PWA is offline.
+      if (navigator.onLine) {
+        try {
+          const res = await fetch(`/api/appointments/range?startDate=${rangeStartStr}&endDate=${rangeEndStr}`, { credentials: "include" });
+          if (res.ok) return res.json();
+        } catch {
+          // fall through to offline store
+        }
+      }
+      const offline = await getFromOfflineStore<any>('appointments');
+      return offline.filter((a: any) => a.date >= rangeStartStr && a.date <= rangeEndStr);
     },
   });
   const { data: staffList = [] } = useStaff();
   const { data: services = [] } = useServices();
-  const { data: charges = [] } = useQuery<any[]>({ queryKey: ["/api/charges"] });
+  // Range-scoped in SQL — payload stays small however long the business history gets.
+  const { data: charges = [] } = useQuery<any[]>({
+    queryKey: ["/api/charges", rangeStartStr, rangeEndStr],
+    queryFn: async () => {
+      const res = await fetch(`/api/charges?from=${rangeStartStr}&to=${rangeEndStr}`, { credentials: "include" });
+      if (!res.ok) throw new Error(String(res.status));
+      return res.json();
+    },
+  });
   const { data: expenseCategories = [] } = useQuery<any[]>({ queryKey: ["/api/expense-categories"] });
-  const { data: ownerWithdrawalsAll = [] } = useQuery<any[]>({ queryKey: ["/api/owner-withdrawals"] });
+  const { data: ownerWithdrawalsAll = [] } = useQuery<any[]>({
+    queryKey: ["/api/owner-withdrawals", rangeStartStr, rangeEndStr],
+    queryFn: async () => {
+      const res = await fetch(`/api/owner-withdrawals?from=${rangeStartStr}&to=${rangeEndStr}`, { credentials: "include" });
+      if (!res.ok) throw new Error(String(res.status));
+      return res.json();
+    },
+  });
   const { data: staffCommissions = [] } = useQuery<{ id: number; staffId: number; serviceId: number; percentage: number }[]>({
     queryKey: ["/api/staff-commissions"],
   });

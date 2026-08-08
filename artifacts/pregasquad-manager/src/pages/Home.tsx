@@ -352,11 +352,23 @@ export default function Home() {
   const { data: services = [] } = useServices();
   const { data: clients = [] } = useClients();
   const { data: categories = [] } = useCategories();
+  // Today-only fetches — the dashboard only shows today's numbers, so the server
+  // filters in SQL and the payload stays tiny regardless of business history.
   const { data: charges = [] } = useQuery<any[]>({
-    queryKey: ["/api/charges"],
+    queryKey: ["/api/charges", todayDate, todayDate],
+    queryFn: async () => {
+      const res = await fetch(`/api/charges?from=${todayDate}&to=${todayDate}`, { credentials: "include" });
+      if (!res.ok) throw new Error(String(res.status));
+      return res.json();
+    },
   });
   const { data: ownerWithdrawalsData = [] } = useQuery<any[]>({
-    queryKey: ["/api/owner-withdrawals"],
+    queryKey: ["/api/owner-withdrawals", todayDate, todayDate],
+    queryFn: async () => {
+      const res = await fetch(`/api/owner-withdrawals?from=${todayDate}&to=${todayDate}`, { credentials: "include" });
+      if (!res.ok) throw new Error(String(res.status));
+      return res.json();
+    },
   });
   const { data: lowStockProducts = [] } = useQuery<any[]>({
     queryKey: ["/api/products/low-stock"],

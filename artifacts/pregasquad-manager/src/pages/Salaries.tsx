@@ -153,8 +153,11 @@ export default function Salaries() {
     // Patch the salaries cache key in-place so the wallet rerenders in one frame.
     type SalaryCache = NonNullable<typeof salaryData>;
     const patch = (updater: (prev: SalaryCache) => SalaryCache) => {
-      const prev = queryClient.getQueryData<SalaryCache>(["/api/salaries/compute"]);
-      if (prev) queryClient.setQueryData(["/api/salaries/compute"], updater(prev));
+      // Prefix match — the compute cache key includes the bounded from-date.
+      queryClient.setQueriesData<SalaryCache>(
+        { queryKey: ["/api/salaries/compute"] },
+        (prev) => (prev ? updater(prev) : prev)
+      );
     };
 
     // Background sync — confirms DB state without blocking the UI update.
@@ -252,6 +255,60 @@ export default function Salaries() {
     return () => document.removeEventListener("visibilitychange", onVisibility);
   }, [queryClient]);
 
+  // ── Bounded compute range ─────────────────────────────────────────────────
+  // Wallets only need appointments since each wallet's last payment, and the
+  // period stats only need the selected period. So we find the earliest date any
+  // widget on this page can need and ask the server for just that range (SQL-filtered).
+  // Falls back to full history when a wallet has never been paid/collected.
+  const { data: allStaffForRange = [], isSuccess: staffRangeReady } = useQuery<Staff[]>({
+    queryKey: ["/api/staff"],
+    staleTime: 60 * 1000,
+  });
+  const { data: allStaffPaymentsSmall = [], isSuccess: spReady } = useQuery<StaffPayment[]>({
+    queryKey: ["/api/staff-payments"],
+    staleTime: 30 * 1000,
+  });
+  const { data: salonPaymentsSmall = [], isSuccess: sopReady } = useQuery<SalonPayment[]>({
+    queryKey: ["/api/salon-payments"],
+    staleTime: 30 * 1000,
+  });
+
+  const periodStartStr = (() => {
+    switch (period) {
+      case "day": return format(startOfDay(selectedDate), "yyyy-MM-dd");
+      case "week": return format(startOfWeek(selectedDate, { weekStartsOn: 0 }), "yyyy-MM-dd");
+      case "month": return format(startOfMonth(selectedDate), "yyyy-MM-dd");
+      case "custom": return format(startOfDay(customStartDate), "yyyy-MM-dd");
+      default: return format(startOfMonth(selectedDate), "yyyy-MM-dd");
+    }
+  })();
+
+  const rangeInputsReady = staffRangeReady && spReady && sopReady;
+  const computeFrom = (() => {
+    if (!rangeInputsReady) return undefined; // still deciding
+    // Salon wallet: needs data since the last collection
+    const lastSalon = [...salonPaymentsSmall]
+      .sort((a, b) => new Date(b.collectedAt).getTime() - new Date(a.collectedAt).getTime())[0];
+    if (!lastSalon) return null; // never collected → full history
+    let min = periodStartStr;
+    const salonSince = format(subDays(new Date(lastSalon.collectedAt), 1), "yyyy-MM-dd");
+    if (salonSince < min) min = salonSince;
+    // Staff wallets: each needs data since that staff member's last payment
+    for (const s of allStaffForRange) {
+      const last = allStaffPaymentsSmall
+        .filter(p => Number(p.staffId) === s.id)
+        .sort((a, b) => new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime())[0];
+      if (!last) return null; // never paid → full history
+      const since = format(subDays(new Date(last.paidAt), 1), "yyyy-MM-dd");
+      if (since < min) min = since;
+    }
+    return min; // 1-day buffer already applied; client-side filters stay exact
+  })();
+
+  const computeUrl = computeFrom
+    ? `/api/salaries/compute?from=${computeFrom}&to=9999-12-31`
+    : "/api/salaries/compute";
+
   // Single query fetches all 7 data sources in parallel on the server.
   // One HTTP round-trip → one response → one render. No cascading jumps.
   const { data: salaryData, isLoading: salaryLoading } = useQuery<{
@@ -264,14 +321,15 @@ export default function Salaries() {
     staffPayments: StaffPayment[];
     salonPayments: SalonPayment[];
   }>({
-    queryKey: ["/api/salaries/compute"],
+    queryKey: ["/api/salaries/compute", "salaries-page", computeFrom ?? "all"],
     queryFn: async () => {
-      const res = await fetch("/api/salaries/compute");
+      const res = await fetch(computeUrl, { credentials: "include" });
       if (!res.ok) return { staff: [], services: [], staffCommissions: [], appointments: [], charges: [], deductions: [], staffPayments: [], salonPayments: [] };
       const data = await res.json();
       saveSalariesCache(data).catch(() => {});
       return data;
     },
+    enabled: rangeInputsReady,
     staleTime: 0,
     refetchOnMount: true,
     refetchOnWindowFocus: false,
@@ -289,8 +347,14 @@ export default function Salaries() {
   const refetchAppointments = () => queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"] });
 
   // Owner withdrawals — needed for accurate net profit (consistent with Reports and Home)
+  // Only used for the selected period's net profit — range-scoped in SQL.
   const { data: ownerWithdrawalsData = [] } = useQuery<any[]>({
-    queryKey: ["/api/owner-withdrawals"],
+    queryKey: ["/api/owner-withdrawals", periodStartStr, "9999-12-31"],
+    queryFn: async () => {
+      const res = await fetch(`/api/owner-withdrawals?from=${periodStartStr}&to=9999-12-31`, { credentials: "include" });
+      if (!res.ok) throw new Error(String(res.status));
+      return res.json();
+    },
     staleTime: 30_000,
   });
 
@@ -407,22 +471,25 @@ export default function Salaries() {
 
       // Immediately patch the cache so the deduction disappears / updates without
       // waiting for the background refetch (fixes the "auto-clear not visible" race).
-      const prev = queryClient.getQueryData<NonNullable<typeof salaryData>>(["/api/salaries/compute"]);
-      if (prev) {
-        queryClient.setQueryData(["/api/salaries/compute"], {
-          ...prev,
-          deductions: prev.deductions.map((d) =>
-            d.id === variables.id
-              ? {
-                  ...d,
-                  paidBack: _data?.paidBack ?? variables.amount,
-                  cleared: !!_data?.cleared,
-                  clearedAt: _data?.cleared ? new Date().toISOString() : d.clearedAt,
-                }
-              : d
-          ),
-        });
-      }
+      queryClient.setQueriesData<NonNullable<typeof salaryData>>(
+        { queryKey: ["/api/salaries/compute"] },
+        (prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            deductions: prev.deductions.map((d) =>
+              d.id === variables.id
+                ? {
+                    ...d,
+                    paidBack: _data?.paidBack ?? variables.amount,
+                    cleared: !!_data?.cleared,
+                    clearedAt: _data?.cleared ? new Date().toISOString() : d.clearedAt,
+                  }
+                : d
+            ),
+          } as typeof prev;
+        }
+      );
 
       refreshSalariesBackground();
       setPayBackDeduction(null);
@@ -444,6 +511,7 @@ export default function Salaries() {
       return res.json();
     },
     onSuccess: async () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/salon-payments"] });
       refreshSalariesBackground();
       toast({ title: "Recette salon collectée" });
       try {
@@ -464,6 +532,7 @@ export default function Salaries() {
       return res.json();
     },
     onSuccess: async () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff-payments"] });
       refreshSalariesBackground();
       toast({ title: t("salaries.paymentRecorded") });
       try {
@@ -492,6 +561,7 @@ export default function Salaries() {
       await apiRequest("DELETE", `/api/staff-payments/${id}`);
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff-payments"] });
       refreshSalariesBackground();
       toast({ title: t("planning.paymentReverted") || "تم إلغاء الدفع" });
     },

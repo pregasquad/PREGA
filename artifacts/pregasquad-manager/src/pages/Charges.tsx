@@ -135,8 +135,21 @@ export default function Charges() {
   const goToNextMonth = () => setSelectedMonth(addMonths(selectedMonth, 1));
   const goToCurrentMonth = () => setSelectedMonth(getWorkDayDate(salonSettings?.openingTime, salonSettings?.closingTime));
 
+  // Range for data fetches: from productsStartDate (or start of selected month, whichever is
+  // earlier — needed for products budget carry-over) to the end of the selected month.
+  const chargesFromDate = (() => {
+    const mStartStr = format(startOfMonth(selectedMonth), "yyyy-MM-dd");
+    return productsStartDate && productsStartDate < mStartStr ? productsStartDate : mStartStr;
+  })();
+  const chargesToDate = format(endOfMonth(selectedMonth), "yyyy-MM-dd");
+
   const { data: charges = [] } = useQuery<any[]>({
-    queryKey: ["/api/charges"],
+    queryKey: ["/api/charges", chargesFromDate, chargesToDate],
+    queryFn: async () => {
+      const res = await fetch(`/api/charges?from=${chargesFromDate}&to=${chargesToDate}`, { credentials: "include" });
+      if (!res.ok) throw new Error(String(res.status));
+      return res.json();
+    },
     staleTime: 60 * 1000,
   });
 
@@ -146,7 +159,12 @@ export default function Charges() {
   });
 
   const { data: ownerWithdrawals = [] } = useQuery<any[]>({
-    queryKey: ["/api/owner-withdrawals"],
+    queryKey: ["/api/owner-withdrawals", chargesFromDate, chargesToDate],
+    queryFn: async () => {
+      const res = await fetch(`/api/owner-withdrawals?from=${chargesFromDate}&to=${chargesToDate}`, { credentials: "include" });
+      if (!res.ok) throw new Error(String(res.status));
+      return res.json();
+    },
     staleTime: 60 * 1000,
   });
 
@@ -173,7 +191,9 @@ export default function Charges() {
       return res.json();
     },
     staleTime: 30 * 1000,
-    gcTime: 5 * 60 * 1000,
+    // Long gcTime keeps the same month's cached data available instantly when navigating
+    // back to this page (no blank flash), without bleeding another month's totals in.
+    gcTime: 30 * 60 * 1000,
     refetchOnMount: "always",
   });
 

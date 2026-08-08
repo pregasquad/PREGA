@@ -227,7 +227,7 @@ function StaffHero({
       transition: {
         opacity: { duration: 0.5, ease: [0.25, 0.1, 0.25, 1] as const },
         scale: { type: "spring" as const, stiffness: 160, damping: 22 },
-        filter: { duration: 0.35, ease: "easeOut" },
+        filter: { duration: 0.35, ease: "easeOut" as const },
       },
     },
     exit: { opacity: 0, scale: 1.06, filter: "blur(4px)", transition: { duration: 0.28 } },
@@ -235,13 +235,13 @@ function StaffHero({
 
   const textVariants = {
     enter: { opacity: 0, y: 12 },
-    center: { opacity: 1, y: 0, transition: { delay: 0.28, duration: 0.38, ease: "easeOut" } },
+    center: { opacity: 1, y: 0, transition: { delay: 0.28, duration: 0.38, ease: "easeOut" as const } },
     exit: { opacity: 0, y: -6, transition: { duration: 0.18 } },
   };
 
   const roleVariants = {
     enter: { opacity: 0, y: 8 },
-    center: { opacity: 1, y: 0, transition: { delay: 0.42, duration: 0.32, ease: "easeOut" } },
+    center: { opacity: 1, y: 0, transition: { delay: 0.42, duration: 0.32, ease: "easeOut" as const } },
     exit: { opacity: 0, transition: { duration: 0.15 } },
   };
 
@@ -713,7 +713,7 @@ export default function Website() {
   const squadRef = useRef<HTMLDivElement>(null);
   const galleryRef = useRef<HTMLDivElement>(null);
   const contactRef = useRef<HTMLDivElement>(null);
-  const scrollTo = (ref: React.RefObject<HTMLDivElement>) =>
+  const scrollTo = (ref: React.RefObject<HTMLDivElement | null>) =>
     ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   // ── Data fetching ────────────────────────────────────────────────────────────

@@ -21,6 +21,7 @@ import type { Staff, Appointment, Service, StaffGoal } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useBusinessSettings } from "@/hooks/use-salon-data";
 import { calcAppointmentCommission } from "@/lib/commissionCalc";
+import { getFromOfflineStore } from "@/lib/offlineDb";
 
 
 export default function StaffPerformance() {
@@ -57,8 +58,32 @@ export default function StaffPerformance() {
     queryKey: ["/api/services"],
   });
 
+  // Month-scoped fetch — the page only ever shows one month, so the server filters
+  // in SQL instead of downloading the entire appointment history.
+  const perfRange = useMemo(() => {
+    const [year, month] = selectedMonth.split("-").map(Number);
+    const start = startOfMonth(new Date(year, month - 1));
+    return {
+      start: format(start, "yyyy-MM-dd"),
+      end: format(endOfMonth(start), "yyyy-MM-dd"),
+    };
+  }, [selectedMonth]);
   const { data: appointments = [], isLoading: loadingAppointments } = useQuery<Appointment[]>({
-    queryKey: ["/api/appointments/all"],
+    queryKey: ["/api/appointments/range", perfRange.start, perfRange.end],
+    queryFn: async () => {
+      // Online first; fall back to the offline appointment store when the PWA is offline.
+      if (navigator.onLine) {
+        try {
+          const res = await fetch(`/api/appointments/range?startDate=${perfRange.start}&endDate=${perfRange.end}`, { credentials: "include" });
+          if (res.ok) return res.json();
+        } catch {
+          // fall through to offline store
+        }
+      }
+      const offline = await getFromOfflineStore<any>('appointments');
+      return offline.filter((a: any) => a.date >= perfRange.start && a.date <= perfRange.end);
+    },
+    placeholderData: (prev: any) => prev,
   });
 
   const { data: staffCommissions = [] } = useQuery<{ id: number; staffId: number; serviceId: number; percentage: number }[]>({

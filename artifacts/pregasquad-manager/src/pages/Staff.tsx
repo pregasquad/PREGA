@@ -24,7 +24,7 @@ import { ImageCropper } from "@/components/ImageCropper";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const staffFormSchema = insertStaffSchema.extend({
-  baseSalary: z.coerce.number().min(0).optional(),
+  baseSalary: z.coerce.number<number>().min(0).optional(),
   gender: z.enum(["female", "male"]).optional().default("female"),
 });
 
@@ -382,7 +382,7 @@ export default function Staff() {
                         {t("admin.uploadPhoto") || "Upload Photo"}
                       </Button>
                     </div>
-                    <Input {...field} type="hidden" />
+                    <Input {...field} value={field.value ?? ""} type="hidden" />
                   </div>
                 </FormControl>
                 <FormMessage />

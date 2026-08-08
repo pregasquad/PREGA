@@ -66,8 +66,9 @@ export function useBusinessName() {
   return data?.businessName || "PREGA SQUAD";
 }
 
-export function useAppointments(date?: string) {
+export function useAppointments(date?: string, opts?: { enabled?: boolean }) {
   return useQuery({
+    enabled: opts?.enabled ?? true,
     queryKey: [api.appointments.list.path, date],
     queryFn: async () => {
       const url = date 
@@ -268,6 +269,8 @@ export function useCreateAppointment() {
         queryClient.invalidateQueries({ queryKey: [api.appointments.list.path, variables.date], refetchType: 'none' });
       }
       queryClient.invalidateQueries({ queryKey: [api.appointments.list.path, undefined], refetchType: 'none' });
+      // Month-range cache (net profit circle) — refetch actively; it's a small month-scoped query.
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments/range"] });
       // Salary cache was already patched in onSuccess — just mark stale, no immediate refetch.
       queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"], refetchType: 'none' });
     },
@@ -358,6 +361,7 @@ export function useUpdateAppointment() {
       if (navigator.onLine) {
         // Mark stale only — onSuccess already patched the cache with correct data
         queryClient.invalidateQueries({ queryKey: [api.appointments.list.path], refetchType: 'none' });
+        queryClient.invalidateQueries({ queryKey: ["/api/appointments/range"] });
         queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"], refetchType: 'none' });
       }
     },
@@ -447,6 +451,7 @@ export function useDeleteAppointment() {
       if (navigator.onLine) {
         // Mark stale only — onMutate already removed the appointment from both caches
         queryClient.invalidateQueries({ queryKey: [api.appointments.list.path], refetchType: 'none' });
+        queryClient.invalidateQueries({ queryKey: ["/api/appointments/range"] });
         queryClient.invalidateQueries({ queryKey: ["/api/salaries/compute"], refetchType: 'none' });
       }
     },

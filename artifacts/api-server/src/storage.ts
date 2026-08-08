@@ -84,12 +84,12 @@ export interface IStorage extends IAuthStorage {
   updateClientGiftCardBalance(id: number, amount: number): Promise<Client>;
   getClientAppointments(clientId: number): Promise<Appointment[]>;
 
-  getCharges(limit?: number, offset?: number): Promise<Charge[]>;
+  getCharges(limit?: number, offset?: number, from?: string, to?: string): Promise<Charge[]>;
   createCharge(charge: InsertCharge): Promise<Charge>;
   updateCharge(id: number, data: Partial<InsertCharge>): Promise<void>;
   deleteCharge(id: number): Promise<void>;
 
-  getOwnerWithdrawals(): Promise<OwnerWithdrawal[]>;
+  getOwnerWithdrawals(from?: string, to?: string): Promise<OwnerWithdrawal[]>;
   createOwnerWithdrawal(withdrawal: InsertOwnerWithdrawal): Promise<OwnerWithdrawal>;
   deleteOwnerWithdrawal(id: number): Promise<void>;
 
@@ -747,9 +747,15 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(s.appointments.date));
   }
 
-  async getCharges(limit?: number, offset?: number): Promise<Charge[]> {
+  async getCharges(limit?: number, offset?: number, from?: string, to?: string): Promise<Charge[]> {
     const s = schema();
-    const q = db().select().from(s.charges).orderBy(desc(s.charges.createdAt));
+    const conds = [];
+    if (from) conds.push(gte(s.charges.date, from));
+    // "~" sorts after any character used in ISO timestamps, so this also matches
+    // rows whose date column holds a full timestamp on the "to" day.
+    if (to) conds.push(lte(s.charges.date, to + "~"));
+    const base = db().select().from(s.charges);
+    const q = (conds.length ? base.where(and(...conds)) : base).orderBy(desc(s.charges.createdAt));
     const items = limit !== undefined ? await q.limit(limit).offset(offset ?? 0) : await q;
     return items.map((item: any) => ({
       ...item,
@@ -781,9 +787,13 @@ export class DatabaseStorage implements IStorage {
     await db().delete(s.charges).where(eq(s.charges.id, id));
   }
 
-  async getOwnerWithdrawals(): Promise<OwnerWithdrawal[]> {
+  async getOwnerWithdrawals(from?: string, to?: string): Promise<OwnerWithdrawal[]> {
     const s = schema();
-    const items = await db().select().from(s.ownerWithdrawals).orderBy(desc(s.ownerWithdrawals.createdAt));
+    const conds = [];
+    if (from) conds.push(gte(s.ownerWithdrawals.date, from));
+    if (to) conds.push(lte(s.ownerWithdrawals.date, to + "~"));
+    const base = db().select().from(s.ownerWithdrawals);
+    const items = await (conds.length ? base.where(and(...conds)) : base).orderBy(desc(s.ownerWithdrawals.createdAt));
     return items.map((item: any) => ({
       ...item,
       amount: Number(item.amount || 0)
@@ -958,7 +968,7 @@ export class DatabaseStorage implements IStorage {
     const servicesArr = [...serviceMap.values()] as any[];
     const staffArr = [{ id: staffId ?? 0, name: staffName }];
     const staffCommissionsArr = [...customCommissions.entries()].map(([serviceId, percentage]) => ({
-      staffId,
+      staffId: staffId ?? 0,
       serviceId,
       percentage,
     }));

@@ -3153,7 +3153,9 @@ export async function registerRoutes(
       const rawOffset = parseInt(req.query.offset as string);
       const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? rawLimit : undefined;
       const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
-      const items = await storage.getCharges(limit, offset);
+      const from = typeof req.query.from === "string" ? req.query.from : undefined;
+      const to = typeof req.query.to === "string" ? req.query.to : undefined;
+      const items = await storage.getCharges(limit, offset, from, to);
       res.json(items);
     } catch (err) {
       console.error("Error fetching charges:", err);
@@ -3192,9 +3194,11 @@ export async function registerRoutes(
   });
 
   // Owner Withdrawals
-  app.get("/api/owner-withdrawals", isPinAuthenticated, async (_req, res) => {
+  app.get("/api/owner-withdrawals", isPinAuthenticated, async (req, res) => {
     try {
-      const items = await storage.getOwnerWithdrawals();
+      const from = typeof req.query.from === "string" ? req.query.from : undefined;
+      const to = typeof req.query.to === "string" ? req.query.to : undefined;
+      const items = await storage.getOwnerWithdrawals(from, to);
       res.json(items);
     } catch (err) {
       console.error("Error fetching owner withdrawals:", err);
@@ -4175,6 +4179,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
   app.post("/api/whatsapp/post-status", isPinAuthenticated, async (req, res) => {
     try {
       const { text } = z.object({ text: z.string().min(1).max(700) }).parse(req.body);
+      // @ts-ignore
       const { sendWhatsAppStatus } = await import("./baileys.js");
       const result = await sendWhatsAppStatus(text);
       if (result.success) {
@@ -4190,8 +4195,8 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
   // ── Manual 24h reminder for a single appointment ────────────────────────────
   app.post("/api/appointments/:id/remind", isPinAuthenticated, async (req, res) => {
     try {
-      const aptId = parseInt(req.params.id);
-      const apt = await storage.getAppointmentById(aptId).catch(() => null);
+      const aptId = parseInt(String(req.params.id));
+      const apt = await storage.getAppointment(aptId).catch(() => null);
       if (!apt) return res.status(404).json({ error: "Appointment not found" });
 
       const phone = (apt as any).phone || (apt as any).client?.match(/\(([^)]+)\)/)?.[1] || null;
@@ -4202,6 +4207,7 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
       const clientName = (apt as any).client?.split(' (')[0]?.trim() || 'Client';
       const serviceName = (apt as any).service || 'RDV';
 
+      // @ts-ignore
       const { sendAppointmentReminderWithOptions } = await import("./baileys.js");
       const result = await sendAppointmentReminderWithOptions(
         phone, clientName, (apt as any).date, (apt as any).startTime, serviceName, salonName
