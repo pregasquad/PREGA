@@ -28,7 +28,19 @@ export function serveStatic(app: Express) {
     app.use("/uploads", express.static(uploadPath));
   }
 
-  app.use(express.static(distPath));
+  // Hashed build assets (/assets/*-<hash>.js|css) are immutable — cache 1 year on phones.
+  // Everything else (index.html, sw.js, manifest) must revalidate so updates ship instantly.
+  app.use(
+    express.static(distPath, {
+      setHeaders: (res, filePath) => {
+        if (/[/\\]assets[/\\][^/\\]+-[A-Za-z0-9_-]{8,}\.\w+$/.test(filePath)) {
+          res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+        } else {
+          res.setHeader("Cache-Control", "no-cache");
+        }
+      },
+    })
+  );
 
   app.use("*splat", (req, res) => {
     const indexPath = path.resolve(distPath, "index.html");
@@ -44,9 +56,9 @@ export function serveStatic(app: Express) {
         '<meta name="apple-mobile-web-app-title" content="PregaSquad" />',
         `<meta name="apple-mobile-web-app-title" content="PregaSquad Portal" />`,
       );
-      res.status(200).set({ "Content-Type": "text/html" }).end(html);
+      res.status(200).set({ "Content-Type": "text/html", "Cache-Control": "no-cache" }).end(html);
     } else {
-      res.sendFile(indexPath);
+      res.set("Cache-Control", "no-cache").sendFile(indexPath);
     }
   });
 }

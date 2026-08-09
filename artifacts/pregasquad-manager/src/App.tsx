@@ -306,16 +306,20 @@ function App() {
       // Seed all core data caches with one request so every page loads instantly
       prefetchCoreData().catch(() => {});
 
-      // Prefetch salaries in parallel
-      fetch("/api/salaries/compute", { credentials: "include" })
-        .then(r => r.ok ? r.json() : null)
-        .then(data => {
-          if (data) {
-            queryClient.setQueryData(["/api/salaries/compute"], data);
-            saveSalariesCache(data).catch(() => {});
-          }
-        })
-        .catch(() => {});
+      // Warm the salaries cache AFTER startup settles — this is the heaviest endpoint,
+      // and running it immediately competed with the first page's own queries.
+      const salariesWarmup = setTimeout(() => {
+        fetch("/api/salaries/compute", { credentials: "include" })
+          .then(r => r.ok ? r.json() : null)
+          .then(data => {
+            if (data) {
+              queryClient.setQueryData(["/api/salaries/compute"], data);
+              saveSalariesCache(data).catch(() => {});
+            }
+          })
+          .catch(() => {});
+      }, 8000);
+      return () => { clearTimeout(salariesWarmup); clearInterval(qzRetry); };
     }
 
     return () => clearInterval(qzRetry);
