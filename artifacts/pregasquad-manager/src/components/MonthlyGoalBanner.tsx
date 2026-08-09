@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { TrendingUp } from "lucide-react";
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { calcAppointmentCommission } from "@/lib/commissionCalc";
 
@@ -20,20 +20,30 @@ export function MonthlyGoalBanner({ className }: Props) {
   const [goalEditValue, setGoalEditValue] = useState("");
   const [showGoalEdit, setShowGoalEdit] = useState(false);
 
-  const { data: salaryData } = useQuery<any>({
-    queryKey: ["/api/salaries/compute"],
-    staleTime: 0,
+  // Light month-scoped queries (shared cache keys with the Planning net-profit circle)
+  // instead of the heavy unscoped /api/salaries/compute — loads instantly.
+  const now = new Date();
+  const monthRangeStart = format(startOfMonth(now), "yyyy-MM-dd");
+  const monthRangeEnd = format(endOfMonth(now), "yyyy-MM-dd");
+  const { data: monthAppointments = [] } = useQuery<any[]>({
+    queryKey: ["/api/appointments/range", monthRangeStart, monthRangeEnd],
+    queryFn: async () => {
+      const res = await fetch(
+        `/api/appointments/range?startDate=${monthRangeStart}&endDate=${monthRangeEnd}`,
+        { credentials: "include" }
+      );
+      if (!res.ok) throw new Error(String(res.status));
+      return res.json();
+    },
+    staleTime: 30 * 1000,
+    placeholderData: (prev: any) => prev ?? [],
   });
+  const { data: allServices = [] } = useQuery<any[]>({ queryKey: ["/api/services"], staleTime: 5 * 60 * 1000 });
+  const { data: allStaff = [] } = useQuery<any[]>({ queryKey: ["/api/staff"], staleTime: 5 * 60 * 1000 });
+  const { data: allStaffCommissions = [] } = useQuery<any[]>({ queryKey: ["/api/staff-commissions"], staleTime: 5 * 60 * 1000 });
 
   const monthlySalonShare = useMemo(() => {
-    const apts: any[] = salaryData?.appointments ?? [];
-    const allStaff: any[] = salaryData?.staff ?? [];
-    const allServices: any[] = salaryData?.services ?? [];
-    const allStaffCommissions: any[] = salaryData?.staffCommissions ?? [];
-    const monthStr = format(new Date(), "yyyy-MM");
-    const monthApts = apts.filter(
-      (a: any) => a.paid && typeof a.date === "string" && a.date.startsWith(monthStr)
-    );
+    const monthApts = (monthAppointments as any[]).filter((a: any) => a.paid && a.date);
     let revenue = 0;
     let commissions = 0;
     for (const app of monthApts) {
@@ -41,7 +51,7 @@ export function MonthlyGoalBanner({ className }: Props) {
       commissions += calcAppointmentCommission(app, allServices, allStaff, allStaffCommissions);
     }
     return revenue - commissions;
-  }, [salaryData]);
+  }, [monthAppointments, allServices, allStaff, allStaffCommissions]);
 
   const fmt = (n: number) => Math.round(n).toLocaleString("fr-MA");
   const pct = monthlyGoal > 0 ? Math.round((monthlySalonShare / monthlyGoal) * 100) : 0;

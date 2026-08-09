@@ -273,6 +273,7 @@
     "totalOutOfCaisse": "Total sorti de la caisse"
   },
   "salaries": {
+    "monthlyGoal": "Objectif du Mois",
     "title": "Salaires",
     "pageTitle": "Salaires et Commissions",
     "pageDesc": "Calculer les gains du personnel selon les services fournis",
@@ -371,7 +372,9 @@
     "lastPaid": "Dernier paiement",
     "never": "Jamais",
     "paymentHistory": "Historique des paiements",
-    "collectionHistory": "Historique des collectes"
+    "collectionHistory": "Historique des collectes",
+    "setGoal": "Définir un objectif",
+    "noGoalSet": "Aucun objectif mensuel défini"
   },
   "staffPerformance": {
     "title": "Performance Staff",

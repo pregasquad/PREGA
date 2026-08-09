@@ -273,6 +273,7 @@
     "totalOutOfCaisse": "إجمالي ما خرج من الصندوق"
   },
   "salaries": {
+    "monthlyGoal": "هدف الشهر",
     "title": "الرواتب",
     "pageTitle": "الرواتب والعمولات",
     "pageDesc": "حساب أرباح الموظفين بناءً على الخدمات المقدمة",
@@ -371,7 +372,9 @@
     "lastPaid": "آخر دفعة",
     "never": "أبداً",
     "paymentHistory": "سجل المدفوعات",
-    "collectionHistory": "سجل التحصيلات"
+    "collectionHistory": "سجل التحصيلات",
+    "setGoal": "تعيين الهدف",
+    "noGoalSet": "لم يتم تعيين هدف شهري بعد"
   },
   "staffPerformance": {
     "title": "أداء الموظفين",

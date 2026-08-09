@@ -903,7 +903,7 @@ export default function Planning() {
   const nowForRange = new Date();
   const monthRangeStart = format(startOfMonth(nowForRange), "yyyy-MM-dd");
   const monthRangeEnd = format(endOfMonth(nowForRange), "yyyy-MM-dd");
-  const { data: monthAppointments = [], isFetching: fetchingMonthApts } = useQuery<any[]>({
+  const { data: monthAppointments = [], isLoading: loadingMonthApts } = useQuery<any[]>({
     queryKey: ["/api/appointments/range", monthRangeStart, monthRangeEnd],
     queryFn: async () => {
       // Online first; fall back to the offline appointment store (filtered to the month)
@@ -930,32 +930,43 @@ export default function Planning() {
 
   // Fast parallel queries for the net profit circle — loaded immediately on page open
   // without waiting for the heavy /api/salaries/compute endpoint.
-  const { data: monthCharges = [], isFetching: fetchingCharges } = useQuery<any[]>({
-    queryKey: ["/api/charges"],
+  const { data: monthCharges = [], isLoading: loadingCharges } = useQuery<any[]>({
+    queryKey: ["/api/charges", monthRangeStart, monthRangeEnd],
+    queryFn: async () => {
+      const res = await fetch(`/api/charges?from=${monthRangeStart}&to=${monthRangeEnd}`, { credentials: "include" });
+      if (!res.ok) throw new Error(String(res.status));
+      return res.json();
+    },
     enabled: canViewNetProfit,
     staleTime: 30 * 1000,
     refetchOnMount: "always",
     placeholderData: (prev: any) => prev ?? [],
   });
 
-  const { data: allStaffCommissions = [], isFetching: fetchingCommissions } = useQuery<any[]>({
+  const { data: allStaffCommissions = [], isLoading: loadingCommissions } = useQuery<any[]>({
     queryKey: ["/api/staff-commissions"],
     enabled: canViewNetProfit,
     staleTime: 5 * 60 * 1000,
     placeholderData: (prev: any) => prev ?? [],
   });
 
-  // Owner withdrawals for net profit circle
-  const { data: ownerWithdrawals = [], isFetching: fetchingWithdrawals } = useQuery<any[]>({
-    queryKey: ["/api/owner-withdrawals"],
+  // Owner withdrawals for net profit circle — scoped to the current month (fast)
+  const { data: ownerWithdrawals = [], isLoading: loadingWithdrawals } = useQuery<any[]>({
+    queryKey: ["/api/owner-withdrawals", monthRangeStart, monthRangeEnd],
+    queryFn: async () => {
+      const res = await fetch(`/api/owner-withdrawals?from=${monthRangeStart}&to=${monthRangeEnd}`, { credentials: "include" });
+      if (!res.ok) throw new Error(String(res.status));
+      return res.json();
+    },
     enabled: canViewNetProfit,
     staleTime: 30 * 1000,
     refetchOnMount: "always",
     placeholderData: (prev: any) => prev ?? [],
   });
 
-  // True while any of the four fast queries that power the profit circle are refetching
-  const isProfitSyncing = canViewNetProfit && (fetchingMonthApts || fetchingCharges || fetchingCommissions || fetchingWithdrawals);
+  // "syncing…" only during the very first load (no data yet). Background refetches keep
+  // showing the live number — otherwise the label pulses constantly and feels broken.
+  const isProfitSyncing = canViewNetProfit && (loadingMonthApts || loadingCharges || loadingCommissions || loadingWithdrawals);
 
   const createDeductionMutation = useMutation({
     mutationFn: async (data: { staffName: string; type: string; description: string; amount: number; date: string }) => {

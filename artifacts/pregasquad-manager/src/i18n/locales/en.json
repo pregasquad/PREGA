@@ -273,6 +273,7 @@
     "totalOutOfCaisse": "Total out of cash register"
   },
   "salaries": {
+    "monthlyGoal": "Monthly Goal",
     "title": "Salaries",
     "pageTitle": "Salaries and Commissions",
     "pageDesc": "Calculate staff earnings based on services provided",
@@ -371,7 +372,9 @@
     "lastPaid": "Last paid",
     "never": "Never",
     "paymentHistory": "Payment History",
-    "collectionHistory": "Collection History"
+    "collectionHistory": "Collection History",
+    "setGoal": "Set Goal",
+    "noGoalSet": "No monthly goal set yet"
   },
   "staffPerformance": {
     "title": "Staff Performance",
