@@ -442,11 +442,14 @@ export default function Staff() {
                 <FormItem>
                   <FormLabel className="flex items-center gap-2">
                     <Phone className="h-4 w-4" />
-                    {t("staff.phone", { defaultValue: "Phone" })}
+                    {t("staff.whatsappNumber", { defaultValue: "WhatsApp Number" })}
                   </FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="06XXXXXXXX" />
+                    <Input {...field} placeholder="2126XXXXXXXX" dir="ltr" />
                   </FormControl>
+                  <p className="text-xs text-muted-foreground">
+                    Used for the daily appointment message at 09:00.
+                  </p>
                   <FormMessage />
                 </FormItem>
               )}

@@ -653,6 +653,26 @@ export default function WhatsApp() {
       toast({ title: "خطأ", description: err.message, variant: "destructive" }),
   });
 
+  const { data: staffList = [] } = useQuery<any[]>({
+    queryKey: ["/api/staff"],
+    queryFn: () => apiRequest("GET", "/api/staff").then((r) => r.json()),
+  });
+  const staffWithWhatsApp = staffList.filter((staff: any) => staff.phone?.trim());
+
+  const sendStaffAppointmentsMutation = useMutation({
+    mutationFn: () =>
+      apiRequest("POST", "/api/staff-daily-appointments/send", {}).then((r) => r.json()),
+    onSuccess: (data) => {
+      toast({
+        title: data.failed > 0 ? "تم الإرسال مع بعض الأخطاء" : "✅ تم الإرسال",
+        description: `أُرسلت مواعيد اليوم إلى ${data.sent} موظفة${data.failed > 0 ? ` — فشل ${data.failed}` : ""}`,
+        variant: data.failed > 0 ? "destructive" : "default",
+      });
+    },
+    onError: (err: any) =>
+      toast({ title: "خطأ في الإرسال", description: err.message, variant: "destructive" }),
+  });
+
   const [manualSummaryDate, setManualSummaryDate] = useState<string>(() => {
     const d = new Date();
     d.setDate(d.getDate() - 1);
@@ -1151,7 +1171,7 @@ export default function WhatsApp() {
         </div>
       </div>
 
-      {/* ── DAILY SUMMARY ── */}
+       {/* ── DAILY SUMMARY ── */}
       <div className="glass-card rounded-2xl p-4 border border-border/30 space-y-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/25 flex items-center justify-center shrink-0 shadow-md">
@@ -1175,6 +1195,35 @@ export default function WhatsApp() {
             }
           />
         </div>
+         <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 space-y-2">
+           <div className="flex items-start gap-2">
+             <UserCheck className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
+             <div className="min-w-0 flex-1">
+               <p className="text-sm font-medium">مواعيد الموظفات</p>
+               <p className="text-xs text-muted-foreground mt-0.5">
+                 تُرسل مواعيد كل موظفة تلقائياً إلى رقم واتساب الخاص بها كل يوم الساعة 09:00 بتوقيت المغرب.
+               </p>
+               <p className="text-xs text-muted-foreground mt-1">
+                 {staffWithWhatsApp.length} موظفة لديها رقم واتساب محفوظ
+               </p>
+             </div>
+           </div>
+           <Button
+             type="button"
+             size="sm"
+             variant="ghost"
+             className="w-full rounded-xl text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/10"
+             disabled={!connected || staffWithWhatsApp.length === 0 || sendStaffAppointmentsMutation.isPending}
+             onClick={() => sendStaffAppointmentsMutation.mutate()}
+           >
+             {sendStaffAppointmentsMutation.isPending ? (
+               <Loader2 className="w-4 h-4 animate-spin mr-1" />
+             ) : (
+               <Send className="w-4 h-4 mr-1" />
+             )}
+             {!connected ? "Connect WhatsApp first" : "إرسال مواعيد اليوم الآن"}
+           </Button>
+         </div>
         {summaryEnabled && (
           <div className="space-y-2 pt-1 border-t border-border/20">
             <div className="flex gap-2">

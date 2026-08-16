@@ -226,25 +226,124 @@ async function buildAndSendDailySummary(dateStr: string, label?: string): Promis
   }
 }
 
+// ── Staff morning appointment messages ───────────────────────────────────────
+// Keep scheduler dates/times in the salon's timezone instead of relying on the
+// host timezone (which is commonly UTC in production).
+const SALON_TIMEZONE = "Africa/Casablanca";
+
+function getSalonDateTime(now = new Date()): { date: string; time: string } {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: SALON_TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(now);
+  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  return {
+    date: `${values.year}-${values.month}-${values.day}`,
+    time: `${values.hour}:${values.minute}`,
+  };
+}
+
+function isCancelledAppointment(appointment: any): boolean {
+  return appointment.bookingStatus === "cancelled" || appointment.status === "cancelled";
+}
+
+const sentStaffAppointmentMessages = new Set<string>();
+
+async function sendStaffDailyAppointments(dateStr: string, force = false): Promise<{
+  sent: number;
+  skipped: number;
+  failed: number;
+  errors: string[];
+}> {
+  const [staffList, appointments, settings] = await Promise.all([
+    storage.getStaff(),
+    storage.getAppointmentsByDateRange(dateStr, dateStr),
+    storage.getBusinessSettings().catch(() => null),
+  ]);
+  const recipients = (staffList as any[]).filter((staff) => staff.phone?.trim());
+  const activeAppointments = (appointments as any[]).filter((appointment) => !isCancelledAppointment(appointment));
+  const salonName = (settings as any)?.businessName || "PREGA SQUAD";
+  const result = { sent: 0, skipped: staffList.length - recipients.length, failed: 0, errors: [] as string[] };
+
+  if (recipients.length === 0) return result;
+
+  // @ts-ignore
+  const { sendWhatsAppMessage, formatJid } = await import("../baileys.js");
+  for (const staff of recipients) {
+    const sendKey = `${dateStr}:${staff.id}`;
+    if (!force && sentStaffAppointmentMessages.has(sendKey)) {
+      result.skipped++;
+      continue;
+    }
+
+    const staffAppointments = activeAppointments
+      .filter((appointment) =>
+        appointment.staffId === staff.id ||
+        (!appointment.staffId && appointment.staff === staff.name)
+      )
+      .sort((a, b) => (a.startTime || "").localeCompare(b.startTime || ""));
+
+    let message = `🌸 *صباح الخير ${staff.name}*\n`;
+    message += `📅 *مواعيدك اليوم — ${dateStr}*\n`;
+    message += `🏪 ${salonName}\n\n`;
+
+    if (staffAppointments.length === 0) {
+      message += "لا توجد مواعيد مسجلة لك اليوم 🌿";
+    } else {
+      message += `لديك *${staffAppointments.length}* موعد:\n\n`;
+      for (const appointment of staffAppointments) {
+        const clientName = appointment.client || "عميلة";
+        const service = appointment.service || "خدمة";
+        const duration = appointment.duration ? ` — ${appointment.duration} د` : "";
+        message += `🕘 *${appointment.startTime || "?"}* — ${clientName}\n`;
+        message += `   ${service}${duration}\n`;
+      }
+    }
+
+    try {
+      await sendWhatsAppMessage(formatJid(staff.phone), message);
+      sentStaffAppointmentMessages.add(sendKey);
+      result.sent++;
+      console.log(`[StaffMorningAppointments] Sent ${staffAppointments.length} appointments to ${staff.name} (${staff.phone})`);
+    } catch (error: any) {
+      result.failed++;
+      result.errors.push(`${staff.name}: ${error?.message || "send failed"}`);
+      console.error(`[StaffMorningAppointments] Failed for ${staff.name}:`, error?.message || error);
+    }
+  }
+
+  return result;
+}
+
 // ── Daily summary scheduler — fires once per day at the configured time ───────
 let lastDailySummarySentDate: string | null = null;
 setInterval(async () => {
   try {
+    const salonDateTime = getSalonDateTime();
+    if (salonDateTime.time >= "09:00" && salonDateTime.time < "09:10") {
+      await sendStaffDailyAppointments(salonDateTime.date);
+    }
+
     const settings = await storage.getBusinessSettings().catch(() => null);
     if (!settings) return;
     if (!(settings as any).dailySummaryEnabled || !(settings as any).ownerPhone) return;
     const summaryTime: string = (settings as any).dailySummaryTime || (settings as any).closingTime || "20:00";
-    const now = new Date();
-    const hh = String(now.getHours()).padStart(2, "0");
-    const mm = String(now.getMinutes()).padStart(2, "0");
-    if (`${hh}:${mm}` !== summaryTime) return;
-    const calendarDateStr = now.toISOString().split("T")[0];
+    if (salonDateTime.time !== summaryTime) return;
+    const calendarDateStr = salonDateTime.date;
     if (lastDailySummarySentDate === calendarDateStr) return;
     lastDailySummarySentDate = calendarDateStr;
     // After-midnight salons: summarise the previous business day
-    const businessDate = new Date(now);
-    if (now.getHours() < 6) businessDate.setDate(businessDate.getDate() - 1);
-    await buildAndSendDailySummary(businessDate.toISOString().split("T")[0]);
+    const businessDate = new Date(`${calendarDateStr}T12:00:00`);
+    const salonHour = Number(salonDateTime.time.slice(0, 2));
+    if (salonHour < 6) businessDate.setDate(businessDate.getDate() - 1);
+    await buildAndSendDailySummary(
+      `${businessDate.getFullYear()}-${String(businessDate.getMonth() + 1).padStart(2, "0")}-${String(businessDate.getDate()).padStart(2, "0")}`,
+    );
   } catch (err: any) {
     console.error("[DailySummary] Scheduler error:", err.message);
   }
@@ -5022,6 +5121,19 @@ You are Wissal — a real employee talking to her manager.${instructionsBlock}`;
         return res.status(400).json({ ok: false, error: result.error || "Failed to send" });
       }
       res.json({ ok: true, date: targetDate });
+    } catch (err: any) {
+      res.status(500).json({ ok: false, error: err.message });
+    }
+  });
+
+  app.post("/api/staff-daily-appointments/send", isPinAuthenticated, requirePermission("manage_business_settings"), async (req, res) => {
+    try {
+      const requestedDate = typeof req.body?.date === "string" ? req.body.date : "";
+      const date = /^\d{4}-\d{2}-\d{2}$/.test(requestedDate)
+        ? requestedDate
+        : getSalonDateTime().date;
+      const result = await sendStaffDailyAppointments(date, true);
+      res.json({ ok: result.failed === 0, date, ...result });
     } catch (err: any) {
       res.status(500).json({ ok: false, error: err.message });
     }
